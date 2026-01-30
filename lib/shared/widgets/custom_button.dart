@@ -8,6 +8,7 @@ class CustomButton extends StatelessWidget {
   final ButtonType type;
   final bool isLoading;
   final IconData? icon;
+  final bool isFullWidth;
 
   const CustomButton({
     super.key,
@@ -16,6 +17,7 @@ class CustomButton extends StatelessWidget {
     this.type = ButtonType.primary,
     this.isLoading = false,
     this.icon,
+    this.isFullWidth = true,
   });
 
   @override
@@ -32,7 +34,7 @@ class CustomButton extends StatelessWidget {
         : theme.colorScheme.onPrimaryContainer;
 
     return SizedBox(
-      width: double.infinity,
+      width: isFullWidth ? double.infinity : null,
       height: 50,
       child: ElevatedButton(
         onPressed: isLoading ? null : onPressed,

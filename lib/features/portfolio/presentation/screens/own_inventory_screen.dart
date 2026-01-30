@@ -6,6 +6,7 @@ import '../providers/products_provider.dart';
 import 'widgets/inventory_item_card.dart';
 import 'widgets/estimate_price_dialog.dart';
 import '../../../../shared/widgets/custom_search_bar.dart';
+import '../../../../shared/widgets/bottom_sheet_action_item.dart';
 import '../../../../core/utils/string_extensions.dart';
 
 // Sort Option Enum
@@ -187,8 +188,7 @@ class _OwnInventoryScreenState extends ConsumerState<OwnInventoryScreen> {
               const SizedBox(height: 8),
 
               // Actions
-              _buildActionItem(
-                context: context,
+              BottomSheetActionItem(
                 icon: Icons.local_offer_outlined,
                 label: 'Estimar precio de venta',
                 onTap: () {
@@ -203,30 +203,24 @@ class _OwnInventoryScreenState extends ConsumerState<OwnInventoryScreen> {
                     ),
                   );
                 },
-                colors: colors,
               ),
-              _buildActionItem(
-                context: context,
+              BottomSheetActionItem(
                 icon: Icons.request_quote_outlined,
                 label: 'Cotizar a un cliente',
                 onTap: () {
                   context.pop();
                   // TODO: Implement Quote to Client
                 },
-                colors: colors,
               ),
-              _buildActionItem(
-                context: context,
+              BottomSheetActionItem(
                 icon: 'assets/icons/add_request_quote.png',
                 label: 'Agregar a cotización existente',
                 onTap: () {
                   context.pop();
                   // TODO: Implement Add to Existing Quote
                 },
-                colors: colors,
               ),
-              _buildActionItem(
-                context: context,
+              BottomSheetActionItem(
                 icon: Icons.info_outline,
                 label: 'Detalles del producto',
                 onTap: () {
@@ -236,7 +230,6 @@ class _OwnInventoryScreenState extends ConsumerState<OwnInventoryScreen> {
                     extra: product,
                   );
                 },
-                colors: colors,
               ),
 
               const SizedBox(height: 24),
@@ -244,27 +237,6 @@ class _OwnInventoryScreenState extends ConsumerState<OwnInventoryScreen> {
           ),
         );
       },
-    );
-  }
-
-  Widget _buildActionItem({
-    required BuildContext context,
-    required dynamic icon, // Can be IconData or String (asset path)
-    required String label,
-    required VoidCallback onTap,
-    required ColorScheme colors,
-  }) {
-    return ListTile(
-      leading: icon is IconData
-          ? Icon(icon, color: colors.onSurface)
-          : ImageIcon(
-              AssetImage(icon as String),
-              color: colors.onSurface,
-              size: 24,
-            ),
-      title: Text(label, style: const TextStyle(fontWeight: FontWeight.w500)),
-      onTap: onTap,
-      contentPadding: const EdgeInsets.symmetric(horizontal: 24),
     );
   }
 

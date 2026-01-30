@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../shared/widgets/custom_search_bar.dart';
+import '../../../../shared/widgets/bottom_sheet_action_item.dart';
 import '../../data/models/service_model.dart';
 import '../providers/services_provider.dart';
 import 'widgets/service_item_card.dart';
@@ -140,10 +141,7 @@ class _OwnServicesScreenState extends ConsumerState<OwnServicesScreen> {
                           ? '${service.serviceRate!.name} (${service.serviceRate!.symbol})'
                           : '',
                       onTap: () {
-                        context.push(
-                          '/portfolio/own-services/details/${service.id}',
-                          extra: service,
-                        );
+                        _showServiceActionSheet(context, service, colors);
                       },
                     );
                   },
@@ -169,6 +167,110 @@ class _OwnServicesScreenState extends ConsumerState<OwnServicesScreen> {
           foregroundColor: colors.onPrimaryContainer,
         ),
       ),
+    );
+  }
+
+  void _showServiceActionSheet(
+    BuildContext context,
+    ServiceModel service,
+    ColorScheme colors,
+  ) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
+      backgroundColor: colors.surfaceContainer,
+      builder: (context) {
+        return SafeArea(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // Handle bar
+              Center(
+                child: Container(
+                  margin: const EdgeInsets.symmetric(vertical: 16),
+                  height: 4,
+                  width: 32,
+                  decoration: BoxDecoration(
+                    color: Colors.grey[400],
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+              ),
+
+              // Title Row
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                child: Row(
+                  children: [
+                    IconButton(
+                      icon: const Icon(Icons.close),
+                      onPressed: () => context.pop(),
+                    ),
+                    Expanded(
+                      child: Text(
+                        'Servicio seleccionado',
+                        style: Theme.of(context).textTheme.titleMedium
+                            ?.copyWith(fontWeight: FontWeight.bold),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+
+              // Service Info Summary
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                child: ServiceItemCard(
+                  name: service.name,
+                  description: service.category?.name ?? service.description,
+                  price: service.price,
+                  priceUnit: service.serviceRate != null
+                      ? '${service.serviceRate!.name} (${service.serviceRate!.symbol})'
+                      : '',
+                  onTap: () {}, // No action in sheet
+                ),
+              ),
+              const SizedBox(height: 8),
+              const Divider(height: 1),
+              const SizedBox(height: 8),
+
+              // Actions
+              BottomSheetActionItem(
+                icon: Icons.request_quote_outlined,
+                label: 'Cotizar a cliente',
+                onTap: () {
+                  context.pop();
+                  // No-op for now
+                },
+              ),
+              BottomSheetActionItem(
+                icon: 'assets/icons/add_request_quote.png',
+                label: 'Agregar a cotización existente',
+                onTap: () {
+                  context.pop();
+                  // No-op for now
+                },
+              ),
+              BottomSheetActionItem(
+                icon: Icons.info_outline,
+                label: 'Detalles del servicio',
+                onTap: () {
+                  context.pop();
+                  context.push(
+                    '/portfolio/own-services/details/${service.id}',
+                    extra: service,
+                  );
+                },
+              ),
+
+              const SizedBox(height: 24),
+            ],
+          ),
+        );
+      },
     );
   }
 }
