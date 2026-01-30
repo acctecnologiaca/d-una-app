@@ -97,7 +97,7 @@ class ContactListTile extends StatelessWidget {
             IconButton(
               onPressed: onWhatsAppTap ?? () {},
               icon: Image.asset(
-                'assets/images/whatsapp_icon.png',
+                'assets/icons/whatsapp_icon.png',
                 width: 32,
                 height: 32,
                 errorBuilder: (context, error, stackTrace) {

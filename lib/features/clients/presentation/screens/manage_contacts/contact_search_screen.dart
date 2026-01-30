@@ -6,6 +6,7 @@ import 'package:d_una_app/features/clients/presentation/providers/clients_provid
 import 'package:d_una_app/features/clients/presentation/widgets/contact_list_tile.dart';
 import 'package:d_una_app/features/auth/presentation/providers/register_provider.dart';
 import 'package:d_una_app/core/utils/contact_utils.dart';
+import 'package:d_una_app/core/utils/string_extensions.dart';
 
 class ContactSearchScreen extends ConsumerStatefulWidget {
   final String clientId;
@@ -196,11 +197,13 @@ class _ContactSearchScreenState extends ConsumerState<ContactSearchScreen> {
 
         final contacts = client.contacts;
         final filteredContacts = contacts.where((contact) {
-          final query = _searchQuery.toLowerCase();
-          return contact.name.toLowerCase().contains(query) ||
-              (contact.email?.toLowerCase() ?? '').contains(query) ||
-              (contact.phone ?? '').contains(query) ||
-              (contact.role?.toLowerCase() ?? '').contains(query);
+          final normalizedQuery = _searchQuery.normalized;
+          return contact.name.normalized.contains(normalizedQuery) ||
+              (contact.email?.normalized ?? '').contains(normalizedQuery) ||
+              (contact.phone ?? '').contains(
+                normalizedQuery,
+              ) || // Phone usually numeric but kept as is
+              (contact.role?.normalized ?? '').contains(normalizedQuery);
         }).toList();
 
         if (filteredContacts.isEmpty) {

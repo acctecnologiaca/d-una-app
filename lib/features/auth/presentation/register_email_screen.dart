@@ -42,7 +42,7 @@ class _RegisterEmailScreenState extends ConsumerState<RegisterEmailScreen> {
   Widget build(BuildContext context) {
     return RegisterLayout(
       title: '¿Cuál es tu correo\nelectrónico?',
-      progress: 0.15, // Approx for step 1
+      progress: 1,
       onNext: _onNext,
       content: Form(
         key: _formKey,

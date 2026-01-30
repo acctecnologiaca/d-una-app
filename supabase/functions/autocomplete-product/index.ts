@@ -116,56 +116,93 @@ Deno.serve(async (req) => {
         console.log(`Selected Model for generation: ${selectedModel}`)
 
 
-        // 5. Generate Content (User Prompt)
-        const prompt = `
-      Act as a product data expert. 
-      I will provide a product Brand and Model. 
-      You must return a JSON object with:
-      1. "name": The full commercial name of the product in Headline Style format, but it can't include the brand name and the model.
-      2. "specs": "A concise list (up to 300 characters) of technical specifications. Format each item on a new line, preceded by a hyphen and one space and ended by a period."
-      
-      If unknown, provide best guess based on model naming or return generic fields. 
-      Everything has to be in Spanish. Just return JSON.
-
-      Brand: ${brand || 'Unknown'}
-      Model: ${model}
-    `
-
-        // Ensure URL format
-        const modelPath = selectedModel.startsWith('models/') ? selectedModel : `models/${selectedModel}`
-        const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/${modelPath}:generateContent?key=${apiKey}`
-
+        // 5. Generate Content with Retries
         let apiResponse = null
         let errorDetail = null
         let status = 'success'
 
-        try {
-            const response = await fetch(geminiUrl, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({
-                    contents: [{
-                        parts: [{ text: prompt }]
-                    }]
-                })
-            })
+        // Try up to 3 models if we hit overload/quota issues
+        const maxRetries = 3;
+        let attempt = 0;
+        let success = false;
 
-            if (!response.ok) {
-                status = response.status === 429 ? 'error_429' : 'error_other'
-                const err = await response.text()
-                errorDetail = `API Error ${response.status}: ${err}`
-                console.error("Gemini API Error details:", err)
-                throw new Error(errorDetail)
+        // Get list of candidates starting from selectedModel index
+        const startIndex = modelsPriority.findIndex(m => m.name === selectedModel);
+        // Create a fallback list: starting with selectedModel, then others not yet tried
+        // For simplicity, let's just use the selectedModel and then fall back to others in priority order if they exist in availableModelNames
+
+        // BETTER STRATEGY: 
+        // We already picked 'selectedModel' based on quota. If it fails with 503, we should try a different one (maybe even one we skipped due to RPM if we are desperate? No, stick to quotas).
+        // Let's just try the request. If 503, wait 1s and retry SAME model or NEXT available model?
+        // 503 usually means "model overloaded". Switching model is a good idea.
+
+        // Let's build a retry queue.
+        const retryQueue = [selectedModel];
+        // Add one or two fallbacks from the priority list that are VALID (in availableModelNames) and DIFFERENT from selectedModel
+        for (const m of modelsPriority) {
+            if (m.name !== selectedModel && availableModelNames.includes(m.name) && retryQueue.length < 3) {
+                retryQueue.push(m.name);
             }
+        }
 
-            apiResponse = await response.json()
+        console.log("Retry Queue:", retryQueue);
 
-        } catch (e) {
-            status = 'error_other'
-            errorDetail = e.message
-            console.error("Fetch Exception:", e)
+        for (const modelToTry of retryQueue) {
+            attempt++;
+            const modelPath = modelToTry.startsWith('models/') ? modelToTry : `models/${modelToTry}`
+            const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/${modelPath}:generateContent?key=${apiKey}`
+
+            console.log(`Attempt ${attempt}: Trying ${modelToTry}...`);
+
+            try {
+                const response = await fetch(geminiUrl, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        contents: [{ parts: [{ text: prompt }] }]
+                    })
+                })
+
+                if (!response.ok) {
+                    const errText = await response.text();
+                    const isOverloaded = response.status === 503 || response.status === 429;
+
+                    if (isOverloaded) {
+                        console.warn(`Model ${modelToTry} overloaded/rate-limited (${response.status}).`);
+                        // If this was the last attempt, allow error to bubble up
+                        if (attempt === retryQueue.length) {
+                            status = response.status === 429 ? 'error_429' : 'error_other';
+                            errorDetail = `API Error ${response.status}: ${errText}`;
+                            throw new Error(errorDetail);
+                        }
+                        // Otherwise continue to next model
+                        continue;
+                    } else {
+                        // Other errors (400, 401, etc) are fatal, do not retry
+                        status = 'error_other';
+                        errorDetail = `API Error ${response.status}: ${errText}`;
+                        throw new Error(errorDetail);
+                    }
+                }
+
+                apiResponse = await response.json();
+                selectedModel = modelToTry; // Update selected model for logging
+                success = true;
+                break; // Success!
+
+            } catch (e) {
+                console.error(`Attempt ${attempt} failed:`, e);
+                if (attempt === retryQueue.length) {
+                    status = 'error_other'
+                    errorDetail = e.message
+                }
+                // If not final attempt, loop continues
+            }
+        }
+
+        if (!success && !errorDetail) {
+            errorDetail = "All retry attempts failed.";
+            status = 'error_other';
         }
 
         // 6. Log Usage

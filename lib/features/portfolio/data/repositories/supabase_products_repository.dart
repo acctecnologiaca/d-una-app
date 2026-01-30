@@ -14,7 +14,7 @@ class SupabaseProductsRepository {
     try {
       final response = await _supabase
           .from('products')
-          .select()
+          .select('*, categories(*), brands(*)')
           .eq('user_id', userId)
           .order('created_at', ascending: false);
 
@@ -28,7 +28,7 @@ class SupabaseProductsRepository {
     try {
       final response = await _supabase
           .from('products')
-          .select()
+          .select('*, categories(*), brands(*)')
           .eq('id', id)
           .maybeSingle();
 
@@ -64,7 +64,12 @@ class SupabaseProductsRepository {
       // JSON conversion excludes null IDs usually, but for insert we want DB to generate ID.
       // Product.toJson doesn't include ID. Great.
       // But we need to ensure 'user_id' is set. Product.toJson includes it.
-      await _supabase.from('products').insert(productToSave.toJson());
+      final productJson = productToSave.toJson();
+      if (productJson['id'] == '') {
+        productJson.remove('id');
+      }
+
+      await _supabase.from('products').insert(productJson);
     } catch (e) {
       throw Exception('Error creating product: $e');
     }

@@ -20,11 +20,11 @@ class WizardProgressBar extends StatelessWidget implements PreferredSizeWidget {
     return Row(
       children: [
         Expanded(
-          flex: currentStep + 1,
+          flex: currentStep,
           child: Container(color: colors.primary, height: 4),
         ),
         Expanded(
-          flex: totalSteps - (currentStep + 1),
+          flex: totalSteps - currentStep,
           child: Container(color: colors.secondaryContainer, height: 4),
         ),
       ],

@@ -3,7 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:d_una_app/features/clients/presentation/widgets/contact_list_tile.dart';
-import 'package:d_una_app/features/clients/presentation/widgets/info_block.dart';
+import 'package:d_una_app/shared/widgets/info_block.dart';
 import 'package:d_una_app/features/clients/presentation/providers/clients_provider.dart';
 import 'package:d_una_app/features/clients/data/models/client_model.dart';
 import 'package:d_una_app/core/utils/contact_utils.dart';

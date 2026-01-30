@@ -17,36 +17,71 @@ final userProfileProvider = StreamProvider.autoDispose<UserProfile?>((
   ref,
 ) async* {
   final supabase = Supabase.instance.client;
-  final user = supabase.auth.currentUser;
 
-  if (user == null) {
-    yield null;
-    return;
-  }
-
-  // Check if session is expired and refresh if necessary
-  final session = supabase.auth.currentSession;
-  if (session != null && session.isExpired) {
-    try {
-      await supabase.auth.refreshSession();
-    } catch (_) {
-      // Refresh failed, likely session invalid
+  // Retry loop to handle token expiry race conditions
+  while (true) {
+    final user = supabase.auth.currentUser;
+    if (user == null) {
       yield null;
       return;
     }
-  }
 
-  // Listen to realtime changes on the profiles table for this user
-  final stream = supabase
-      .from('profiles')
-      .stream(primaryKey: ['id'])
-      .eq('id', user.id);
+    // Proactive Expiry Check (60s buffer)
+    final session = supabase.auth.currentSession;
+    if (session != null) {
+      final expiresAt = DateTime.fromMillisecondsSinceEpoch(
+        session.expiresAt! * 1000,
+      );
+      if (DateTime.now().add(const Duration(seconds: 60)).isAfter(expiresAt)) {
+        try {
+          await supabase.auth.refreshSession();
+        } catch (_) {
+          // If refresh fails, proceed and let stream fail if token is invalid
+        }
+      }
+    }
 
-  await for (final data in stream) {
-    if (data.isNotEmpty) {
-      yield UserProfile.fromJson(data.first);
-    } else {
+    try {
+      // Listen to realtime changes on the profiles table for this user
+      final stream = supabase
+          .from('profiles')
+          .stream(primaryKey: ['id'])
+          .eq('id', user.id);
+
+      await for (final data in stream) {
+        if (data.isNotEmpty) {
+          yield UserProfile.fromJson(data.first);
+        } else {
+          yield null;
+        }
+      }
+      // Stream completed normally
+      break;
+    } on RealtimeSubscribeException catch (e) {
+      // Check for token expiry error
+      // Error: RealtimeSubscribeException(status: channelError, details: Exception: "InvalidJWTToken: ...")
+      final msg = e.toString();
+      if (msg.contains('expired') ||
+          msg.contains('InvalidJWTToken') ||
+          msg.contains('JWT')) {
+        // Attempt to refresh session and retry
+        try {
+          await supabase.auth.refreshSession();
+          continue; // Retry loop
+        } catch (_) {
+          // Refresh failed, typically means user needs to re-login
+          yield null;
+          return;
+        }
+      }
+      // Other error, log and return null
+      // debugPrint('Realtime Error: $e');
       yield null;
+      return;
+    } catch (e) {
+      // debugPrint('General Error: $e');
+      yield null;
+      return;
     }
   }
 });
@@ -67,33 +102,60 @@ final fetchUserProfileProvider = FutureProvider.autoDispose<UserProfile?>((
 final shippingMethodsProvider =
     StreamProvider.autoDispose<List<ShippingMethod>>((ref) async* {
       final supabase = Supabase.instance.client;
-      final user = supabase.auth.currentUser;
 
-      if (user == null) {
-        yield [];
-        return;
-      }
-
-      // Check if session is expired and refresh if necessary
-      final session = supabase.auth.currentSession;
-      if (session != null && session.isExpired) {
-        try {
-          await supabase.auth.refreshSession();
-        } catch (_) {
+      while (true) {
+        final user = supabase.auth.currentUser;
+        if (user == null) {
           yield [];
           return;
         }
-      }
 
-      final stream = supabase
-          .from('shipping_methods')
-          .stream(primaryKey: ['id'])
-          .eq('user_id', user.id)
-          .order('is_primary', ascending: false)
-          .order('created_at', ascending: true);
+        // Proactive Expiry Check (60s buffer)
+        final session = supabase.auth.currentSession;
+        if (session != null) {
+          final expiresAt = DateTime.fromMillisecondsSinceEpoch(
+            session.expiresAt! * 1000,
+          );
+          if (DateTime.now()
+              .add(const Duration(seconds: 60))
+              .isAfter(expiresAt)) {
+            try {
+              await supabase.auth.refreshSession();
+            } catch (_) {}
+          }
+        }
 
-      await for (final data in stream) {
-        yield data.map((json) => ShippingMethod.fromJson(json)).toList();
+        try {
+          final stream = supabase
+              .from('shipping_methods')
+              .stream(primaryKey: ['id'])
+              .eq('user_id', user.id)
+              .order('is_primary', ascending: false)
+              .order('created_at', ascending: true);
+
+          await for (final data in stream) {
+            yield data.map((json) => ShippingMethod.fromJson(json)).toList();
+          }
+          break;
+        } on RealtimeSubscribeException catch (e) {
+          final msg = e.toString();
+          if (msg.contains('expired') ||
+              msg.contains('InvalidJWTToken') ||
+              msg.contains('JWT')) {
+            try {
+              await supabase.auth.refreshSession();
+              continue;
+            } catch (_) {
+              yield [];
+              return;
+            }
+          }
+          yield [];
+          return;
+        } catch (e) {
+          yield [];
+          return;
+        }
       }
     });
 
@@ -101,31 +163,60 @@ final shippingMethodsProvider =
 final verificationDocumentsProvider =
     StreamProvider.autoDispose<List<VerificationDocument>>((ref) async* {
       final supabase = Supabase.instance.client;
-      final user = supabase.auth.currentUser;
 
-      if (user == null) {
-        yield [];
-        return;
-      }
-
-      // Check if session is expired and refresh if necessary
-      final session = supabase.auth.currentSession;
-      if (session != null && session.isExpired) {
-        try {
-          await supabase.auth.refreshSession();
-        } catch (_) {
+      while (true) {
+        final user = supabase.auth.currentUser;
+        if (user == null) {
           yield [];
           return;
         }
-      }
 
-      final stream = supabase
-          .from('verification_documents')
-          .stream(primaryKey: ['id'])
-          .eq('user_id', user.id)
-          .order('created_at', ascending: false);
+        // Proactive Expiry Check (60s buffer)
+        final session = supabase.auth.currentSession;
+        if (session != null) {
+          final expiresAt = DateTime.fromMillisecondsSinceEpoch(
+            session.expiresAt! * 1000,
+          );
+          if (DateTime.now()
+              .add(const Duration(seconds: 60))
+              .isAfter(expiresAt)) {
+            try {
+              await supabase.auth.refreshSession();
+            } catch (_) {}
+          }
+        }
 
-      await for (final data in stream) {
-        yield data.map((json) => VerificationDocument.fromJson(json)).toList();
+        try {
+          final stream = supabase
+              .from('verification_documents')
+              .stream(primaryKey: ['id'])
+              .eq('user_id', user.id)
+              .order('created_at', ascending: false);
+
+          await for (final data in stream) {
+            yield data
+                .map((json) => VerificationDocument.fromJson(json))
+                .toList();
+          }
+          break;
+        } on RealtimeSubscribeException catch (e) {
+          final msg = e.toString();
+          if (msg.contains('expired') ||
+              msg.contains('InvalidJWTToken') ||
+              msg.contains('JWT')) {
+            try {
+              await supabase.auth.refreshSession();
+              continue;
+            } catch (_) {
+              yield [];
+              return;
+            }
+          }
+          yield [];
+          return;
+        } catch (e) {
+          yield [];
+          return;
+        }
       }
     });

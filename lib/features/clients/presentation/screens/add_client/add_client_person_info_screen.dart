@@ -93,7 +93,7 @@ class _AddClientPersonInfoScreenState
           ),
         ),
         centerTitle: false,
-        bottom: const WizardProgressBar(totalSteps: 4, currentStep: 1),
+        bottom: const WizardProgressBar(totalSteps: 4, currentStep: 2),
       ),
       body: SafeArea(
         child: Column(
@@ -147,7 +147,7 @@ class _AddClientPersonInfoScreenState
 
             // Footer
             Padding(
-              padding: const EdgeInsets.fromLTRB(16, 0, 16, 56),
+              padding: const EdgeInsets.only(bottom: 40),
               child: WizardButtonBar(
                 onCancel: () {
                   context.go('/clients');

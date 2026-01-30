@@ -2,20 +2,26 @@ import 'package:flutter/material.dart';
 import '../../../../shared/widgets/custom_button.dart';
 
 class WizardButtonBar extends StatelessWidget {
-  final VoidCallback onCancel;
+  final VoidCallback? onCancel;
   final VoidCallback? onNext;
   final VoidCallback? onBack;
   final String labelNext;
+  final String labelFinish;
+  final String labelBack;
+  final String labelCancel; // Customizable labels
   final bool isLastStep;
   final bool isLoading;
   final bool isNextEnabled;
 
   const WizardButtonBar({
     super.key,
-    required this.onCancel,
-    this.onNext,
+    this.onCancel,
+    required this.onNext,
     this.onBack,
     this.labelNext = 'Siguiente',
+    this.labelFinish = 'Finalizar',
+    this.labelBack = 'Atrás',
+    this.labelCancel = 'Cancelar',
     this.isLastStep = false,
     this.isLoading = false,
     this.isNextEnabled = true,
@@ -25,53 +31,79 @@ class WizardButtonBar extends StatelessWidget {
   Widget build(BuildContext context) {
     final colors = Theme.of(context).colorScheme;
 
-    return Row(
-      children: [
-        // Cancel Button (Always visible on left?)
-        // In some designs "Cancel" is replaced by "Back" if not step 1?
-        // User said: Step 1: Cancel, Next. Intermediate: Cancel, Back, Next.
-        // So Cancel is always there.
-        TextButton(
-          onPressed: onCancel,
-          child: Text(
-            'Cancelar',
-            style: TextStyle(
-              color: colors.primary,
-              fontWeight: FontWeight.w600,
-              fontSize: 16,
-            ),
-          ),
-        ),
-
-        const Spacer(),
-
-        // Back Button (If provided)
-        if (onBack != null) ...[
-          TextButton(
-            onPressed: onBack,
-            child: Text(
-              'Atrás',
-              style: TextStyle(
-                color: colors.primary,
-                fontWeight: FontWeight.w600,
-                fontSize: 16,
+    return Padding(
+      padding: const EdgeInsets.all(16.0),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          // Left Side: Cancel (Optional)
+          if (onCancel != null)
+            TextButton(
+              onPressed: onCancel,
+              style: TextButton.styleFrom(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 12,
+                ),
+                foregroundColor: colors
+                    .primary, // Often Cancel is destructive/alert or just neutral
               ),
-            ),
-          ),
-          const SizedBox(width: 16),
-        ],
+              child: Text(
+                labelCancel,
+                style: const TextStyle(
+                  fontWeight: FontWeight.w600,
+                  fontSize: 16,
+                ),
+              ),
+            )
+          else
+            const SizedBox.shrink(), // Placeholder to keep spacing if needed? No, spaceBetween handles it.
+          // Right Side: Back + Next/Finish
+          Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // Back Button
+              if (onBack != null) ...[
+                TextButton(
+                  onPressed: onBack,
+                  style: TextButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 12,
+                    ),
+                    foregroundColor: colors.primary,
+                  ),
+                  child: Text(
+                    labelBack,
+                    style: const TextStyle(
+                      fontWeight: FontWeight.w600,
+                      fontSize: 16,
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 8),
+              ],
 
-        // Next/Finish Button
-        SizedBox(
-          width: 120, // Fixed width as seen in previous files
-          child: CustomButton(
-            text: isLastStep ? 'Finalizar' : labelNext,
-            type: ButtonType.primary,
-            onPressed: isNextEnabled ? onNext : null,
-            isLoading: isLoading,
+              // Next / Finish Button
+              SizedBox(
+                // Constrain width or let it be flexible? form_bottom_bar uses Expanded.
+                // For Wizard, usually strictly "Next" button.
+                // Let's us CustomButton but maybe wrap in IntrinsicWidth or fixed width if short text.
+                // But CustomButton expands to infinity width by default?
+                // Looking at CustomButton code: yes, width: double.infinity.
+                // So we must wrap it in a SizedBox with width or Flexible.
+                width: 140,
+                child: CustomButton(
+                  text: isLastStep ? labelFinish : labelNext,
+                  type: ButtonType.primary,
+                  onPressed: isNextEnabled ? onNext : null,
+                  isLoading: isLoading,
+                ),
+              ),
+            ],
           ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 }

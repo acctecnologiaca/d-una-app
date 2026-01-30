@@ -74,7 +74,7 @@ class _RegisterOccupationScreenState
       title: '¿A qué te dedicas?',
       subtitle:
           'Saber esto, nos permitirá conectarte con los proveedores adecuados.',
-      progress: 0.85, // Approx step 6/7
+      progress: 4, //
       onNext: _onNext,
       content: Form(
         key: _formKey,

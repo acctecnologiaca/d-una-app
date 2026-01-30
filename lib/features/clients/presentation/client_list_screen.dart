@@ -1,10 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-
 import 'providers/clients_provider.dart';
 import 'package:d_una_app/features/profile/presentation/providers/profile_provider.dart';
 import 'providers/add_client_provider.dart';
+import 'package:d_una_app/core/utils/string_extensions.dart';
+import '../../../../shared/widgets/custom_search_bar.dart';
 
 enum SortOption { recent, nameAZ, nameZA }
 
@@ -23,11 +24,11 @@ class _ClientListScreenState extends ConsumerState<ClientListScreen> {
   String _getSortLabel(SortOption option) {
     switch (option) {
       case SortOption.recent:
-        return 'Reciente';
+        return 'Más reciente';
       case SortOption.nameAZ:
-        return 'Nombre A-Z';
+        return 'Nombre (A-Z)';
       case SortOption.nameZA:
-        return 'Nombre Z-A';
+        return 'Nombre (Z-A)';
     }
   }
 
@@ -79,16 +80,21 @@ class _ClientListScreenState extends ConsumerState<ClientListScreen> {
                 ),
               ),
               //const Divider(height: 1),
-              _buildSortOption(context, 'Reciente', SortOption.recent, colors),
               _buildSortOption(
                 context,
-                'Nombre A-Z',
+                'Más reciente',
+                SortOption.recent,
+                colors,
+              ),
+              _buildSortOption(
+                context,
+                'Nombre (A-Z)',
                 SortOption.nameAZ,
                 colors,
               ),
               _buildSortOption(
                 context,
-                'Nombre Z-A',
+                'Nombre (Z-A)',
                 SortOption.nameZA,
                 colors,
               ),
@@ -240,37 +246,24 @@ class _ClientListScreenState extends ConsumerState<ClientListScreen> {
                   ),
                 ),
                 const SizedBox(height: 16),
+
                 // Search Bar
                 Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16.0),
-                  child: TextField(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16.0,
+                    vertical: 8.0,
+                  ),
+                  child: CustomSearchBar(
+                    controller: _searchController,
+                    hintText: 'Buscar...',
                     readOnly: true,
+                    showFilterIcon: true,
                     onTap: () {
                       context.push('/clients/search');
                     },
-                    decoration: InputDecoration(
-                      hintText: 'Buscar...',
-                      prefixIcon: const Padding(
-                        padding: EdgeInsets.only(left: 16.0, right: 8.0),
-                        child: Icon(Icons.search),
-                      ),
-                      suffixIcon: const Padding(
-                        padding: EdgeInsets.only(right: 16.0, left: 8.0),
-                        child: Icon(Icons.filter_list),
-                      ),
-                      filled: true,
-                      fillColor: colors.surfaceContainerHighest,
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(30),
-                        borderSide: BorderSide.none,
-                      ),
-                      contentPadding: const EdgeInsets.symmetric(
-                        vertical: 0,
-                        horizontal: 0,
-                      ),
-                    ),
                   ),
                 ),
+
                 const SizedBox(height: 16),
               ],
             ),
@@ -317,12 +310,13 @@ class _ClientListScreenState extends ConsumerState<ClientListScreen> {
                 data: (clients) {
                   // Filter Clients
                   var filteredClients = clients.where((client) {
-                    final name = client.name.toLowerCase();
-                    final id = client.taxId?.toLowerCase() ?? '';
-                    final email = client.email?.toLowerCase() ?? '';
-                    return name.contains(_searchQuery) ||
-                        id.contains(_searchQuery) ||
-                        email.contains(_searchQuery);
+                    final normalizedQuery = _searchQuery.normalized;
+                    final name = client.name.normalized;
+                    final id = (client.taxId ?? '').normalized;
+                    final email = (client.email ?? '').normalized;
+                    return name.contains(normalizedQuery) ||
+                        id.contains(normalizedQuery) ||
+                        email.contains(normalizedQuery);
                   }).toList();
 
                   // Sort Clients
@@ -365,9 +359,10 @@ class _ClientListScreenState extends ConsumerState<ClientListScreen> {
                   }
 
                   return ListView.separated(
-                    padding: const EdgeInsets.fromLTRB(0, 0, 0, 100),
+                    padding: const EdgeInsets.fromLTRB(0, 8, 0, 100),
                     itemCount: filteredClients.length,
-                    separatorBuilder: (context, index) => const Divider(),
+                    separatorBuilder: (context, index) =>
+                        const Divider(height: 1, indent: 16, endIndent: 16),
                     itemBuilder: (context, index) {
                       final client = filteredClients[index];
 
@@ -379,6 +374,7 @@ class _ClientListScreenState extends ConsumerState<ClientListScreen> {
                           size: 32,
                           color: colors.onSurfaceVariant,
                         ),
+                        visualDensity: VisualDensity.standard,
                         title: Text(client.name),
                         subtitle: Text(client.taxId ?? 'Sin ID'),
                         onTap: () {

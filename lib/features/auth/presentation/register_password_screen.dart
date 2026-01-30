@@ -54,13 +54,7 @@ class _RegisterPasswordScreenState
   Widget build(BuildContext context) {
     return RegisterLayout(
       title: 'Escribe tu contraseña',
-      progress:
-          0.30, // Approx for step 2/7 (wait, name was 0.3? Name is step 3. Email is step 1. Password is step 2.)
-      // Let's adjust progress: Email(1/7)=0.14, Password(2/7)=0.28, Name(3/7)=0.42, Occupation(6/7 from file analysis)=0.85
-      // Previous file had Name at 0.3. Password should be 0.3? No, Password usually comes AFTER email and BEFORE name?
-      // Flow in app_router: email -> password -> name -> occupation -> verification.
-      // So: Email (1), Password (2), Name (3), Occupation (4), Verification (5).
-      // Let's stick to 0.3 for now as visual approximation.
+      progress: 2,
       onNext: _onNext,
       content: Form(
         key: _formKey,

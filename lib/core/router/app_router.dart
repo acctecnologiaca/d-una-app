@@ -7,6 +7,16 @@ import 'package:d_una_app/features/home/presentation/home_screen.dart';
 import 'package:d_una_app/features/portfolio/presentation/portfolio_screen.dart';
 import '../../features/portfolio/presentation/screens/own_inventory_screen.dart';
 import '../../features/portfolio/presentation/screens/add_product/add_product_screen.dart';
+import '../../features/portfolio/presentation/screens/edit_product/edit_product_screen.dart';
+import '../../features/portfolio/presentation/screens/product_details/product_details_screen.dart';
+import '../../features/portfolio/presentation/screens/product_search_screen.dart';
+import '../../features/portfolio/presentation/screens/own_services_screen.dart';
+import '../../features/portfolio/presentation/screens/service_search_screen.dart';
+import '../../features/portfolio/presentation/screens/add_service/add_service_screen.dart';
+import '../../features/portfolio/presentation/screens/service_details_screen.dart';
+import '../../features/portfolio/presentation/screens/edit_service/edit_service_screen.dart';
+import '../../features/portfolio/data/models/product_model.dart';
+import '../../features/portfolio/data/models/service_model.dart';
 import 'package:d_una_app/features/quotes/presentation/quotes_screen.dart';
 import 'package:d_una_app/features/reports/presentation/reports_screen.dart';
 import 'package:d_una_app/features/profile/presentation/screens/profile_screen.dart';
@@ -88,6 +98,10 @@ final appRouter = GoRouter(
                   path: 'own-inventory',
                   routes: [
                     GoRoute(
+                      path: 'search',
+                      builder: (context, state) => const ProductSearchScreen(),
+                    ),
+                    GoRoute(
                       path: 'add',
                       parentNavigatorKey:
                           _rootNavigatorKey, // Full screen, cover shell? Or standard?
@@ -96,6 +110,43 @@ final appRouter = GoRouter(
                       // Usually "Add" flows are better as root or full screen.
                       // Let's keep it simple first.
                       builder: (context, state) => const AddProductScreen(),
+                    ),
+                    GoRoute(
+                      path: 'details/:id',
+                      builder: (context, state) {
+                        final extra = state.extra;
+                        final Product product;
+                        if (extra is Product) {
+                          product = extra;
+                        } else if (extra is Map<String, dynamic>) {
+                          product = Product.fromJson(extra);
+                        } else {
+                          // Fallback or error if neither
+                          throw Exception(
+                            'Invalid navigation state for ProductDetails: Expected Product or JSON Map',
+                          );
+                        }
+                        return ProductDetailsScreen(product: product);
+                      },
+                      routes: [
+                        GoRoute(
+                          path: 'edit',
+                          builder: (context, state) {
+                            final extra = state.extra;
+                            final Product product;
+                            if (extra is Product) {
+                              product = extra;
+                            } else if (extra is Map<String, dynamic>) {
+                              product = Product.fromJson(extra);
+                            } else {
+                              throw Exception(
+                                'Invalid navigation state for EditProduct: Expected Product or JSON Map',
+                              );
+                            }
+                            return EditProductScreen(product: product);
+                          },
+                        ),
+                      ],
                     ),
                   ],
                   builder: (context, state) => const OwnInventoryScreen(),
@@ -108,8 +159,32 @@ final appRouter = GoRouter(
                 ),
                 GoRoute(
                   path: 'own-services',
-                  builder: (context, state) =>
-                      const Scaffold(body: Center(child: Text('Own Services'))),
+                  builder: (context, state) => const OwnServicesScreen(),
+                  routes: [
+                    GoRoute(
+                      path: 'search',
+                      builder: (context, state) => const ServiceSearchScreen(),
+                    ),
+                    GoRoute(
+                      path: 'add',
+                      builder: (context, state) => const AddServiceScreen(),
+                    ),
+                    GoRoute(
+                      path: 'details/:id',
+                      builder: (context, state) {
+                        final service = state.extra as ServiceModel;
+                        return ServiceDetailsScreen(service: service);
+                      },
+                    ),
+                    // cleaned up
+                    GoRoute(
+                      path: 'edit/:id',
+                      builder: (context, state) {
+                        final service = state.extra as ServiceModel;
+                        return EditServiceScreen(service: service);
+                      },
+                    ),
+                  ],
                 ),
               ],
             ),

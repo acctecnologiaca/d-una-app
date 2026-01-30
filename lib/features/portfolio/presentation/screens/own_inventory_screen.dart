@@ -4,7 +4,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../providers/products_provider.dart';
 import 'widgets/inventory_item_card.dart';
+import 'widgets/estimate_price_dialog.dart';
 import '../../../../shared/widgets/custom_search_bar.dart';
+import '../../../../core/utils/string_extensions.dart';
 
 // Sort Option Enum
 enum SortOption { recent, nameAZ, nameZA }
@@ -46,89 +48,65 @@ class _OwnInventoryScreenState extends ConsumerState<OwnInventoryScreen> {
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
       ),
+      backgroundColor: colors.surfaceContainer,
       builder: (context) {
         return SafeArea(
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              ListTile(
-                leading: Icon(
-                  Icons.access_time,
-                  color: _currentSort == SortOption.recent
-                      ? colors.primary
-                      : colors.onSurfaceVariant,
-                ),
-                title: Text(
-                  'Más recientes',
-                  style: TextStyle(
-                    color: _currentSort == SortOption.recent
-                        ? colors.primary
-                        : colors.onSurface,
-                    fontWeight: _currentSort == SortOption.recent
-                        ? FontWeight.bold
-                        : FontWeight.normal,
+              // Handle bar
+              Center(
+                child: Container(
+                  margin: const EdgeInsets.symmetric(vertical: 16),
+                  height: 4,
+                  width: 32,
+                  decoration: BoxDecoration(
+                    color: Colors.grey[400],
+                    borderRadius: BorderRadius.circular(2),
                   ),
                 ),
-                trailing: _currentSort == SortOption.recent
-                    ? Icon(Icons.check, color: colors.primary)
-                    : null,
-                onTap: () {
-                  setState(() => _currentSort = SortOption.recent);
-                  Navigator.pop(context);
-                },
               ),
-              ListTile(
-                leading: Icon(
-                  Icons.sort_by_alpha,
-                  color: _currentSort == SortOption.nameAZ
-                      ? colors.primary
-                      : colors.onSurfaceVariant,
+              // Title
+              Padding(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16.0,
+                  vertical: 16.0,
                 ),
-                title: Text(
-                  'Nombre (A-Z)',
-                  style: TextStyle(
-                    color: _currentSort == SortOption.nameAZ
-                        ? colors.primary
-                        : colors.onSurface,
-                    fontWeight: _currentSort == SortOption.nameAZ
-                        ? FontWeight.bold
-                        : FontWeight.normal,
-                  ),
+                child: Row(
+                  children: [
+                    IconButton(
+                      icon: const Icon(Icons.close),
+                      onPressed: () => context.pop(),
+                    ),
+                    Expanded(
+                      child: Text(
+                        'Ordenar por',
+                        style: Theme.of(context).textTheme.titleMedium
+                            ?.copyWith(fontWeight: FontWeight.bold),
+                      ),
+                    ),
+                  ],
                 ),
-                trailing: _currentSort == SortOption.nameAZ
-                    ? Icon(Icons.check, color: colors.primary)
-                    : null,
-                onTap: () {
-                  setState(() => _currentSort = SortOption.nameAZ);
-                  Navigator.pop(context);
-                },
               ),
-              ListTile(
-                leading: Icon(
-                  Icons.sort_by_alpha,
-                  color: _currentSort == SortOption.nameZA
-                      ? colors.primary
-                      : colors.onSurfaceVariant,
-                ),
-                title: Text(
-                  'Nombre (Z-A)',
-                  style: TextStyle(
-                    color: _currentSort == SortOption.nameZA
-                        ? colors.primary
-                        : colors.onSurface,
-                    fontWeight: _currentSort == SortOption.nameZA
-                        ? FontWeight.bold
-                        : FontWeight.normal,
-                  ),
-                ),
-                trailing: _currentSort == SortOption.nameZA
-                    ? Icon(Icons.check, color: colors.primary)
-                    : null,
-                onTap: () {
-                  setState(() => _currentSort = SortOption.nameZA);
-                  Navigator.pop(context);
-                },
+              _buildSortOption(
+                context,
+                'Más reciente',
+                SortOption.recent,
+                colors,
               ),
+              _buildSortOption(
+                context,
+                'Nombre (A-Z)',
+                SortOption.nameAZ,
+                colors,
+              ),
+              _buildSortOption(
+                context,
+                'Nombre (Z-A)',
+                SortOption.nameZA,
+                colors,
+              ),
+              const SizedBox(height: 16),
             ],
           ),
         );
@@ -136,10 +114,214 @@ class _OwnInventoryScreenState extends ConsumerState<OwnInventoryScreen> {
     );
   }
 
+  void _showProductActionSheet(
+    BuildContext context,
+    dynamic product,
+    double currentPrice, // Add price argument
+    ColorScheme colors,
+  ) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
+      backgroundColor: colors.surfaceContainer,
+      builder: (context) {
+        // Mock data for display consistency with image
+        final randomPrice = 30 + Random().nextDouble() * 70;
+        final randomStock = 5 + Random().nextInt(26);
+
+        return SafeArea(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // Handle bar
+              Center(
+                child: Container(
+                  margin: const EdgeInsets.symmetric(vertical: 16),
+                  height: 4,
+                  width: 32,
+                  decoration: BoxDecoration(
+                    color: Colors.grey[400],
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+              ),
+
+              // Title Row
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                child: Row(
+                  children: [
+                    IconButton(
+                      icon: const Icon(Icons.close),
+                      onPressed: () => context.pop(),
+                    ),
+                    Expanded(
+                      child: Text(
+                        'Producto seleccionado',
+                        style: Theme.of(context).textTheme.titleMedium
+                            ?.copyWith(fontWeight: FontWeight.bold),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+
+              // Product Info Summary (Mini Card)
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                child: InventoryItemCard(
+                  name: product.name,
+                  brand: product.brand?.name ?? 'Sin marca',
+                  model: product.model ?? 'Sin modelo',
+                  stock: randomStock, // Using same mock stock as before
+                  price: randomPrice, // Using same mock price as before
+                  imageUrl: product.imageUrl,
+                  onTap: () {}, // No action when tapping the card in the sheet
+                ),
+              ),
+              const SizedBox(height: 8),
+              const Divider(height: 1),
+              const SizedBox(height: 8),
+
+              // Actions
+              _buildActionItem(
+                context: context,
+                icon: Icons.local_offer_outlined,
+                label: 'Estimar precio de venta',
+                onTap: () {
+                  context.pop();
+                  showDialog(
+                    context: context,
+                    builder: (_) => EstimatePriceDialog(
+                      basePrice: currentPrice,
+                      productName: product.name,
+                      productBrand: product.brand?.name,
+                      productModel: product.model,
+                    ),
+                  );
+                },
+                colors: colors,
+              ),
+              _buildActionItem(
+                context: context,
+                icon: Icons.request_quote_outlined,
+                label: 'Cotizar a un cliente',
+                onTap: () {
+                  context.pop();
+                  // TODO: Implement Quote to Client
+                },
+                colors: colors,
+              ),
+              _buildActionItem(
+                context: context,
+                icon: 'assets/icons/add_request_quote.png',
+                label: 'Agregar a cotización existente',
+                onTap: () {
+                  context.pop();
+                  // TODO: Implement Add to Existing Quote
+                },
+                colors: colors,
+              ),
+              _buildActionItem(
+                context: context,
+                icon: Icons.info_outline,
+                label: 'Detalles del producto',
+                onTap: () {
+                  context.pop();
+                  context.push(
+                    '/portfolio/own-inventory/details/${product.id}',
+                    extra: product,
+                  );
+                },
+                colors: colors,
+              ),
+
+              const SizedBox(height: 24),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildActionItem({
+    required BuildContext context,
+    required dynamic icon, // Can be IconData or String (asset path)
+    required String label,
+    required VoidCallback onTap,
+    required ColorScheme colors,
+  }) {
+    return ListTile(
+      leading: icon is IconData
+          ? Icon(icon, color: colors.onSurface)
+          : ImageIcon(
+              AssetImage(icon as String),
+              color: colors.onSurface,
+              size: 24,
+            ),
+      title: Text(label, style: const TextStyle(fontWeight: FontWeight.w500)),
+      onTap: onTap,
+      contentPadding: const EdgeInsets.symmetric(horizontal: 24),
+    );
+  }
+
+  Widget _buildSortOption(
+    BuildContext context,
+    String label,
+    SortOption option,
+    ColorScheme colors,
+  ) {
+    final isSelected = _currentSort == option;
+    return InkWell(
+      onTap: () {
+        setState(() {
+          _currentSort = option;
+        });
+        context.pop();
+      },
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 16.0),
+        child: Row(
+          children: [
+            Icon(
+              isSelected
+                  ? (option == SortOption.recent
+                        ? Icons.arrow_downward
+                        : (option == SortOption.nameAZ
+                              ? Icons.arrow_upward
+                              : Icons.arrow_downward))
+                  : (option == SortOption.recent
+                        ? Icons.arrow_downward
+                        : (option == SortOption.nameAZ
+                              ? Icons.arrow_upward
+                              : Icons.arrow_downward)),
+              color: colors.onSurface,
+              size: 20,
+            ),
+            const SizedBox(width: 16),
+            Expanded(
+              child: Text(
+                label,
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w400,
+                  color: colors.onSurface,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   String _getSortLabel(SortOption option) {
     switch (option) {
       case SortOption.recent:
-        return 'Más recientes';
+        return 'Más reciente';
       case SortOption.nameAZ:
         return 'Nombre (A-Z)';
       case SortOption.nameZA:
@@ -179,8 +361,10 @@ class _OwnInventoryScreenState extends ConsumerState<OwnInventoryScreen> {
             child: CustomSearchBar(
               controller: _searchController,
               hintText: 'Buscar...',
-              onFilterTap: () {
-                // Filter action
+              readOnly: true,
+              showFilterIcon: true,
+              onTap: () {
+                context.push('/portfolio/own-inventory/search');
               },
             ),
           ),
@@ -240,12 +424,13 @@ class _OwnInventoryScreenState extends ConsumerState<OwnInventoryScreen> {
               data: (products) {
                 // Filter List
                 var filteredList = products.where((product) {
-                  final name = product.name.toLowerCase();
-                  final brand = (product.brand ?? '').toLowerCase();
-                  final model = (product.model ?? '').toLowerCase();
-                  return name.contains(_searchQuery) ||
-                      brand.contains(_searchQuery) ||
-                      model.contains(_searchQuery);
+                  final normalizedQuery = _searchQuery.normalized;
+                  final name = product.name.normalized;
+                  final brand = (product.brand?.name ?? '').normalized;
+                  final model = (product.model ?? '').normalized;
+                  return name.contains(normalizedQuery) ||
+                      brand.contains(normalizedQuery) ||
+                      model.contains(normalizedQuery);
                 }).toList();
 
                 // Apply sort
@@ -273,8 +458,12 @@ class _OwnInventoryScreenState extends ConsumerState<OwnInventoryScreen> {
                   );
                 }
 
-                return ListView.builder(
+                return ListView.separated(
+                  padding: const EdgeInsets.fromLTRB(16, 16, 16, 100),
                   itemCount: filteredList.length,
+                  separatorBuilder: (context, index) =>
+                      //const SizedBox(height: 12),
+                      const Divider(height: 1),
                   itemBuilder: (context, index) {
                     final product = filteredList[index];
                     // Random price between 30 and 100 for visual testing
@@ -282,17 +471,21 @@ class _OwnInventoryScreenState extends ConsumerState<OwnInventoryScreen> {
                     // Random stock between 5 and 30 for visual testing
                     final randomStock = 5 + Random().nextInt(26);
 
-                    return Padding(
-                      padding: const EdgeInsets.only(bottom: 12.0),
-                      child: InventoryItemCard(
-                        name: product.name,
-                        brand: product.brand ?? 'Sin marca',
-                        model: product.model ?? 'Sin modelo',
-                        stock: randomStock, // Mock stock to see the color
-                        price: randomPrice,
-                        imageUrl: product.imageUrl,
-                        onTap: () {},
-                      ),
+                    return InventoryItemCard(
+                      name: product.name,
+                      brand: product.brand?.name ?? 'Sin marca',
+                      model: product.model ?? 'Sin modelo',
+                      stock: randomStock, // Mock stock to see the color
+                      price: randomPrice,
+                      imageUrl: product.imageUrl,
+                      onTap: () {
+                        _showProductActionSheet(
+                          context,
+                          product,
+                          randomPrice,
+                          colors,
+                        );
+                      },
                     );
                   },
                 );

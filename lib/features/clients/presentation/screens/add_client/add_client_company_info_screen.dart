@@ -1,7 +1,8 @@
+import 'package:d_una_app/shared/widgets/wizard_bottom_bar.dart';
+import 'package:d_una_app/shared/widgets/wizard_progress_bar.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:d_una_app/shared/widgets/custom_button.dart';
 import 'package:d_una_app/shared/widgets/custom_text_field.dart';
 import '../../providers/add_client_provider.dart';
 import '../../providers/clients_provider.dart';
@@ -21,7 +22,6 @@ class _AddClientCompanyInfoScreenState
   final _idController = TextEditingController(); // RIF
   final _aliasController = TextEditingController();
 
-  bool _isLoading = false;
   String? _rifError;
 
   @override
@@ -36,8 +36,6 @@ class _AddClientCompanyInfoScreenState
     setState(() => _rifError = null);
 
     if (_formKey.currentState!.validate()) {
-      setState(() => _isLoading = true);
-
       // Check if RIF exists
       final rif = _idController.text.trim();
       if (rif.isNotEmpty) {
@@ -48,7 +46,6 @@ class _AddClientCompanyInfoScreenState
           if (exists) {
             if (mounted) {
               setState(() {
-                _isLoading = false;
                 _rifError = 'RIF/Identificación existente';
               });
               _formKey.currentState!.validate();
@@ -61,7 +58,6 @@ class _AddClientCompanyInfoScreenState
       }
 
       if (mounted) {
-        setState(() => _isLoading = false);
         ref
             .read(addClientProvider.notifier)
             .updateBasicInfo(
@@ -92,21 +88,7 @@ class _AddClientCompanyInfoScreenState
           ),
         ),
         centerTitle: false,
-        bottom: PreferredSize(
-          preferredSize: const Size.fromHeight(4.0),
-          child: Row(
-            children: [
-              Expanded(
-                flex: 2,
-                child: Container(color: colors.primary, height: 4),
-              ),
-              Expanded(
-                flex: 3,
-                child: Container(color: colors.secondaryContainer, height: 4),
-              ),
-            ],
-          ),
-        ),
+        bottom: const WizardProgressBar(totalSteps: 4, currentStep: 2),
       ),
       body: SafeArea(
         child: Column(
@@ -169,43 +151,13 @@ class _AddClientCompanyInfoScreenState
 
             // Footer
             Padding(
-              padding: const EdgeInsets.fromLTRB(16, 0, 16, 56),
-              child: Row(
-                children: [
-                  TextButton(
-                    onPressed: () {
-                      context.go('/clients');
-                    },
-                    child: Text(
-                      'Cancelar',
-                      style: TextStyle(
-                        color: colors.primary,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                  ),
-                  const Spacer(),
-                  TextButton(
-                    onPressed: () => context.pop(),
-                    child: Text(
-                      'Atrás',
-                      style: TextStyle(
-                        color: colors.primary,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 16),
-                  SizedBox(
-                    width: 120, // Check width constraint
-                    child: CustomButton(
-                      text: 'Siguiente',
-                      onPressed: _onNext,
-                      isLoading: _isLoading,
-                      type: ButtonType.primary,
-                    ),
-                  ),
-                ],
+              padding: const EdgeInsets.only(bottom: 40),
+              child: WizardButtonBar(
+                onCancel: () {
+                  context.go('/clients');
+                },
+                onBack: () => context.pop(),
+                onNext: _onNext,
               ),
             ),
           ],

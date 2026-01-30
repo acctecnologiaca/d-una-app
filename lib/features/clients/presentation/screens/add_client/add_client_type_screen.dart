@@ -60,11 +60,11 @@ class _AddClientTypeScreenState extends ConsumerState<AddClientTypeScreen> {
           ),
         ),
         centerTitle: false,
-        bottom: const WizardProgressBar(totalSteps: 4, currentStep: 0),
+        bottom: const WizardProgressBar(totalSteps: 4, currentStep: 1),
       ),
       body: SafeArea(
         child: Padding(
-          padding: const EdgeInsets.fromLTRB(16, 24, 16, 40),
+          padding: const EdgeInsets.fromLTRB(0, 24, 0, 40),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
@@ -108,7 +108,6 @@ class _AddClientTypeScreenState extends ConsumerState<AddClientTypeScreen> {
                 },
                 onNext: _onNext,
               ),
-              const SizedBox(height: 16),
             ],
           ),
         ),

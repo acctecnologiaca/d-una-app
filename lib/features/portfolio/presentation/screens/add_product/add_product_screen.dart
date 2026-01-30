@@ -8,13 +8,15 @@ import 'package:cached_network_image/cached_network_image.dart';
 import '../../../../../../shared/widgets/wizard_progress_bar.dart';
 import 'steps/add_product_step1.dart';
 import 'steps/add_product_step2.dart';
-
 import 'steps/add_product_step3.dart';
 import 'steps/add_product_step4.dart';
-
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../data/models/product_model.dart';
+import '../../../data/models/category_model.dart';
+import '../../../data/models/brand_model.dart';
+import '../../../domain/utils/product_validators.dart';
 import '../../../presentation/providers/products_provider.dart';
+import '../../providers/lookup_providers.dart';
 
 class AddProductScreen extends ConsumerStatefulWidget {
   const AddProductScreen({super.key});
@@ -30,16 +32,15 @@ class _AddProductScreenState extends ConsumerState<AddProductScreen> {
   // Controllers for steps
   // Step 1
   final TextEditingController _modelController = TextEditingController();
-  String? _selectedBrand;
+  Brand? _selectedBrand;
 
   // Step 2
   final TextEditingController _nameController = TextEditingController();
   final TextEditingController _specsController = TextEditingController();
 
   // Step 3
-  String? _selectedCategory;
+  Category? _selectedCategory;
 
-  // Step 4
   // Step 4
   File? _productImage;
 
@@ -75,9 +76,10 @@ class _AddProductScreenState extends ConsumerState<AddProductScreen> {
     final products = ref.read(productsProvider).value ?? [];
 
     // 1. Exact Match: Model ONLY (User request)
-    final exactMatchProduct = products
-        .where((p) => p.model?.toLowerCase() == currentModel.toLowerCase())
-        .firstOrNull;
+    final exactMatchProduct = ProductValidators.findExactMatch(
+      products,
+      currentModel,
+    );
 
     if (exactMatchProduct != null) {
       // Block user
@@ -115,7 +117,7 @@ class _AddProductScreenState extends ConsumerState<AddProductScreen> {
                 ),
               Text(
                 'Ya existe un equipo con el modelo "$currentModel" en el inventario.\n\n'
-                'Marca existente: ${exactMatchProduct.brand}',
+                'Marca existente: ${exactMatchProduct.brand?.name ?? "Desconocida"}',
               ),
             ],
           ),
@@ -134,21 +136,10 @@ class _AddProductScreenState extends ConsumerState<AddProductScreen> {
     }
 
     // 2. Fuzzy Match: 80% Similarity on Model
-    // Filter by same brand? User said "decirle cual es y de que marca", implies checking all brands or confirming brand context.
-    // "Ya existe un modelo similar... y decirle cual es y de que marca".
-    // This implies we check ALL products.
-
-    Product? similarProduct;
-    for (final p in products) {
-      final similarity = _calculateSimilarity(
-        currentModel.toLowerCase(),
-        p.model!.toLowerCase(),
-      );
-      if (similarity >= 0.8) {
-        similarProduct = p;
-        break; // Stop at first similar found
-      }
-    }
+    final similarProduct = ProductValidators.findSimilarMatch(
+      products,
+      currentModel,
+    );
 
     if (similarProduct != null) {
       showDialog(
@@ -158,7 +149,7 @@ class _AddProductScreenState extends ConsumerState<AddProductScreen> {
           content: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              if (similarProduct!.imageUrl != null)
+              if (similarProduct.imageUrl != null)
                 Padding(
                   padding: const EdgeInsets.only(bottom: 16.0),
                   child: ClipRRect(
@@ -186,7 +177,7 @@ class _AddProductScreenState extends ConsumerState<AddProductScreen> {
               Text(
                 'Ya existe un modelo similar en el inventario:\n\n'
                 'Modelo: ${similarProduct.model}\n'
-                'Marca: ${similarProduct.brand}\n\n'
+                'Marca: ${similarProduct.brand?.name ?? "Desconocida"}\n\n'
                 '¿Estás seguro de continuar?',
               ),
             ],
@@ -213,42 +204,7 @@ class _AddProductScreenState extends ConsumerState<AddProductScreen> {
     }
   }
 
-  /// Calculates similarity between two strings (0.0 to 1.0) using Levenshtein distance.
-  double _calculateSimilarity(String s1, String s2) {
-    if (s1 == s2) return 1.0;
-    if (s1.isEmpty || s2.isEmpty) return 0.0;
-
-    final distance = _levenshteinDistance(s1, s2);
-    final maxLength = (s1.length > s2.length) ? s1.length : s2.length;
-    return 1.0 - (distance / maxLength);
-  }
-
-  int _levenshteinDistance(String s1, String s2) {
-    if (s1 == s2) return 0;
-    if (s1.isEmpty) return s2.length;
-    if (s2.isEmpty) return s1.length;
-
-    List<int> v0 = List<int>.generate(s2.length + 1, (i) => i);
-    List<int> v1 = List<int>.filled(s2.length + 1, 0);
-
-    for (int i = 0; i < s1.length; i++) {
-      v1[0] = i + 1;
-      for (int j = 0; j < s2.length; j++) {
-        int cost = (s1.codeUnitAt(i) == s2.codeUnitAt(j)) ? 0 : 1;
-        v1[j + 1] = [
-          v1[j] + 1,
-          v0[j + 1] + 1,
-          v0[j] + cost,
-        ].reduce((a, b) => a < b ? a : b);
-      }
-      for (int j = 0; j < v0.length; j++) {
-        v0[j] = v1[j];
-      }
-    }
-    return v1[s2.length];
-  }
-
-  void _nextStep() {
+  void nextStep() {
     if (_currentStep < _totalSteps - 1) {
       setState(() {
         _currentStep++;
@@ -256,7 +212,7 @@ class _AddProductScreenState extends ConsumerState<AddProductScreen> {
     }
   }
 
-  void _prevStep() {
+  void prevStep() {
     if (_currentStep > 0) {
       setState(() {
         _currentStep--;
@@ -266,14 +222,16 @@ class _AddProductScreenState extends ConsumerState<AddProductScreen> {
     }
   }
 
-  Future<void> _submitProduct() async {
+  Future<void> submitProduct() async {
     final product = Product(
       id: '', // Generated by DB
       userId: '', // Handled by Repository
       name: _nameController.text,
+      brandId: _selectedBrand?.id,
       brand: _selectedBrand,
       model: _modelController.text,
       specs: _specsController.text,
+      categoryId: _selectedCategory?.id,
       category: _selectedCategory,
       createdAt: DateTime.now(),
       updatedAt: DateTime.now(),
@@ -311,7 +269,7 @@ class _AddProductScreenState extends ConsumerState<AddProductScreen> {
     }
   }
 
-  Future<void> _handleAiAutofill() async {
+  Future<void> handleAiAutofill() async {
     final brand = _selectedBrand;
     final model = _modelController.text.trim();
 
@@ -329,7 +287,7 @@ class _AddProductScreenState extends ConsumerState<AddProductScreen> {
     try {
       final data = await ref
           .read(productsRepositoryProvider)
-          .fetchProductDetailsFromAI(brand, model);
+          .fetchProductDetailsFromAI(brand.name, model);
 
       if (mounted) {
         setState(() {
@@ -348,16 +306,91 @@ class _AddProductScreenState extends ConsumerState<AddProductScreen> {
       }
     } catch (e) {
       if (mounted) {
+        String errorMessage = 'Error al consultar IA';
+        if (e.toString().contains('503') ||
+            e.toString().toLowerCase().contains('overloaded')) {
+          errorMessage =
+              'El servicio de IA está congestionado. Intenta de nuevo en unos momentos.';
+        } else if (e.toString().contains('429')) {
+          errorMessage =
+              'Has excedido el límite de consultas. Intenta más tarde.';
+        }
+
         ScaffoldMessenger.of(
           context,
-        ).showSnackBar(SnackBar(content: Text('Error al consultar IA: $e')));
+        ).showSnackBar(SnackBar(content: Text(errorMessage)));
       }
     }
+  }
+
+  Future<void> _addNewCategory(String name) async {
+    try {
+      final newCategory = await ref
+          .read(lookupRepositoryProvider)
+          .addCategory(name);
+      ref.invalidate(categoriesProvider); // Refresh the list
+      setState(() {
+        _selectedCategory = newCategory; // Auto-select new category
+      });
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error al agregar categoría: $e')),
+        );
+      }
+    }
+  }
+
+  void _showAddCategoryDialog() {
+    final textController = TextEditingController();
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Agregar nueva categoría'),
+        content: TextField(
+          controller: textController,
+          decoration: const InputDecoration(
+            labelText: 'Nombre de la categoría',
+            hintText: 'Ej. Accesorios',
+          ),
+          textCapitalization: TextCapitalization.sentences,
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancelar'),
+          ),
+          FilledButton(
+            onPressed: () {
+              final val = textController.text.trim();
+              if (val.isNotEmpty) {
+                _addNewCategory(val);
+                Navigator.pop(context);
+              }
+            },
+            child: const Text('Agregar'),
+          ),
+        ],
+      ),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
     final colors = Theme.of(context).colorScheme;
+    final brandsAsync = ref.watch(brandsProvider);
+    final brandsList = brandsAsync.valueOrNull ?? [];
+
+    final categoriesAsync = ref.watch(categoriesProvider);
+    final categoriesList = (categoriesAsync.valueOrNull ?? [])
+        .toList(); // Create mutable copy
+
+    // Ensure selected category is in the list
+    if (_selectedCategory != null &&
+        !categoriesList.contains(_selectedCategory)) {
+      categoriesList.add(_selectedCategory!);
+    }
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('Agregar producto'),
@@ -376,7 +409,7 @@ class _AddProductScreenState extends ConsumerState<AddProductScreen> {
         bottom: PreferredSize(
           preferredSize: const Size.fromHeight(4),
           child: WizardProgressBar(
-            currentStep: _currentStep,
+            currentStep: _currentStep + 1,
             totalSteps: _totalSteps,
           ),
         ),
@@ -388,31 +421,51 @@ class _AddProductScreenState extends ConsumerState<AddProductScreen> {
             modelController: _modelController,
             focusNode: _modelFocusNode,
             selectedBrand: _selectedBrand,
+            brands: brandsList,
             onBrandChanged: (val) {
               setState(() {
                 _selectedBrand = val;
               });
             },
-            onNext: _nextStep,
+            onNext: nextStep,
             onCancel: () => context.pop(),
+            onAddBrand: (name) async {
+              try {
+                final newBrand = await ref
+                    .read(lookupRepositoryProvider)
+                    .addBrand(name);
+                ref.invalidate(brandsProvider);
+                setState(() {
+                  _selectedBrand = newBrand;
+                });
+              } catch (e) {
+                if (mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text('Error al agregar marca: $e')),
+                  );
+                }
+              }
+            },
           ),
           AddProductStep2(
             nameController: _nameController,
             specsController: _specsController,
-            onNext: _nextStep,
-            onBack: _prevStep,
+            onNext: nextStep,
+            onBack: prevStep,
             onCancel: () => context.pop(),
-            onAiAutofill: _handleAiAutofill,
+            onAiAutofill: handleAiAutofill,
           ),
           AddProductStep3(
             selectedCategory: _selectedCategory,
+            categories: categoriesList,
             onCategoryChanged: (val) {
               setState(() {
                 _selectedCategory = val;
               });
             },
-            onNext: _nextStep,
-            onBack: _prevStep,
+            onAddCategory: _showAddCategoryDialog,
+            onNext: nextStep,
+            onBack: prevStep,
             onCancel: () => context.pop(),
           ),
           AddProductStep4(
@@ -420,12 +473,12 @@ class _AddProductScreenState extends ConsumerState<AddProductScreen> {
             model: _modelController.text,
             name: _nameController.text,
             specs: _specsController.text,
-            category: _selectedCategory,
+            category: _selectedCategory?.name,
             image: _productImage,
             onPickImage: (source) => _pickImageFromSource(source),
-            onBack: _prevStep,
+            onBack: prevStep,
             onCancel: () => context.pop(),
-            onSave: _submitProduct,
+            onSave: submitProduct,
           ),
         ],
       ),

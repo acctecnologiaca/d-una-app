@@ -35,7 +35,7 @@ class InventoryItemCard extends StatelessWidget {
     return InkWell(
       onTap: onTap,
       child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 12.0),
+        padding: const EdgeInsets.symmetric(vertical: 16.0),
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.center,
           children: [
@@ -170,7 +170,7 @@ class InventoryItemCard extends StatelessWidget {
         return Symbols.layers;
       case 'ud.':
       default:
-        return Symbols.inventory_2;
+        return Symbols.package_2;
     }
   }
 

@@ -1,11 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-import '../../../../shared/widgets/custom_button.dart';
+import '../../../../shared/widgets/wizard_bottom_bar.dart';
+import '../../../../shared/widgets/wizard_progress_bar.dart';
 
 class RegisterLayout extends StatelessWidget {
   final String title;
   final String? subtitle;
-  final double progress; // 0.0 to 1.0 (or step index based on total)
+  final int progress;
   final Widget content;
   final VoidCallback onNext;
   final VoidCallback? onBack;
@@ -37,47 +38,36 @@ class RegisterLayout extends StatelessWidget {
 
     return Scaffold(
       backgroundColor: colors.surface,
+      appBar: AppBar(
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        leading: IconButton(
+          icon: Icon(Icons.arrow_back, color: colors.onSurface),
+          onPressed: onBack ?? () => context.pop(),
+        ),
+        title: Text(
+          'Crea una cuenta',
+          style: textTheme.titleLarge?.copyWith(
+            color: colors.onSurface,
+            fontWeight: FontWeight.normal,
+          ),
+        ),
+        centerTitle: false,
+        bottom: PreferredSize(
+          preferredSize: const Size.fromHeight(4.0),
+          child: WizardProgressBar(
+            totalSteps: 5, // Estimated total steps for registration
+            currentStep: progress, // Map progress (0-5) to steps roughly
+          ),
+        ),
+      ),
       body: SafeArea(
         child: SingleChildScrollView(
-          padding: const EdgeInsets.fromLTRB(16.0, 22.0, 16.0, 40.0),
+          padding: const EdgeInsets.fromLTRB(16.0, 24.0, 16.0, 40.0),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              // Header Row (Back Arrow + Title)
-              Row(
-                children: [
-                  IconButton(
-                    icon: Icon(Icons.arrow_back, color: colors.onSurface),
-                    onPressed: onBack ?? () => context.pop(),
-                    padding: EdgeInsets.zero,
-                    constraints: const BoxConstraints(),
-                  ),
-                  const SizedBox(width: 16),
-                  Text(
-                    'Crea una cuenta',
-                    style: textTheme.titleLarge?.copyWith(
-                      color: colors.onSurface,
-                      fontWeight: FontWeight.normal,
-                    ),
-                  ),
-                ],
-              ),
               const SizedBox(height: 16),
-
-              // Progress Bar
-              Stack(
-                children: [
-                  Container(
-                    height: 4,
-                    width: double.infinity,
-                    color: const Color(0xFFFFDBCD), // Secondary container color
-                  ),
-                  FractionallySizedBox(
-                    widthFactor: progress,
-                    child: Container(height: 4, color: colors.primary),
-                  ),
-                ],
-              ),
               const SizedBox(height: 32),
 
               // Main Title/Question
@@ -108,44 +98,17 @@ class RegisterLayout extends StatelessWidget {
               const SizedBox(height: 60),
 
               // Footer Navigation
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  TextButton(
-                    onPressed: onCancel ?? () => context.go('/login'),
-                    child: Text(
-                      cancelButtonText,
-                      style: TextStyle(
-                        color: colors.primary,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ),
-                  Row(
-                    children: [
-                      if (onBack != null || Navigator.canPop(context))
-                        TextButton(
-                          onPressed: onBack ?? () => context.pop(),
-                          child: Text(
-                            backButtonText,
-                            style: TextStyle(
-                              color: colors.primary,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                        ),
-                      const SizedBox(width: 8),
-                      SizedBox(
-                        width: 120,
-                        child: CustomButton(
-                          text: nextButtonText,
-                          onPressed: isNextEnabled ? onNext : null,
-                          type: ButtonType.primary,
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
+              // Footer Navigation
+              WizardButtonBar(
+                onCancel: onCancel ?? () => context.go('/login'),
+                onBack: (onBack != null || Navigator.canPop(context))
+                    ? (onBack ?? () => context.pop())
+                    : null,
+                onNext: onNext,
+                labelNext: nextButtonText,
+                labelCancel: cancelButtonText,
+                labelBack: backButtonText,
+                isNextEnabled: isNextEnabled,
               ),
             ],
           ),

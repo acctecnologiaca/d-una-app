@@ -48,7 +48,7 @@ class _RegisterNameScreenState extends ConsumerState<RegisterNameScreen> {
   Widget build(BuildContext context) {
     return RegisterLayout(
       title: 'Ingresa tu nombre',
-      progress: 0.3, // Approx for step 2
+      progress: 3,
       onNext: _onNext,
       content: Form(
         key: _formKey,

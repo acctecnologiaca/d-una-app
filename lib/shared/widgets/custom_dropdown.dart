@@ -48,7 +48,7 @@ class CustomDropdown<T> extends StatelessWidget {
           vertical: 16,
         ),
         filled: true,
-        fillColor: colors.surface,
+        fillColor: colors.surfaceContainerLow,
       ),
       icon: const Icon(Icons.arrow_drop_down),
       selectedItemBuilder: (BuildContext context) {

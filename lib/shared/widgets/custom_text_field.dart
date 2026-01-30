@@ -8,6 +8,7 @@ class CustomTextField extends StatefulWidget {
   final TextEditingController? controller;
   final bool obscureText;
   final Widget? suffixIcon;
+  final Widget? prefixIcon;
   final TextInputType? keyboardType;
   final String? Function(String?)? validator;
   final List<TextInputFormatter>? inputFormatters;
@@ -19,6 +20,7 @@ class CustomTextField extends StatefulWidget {
   final bool enabled;
   final int? minLines;
   final FocusNode? focusNode;
+  final String? prefixText;
 
   const CustomTextField({
     super.key,
@@ -28,6 +30,7 @@ class CustomTextField extends StatefulWidget {
     this.controller,
     this.obscureText = false,
     this.suffixIcon,
+    this.prefixIcon,
     this.keyboardType,
     this.validator,
     this.inputFormatters,
@@ -39,6 +42,7 @@ class CustomTextField extends StatefulWidget {
     this.enabled = true,
     this.minLines,
     this.focusNode,
+    this.prefixText,
   });
 
   @override
@@ -94,10 +98,11 @@ class _CustomTextFieldState extends State<CustomTextField> {
   @override
   Widget build(BuildContext context) {
     // Determine suffix icon: User provided > Clear Button > Null
+    final colors = Theme.of(context).colorScheme;
     Widget? activeSuffixIcon = widget.suffixIcon;
     if (activeSuffixIcon == null && _showClearButton && !widget.obscureText) {
       activeSuffixIcon = IconButton(
-        icon: const Icon(Icons.cancel_outlined, color: Colors.grey),
+        icon: Icon(Icons.cancel_outlined, color: colors.onSurfaceVariant),
         onPressed: () {
           _controller.clear();
           widget.onChanged?.call('');
@@ -127,6 +132,8 @@ class _CustomTextFieldState extends State<CustomTextField> {
             hintText: widget.hintText,
             helperText: widget.helperText,
             helperMaxLines: 2,
+            prefixIcon: widget.prefixIcon,
+            prefixText: widget.prefixText,
             suffixIcon: activeSuffixIcon,
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(8.0),
@@ -140,7 +147,9 @@ class _CustomTextFieldState extends State<CustomTextField> {
               vertical: 16,
             ),
             filled: true,
-            fillColor: widget.enabled ? Colors.white : Colors.grey.shade200,
+            fillColor: widget.enabled
+                ? colors.surfaceContainerLowest
+                : colors.surfaceContainerHighest,
           ),
         ),
       ],

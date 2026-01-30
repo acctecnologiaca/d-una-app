@@ -1,11 +1,13 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
+import '../../../../data/models/brand_model.dart';
 import '../../../../../../shared/widgets/wizard_bottom_bar.dart';
+import '../../../../../../shared/widgets/info_block.dart';
 import 'package:material_symbols_icons/symbols.dart';
 
 class AddProductStep4 extends StatelessWidget {
-  final String? brand;
+  final Brand? brand;
   final String model;
   final String name;
   final String specs;
@@ -71,179 +73,140 @@ class AddProductStep4 extends StatelessWidget {
   Widget build(BuildContext context) {
     final colors = Theme.of(context).colorScheme;
 
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        return SingleChildScrollView(
-          padding: const EdgeInsets.fromLTRB(16, 24, 16, 40),
-          child: ConstrainedBox(
-            constraints: BoxConstraints(minHeight: constraints.maxHeight - 64),
-            child: IntrinsicHeight(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.center,
-                children: [
-                  Text(
-                    'Resúmen',
-                    style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                      fontWeight: FontWeight.w400,
-                      fontSize: 24,
-                      color: colors.onSurface,
-                    ),
-                    textAlign: TextAlign.center,
+    return Column(
+      children: [
+        Expanded(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.fromLTRB(16, 24, 16, 24),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                Text(
+                  'Resúmen',
+                  style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                    fontWeight: FontWeight.w400,
+                    fontSize: 24,
+                    color: colors.onSurface,
                   ),
-                  const SizedBox(height: 32),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 32),
 
-                  // Product Icon/Image Circle
-                  GestureDetector(
-                    onTap: () => _pickImage(context),
-                    child: Stack(
-                      children: [
-                        image != null
-                            ? CircleAvatar(
-                                radius: 60,
-                                backgroundImage: FileImage(image!),
-                                backgroundColor: colors.surfaceContainerHighest,
-                              )
-                            : Container(
-                                width: 120,
-                                height: 120,
-                                decoration: BoxDecoration(
-                                  shape: BoxShape.circle,
-                                  color: colors.secondaryContainer,
-                                ),
-                                child: Center(
-                                  child: Icon(
-                                    Symbols.package_2,
-                                    weight: 300,
-                                    size: 92,
-                                    color: colors.onSecondaryContainer,
-                                  ),
+                // Product Icon/Image Circle
+                GestureDetector(
+                  onTap: () => _pickImage(context),
+                  child: Stack(
+                    children: [
+                      image != null
+                          ? CircleAvatar(
+                              radius: 60,
+                              backgroundImage: FileImage(image!),
+                              backgroundColor: colors.surfaceContainerHighest,
+                            )
+                          : Container(
+                              width: 120,
+                              height: 120,
+                              decoration: BoxDecoration(
+                                shape: BoxShape.circle,
+                                color: colors.secondaryContainer,
+                              ),
+                              child: Center(
+                                child: Icon(
+                                  Symbols.package_2,
+                                  weight: 300,
+                                  size: 92,
+                                  color: colors.onSecondaryContainer,
                                 ),
                               ),
-                        Positioned(
-                          bottom: 0,
-                          right: 0,
-                          child: Container(
-                            padding: const EdgeInsets.all(8),
-                            decoration: BoxDecoration(
-                              color: colors.surface,
-                              shape: BoxShape.circle,
-                              border: Border.all(
-                                color: colors.outlineVariant,
-                                width: 1,
+                            ),
+                      Positioned(
+                        bottom: 0,
+                        right: 0,
+                        child: Container(
+                          padding: const EdgeInsets.all(8),
+                          decoration: BoxDecoration(
+                            color: colors.surface,
+                            shape: BoxShape.circle,
+                            border: Border.all(
+                              color: colors.outlineVariant,
+                              width: 1,
+                            ),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withValues(alpha: 0.1),
+                                blurRadius: 4,
+                                offset: const Offset(0, 2),
                               ),
-                              boxShadow: [
-                                BoxShadow(
-                                  color: Colors.black.withValues(alpha: 0.1),
-                                  blurRadius: 4,
-                                  offset: const Offset(0, 2),
-                                ),
-                              ],
-                            ),
-                            child: Icon(
-                              Icons.edit,
-                              size: 18,
-                              color: colors.onSurfaceVariant,
-                            ),
+                            ],
+                          ),
+                          child: Icon(
+                            Icons.edit,
+                            size: 18,
+                            color: colors.onSurfaceVariant,
                           ),
                         ),
-                      ],
-                    ),
+                      ),
+                    ],
                   ),
-                  const SizedBox(height: 16),
+                ),
+                const SizedBox(height: 16),
 
-                  // Brand
-                  Text(
-                    brand ?? 'Sin marca',
-                    style: TextStyle(
-                      fontSize: 14,
-                      color: colors.onSurfaceVariant,
-                    ),
+                // Brand
+                Text(
+                  brand?.name ?? 'Sin marca',
+                  style: TextStyle(
+                    fontSize: 14,
+                    color: colors.onSurfaceVariant,
                   ),
-                  const SizedBox(height: 4),
+                ),
+                const SizedBox(height: 4),
 
-                  // Name
-                  Text(
-                    name,
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                      color: colors.onSurface,
-                    ),
+                // Name
+                Text(
+                  name,
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: colors.onSurface,
                   ),
-                  const SizedBox(height: 4),
+                ),
+                const SizedBox(height: 4),
 
-                  // Model
-                  Text(
-                    model.isNotEmpty ? model : 'Sin modelo',
-                    style: TextStyle(
-                      fontSize: 14,
-                      color: colors.onSurfaceVariant,
-                    ),
+                // Model
+                Text(
+                  model.isNotEmpty ? model : 'Sin modelo',
+                  style: TextStyle(
+                    fontSize: 14,
+                    color: colors.onSurfaceVariant,
                   ),
+                ),
 
-                  const SizedBox(height: 32),
+                const SizedBox(height: 32),
 
-                  // Details Section
-                  _buildDetailRow(
-                    context,
-                    icon: Icons.category_outlined,
-                    label: 'Categoría',
-                    value: category ?? 'Sin categoría',
-                  ),
-                  const SizedBox(height: 24),
-                  _buildDetailRow(
-                    context,
-                    icon: Icons.description_outlined,
-                    label: 'Características',
-                    value: specs.isNotEmpty ? specs : 'Sin especificaciones',
-                  ),
-
-                  const SizedBox(height: 32),
-                  const Spacer(),
-
-                  WizardButtonBar(
-                    onCancel: onCancel,
-                    onBack: onBack,
-                    onNext: onSave,
-                    labelNext: 'Finalizar',
-                  ),
-                  const SizedBox(height: 16),
-                ],
-              ),
+                // Details Section
+                InfoBlock.text(
+                  icon: Icons.category_outlined,
+                  label: 'Categoría',
+                  value: category ?? 'Sin categoría',
+                ),
+                const SizedBox(height: 24),
+                InfoBlock.text(
+                  icon: Icons.description_outlined,
+                  label: 'Características',
+                  value: specs.isNotEmpty ? specs : 'Sin especificaciones',
+                ),
+              ],
             ),
           ),
-        );
-      },
-    );
-  }
-
-  Widget _buildDetailRow(
-    BuildContext context, {
-    required IconData icon,
-    required String label,
-    required String value,
-  }) {
-    final colors = Theme.of(context).colorScheme;
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Icon(icon, color: colors.onSurfaceVariant, size: 24),
-        const SizedBox(width: 16),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                label,
-                style: TextStyle(fontSize: 12, color: colors.onSurfaceVariant),
-              ),
-              const SizedBox(height: 4),
-              Text(
-                value,
-                style: TextStyle(fontSize: 16, color: colors.onSurface),
-              ),
-            ],
+        ),
+        Padding(
+          padding: const EdgeInsets.only(bottom: 40),
+          child: WizardButtonBar(
+            onCancel: onCancel,
+            onBack: onBack,
+            onNext: onSave,
+            labelNext: 'Finalizar',
           ),
         ),
       ],

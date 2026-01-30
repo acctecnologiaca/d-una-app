@@ -110,7 +110,7 @@ class _RegisterVerificationScreenState
       title: 'Confirma tu cuenta',
       subtitle:
           'Introduce el código que hemos enviado a tu correo electrónico:\n\n$email',
-      progress: 0.95, // Approx step 7/7
+      progress: 5, //
       onNext: _onVerify,
       nextButtonText: 'Verificar',
       content: Form(
