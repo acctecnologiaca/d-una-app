@@ -22,7 +22,10 @@ class CustomSearchBar extends StatefulWidget {
     this.readOnly = false,
     this.onTap,
     this.showFilterIcon = false,
+    this.autoFocus = false,
   });
+
+  final bool autoFocus;
 
   @override
   State<CustomSearchBar> createState() => _CustomSearchBarState();
@@ -112,6 +115,7 @@ class _CustomSearchBarState extends State<CustomSearchBar> {
     return TextField(
       controller: _controller,
       focusNode: widget.focusNode,
+      autofocus: widget.autoFocus,
       readOnly: widget.readOnly,
       onTap: widget.onTap,
       onChanged: widget.onChanged,

@@ -263,7 +263,7 @@ class _MainAddressScreenState extends ConsumerState<MainAddressScreen> {
                             // Styling
                             dropdownDecoration: BoxDecoration(
                               borderRadius: BorderRadius.circular(8),
-                              color: Colors.white,
+                              color: colors.surface,
                               border: Border.all(
                                 color: Colors.grey.shade400,
                                 width: 1,

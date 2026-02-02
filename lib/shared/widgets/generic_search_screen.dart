@@ -25,6 +25,7 @@ class GenericSearchScreen<T> extends StatefulWidget {
   final List<FilterChipData> filters;
   final Widget? emptyState;
   final VoidCallback? onResetFilters;
+  final ValueChanged<String>? onQueryChanged;
 
   const GenericSearchScreen({
     super.key,
@@ -37,6 +38,7 @@ class GenericSearchScreen<T> extends StatefulWidget {
     this.filters = const [],
     this.emptyState,
     this.onResetFilters,
+    this.onQueryChanged,
   });
 
   @override
@@ -57,6 +59,7 @@ class _GenericSearchScreenState<T> extends State<GenericSearchScreen<T>> {
       setState(() {
         _searchQuery = _searchController.text;
       });
+      widget.onQueryChanged?.call(_searchController.text);
     });
     // Request focus after build
     WidgetsBinding.instance.addPostFrameCallback((_) {

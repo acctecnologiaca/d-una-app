@@ -40,7 +40,7 @@ class SupabaseClientsRepository {
           .from('clients')
           .select('id')
           .eq('tax_id', taxId)
-          .eq('owner_id', userId)
+          .eq('user_id', userId)
           .maybeSingle();
 
       if (existingResponse != null) {
@@ -49,7 +49,7 @@ class SupabaseClientsRepository {
     }
 
     final dbData = {
-      'owner_id': userId,
+      'user_id': userId,
       'name': clientData['name'],
       'type': clientData['type'], // 'company' or 'person'
       'tax_id': taxId,
@@ -90,7 +90,7 @@ class SupabaseClientsRepository {
           .from('clients')
           .select('id')
           .eq('tax_id', newTaxId)
-          .eq('owner_id', userId)
+          .eq('user_id', userId)
           .neq('id', id) // Exclude self
           .maybeSingle();
 
@@ -196,7 +196,7 @@ class SupabaseClientsRepository {
         .from('clients')
         .select('id')
         .eq('tax_id', taxId)
-        .eq('owner_id', userId);
+        .eq('user_id', userId);
 
     if (excludeId != null) {
       query = query.neq('id', excludeId);

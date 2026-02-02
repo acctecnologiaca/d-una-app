@@ -9,7 +9,9 @@ class UserProfile {
   final String? phone;
   final String? secondaryPhone;
   final String? occupation;
+  final String? occupationId;
   final List<String> secondaryOccupations;
+  final List<String> secondaryOccupationIds;
   final String? mainAddress;
   final String? mainCity;
   final String? mainState;
@@ -34,7 +36,9 @@ class UserProfile {
     this.phone,
     this.secondaryPhone,
     this.occupation,
+    this.occupationId,
     this.secondaryOccupations = const [],
+    this.secondaryOccupationIds = const [],
     this.mainAddress,
     this.mainCity,
     this.mainState,
@@ -63,8 +67,14 @@ class UserProfile {
       phone: json['phone'] as String?,
       secondaryPhone: json['secondary_phone'] as String?,
       occupation: json['occupation'] as String?,
+      occupationId: json['occupation_id'] as String?,
       secondaryOccupations:
           (json['secondary_occupations'] as List<dynamic>?)
+              ?.map((e) => e as String)
+              .toList() ??
+          const [],
+      secondaryOccupationIds:
+          (json['secondary_occupation_ids'] as List<dynamic>?)
               ?.map((e) => e as String)
               .toList() ??
           const [],
@@ -100,7 +110,9 @@ class UserProfile {
       'phone': phone,
       'secondary_phone': secondaryPhone,
       'occupation': occupation,
+      'occupation_id': occupationId,
       'secondary_occupations': secondaryOccupations,
+      'secondary_occupation_ids': secondaryOccupationIds,
       'main_address': mainAddress,
       'main_city': mainCity,
       'main_state': mainState,
@@ -126,7 +138,9 @@ class UserProfile {
     String? phone,
     String? secondaryPhone,
     String? occupation,
+    String? occupationId,
     List<String>? secondaryOccupations,
+    List<String>? secondaryOccupationIds,
     // Use dynamic to allow explicit nulls for these fields
     dynamic mainAddress = _sentinel,
     dynamic mainCity = _sentinel,
@@ -150,7 +164,10 @@ class UserProfile {
       phone: phone ?? this.phone,
       secondaryPhone: secondaryPhone ?? this.secondaryPhone,
       occupation: occupation ?? this.occupation,
+      occupationId: occupationId ?? this.occupationId,
       secondaryOccupations: secondaryOccupations ?? this.secondaryOccupations,
+      secondaryOccupationIds:
+          secondaryOccupationIds ?? this.secondaryOccupationIds,
       mainAddress: mainAddress == _sentinel
           ? this.mainAddress
           : mainAddress as String?,

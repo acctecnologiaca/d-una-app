@@ -5,16 +5,16 @@ import 'package:d_una_app/features/clients/presentation/client_routes.dart';
 
 import 'package:d_una_app/features/home/presentation/home_screen.dart';
 import 'package:d_una_app/features/portfolio/presentation/portfolio_screen.dart';
-import '../../features/portfolio/presentation/screens/own_inventory_screen.dart';
-import '../../features/portfolio/presentation/screens/add_product/add_product_screen.dart';
-import '../../features/portfolio/presentation/screens/edit_product/edit_product_screen.dart';
-import '../../features/portfolio/presentation/screens/product_details/product_details_screen.dart';
-import '../../features/portfolio/presentation/screens/product_search_screen.dart';
-import '../../features/portfolio/presentation/screens/own_services_screen.dart';
-import '../../features/portfolio/presentation/screens/service_search_screen.dart';
-import '../../features/portfolio/presentation/screens/add_service/add_service_screen.dart';
-import '../../features/portfolio/presentation/screens/service_details_screen.dart';
-import '../../features/portfolio/presentation/screens/edit_service/edit_service_screen.dart';
+import '../../features/portfolio/presentation/inventory/screens/own_inventory_screen.dart';
+import '../../features/portfolio/presentation/inventory/screens/add_product/add_product_screen.dart';
+import '../../features/portfolio/presentation/inventory/screens/edit_product/edit_product_screen.dart';
+import '../../features/portfolio/presentation/inventory/screens/product_details/product_details_screen.dart';
+import '../../features/portfolio/presentation/inventory/screens/product_search_screen.dart';
+import '../../features/portfolio/presentation/services/screens/own_services_screen.dart';
+import '../../features/portfolio/presentation/services/screens/service_search_screen.dart';
+import '../../features/portfolio/presentation/services/screens/add_service/add_service_screen.dart';
+import '../../features/portfolio/presentation/services/screens/service_details/service_details_screen.dart';
+import '../../features/portfolio/presentation/services/screens/edit_service/edit_service_screen.dart';
 import '../../features/portfolio/data/models/product_model.dart';
 import '../../features/portfolio/data/models/service_model.dart';
 import 'package:d_una_app/features/quotes/presentation/quotes_screen.dart';
@@ -29,6 +29,7 @@ import 'package:d_una_app/features/profile/domain/models/shipping_method.dart';
 import 'package:d_una_app/features/profile/presentation/screens/occupation_screen.dart';
 import 'package:d_una_app/features/profile/presentation/screens/security_screen.dart';
 import 'package:d_una_app/features/profile/presentation/screens/verification_screen.dart';
+import '../../features/portfolio/presentation/suppliers_directory/screens/suppliers_directory_screen.dart';
 
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../router/router_notifier.dart';
@@ -153,9 +154,7 @@ final appRouter = GoRouter(
                 ),
                 GoRoute(
                   path: 'supplier-inventory',
-                  builder: (context, state) => const Scaffold(
-                    body: Center(child: Text('Supplier Inventory')),
-                  ),
+                  builder: (context, state) => const SuppliersDirectoryScreen(),
                 ),
                 GoRoute(
                   path: 'own-services',

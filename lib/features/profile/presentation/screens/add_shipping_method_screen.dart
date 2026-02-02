@@ -432,7 +432,7 @@ class _AddShippingMethodScreenState
                               // Styling
                               dropdownDecoration: BoxDecoration(
                                 borderRadius: BorderRadius.circular(8),
-                                color: Colors.white,
+                                color: colors.surface,
                                 border: Border.all(
                                   color: Colors.grey.shade400,
                                   width: 1,
@@ -440,7 +440,7 @@ class _AddShippingMethodScreenState
                               ),
                               disabledDropdownDecoration: BoxDecoration(
                                 borderRadius: BorderRadius.circular(8),
-                                color: Colors.grey.shade100,
+                                color: colors.surface,
                                 border: Border.all(
                                   color: Colors.grey.shade400,
                                   width: 1,

@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:d_una_app/features/profile/presentation/providers/profile_provider.dart';
-import 'screens/widgets/dashboard_card.dart';
+import 'widgets/dashboard_card.dart';
 import 'package:material_symbols_icons/symbols.dart';
 
 class PortfolioScreen extends ConsumerWidget {

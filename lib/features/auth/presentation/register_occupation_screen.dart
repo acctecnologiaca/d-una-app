@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'widgets/register_layout.dart';
 import 'providers/register_provider.dart';
+import '../../profile/presentation/providers/occupations_provider.dart';
 
 class RegisterOccupationScreen extends ConsumerStatefulWidget {
   const RegisterOccupationScreen({super.key});
@@ -16,16 +17,16 @@ class _RegisterOccupationScreenState
     extends ConsumerState<RegisterOccupationScreen> {
   final _formKey = GlobalKey<FormState>();
 
-  String? _primaryOccupation;
-  List<String> _secondaryOccupations = [];
+  String? _primaryOccupationId;
+  List<String> _secondaryOccupationIds = [];
   bool _isSecondaryExpanded = false;
 
   @override
   void initState() {
     super.initState();
     final state = ref.read(registerProvider);
-    _primaryOccupation = state.primaryOccupation;
-    _secondaryOccupations = List.from(state.secondaryOccupations);
+    _primaryOccupationId = state.primaryOccupationId;
+    _secondaryOccupationIds = List.from(state.secondaryOccupationIds);
   }
 
   Future<void> _onNext() async {
@@ -33,8 +34,8 @@ class _RegisterOccupationScreenState
       ref
           .read(registerProvider.notifier)
           .updateOccupations(
-            primary: _primaryOccupation,
-            secondary: _secondaryOccupations,
+            primaryId: _primaryOccupationId,
+            secondaryIds: _secondaryOccupationIds,
           );
 
       try {
@@ -52,13 +53,13 @@ class _RegisterOccupationScreenState
     }
   }
 
-  void _toggleSecondary(String occupation) {
+  void _toggleSecondary(String occupationId) {
     setState(() {
-      if (_secondaryOccupations.contains(occupation)) {
-        _secondaryOccupations.remove(occupation);
+      if (_secondaryOccupationIds.contains(occupationId)) {
+        _secondaryOccupationIds.remove(occupationId);
       } else {
-        if (_secondaryOccupations.length < 2) {
-          _secondaryOccupations.add(occupation);
+        if (_secondaryOccupationIds.length < 2) {
+          _secondaryOccupationIds.add(occupationId);
         } else {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(content: Text('Máximo 2 ocupaciones secundarias')),
@@ -70,153 +71,180 @@ class _RegisterOccupationScreenState
 
   @override
   Widget build(BuildContext context) {
+    final occupationsAsync = ref.watch(occupationsProvider);
+
     return RegisterLayout(
       title: '¿A qué te dedicas?',
       subtitle:
           'Saber esto, nos permitirá conectarte con los proveedores adecuados.',
       progress: 4, //
       onNext: _onNext,
-      content: Form(
-        key: _formKey,
-        child: Column(
-          children: [
-            // Primary Occupation Dropdown
-            DropdownButtonFormField<String>(
-              // ignore: deprecated_member_use
-              value: _primaryOccupation,
-              isExpanded: true,
-              decoration: InputDecoration(
-                labelText: 'Ocupación principal*',
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                contentPadding: const EdgeInsets.symmetric(
-                  horizontal: 16,
-                  vertical: 16,
-                ),
-              ),
-              items: availableOccupations.map((occ) {
-                return DropdownMenuItem(
-                  value: occ,
-                  child: Text(occ, overflow: TextOverflow.ellipsis),
-                );
-              }).toList(),
-              onChanged: (val) {
-                setState(() {
-                  _primaryOccupation = val;
-                  // Auto-remove from secondary if selected as primary
-                  if (val != null && _secondaryOccupations.contains(val)) {
-                    _secondaryOccupations.remove(val);
-                  }
-                });
-              },
-              validator: (val) {
-                if (val == null || val.isEmpty) {
-                  return 'Selecciona una ocupación principal';
-                }
-                return null;
-              },
-            ),
-
-            const SizedBox(height: 24),
-
-            // Secondary Occupations Custom Dropdown/Expander
-            Container(
-              decoration: BoxDecoration(
-                border: Border.all(
-                  color: _isSecondaryExpanded
-                      ? Theme.of(context).colorScheme.primary
-                      : Colors.grey.shade400,
-                  width: _isSecondaryExpanded ? 2 : 1,
-                ),
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: Column(
-                children: [
-                  InkWell(
-                    onTap: () {
-                      setState(
-                        () => _isSecondaryExpanded = !_isSecondaryExpanded,
-                      );
-                    },
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 16,
-                        vertical: 16,
-                      ),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                if (_secondaryOccupations.isEmpty)
-                                  Text(
-                                    'Otras ocupaciones',
-                                    style: TextStyle(
-                                      color: Colors.grey.shade600,
-                                      fontSize: 16,
-                                    ),
-                                  )
-                                else
-                                  Text(
-                                    _secondaryOccupations.join(', '),
-                                    style: TextStyle(
-                                      color: Theme.of(
-                                        context,
-                                      ).colorScheme.onSurface,
-                                      fontSize: 14,
-                                    ),
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
-                                  ),
-                              ],
-                            ),
-                          ),
-                          Icon(
-                            _isSecondaryExpanded ? Icons.remove : Icons.add,
-                            color: Theme.of(context).colorScheme.onSurface,
-                          ),
-                        ],
-                      ),
+      content: occupationsAsync.when(
+        loading: () => const Center(child: CircularProgressIndicator()),
+        error: (e, stack) => Center(child: Text('Error: $e')),
+        data: (occupationsList) {
+          return Form(
+            key: _formKey,
+            child: Column(
+              children: [
+                // Primary Occupation Dropdown
+                DropdownButtonFormField<String>(
+                  // ignore: deprecated_member_use
+                  value: _primaryOccupationId,
+                  isExpanded: true,
+                  decoration: InputDecoration(
+                    labelText: 'Ocupación principal*',
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    contentPadding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 16,
                     ),
                   ),
-                  if (_isSecondaryExpanded)
-                    Container(
-                      height: 200, // Fixed height scrollable area
-                      decoration: const BoxDecoration(
-                        border: Border(top: BorderSide(color: Colors.grey)),
-                        color: Color(0xFFF0F0F0),
+                  items: occupationsList.map((occ) {
+                    return DropdownMenuItem(
+                      value: occ['id'] as String,
+                      child: Text(
+                        occ['name'] as String,
+                        overflow: TextOverflow.ellipsis,
                       ),
-                      child: ListView.builder(
-                        itemCount: availableOccupations.length,
-                        itemBuilder: (context, index) {
-                          final occ = availableOccupations[index];
-                          // Skip primary if selected
-                          if (occ == _primaryOccupation) {
-                            return const SizedBox.shrink();
-                          }
+                    );
+                  }).toList(),
+                  onChanged: (val) {
+                    setState(() {
+                      _primaryOccupationId = val;
+                      // Auto-remove from secondary if selected as primary
+                      if (val != null &&
+                          _secondaryOccupationIds.contains(val)) {
+                        _secondaryOccupationIds.remove(val);
+                      }
+                    });
+                  },
+                  validator: (val) {
+                    if (val == null || val.isEmpty) {
+                      return 'Selecciona una ocupación principal';
+                    }
+                    return null;
+                  },
+                ),
 
-                          final isSelected = _secondaryOccupations.contains(
-                            occ,
-                          );
-                          return CheckboxListTile(
-                            title: Text(occ),
-                            value: isSelected,
-                            controlAffinity: ListTileControlAffinity.trailing,
-                            onChanged: (bool? checked) {
-                              _toggleSecondary(occ);
-                            },
+                const SizedBox(height: 24),
+
+                // Secondary Occupations Custom Dropdown/Expander
+                Container(
+                  decoration: BoxDecoration(
+                    border: Border.all(
+                      color: _isSecondaryExpanded
+                          ? Theme.of(context).colorScheme.primary
+                          : Colors.grey.shade400,
+                      width: _isSecondaryExpanded ? 2 : 1,
+                    ),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Column(
+                    children: [
+                      InkWell(
+                        onTap: () {
+                          setState(
+                            () => _isSecondaryExpanded = !_isSecondaryExpanded,
                           );
                         },
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 16,
+                            vertical: 16,
+                          ),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    if (_secondaryOccupationIds.isEmpty)
+                                      Text(
+                                        'Otras ocupaciones',
+                                        style: TextStyle(
+                                          color: Colors.grey.shade600,
+                                          fontSize: 16,
+                                        ),
+                                      )
+                                    else
+                                      Text(
+                                        _secondaryOccupationIds
+                                            .map((id) {
+                                              final occ = occupationsList
+                                                  .firstWhere(
+                                                    (element) =>
+                                                        element['id'] == id,
+                                                    orElse: () => {
+                                                      'name': 'Desconocido',
+                                                    },
+                                                  );
+                                              return occ['name'];
+                                            })
+                                            .join(', '),
+                                        style: TextStyle(
+                                          color: Theme.of(
+                                            context,
+                                          ).colorScheme.onSurface,
+                                          fontSize: 14,
+                                        ),
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                  ],
+                                ),
+                              ),
+                              Icon(
+                                _isSecondaryExpanded ? Icons.remove : Icons.add,
+                                color: Theme.of(context).colorScheme.onSurface,
+                              ),
+                            ],
+                          ),
+                        ),
                       ),
-                    ),
-                ],
-              ),
+                      if (_isSecondaryExpanded)
+                        Container(
+                          height: 200, // Fixed height scrollable area
+                          decoration: const BoxDecoration(
+                            border: Border(top: BorderSide(color: Colors.grey)),
+                            color: Color(0xFFF0F0F0),
+                          ),
+                          child: ListView.builder(
+                            itemCount: occupationsList.length,
+                            itemBuilder: (context, index) {
+                              final occ = occupationsList[index];
+                              final id = occ['id'] as String;
+                              final name = occ['name'] as String;
+
+                              // Skip primary if selected
+                              if (id == _primaryOccupationId) {
+                                return const SizedBox.shrink();
+                              }
+
+                              final isSelected = _secondaryOccupationIds
+                                  .contains(id);
+                              return CheckboxListTile(
+                                title: Text(name),
+                                value: isSelected,
+                                controlAffinity:
+                                    ListTileControlAffinity.trailing,
+                                onChanged: (bool? checked) {
+                                  _toggleSecondary(id);
+                                },
+                              );
+                            },
+                          ),
+                        ),
+                    ],
+                  ),
+                ),
+              ],
             ),
-          ],
-        ),
+          );
+        },
       ),
     );
   }

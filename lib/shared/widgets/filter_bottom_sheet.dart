@@ -32,6 +32,7 @@ class FilterBottomSheet extends StatefulWidget {
     required List<String> options,
     required Set<String> selectedValues,
     required ValueChanged<Set<String>> onApply,
+    String Function(String)? labelBuilder,
   }) {
     return showModalBottomSheet(
       context: context,
@@ -43,7 +44,10 @@ class FilterBottomSheet extends StatefulWidget {
       builder: (context) => FilterBottomSheet._(
         title: title,
         isMultiSelect: true,
-        options: options.map((e) => FilterOption(label: e, value: e)).toList(),
+        options: options.map((e) {
+          final label = labelBuilder != null ? labelBuilder(e) : e;
+          return FilterOption(label: label, value: e);
+        }).toList(),
         selectedValues: selectedValues,
         onApply: onApply,
       ),

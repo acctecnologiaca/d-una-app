@@ -10,8 +10,8 @@ class RegisterState {
   final String password;
   // Add other fields as needed based on the 7 steps
 
-  final String? primaryOccupation;
-  final List<String> secondaryOccupations;
+  final String? primaryOccupationId;
+  final List<String> secondaryOccupationIds;
   final bool isLoading;
   final String? error;
 
@@ -20,8 +20,8 @@ class RegisterState {
     this.password = '',
     this.firstName = '',
     this.lastName = '',
-    this.primaryOccupation,
-    this.secondaryOccupations = const [],
+    this.primaryOccupationId,
+    this.secondaryOccupationIds = const [],
     this.isLoading = false,
     this.error,
   });
@@ -31,8 +31,8 @@ class RegisterState {
     String? password,
     String? firstName,
     String? lastName,
-    String? primaryOccupation,
-    List<String>? secondaryOccupations,
+    String? primaryOccupationId,
+    List<String>? secondaryOccupationIds,
     bool? isLoading,
     String? error,
   }) {
@@ -41,8 +41,9 @@ class RegisterState {
       password: password ?? this.password,
       firstName: firstName ?? this.firstName,
       lastName: lastName ?? this.lastName,
-      primaryOccupation: primaryOccupation ?? this.primaryOccupation,
-      secondaryOccupations: secondaryOccupations ?? this.secondaryOccupations,
+      primaryOccupationId: primaryOccupationId ?? this.primaryOccupationId,
+      secondaryOccupationIds:
+          secondaryOccupationIds ?? this.secondaryOccupationIds,
       isLoading: isLoading ?? this.isLoading,
       error: error ?? this.error,
     );
@@ -86,10 +87,10 @@ class RegisterNotifier extends StateNotifier<RegisterState> {
     state = state.copyWith(password: password);
   }
 
-  void updateOccupations({String? primary, List<String>? secondary}) {
+  void updateOccupations({String? primaryId, List<String>? secondaryIds}) {
     state = state.copyWith(
-      primaryOccupation: primary,
-      secondaryOccupations: secondary,
+      primaryOccupationId: primaryId,
+      secondaryOccupationIds: secondaryIds,
     );
   }
 
@@ -102,8 +103,8 @@ class RegisterNotifier extends StateNotifier<RegisterState> {
         data: {
           'first_name': state.firstName,
           'last_name': state.lastName,
-          'occupation': state.primaryOccupation,
-          'secondary_occupations': state.secondaryOccupations,
+          'occupation_id': state.primaryOccupationId,
+          'secondary_occupation_ids': state.secondaryOccupationIds,
         },
       );
       // Success: OTP sent by Supabase
@@ -140,17 +141,3 @@ class RegisterNotifier extends StateNotifier<RegisterState> {
     }
   }
 }
-
-// Static list of available occupations for the MVP
-const List<String> availableOccupations = [
-  'Técnico en sistemas de seguridad',
-  'Técnico en computación',
-  'Técnico en redes de datos',
-  'Técnico en electrónica',
-  'Técnico electricista',
-  'Albañil',
-  'Plomero',
-  'Carpintero',
-  'Pintor',
-  'Mecánico automotriz',
-];

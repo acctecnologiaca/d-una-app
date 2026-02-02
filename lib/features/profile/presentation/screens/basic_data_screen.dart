@@ -8,6 +8,7 @@ import 'package:image_cropper/image_cropper.dart';
 import '../../domain/models/user_profile.dart';
 import '../providers/profile_provider.dart';
 import '../../../../shared/widgets/custom_text_field.dart';
+import '../../../../shared/widgets/custom_dropdown.dart';
 import '../../../../shared/widgets/form_bottom_bar.dart';
 
 class BasicDataScreen extends ConsumerStatefulWidget {
@@ -361,46 +362,18 @@ class _BasicDataScreenState extends ConsumerState<BasicDataScreen> {
                         const SizedBox(height: 16),
 
                         // Gender Dropdown
-                        Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            DropdownButtonFormField<String>(
-                              initialValue: _selectedGender,
-                              decoration: InputDecoration(
-                                labelText: 'Género*',
-                                floatingLabelBehavior:
-                                    FloatingLabelBehavior.always,
-                                border: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(8.0),
-                                ),
-                                enabledBorder: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(8.0),
-                                  borderSide: BorderSide(
-                                    color: Colors.grey.shade400,
-                                  ),
-                                ),
-                                contentPadding: const EdgeInsets.symmetric(
-                                  horizontal: 16,
-                                  vertical: 16,
-                                ),
-                                filled: true,
-                                fillColor: Colors.white,
-                              ),
-                              items: ['Masculino', 'Femenino', 'Otro']
-                                  .map(
-                                    (label) => DropdownMenuItem(
-                                      value: label,
-                                      child: Text(label),
-                                    ),
-                                  )
-                                  .toList(),
-                              onChanged: (value) {
-                                setState(() {
-                                  _selectedGender = value;
-                                });
-                              },
-                            ),
-                          ],
+                        CustomDropdown<String>(
+                          label: 'Género',
+                          value: _selectedGender,
+                          items: const ['Masculino', 'Femenino', 'Otro'],
+                          itemLabelBuilder: (val) => val,
+                          onChanged: (value) {
+                            setState(() {
+                              _selectedGender = value;
+                            });
+                          },
+                          validator: (val) =>
+                              val == null || val.isEmpty ? 'Requerido' : null,
                         ),
                         const SizedBox(height: 16),
 

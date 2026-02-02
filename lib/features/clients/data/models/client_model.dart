@@ -2,7 +2,7 @@ import 'package:equatable/equatable.dart';
 
 class Client extends Equatable {
   final String id;
-  final String ownerId;
+  final String userId;
   final String name;
   final String type; // 'company' or 'person'
   final String? taxId;
@@ -18,7 +18,7 @@ class Client extends Equatable {
 
   const Client({
     required this.id,
-    required this.ownerId,
+    required this.userId,
     required this.name,
     required this.type,
     this.taxId,
@@ -36,7 +36,7 @@ class Client extends Equatable {
   factory Client.fromJson(Map<String, dynamic> json) {
     return Client(
       id: json['id'],
-      ownerId: json['owner_id'],
+      userId: json['user_id'],
       name: json['name'],
       type: json['type'],
       taxId: json['tax_id'],
@@ -60,7 +60,7 @@ class Client extends Equatable {
 
   Map<String, dynamic> toJson() {
     return {
-      'owner_id': ownerId,
+      'user_id': userId,
       'name': name,
       'type': type,
       'tax_id': taxId,
@@ -77,7 +77,7 @@ class Client extends Equatable {
 
   Client copyWith({
     String? id,
-    String? ownerId,
+    String? userId,
     String? name,
     String? type,
     String? taxId,
@@ -93,7 +93,7 @@ class Client extends Equatable {
   }) {
     return Client(
       id: id ?? this.id,
-      ownerId: ownerId ?? this.ownerId,
+      userId: userId ?? this.userId,
       name: name ?? this.name,
       type: type ?? this.type,
       taxId: taxId ?? this.taxId,
@@ -112,7 +112,7 @@ class Client extends Equatable {
   @override
   List<Object?> get props => [
     id,
-    ownerId,
+    userId,
     name,
     type,
     taxId,

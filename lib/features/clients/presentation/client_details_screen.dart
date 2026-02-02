@@ -29,7 +29,7 @@ class ClientDetailsScreen extends ConsumerWidget {
           (c) => c.id == clientId,
           orElse: () => Client(
             id: '',
-            ownerId: '',
+            userId: '',
             name: '',
             type: '',
             createdAt: DateTime.now(),

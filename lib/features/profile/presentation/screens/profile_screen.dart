@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../widgets/profile_menu_tile.dart';
 import '../providers/profile_provider.dart';
+import '../providers/occupations_provider.dart';
 import '../../../../core/utils/session_manager.dart';
 
 class ProfileScreen extends ConsumerWidget {
@@ -117,12 +118,20 @@ class ProfileScreen extends ConsumerWidget {
                       ),
                       const SizedBox(height: 4),
                       // Occupation
-                      Text(
-                        currentOccupation,
-                        style: textTheme.bodyLarge?.copyWith(
-                          color: colors.onSurfaceVariant,
-                          fontWeight: FontWeight.w500,
-                        ),
+                      Consumer(
+                        builder: (context, ref, child) {
+                          final occupationId = profile?.occupationId;
+                          final occupationName = ref.watch(
+                            occupationNameProvider(occupationId),
+                          );
+                          return Text(
+                            occupationName ?? 'Sin ocupación',
+                            style: textTheme.bodyLarge?.copyWith(
+                              color: colors.onSurfaceVariant,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          );
+                        },
                       ),
                       const SizedBox(height: 8),
                       // Verification Badge
