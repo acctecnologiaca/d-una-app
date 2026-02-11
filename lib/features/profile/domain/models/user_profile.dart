@@ -22,6 +22,7 @@ class UserProfile {
   final String? companyAddress;
   final String? companyLogoUrl;
   final String verificationStatus;
+  final String? verificationType;
   final DateTime? updatedAt;
   final DateTime? createdAt;
 
@@ -49,6 +50,7 @@ class UserProfile {
     this.companyAddress,
     this.companyLogoUrl,
     this.verificationStatus = 'unverified',
+    this.verificationType,
     this.updatedAt,
     this.createdAt,
   });
@@ -89,6 +91,7 @@ class UserProfile {
       companyLogoUrl: json['company_logo_url'] as String?,
       verificationStatus:
           json['verification_status'] as String? ?? 'unverified',
+      verificationType: json['verification_type'] as String?,
       updatedAt: json['updated_at'] != null
           ? DateTime.tryParse(json['updated_at'] as String)
           : null,
@@ -123,6 +126,7 @@ class UserProfile {
       'company_address': companyAddress,
       'company_logo_url': companyLogoUrl,
       'verification_status': verificationStatus,
+      'verification_type': verificationType,
       'updated_at': updatedAt?.toIso8601String(),
       'created_at': createdAt?.toIso8601String(),
     };
@@ -152,6 +156,7 @@ class UserProfile {
     dynamic companyAddress = _sentinel,
     dynamic companyLogoUrl = _sentinel,
     String? verificationStatus,
+    String? verificationType,
   }) {
     return UserProfile(
       id: id,
@@ -190,6 +195,7 @@ class UserProfile {
           ? this.companyLogoUrl
           : companyLogoUrl as String?,
       verificationStatus: verificationStatus ?? this.verificationStatus,
+      verificationType: verificationType ?? this.verificationType,
       updatedAt: updatedAt,
       createdAt: createdAt,
     );

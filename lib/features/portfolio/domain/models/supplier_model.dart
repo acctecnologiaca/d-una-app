@@ -7,6 +7,7 @@ class Supplier extends Equatable {
   final String? logoUrl;
   final bool isActive;
   final String? tradeType;
+  final List<String> allowedVerificationTypes;
   final Map<String, dynamic> contactInfo;
 
   const Supplier({
@@ -16,6 +17,7 @@ class Supplier extends Equatable {
     this.logoUrl,
     this.isActive = true,
     this.tradeType,
+    this.allowedVerificationTypes = const [],
     this.contactInfo = const {},
   });
 
@@ -27,6 +29,11 @@ class Supplier extends Equatable {
       logoUrl: json['logo_url'],
       isActive: json['is_active'] ?? true,
       tradeType: json['trade_type'],
+      allowedVerificationTypes:
+          (json['allowed_verification_types'] as List<dynamic>?)
+              ?.map((e) => e as String)
+              .toList() ??
+          const [],
       contactInfo: json['contact_info'] ?? {},
     );
   }
@@ -39,6 +46,7 @@ class Supplier extends Equatable {
     logoUrl,
     isActive,
     tradeType,
+    allowedVerificationTypes,
     contactInfo,
   ];
 }

@@ -18,10 +18,6 @@ extension StringExtensions on String {
     final exceptions = {
       'de',
       'del',
-      'la',
-      'las',
-      'el',
-      'los',
       'y',
       'e',
       'o',

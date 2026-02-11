@@ -5,9 +5,15 @@ import '../../../domain/models/supplier_model.dart';
 
 class SupplierCard extends StatelessWidget {
   final Supplier supplier;
+  final bool isLocked;
   final VoidCallback? onTap;
 
-  const SupplierCard({super.key, required this.supplier, this.onTap});
+  const SupplierCard({
+    super.key,
+    required this.supplier,
+    this.isLocked = false,
+    this.onTap,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -15,6 +21,12 @@ class SupplierCard extends StatelessWidget {
       onTap: onTap,
       child: Container(
         height: 180,
+        foregroundDecoration: isLocked
+            ? BoxDecoration(
+                color: Colors.grey.withOpacity(0.7),
+                borderRadius: BorderRadius.circular(16),
+              )
+            : null,
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(16),
@@ -23,6 +35,8 @@ class SupplierCard extends StatelessWidget {
               ? DecorationImage(
                   image: CachedNetworkImageProvider(supplier.bannerUrl!),
                   fit: BoxFit.cover,
+                  // Optional: apply grayscale filter to image itself if preferred
+                  // colorFilter: isLocked ? ColorFilter.mode(Colors.grey, BlendMode.saturation) : null,
                 )
               : null,
         ),
@@ -36,7 +50,7 @@ class SupplierCard extends StatelessWidget {
                   child: supplier.logoUrl != null
                       ? CachedNetworkImage(
                           imageUrl: supplier.logoUrl!,
-                          height: 80,
+                          height: 120,
                           fit: BoxFit.contain,
                         )
                       : Text(
@@ -57,6 +71,18 @@ class SupplierCard extends StatelessWidget {
                 top: 12,
                 right: 12,
                 child: _TradeTypeChip(tradeType: supplier.tradeType!),
+              ),
+
+            // Lock Icon - Center (if locked)
+            if (isLocked)
+              const Positioned.fill(
+                child: Center(
+                  child: Icon(
+                    Icons.lock_outline,
+                    color: Colors.white, // Visible against grey overlay
+                    size: 48,
+                  ),
+                ),
               ),
           ],
         ),

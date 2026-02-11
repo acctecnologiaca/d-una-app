@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import '../../../domain/models/supplier_model.dart';
-import 'supplier_card.dart'; // To reuse _TradeTypeChip logic if possible, or duplicate/move it
+// To reuse _TradeTypeChip logic if possible, or duplicate/move it
 
 class CompactSupplierCard extends StatelessWidget {
   final Supplier supplier;

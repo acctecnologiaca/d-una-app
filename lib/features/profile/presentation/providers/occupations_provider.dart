@@ -21,11 +21,13 @@ String? occupationName(Ref ref, String? id) {
   if (id == null) return null;
   final listAsync = ref.watch(occupationsProvider);
   return listAsync.when(
-    data: (list) => list.firstWhere(
-      (element) => element['id'] == id,
-      orElse: () => {'name': 'Desconocido'},
-    )['name'] as String?,
-    error: (_, __) => null,
+    data: (list) =>
+        list.firstWhere(
+              (element) => element['id'] == id,
+              orElse: () => {'name': 'Desconocido'},
+            )['name']
+            as String?,
+    error: (_, _) => null,
     loading: () => 'Cargando...',
   );
 }

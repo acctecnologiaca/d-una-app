@@ -100,8 +100,9 @@ class _AddServiceStep4State extends State<AddServiceStep4> {
                             keyboardType: TextInputType.number,
                             validator: (val) {
                               if (!widget.hasWarranty) return null;
-                              if (val == null || val.trim().isEmpty)
+                              if (val == null || val.trim().isEmpty) {
                                 return 'Requerido';
+                              }
                               if (int.tryParse(val) == null) return 'Inválido';
                               return null;
                             },

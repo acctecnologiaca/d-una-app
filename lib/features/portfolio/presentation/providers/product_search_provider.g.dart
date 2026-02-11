@@ -6,7 +6,7 @@ part of 'product_search_provider.dart';
 // RiverpodGenerator
 // **************************************************************************
 
-String _$productSearchHash() => r'f70989d751e1cd9e09d73a5935e97ac34448de40';
+String _$productSearchHash() => r'505f942b82bd9368ed9d9129eb76855bfd9f751c';
 
 /// Copied from Dart SDK
 class _SystemHash {
@@ -39,15 +39,15 @@ class ProductSearchFamily extends Family<AsyncValue<List<AggregatedProduct>>> {
   const ProductSearchFamily();
 
   /// See also [productSearch].
-  ProductSearchProvider call(String query) {
-    return ProductSearchProvider(query);
+  ProductSearchProvider call(ProductSearchParams params) {
+    return ProductSearchProvider(params);
   }
 
   @override
   ProductSearchProvider getProviderOverride(
     covariant ProductSearchProvider provider,
   ) {
-    return call(provider.query);
+    return call(provider.params);
   }
 
   static const Iterable<ProviderOrFamily>? _dependencies = null;
@@ -69,9 +69,9 @@ class ProductSearchFamily extends Family<AsyncValue<List<AggregatedProduct>>> {
 class ProductSearchProvider
     extends AutoDisposeFutureProvider<List<AggregatedProduct>> {
   /// See also [productSearch].
-  ProductSearchProvider(String query)
+  ProductSearchProvider(ProductSearchParams params)
     : this._internal(
-        (ref) => productSearch(ref as ProductSearchRef, query),
+        (ref) => productSearch(ref as ProductSearchRef, params),
         from: productSearchProvider,
         name: r'productSearchProvider',
         debugGetCreateSourceHash: const bool.fromEnvironment('dart.vm.product')
@@ -80,7 +80,7 @@ class ProductSearchProvider
         dependencies: ProductSearchFamily._dependencies,
         allTransitiveDependencies:
             ProductSearchFamily._allTransitiveDependencies,
-        query: query,
+        params: params,
       );
 
   ProductSearchProvider._internal(
@@ -90,10 +90,10 @@ class ProductSearchProvider
     required super.allTransitiveDependencies,
     required super.debugGetCreateSourceHash,
     required super.from,
-    required this.query,
+    required this.params,
   }) : super.internal();
 
-  final String query;
+  final ProductSearchParams params;
 
   @override
   Override overrideWith(
@@ -109,7 +109,7 @@ class ProductSearchProvider
         dependencies: null,
         allTransitiveDependencies: null,
         debugGetCreateSourceHash: null,
-        query: query,
+        params: params,
       ),
     );
   }
@@ -121,13 +121,13 @@ class ProductSearchProvider
 
   @override
   bool operator ==(Object other) {
-    return other is ProductSearchProvider && other.query == query;
+    return other is ProductSearchProvider && other.params == params;
   }
 
   @override
   int get hashCode {
     var hash = _SystemHash.combine(0, runtimeType.hashCode);
-    hash = _SystemHash.combine(hash, query.hashCode);
+    hash = _SystemHash.combine(hash, params.hashCode);
 
     return _SystemHash.finish(hash);
   }
@@ -137,8 +137,8 @@ class ProductSearchProvider
 // ignore: unused_element
 mixin ProductSearchRef
     on AutoDisposeFutureProviderRef<List<AggregatedProduct>> {
-  /// The parameter `query` of this provider.
-  String get query;
+  /// The parameter `params` of this provider.
+  ProductSearchParams get params;
 }
 
 class _ProductSearchProviderElement
@@ -147,7 +147,7 @@ class _ProductSearchProviderElement
   _ProductSearchProviderElement(super.provider);
 
   @override
-  String get query => (origin as ProductSearchProvider).query;
+  ProductSearchParams get params => (origin as ProductSearchProvider).params;
 }
 
 // ignore_for_file: type=lint

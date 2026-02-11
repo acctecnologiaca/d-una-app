@@ -28,16 +28,61 @@ class SuppliersRepository {
   }
 
   Future<List<Map<String, dynamic>>> searchAggregatedProducts(
-    String query,
-  ) async {
+    String query, {
+    List<String>? brands,
+    List<String>? categories,
+    List<String>? supplierIds,
+    double? minPrice,
+    double? maxPrice,
+  }) async {
     try {
       final response = await _supabase.rpc(
         'search_supplier_products',
-        params: {'query_text': query},
+        params: {
+          'query_text': query,
+          // ... filters remain same but RPC now queries product_stock
+          'brand_filter': brands?.isNotEmpty == true ? brands : null,
+          'category_filter': categories?.isNotEmpty == true ? categories : null,
+          'supplier_filter': supplierIds?.isNotEmpty == true
+              ? supplierIds
+              : null,
+          'min_price_filter': minPrice,
+          'max_price_filter': maxPrice,
+        },
       );
       return List<Map<String, dynamic>>.from(response);
     } catch (e) {
       throw Exception('Error searching products: $e');
+    }
+  }
+
+  Future<List<Map<String, dynamic>>> getProductSuppliers({
+    required String name,
+    required String brand,
+    required String model,
+    required String uom,
+    List<String>? supplierIds,
+    double? minPrice,
+    double? maxPrice,
+  }) async {
+    try {
+      final response = await _supabase.rpc(
+        'get_product_suppliers',
+        params: {
+          'p_name': name,
+          'p_brand': brand,
+          'p_model': model,
+          'p_uom': uom,
+          'p_supplier_ids': supplierIds?.isNotEmpty == true
+              ? supplierIds
+              : null,
+          'p_min_price': minPrice,
+          'p_max_price': maxPrice,
+        },
+      );
+      return List<Map<String, dynamic>>.from(response);
+    } catch (e) {
+      throw Exception('Error fetching product suppliers: $e');
     }
   }
 }

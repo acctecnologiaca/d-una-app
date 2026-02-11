@@ -13,11 +13,16 @@ void main() async {
     url: 'https://fdkswvzrozijbizdthge.supabase.co',
     anonKey:
         'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZka3N3dnpyb3ppamJpemR0aGdlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njc0NzQ2MzMsImV4cCI6MjA4MzA1MDYzM30.ZENEwSy2E8iSHuy4Y4uTd7CBd32iaE-tJmSww6cw0TY',
+    authOptions: const FlutterAuthClientOptions(
+      authFlowType: AuthFlowType.pkce,
+    ),
+    debug: true, // Enable debug logs to track connection issues
   );
 
   // Check session validity (5 days inactivity rule)
+  // Check session validity (5 days inactivity rule)
   final sessionManager = SessionManager();
-  await sessionManager.checkSessionValidity();
+  sessionManager.checkSessionValidity(); // Fire and forget, don't block startup
 
   runApp(const ProviderScope(child: DUnaApp()));
 }

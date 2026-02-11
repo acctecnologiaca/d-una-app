@@ -141,7 +141,7 @@ class _AddServiceStep2State extends State<AddServiceStep2> {
                     items: widget.rateUnits,
                     onChanged: widget.onRateUnitChanged,
                     itemLabelBuilder: (item) =>
-                        item != null ? '${item.name} (${item.symbol})' : '',
+                        '${item.name} (${item.symbol})',
                     validator: (val) => val == null ? 'Requerido' : null,
                     showAddOption: true,
                     addOptionLabel: 'Agregar',

@@ -1,19 +1,26 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
-import 'package:d_una_app/shared/widgets/custom_search_bar.dart';
+import 'package:d_una_app/shared/widgets/generic_search_screen.dart';
 import 'package:d_una_app/shared/widgets/filter_bottom_sheet.dart';
+import 'package:d_una_app/shared/widgets/price_filter_sheet.dart';
 import 'package:d_una_app/core/utils/string_extensions.dart';
 import 'package:d_una_app/features/portfolio/domain/models/supplier_model.dart';
 import 'package:d_una_app/features/portfolio/domain/models/aggregated_product.dart';
+import 'package:d_una_app/features/portfolio/domain/models/search_result_item.dart';
 import 'package:d_una_app/features/portfolio/presentation/suppliers_directory/widgets/compact_supplier_card.dart';
 import 'package:d_una_app/features/portfolio/presentation/suppliers_directory/widgets/aggregated_product_card.dart';
 import 'package:d_una_app/features/portfolio/presentation/providers/suppliers_provider.dart';
 import 'package:d_una_app/features/portfolio/presentation/providers/product_search_provider.dart';
+import 'package:d_una_app/features/portfolio/presentation/providers/lookup_providers.dart';
+import 'package:d_una_app/features/portfolio/domain/models/product_search_filters.dart';
+import 'package:d_una_app/features/portfolio/presentation/suppliers_directory/widgets/product_action_sheet.dart';
+import 'package:d_una_app/features/portfolio/presentation/suppliers_directory/screens/product_suppliers_screen.dart';
 
 class SupplierSearchScreen extends ConsumerStatefulWidget {
-  const SupplierSearchScreen({super.key});
+  final String? initialSupplierId;
+
+  const SupplierSearchScreen({super.key, this.initialSupplierId});
 
   @override
   ConsumerState<SupplierSearchScreen> createState() =>
@@ -21,314 +28,358 @@ class SupplierSearchScreen extends ConsumerStatefulWidget {
 }
 
 class _SupplierSearchScreenState extends ConsumerState<SupplierSearchScreen> {
-  final TextEditingController _searchController = TextEditingController();
-  final FocusNode _focusNode = FocusNode();
-  String _searchQuery = '';
-  // View State
-  bool _viewAllSuppliers = false;
-  Timer? _debounce;
-
-  // Suppliers Filter State (Kept for compatibility, though mainly for general list)
-  final Set<String> _selectedTradeTypes = {};
+  // Query state maintained by GenericSearchScreen, but we need it for provider params
+  String _currentQuery = '';
+  late ProductSearchFilters _filters;
 
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      _focusNode.requestFocus();
-    });
+    _filters = widget.initialSupplierId != null
+        ? ProductSearchFilters(supplierIds: [widget.initialSupplierId!])
+        : const ProductSearchFilters();
   }
 
-  @override
-  void dispose() {
-    _searchController.dispose();
-    _focusNode.dispose();
-    _debounce?.cancel();
-    super.dispose();
-  }
+  // Suppliers Filter State (Kept for compatibility)
+  final Set<String> _selectedTradeTypes = {};
 
-  void _onSearchChanged(String query) {
+  void _onQueryChanged(String query) {
+    // Debounce is handled by GenericSearchScreen updates?
+    // GenericSearchScreen calls onQueryChanged instantly on text changed.
+    // We should implement local debounce here if we trigger API calls.
+    // Actually, productSearchProvider listens to this params.
+    // Let's debounce the setState update.
     if (_debounce?.isActive ?? false) _debounce!.cancel();
     _debounce = Timer(const Duration(milliseconds: 300), () {
       if (mounted) {
         setState(() {
-          _searchQuery = query;
+          _currentQuery = query;
         });
       }
     });
   }
 
-  // Reuse existing filter logic
-  void _showTradeTypeFilter(List<Supplier> suppliers) {
-    final availableTypes = suppliers
-        .map((e) => e.tradeType)
-        .where((e) => e != null)
-        .cast<String>()
-        .toSet()
-        .toList();
+  Timer? _debounce;
 
-    String getLabel(String value) {
-      switch (value) {
-        case 'WHOLESALE':
-          return 'Mayorista';
-        case 'RETAIL':
-          return 'Minorista';
-        case 'BOTH':
-          return 'Mayorista / Minorista';
-        default:
-          return value;
-      }
+  @override
+  void dispose() {
+    _debounce?.cancel();
+    super.dispose();
+  }
+
+  void _resetFilters() {
+    setState(() {
+      _filters = const ProductSearchFilters();
+      _selectedTradeTypes.clear();
+    });
+  }
+
+  // --- Dynamic Label Helpers ---
+
+  String _getChipLabel(
+    String defaultLabel,
+    Set<String> selected, [
+    Map<String, String>? nameMap,
+  ]) {
+    if (selected.isEmpty) return defaultLabel;
+    if (selected.length == 1) {
+      final value = selected.first;
+      return nameMap?[value] ?? value;
     }
+    // For multiple: "First + N"
+    final first = nameMap?[selected.first] ?? selected.first;
+    return '$first +${selected.length - 1}';
+  }
+
+  String _getPriceLabel() {
+    final min = _filters.minPrice;
+    final max = _filters.maxPrice;
+    if (min == null && max == null) return 'Precio';
+
+    if (min != null && max != null) {
+      return '\$${min.toInt()} - \$${max.toInt()}';
+    } else if (min != null) {
+      return '> \$${min.toInt()}';
+    } else {
+      return '< \$${max!.toInt()}';
+    }
+  }
+
+  // --- Filter Logic ---
+
+  void _showSupplierFilter() {
+    final suppliers = ref.read(suppliersProvider).valueOrNull ?? [];
+    final options = suppliers.map((s) => s.id).toList();
+    final nameMap = {for (var s in suppliers) s.id: s.name};
 
     FilterBottomSheet.showMulti(
       context: context,
-      title: 'Tipo de Comercio',
-      options: availableTypes,
-      selectedValues: _selectedTradeTypes,
-      labelBuilder: getLabel,
+      title: 'Proveedor',
+      options: options,
+      selectedValues: _filters.supplierIds.toSet(),
+      labelBuilder: (id) => nameMap[id] ?? id,
       onApply: (selected) {
         setState(() {
-          _selectedTradeTypes.clear();
-          _selectedTradeTypes.addAll(selected);
+          _filters = _filters.copyWith(supplierIds: selected.toList());
         });
       },
+    );
+  }
+
+  void _showCategoryFilter() async {
+    final categories = await ref.read(categoriesProvider.future);
+    final options = categories.map((c) => c.name).toList();
+
+    if (!mounted) return;
+
+    FilterBottomSheet.showMulti(
+      context: context,
+      title: 'Categoría',
+      options: options,
+      selectedValues: _filters.categories.toSet(),
+      onApply: (selected) {
+        setState(() {
+          _filters = _filters.copyWith(categories: selected.toList());
+        });
+      },
+    );
+  }
+
+  void _showBrandFilter() async {
+    final brands = await ref.read(brandsProvider.future);
+    final options = brands.map((b) => b.name).toList();
+
+    if (!mounted) return;
+
+    FilterBottomSheet.showMulti(
+      context: context,
+      title: 'Marca',
+      options: options,
+      selectedValues: _filters.brands.toSet(),
+      onApply: (selected) {
+        setState(() {
+          _filters = _filters.copyWith(brands: selected.toList());
+        });
+      },
+    );
+  }
+
+  void _showPriceFilter() {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      builder: (context) => PriceFilterSheet(
+        initialMin: _filters.minPrice,
+        initialMax: _filters.maxPrice,
+        onApply: (min, max) {
+          setState(() {
+            _filters = _filters.copyWith(minPrice: min, maxPrice: max);
+          });
+        },
+      ),
     );
   }
 
   @override
   Widget build(BuildContext context) {
-    final colors = Theme.of(context).colorScheme;
+    // 1. Fetch Data
     final suppliersAsync = ref.watch(suppliersProvider);
     final productsAsync = ref.watch(
-      productSearchProvider(_searchQuery.normalized),
-    );
-
-    return PopScope(
-      canPop: !_viewAllSuppliers,
-      onPopInvoked: (didPop) {
-        if (didPop) return;
-        setState(() {
-          _viewAllSuppliers = false;
-        });
-      },
-      child: Scaffold(
-        backgroundColor: colors.surface,
-        appBar: AppBar(
-          backgroundColor: colors.surface,
-          elevation: 0,
-          leading: IconButton(
-            icon: Icon(Icons.arrow_back, color: colors.onSurface),
-            onPressed: () {
-              if (_viewAllSuppliers) {
-                setState(() {
-                  _viewAllSuppliers = false;
-                });
-              } else {
-                context.pop();
-              }
-            },
-          ),
-          titleSpacing: 0,
-          title: Padding(
-            padding: const EdgeInsets.only(right: 16.0),
-            child: _viewAllSuppliers
-                ? Text(
-                    'Proveedores',
-                    style: TextStyle(
-                      color: colors.onSurface,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  )
-                : CustomSearchBar(
-                    controller: _searchController,
-                    focusNode: _focusNode,
-                    hintText: 'Buscar proveedores, productos...',
-                    onChanged: _onSearchChanged,
-                    autoFocus: false, // Already focused in InitState
-                  ),
-          ),
-        ),
-        body: _buildBody(context, suppliersAsync, productsAsync),
+      productSearchProvider(
+        ProductSearchParams(query: _currentQuery.normalized, filters: _filters),
       ),
     );
-  }
 
-  Widget _buildBody(
-    BuildContext context,
-    AsyncValue<List<Supplier>> suppliersAsync,
-    AsyncValue<List<AggregatedProduct>> productsAsync,
-  ) {
-    final colors = Theme.of(context).colorScheme;
+    // 2. Combine Data into unified list
+    final combinedAsync = _combineData(suppliersAsync, productsAsync);
 
-    if (_searchQuery.isEmpty && !_viewAllSuppliers) {
-      return Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(Icons.search, size: 48, color: colors.outline),
-            const SizedBox(height: 16),
-            Text(
-              'Escribe para buscar...',
-              style: TextStyle(color: colors.outline),
-            ),
-          ],
+    // Dynamic label helpers
+    final suppliers = suppliersAsync.valueOrNull ?? [];
+    final supplierNameMap = {for (var s in suppliers) s.id: s.name};
+
+    return GenericSearchScreen<SearchResultItem>(
+      title: 'Proveedores',
+      hintText: 'Buscar proveedores, productos, marcas...',
+      historyKey: 'supplier_search_history',
+      data: combinedAsync,
+      // We handle query updates via onQueryChanged to feed the provider
+      onQueryChanged: _onQueryChanged,
+      onResetFilters: _resetFilters,
+      bottomFilterWidget: Padding(
+        padding: const EdgeInsets.only(
+          top: 8.0,
+          left: 16,
+          right: 16,
+          bottom: 8.0,
         ),
-      );
-    }
-
-    // Filter Suppliers
-    List<Supplier> matchedSuppliers = [];
-    suppliersAsync.whenData((list) {
-      matchedSuppliers = list.where((s) {
-        final matchesName = s.name.normalized.contains(_searchQuery.normalized);
-        final matchesType =
-            _selectedTradeTypes.isEmpty ||
-            (s.tradeType != null && _selectedTradeTypes.contains(s.tradeType));
-        return matchesName && matchesType;
-      }).toList();
-    });
-
-    if (_viewAllSuppliers) {
-      // Full Supplier List View
-      return ListView.builder(
-        padding: const EdgeInsets.symmetric(horizontal: 16),
-        itemCount: matchedSuppliers.length,
-        itemBuilder: (context, index) => CompactSupplierCard(
-          supplier: matchedSuppliers[index],
-          onTap: () {},
+        child: Text(
+          'Precios no incluyen impuesto y pueden variar sin previo aviso',
+          textAlign: TextAlign.center,
+          style: TextStyle(
+            fontSize: 12,
+            fontWeight: FontWeight.bold,
+            color: Theme.of(context).colorScheme.onSurface,
+          ),
         ),
-      );
-    }
+      ),
 
-    // Unified Sectioned View
-    return CustomScrollView(
-      slivers: [
-        // 1. Suppliers Section (if matches)
-        if (matchedSuppliers.isNotEmpty) ...[
-          SliverToBoxAdapter(
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text(
-                    'Proveedores',
-                    style: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                      color: colors.onSurface,
-                    ),
-                  ),
-                  if (matchedSuppliers.length > 3)
-                    TextButton(
-                      onPressed: () {
-                        setState(() {
-                          _viewAllSuppliers = true;
-                        });
-                      },
-                      child: const Text('Ver todo'),
-                    ),
-                ],
-              ),
-            ),
+      // Filter Chips Configuration
+      filters: [
+        FilterChipData(
+          label: _getChipLabel(
+            'Proveedor',
+            _filters.supplierIds.toSet(),
+            supplierNameMap,
           ),
-          SliverList(
-            delegate: SliverChildBuilderDelegate(
-              (context, index) => Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                child: CompactSupplierCard(
-                  supplier: matchedSuppliers[index],
-                  onTap: () {},
-                ),
-              ),
-              childCount: matchedSuppliers.length > 3
-                  ? 3
-                  : matchedSuppliers.length,
-            ),
-          ),
-          SliverToBoxAdapter(
-            child: Divider(
-              height: 32,
-              thickness: 1,
-              color: colors.outlineVariant.withOpacity(0.5),
-            ),
-          ),
-        ],
+          isActive: _filters.supplierIds.isNotEmpty,
+          onTap: _showSupplierFilter,
+        ),
+        FilterChipData(
+          label: _getChipLabel('Categoría', _filters.categories.toSet()),
+          isActive: _filters.categories.isNotEmpty,
+          onTap: _showCategoryFilter,
+        ),
+        FilterChipData(
+          label: _getChipLabel('Marca', _filters.brands.toSet()),
+          isActive: _filters.brands.isNotEmpty,
+          onTap: _showBrandFilter,
+        ),
+        FilterChipData(
+          label: _getPriceLabel(),
+          isActive: _filters.minPrice != null || _filters.maxPrice != null,
+          onTap: _showPriceFilter,
+        ),
+      ],
 
-        // 2 & 3. Products Section (Title + List handled together)
-        productsAsync.when(
-          data: (products) {
-            if (products.isEmpty) {
-              // If both lists are empty, show "No results"
-              if (matchedSuppliers.isEmpty) {
-                return SliverToBoxAdapter(
-                  child: Padding(
-                    padding: const EdgeInsets.all(32.0),
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(Icons.search_off, size: 48, color: colors.outline),
-                        const SizedBox(height: 16),
-                        Text(
-                          'No se encontraron resultados',
-                          style: TextStyle(color: colors.outline),
-                        ),
-                      ],
+      // Filter Predicate: Always true because filtering is done by Providers upstream
+      // GenericSearchScreen might run this check, so we ensure it passes.
+      filter: (item, query) => true,
+
+      itemBuilder: (context, item) {
+        if (item is HeaderResultItem) {
+          return Padding(
+            padding: const EdgeInsets.fromLTRB(16, 24, 16, 8),
+            child: Text(
+              item.title,
+              style: Theme.of(
+                context,
+              ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
+            ),
+          );
+        } else if (item is DividerResultItem) {
+          return const Divider(height: 32);
+        } else if (item is SupplierResultItem) {
+          return Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+            child: CompactSupplierCard(supplier: item.supplier, onTap: () {}),
+          );
+        } else if (item is ProductResultItem) {
+          return Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+            child: AggregatedProductCard(
+              product: item.product,
+              onTap: () {
+                // Always navigate to ProductSuppliersScreen as per new UX requirement.
+                // Single supplier might have multiple branches.
+                /* 
+                // Previous Logic: Open Action Sheet if single supplier
+                if (item.product.supplierCount == 1 &&
+                    item.product.firstSupplierId != null) {
+                  ProductActionSheet.show(
+                    context,
+                    supplierName: item.product.firstSupplierName ?? 'Proveedor',
+                    productName: item.product.name,
+                    price: item.product.minPrice,
+                    stock: item.product.totalQuantity,
+                    isWholesale:
+                        item.product.firstSupplierTradeType == 'WHOLESALE',
+                  );
+                } else { 
+                */
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => ProductSuppliersScreen(
+                      product: item.product,
+                      filters: _filters,
                     ),
                   ),
                 );
-              }
-              // If only products are empty, hide the section
-              return const SliverToBoxAdapter(child: SizedBox.shrink());
-            }
-
-            // Show Title + Products
-            return SliverList(
-              delegate: SliverChildBuilderDelegate(
-                (context, index) {
-                  // Index 0: Section Title
-                  if (index == 0) {
-                    return Padding(
-                      padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
-                      child: Text(
-                        'Productos',
-                        style: TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                          color: colors.onSurface,
-                        ),
-                      ),
-                    );
-                  }
-                  // Index > 0: Product Items
-                  // Note: index is 1-based relative to this delegate, so we use index-1 for data
-                  return Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 16),
-                    child: AggregatedProductCard(
-                      product: products[index - 1],
-                      onTap: () {},
-                    ),
-                  );
-                },
-                childCount: products.length + 1, // +1 for Title
-              ),
-            );
-          },
-          loading: () => const SliverToBoxAdapter(
-            child: Center(
-              child: Padding(
-                padding: EdgeInsets.all(16),
-                child: CircularProgressIndicator(),
-              ),
+                // }
+              },
             ),
-          ),
-          error: (err, stack) =>
-              SliverToBoxAdapter(child: Center(child: Text('Error: $err'))),
-        ),
-
-        // Bottom Padding
-        const SliverToBoxAdapter(child: SizedBox(height: 32)),
-      ],
+          );
+        }
+        return const SizedBox.shrink();
+      },
     );
+  }
+
+  AsyncValue<List<SearchResultItem>> _combineData(
+    AsyncValue<List<Supplier>> suppliersAsync,
+    AsyncValue<List<AggregatedProduct>> productsAsync,
+  ) {
+    if (suppliersAsync.isLoading || productsAsync.isLoading) {
+      return const AsyncValue.loading();
+    }
+
+    // Logic from previous implementation to filter Suppliers locally
+    // (Product filtering is server-side, Supplier filtering is client-side text match)
+    final suppliers = suppliersAsync.valueOrNull ?? [];
+    final products = productsAsync.valueOrNull ?? [];
+
+    // Filter suppliers by query & types locally (matches previous logic)
+    final matchedSuppliers = suppliers.where((s) {
+      final matchesName = s.name.normalized.contains(_currentQuery.normalized);
+      // Simple Trade Filter logic if we were using it, but _selectedTradeTypes is cleared/unused in new filters?
+      // The new filter chips (Supplier, Cat, Brand, Price) are Product focused.
+      // The previous implementation used _selectedTradeTypes.
+      // I'll skip trade type logic for now as it wasn't in the new chips list.
+      return matchesName;
+    }).toList();
+
+    List<SearchResultItem> items = [];
+
+    // 1. Suppliers Section
+    // Only show if no pure-product filters are active (logic from previous code)
+    bool hasProductFilters =
+        _filters.brands.isNotEmpty ||
+        _filters.categories.isNotEmpty ||
+        _filters.supplierIds.isNotEmpty ||
+        _filters.minPrice != null ||
+        _filters.maxPrice != null;
+
+    if (matchedSuppliers.isNotEmpty && !hasProductFilters) {
+      items.add(const HeaderResultItem('Proveedores'));
+      // Show top 3 or all? Previous code had "View All" logic.
+      // GenericSearchScreen doesn't support "View All" toggle easily inside itemBuilder.
+      // We will show ALL matched suppliers if "View All" isn't feasible,
+      // OR we just limit to 3 for compactness if there are products.
+      final showLimit = (products.isNotEmpty) ? 3 : matchedSuppliers.length;
+      final count = (matchedSuppliers.length > showLimit)
+          ? showLimit
+          : matchedSuppliers.length;
+
+      for (var i = 0; i < count; i++) {
+        items.add(SupplierResultItem(matchedSuppliers[i]));
+      }
+
+      if (products.isNotEmpty) {
+        items.add(const DividerResultItem());
+      }
+    }
+
+    // 2. Products Section
+    if (products.isNotEmpty) {
+      items.add(const HeaderResultItem('Productos'));
+      for (final p in products) {
+        items.add(ProductResultItem(p));
+      }
+    } else if (items.isEmpty && _currentQuery.isNotEmpty) {
+      // Return empty list to trigger Empty State
+      return const AsyncValue.data([]);
+    }
+
+    return AsyncValue.data(items);
   }
 }
