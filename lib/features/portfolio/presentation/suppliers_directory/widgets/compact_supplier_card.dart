@@ -6,71 +6,96 @@ import '../../../domain/models/supplier_model.dart';
 class CompactSupplierCard extends StatelessWidget {
   final Supplier supplier;
   final VoidCallback? onTap;
+  final bool isLocked;
 
-  const CompactSupplierCard({super.key, required this.supplier, this.onTap});
+  const CompactSupplierCard({
+    super.key,
+    required this.supplier,
+    this.onTap,
+    this.isLocked = false,
+  });
 
   @override
   Widget build(BuildContext context) {
     final colors = Theme.of(context).colorScheme;
 
     return InkWell(
-      onTap: onTap,
-      child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 12.0),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.center,
-          children: [
-            // Logo
-            Container(
-              width: 50,
-              height: 50,
-              margin: const EdgeInsets.only(right: 16),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(8),
-                border: Border.all(color: colors.outlineVariant),
+      onTap: isLocked ? null : onTap,
+      child: Opacity(
+        opacity: isLocked ? 0.6 : 1.0,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 12.0),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              // Logo
+              Container(
+                width: 50,
+                height: 50,
+                margin: const EdgeInsets.only(right: 16),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: colors.outlineVariant),
+                ),
+                child: supplier.logoUrl != null
+                    ? ClipRRect(
+                        borderRadius: BorderRadius.circular(8),
+                        child: CachedNetworkImage(
+                          imageUrl: supplier.logoUrl!,
+                          fit: BoxFit.contain,
+                          placeholder: (context, url) => const Center(
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          ),
+                          errorWidget: (context, url, error) => Icon(
+                            Icons.business,
+                            color: colors.onSurfaceVariant,
+                          ),
+                        ),
+                      )
+                    : Icon(Icons.business, color: colors.onSurfaceVariant),
               ),
-              child: supplier.logoUrl != null
-                  ? ClipRRect(
-                      borderRadius: BorderRadius.circular(8),
-                      child: CachedNetworkImage(
-                        imageUrl: supplier.logoUrl!,
-                        fit: BoxFit.contain,
-                        placeholder: (context, url) => const Center(
-                          child: CircularProgressIndicator(strokeWidth: 2),
-                        ),
-                        errorWidget: (context, url, error) => Icon(
-                          Icons.business,
-                          color: colors.onSurfaceVariant,
-                        ),
-                      ),
-                    )
-                  : Icon(Icons.business, color: colors.onSurfaceVariant),
-            ),
 
-            // Content
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    supplier.name,
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w600,
-                      color: colors.onSurface,
+              // Content
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Flexible(
+                          child: Text(
+                            supplier.name,
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w600,
+                              color: colors.onSurface,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                        if (isLocked) ...[
+                          const SizedBox(width: 6),
+                          Icon(
+                            Icons.lock_outline,
+                            size: 16,
+                            color: colors.onSurfaceVariant,
+                          ),
+                        ],
+                      ],
                     ),
-                  ),
-                  if (supplier.tradeType != null) ...[
-                    const SizedBox(height: 4),
-                    _CompactTradeTypeChip(tradeType: supplier.tradeType!),
+                    if (supplier.tradeType != null) ...[
+                      const SizedBox(height: 4),
+                      _CompactTradeTypeChip(tradeType: supplier.tradeType!),
+                    ],
                   ],
-                ],
+                ),
               ),
-            ),
-            // Chevron
-            Icon(Icons.chevron_right, color: colors.onSurfaceVariant),
-          ],
+              // Chevron or Lock
+              Icon(Icons.chevron_right, color: colors.onSurfaceVariant),
+            ],
+          ),
         ),
       ),
     );

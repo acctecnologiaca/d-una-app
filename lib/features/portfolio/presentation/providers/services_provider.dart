@@ -1,4 +1,5 @@
 import 'package:riverpod_annotation/riverpod_annotation.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../data/models/service_model.dart';
 import '../../data/repositories/supabase_services_repository.dart';
@@ -7,7 +8,7 @@ import '../../domain/repositories/services_repository.dart';
 part 'services_provider.g.dart';
 
 @riverpod
-ServicesRepository servicesRepository(ServicesRepositoryRef ref) {
+ServicesRepository servicesRepository(Ref ref) {
   return SupabaseServicesRepository(Supabase.instance.client);
 }
 

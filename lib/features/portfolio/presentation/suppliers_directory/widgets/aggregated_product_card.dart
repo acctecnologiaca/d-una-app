@@ -1,3 +1,4 @@
+import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:material_symbols_icons/symbols.dart';
 import '../../../domain/models/aggregated_product.dart';
@@ -6,6 +7,7 @@ import '../../../../../core/utils/string_extensions.dart';
 class AggregatedProductCard extends StatelessWidget {
   final AggregatedProduct product;
   final bool showPriceAndStock;
+  final bool isLocked;
 
   final dynamic onTap;
 
@@ -14,6 +16,7 @@ class AggregatedProductCard extends StatelessWidget {
     required this.product,
     required this.onTap,
     this.showPriceAndStock = true,
+    this.isLocked = false,
   });
 
   @override
@@ -27,28 +30,7 @@ class AggregatedProductCard extends StatelessWidget {
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.center,
           children: [
-            // Image Placeholder (or use brand first letter?)
-            /*Container(
-              width: 50,
-              height: 50,
-              margin: const EdgeInsets.only(right: 16),
-              decoration: BoxDecoration(
-                color: colors.surfaceContainerHighest,
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: Center(
-                child: Text(
-                  product.brand.isNotEmpty
-                      ? product.brand[0].toUpperCase()
-                      : '?',
-                  style: TextStyle(
-                    fontSize: 24,
-                    color: colors.onSurfaceVariant,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ),
-            ),*/
+            // ... Image Placeholder removed ...
 
             // Middle: Brand, Name, Model
             Expanded(
@@ -64,15 +46,24 @@ class AggregatedProductCard extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(height: 2),
-                  Text(
-                    product.name.toTitleCase,
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w600,
-                      color: colors.onSurface,
-                    ),
+                  Row(
+                    children: [
+                      Flexible(
+                        child: Text(
+                          product.name.toTitleCase,
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w600,
+                            color: colors.onSurface,
+                          ),
+                        ),
+                      ),
+                      if (isLocked) ...[
+                        // Removed lock icon from here as per request
+                      ],
+                    ],
                   ),
                   if (product.model.isNotEmpty) ...[
                     const SizedBox(height: 2),
@@ -94,13 +85,40 @@ class AggregatedProductCard extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.end,
                 children: [
                   // Price
-                  Text(
-                    _formatCurrency(product.minPrice),
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                      color: colors.onSurface,
-                    ),
+                  // isLocked: Always show price as per user request
+                  Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      if (isLocked) ...[
+                        Icon(
+                          Symbols.lock,
+                          size: 16,
+                          color: colors.onSurfaceVariant,
+                        ),
+                        const SizedBox(width: 4),
+                      ],
+                      if (isLocked)
+                        ImageFiltered(
+                          imageFilter: ImageFilter.blur(sigmaX: 4, sigmaY: 4),
+                          child: Text(
+                            _formatCurrency(product.minPrice),
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                              color: colors.onSurface,
+                            ),
+                          ),
+                        )
+                      else
+                        Text(
+                          _formatCurrency(product.minPrice),
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                            color: colors.onSurface,
+                          ),
+                        ),
+                    ],
                   ),
                   const SizedBox(height: 8),
 
@@ -121,7 +139,7 @@ class AggregatedProductCard extends StatelessWidget {
                         child: Row(
                           children: [
                             Icon(
-                              Symbols.groups,
+                              Symbols.warehouse,
                               size: 14,
                               color: colors.onTertiaryContainer,
                             ),

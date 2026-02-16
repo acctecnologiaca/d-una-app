@@ -2,18 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'custom_search_bar.dart';
-
-class FilterChipData {
-  final String label;
-  final bool isActive;
-  final VoidCallback onTap;
-
-  const FilterChipData({
-    required this.label,
-    required this.isActive,
-    required this.onTap,
-  });
-}
+import 'horizontal_filter_bar.dart';
 
 class GenericSearchScreen<T> extends StatefulWidget {
   final String title;
@@ -156,98 +145,11 @@ class _GenericSearchScreenState<T> extends State<GenericSearchScreen<T>> {
         children: [
           // Filters
           if (widget.filters.isNotEmpty)
-            SingleChildScrollView(
-              scrollDirection: Axis.horizontal,
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-              child: Row(
-                children:
-                    widget.filters.map((filter) {
-                      return Padding(
-                        padding: const EdgeInsets.only(right: 8.0),
-                        child: ActionChip(
-                          label: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              if (filter.isActive) ...[
-                                Icon(
-                                  Icons.check,
-                                  size: 18,
-                                  color: colors.onSecondaryContainer,
-                                ),
-                                const SizedBox(width: 8),
-                              ],
-                              Text(
-                                filter.label,
-                                style: TextStyle(
-                                  color: filter.isActive
-                                      ? colors.onSecondaryContainer
-                                      : colors.onSurface,
-                                  fontWeight: FontWeight.w600,
-                                  fontSize: 14, // Matches original font size
-                                ),
-                              ),
-                              const SizedBox(width: 4),
-                              Icon(
-                                Icons.arrow_drop_down,
-                                size: 20,
-                                color: filter.isActive
-                                    ? colors.onSecondaryContainer
-                                    : colors.onSurface,
-                              ),
-                            ],
-                          ),
-                          backgroundColor: filter.isActive
-                              ? colors.secondaryContainer
-                              : colors.surface,
-                          side: filter.isActive
-                              ? const BorderSide(color: Colors.transparent)
-                              : BorderSide(
-                                  color: colors.outline.withOpacity(
-                                    0.3,
-                                  ), // Changed .withValues to .withOpacity
-                                ),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(
-                              8,
-                            ), // Reduced radius
-                          ),
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 4,
-                            vertical: 2,
-                          ),
-                          onPressed: filter.onTap,
-                        ),
-                      );
-                    }).toList()..addAll([
-                      if (widget.filters.any((f) => f.isActive) &&
-                          widget.onResetFilters != null)
-                        Padding(
-                          padding: const EdgeInsets.only(left: 4.0),
-                          child: TextButton(
-                            onPressed: widget.onResetFilters,
-                            style: TextButton.styleFrom(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 12,
-                              ),
-                              minimumSize: const Size(
-                                0,
-                                32,
-                              ), // Match chip height roughly
-                              visualDensity: VisualDensity.compact,
-                            ),
-                            child: Text(
-                              "Borrar filtros",
-                              style: TextStyle(
-                                color: colors.primary,
-                                fontWeight: FontWeight.bold,
-                                fontSize: 14,
-                              ),
-                            ),
-                          ),
-                        ),
-                    ]),
+            if (widget.filters.isNotEmpty)
+              HorizontalFilterBar(
+                filters: widget.filters,
+                onResetFilters: widget.onResetFilters,
               ),
-            ),
 
           if (widget.bottomFilterWidget != null) widget.bottomFilterWidget!,
 

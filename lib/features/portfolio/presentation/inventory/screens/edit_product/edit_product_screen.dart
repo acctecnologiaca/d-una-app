@@ -88,6 +88,7 @@ class _EditProductScreenState extends ConsumerState<EditProductScreen> {
   }
 
   Future<void> _pickImage() async {
+    final theme = Theme.of(context);
     final picker = ImagePicker();
     final pickedFile = await picker.pickImage(source: ImageSource.gallery);
     if (pickedFile != null) {
@@ -97,7 +98,7 @@ class _EditProductScreenState extends ConsumerState<EditProductScreen> {
         uiSettings: [
           AndroidUiSettings(
             toolbarTitle: 'Editar Imagen',
-            toolbarColor: Theme.of(context).colorScheme.primary,
+            toolbarColor: theme.colorScheme.primary,
             toolbarWidgetColor: Colors.white,
             initAspectRatio: CropAspectRatioPreset.square,
             lockAspectRatio: true,
@@ -145,18 +146,18 @@ class _EditProductScreenState extends ConsumerState<EditProductScreen> {
                       .read(lookupRepositoryProvider)
                       .addCategory(name);
                   ref.invalidate(categoriesProvider);
-                  if (mounted) {
+                  ref.invalidate(categoriesProvider);
+                  if (context.mounted) {
                     setState(() {
                       _selectedCategory = newCategory;
                     });
                     Navigator.pop(context);
                   }
                 } catch (e) {
-                  if (mounted) {
-                    ScaffoldMessenger.of(
-                      context,
-                    ).showSnackBar(SnackBar(content: Text('Error: $e')));
-                  }
+                  if (!context.mounted) return;
+                  ScaffoldMessenger.of(
+                    context,
+                  ).showSnackBar(SnackBar(content: Text('Error: $e')));
                 }
               }
             },
@@ -356,7 +357,7 @@ class _EditProductScreenState extends ConsumerState<EditProductScreen> {
                       shape: BoxShape.circle,
                       color: colors.surfaceContainerHighest,
                       border: Border.all(
-                        color: colors.outlineVariant.withOpacity(0.2),
+                        color: colors.outlineVariant.withValues(alpha: 0.2),
                       ),
                     ),
                     clipBehavior: Clip.antiAlias,
@@ -482,7 +483,8 @@ class _EditProductScreenState extends ConsumerState<EditProductScreen> {
                               setState(() {
                                 _selectedBrand = newBrand;
                               });
-                              if (mounted) Navigator.pop(context);
+                              if (!context.mounted) return;
+                              Navigator.pop(context);
                             } catch (e) {
                               // verify mounted
                             }

@@ -1,3 +1,4 @@
+import 'package:d_una_app/shared/widgets/horizontal_filter_bar.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../data/models/product_model.dart';

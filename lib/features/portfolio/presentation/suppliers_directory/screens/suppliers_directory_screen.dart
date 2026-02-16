@@ -6,6 +6,7 @@ import '../widgets/supplier_card.dart';
 import 'supplier_search_screen.dart';
 
 import '../../../../profile/presentation/providers/profile_provider.dart';
+import '../../../../profile/presentation/screens/verification_screen.dart';
 
 class SuppliersDirectoryScreen extends ConsumerWidget {
   const SuppliersDirectoryScreen({super.key});
@@ -79,45 +80,39 @@ class SuppliersDirectoryScreen extends ConsumerWidget {
                     final supplier = suppliers[index];
 
                     // Logic: Is this supplier locked for this user?
-                    final allowedTypes = supplier.allowedVerificationTypes;
-                    final isRestricted = allowedTypes.isNotEmpty;
+                    // Logic: Is this supplier locked for this user?
 
-                    final userType =
-                        userProfileAsync.asData?.value?.verificationType;
-                    final isBusiness = userType == 'business';
                     final isRetail =
                         supplier.tradeType == 'RETAIL' ||
                         supplier.tradeType == 'BOTH';
 
-                    bool isLocked = true;
+                    bool isLocked = false;
+                    String lockMessage = '';
 
-                    if (isBusiness) {
-                      // Rule 3: Business overrides all
-                      isLocked = false;
-                    } else if (isRetail) {
-                      // Rule 1: Retail/Both is accessible to unverified/individuals explicitly
-                      // (Unless we want to respect isRestricted for Retail too? User implies Retail is public)
+                    if (isRetail) {
+                      // Retail is always open
                       isLocked = false;
                     } else {
-                      // It is WHOLESALE (or null)
-
-                      // Rule: Unverified cannot access ANY Wholesaler
+                      // WHOLESALE
+                      // Logic:
+                      // 1. Unverified -> Locked (Restricted).
+                      //    Note: "Denied" suppliers (Wholesale Business) are filtered out by Backend.
+                      //    So any Wholesale supplier appearing here for Unverified is "Restricted".
                       if (!isVerified) {
                         isLocked = true;
+                        // Generic message for restricted access
+                        lockMessage =
+                              "Para acceder a los productos de este proveedor debes estar verificado.";
                       } else {
-                        // User is Verified Individual accessing Wholesaler
-                        if (isRestricted) {
-                          // Check list matches
-                          if (userType == null ||
-                              !allowedTypes.contains(userType)) {
-                            isLocked = true;
-                          } else {
-                            isLocked = false;
-                          }
-                        } else {
-                          // Wholesaler with no explicit list -> Accessible to Verified Individual
-                          isLocked = false;
-                        }
+                        // Verified User (Individual or Business)
+                        // 2. Verified Individual ->
+                        //    - Wholesale (Individual) -> Full -> Open
+                        //    - Wholesale (Business) -> Partial -> Open (Blur inside)
+                        // 3. Verified Business -> Full -> Open
+                        
+                        // Therefore, for Verified users, the Card is ALWAYS Open in the directory.
+                        // The restriction (Partial) is handled inside the details screen.
+                        isLocked = false;
                       }
                     }
 
@@ -126,26 +121,59 @@ class SuppliersDirectoryScreen extends ConsumerWidget {
                       isLocked: isLocked, // Pass lock status
                       onTap: () {
                         if (isLocked) {
-                          // Show "Access Denied" dialog or snackbar
-                          final requiredTypes = allowedTypes.join(' o ');
+                          ScaffoldMessenger.of(context).hideCurrentSnackBar();
                           ScaffoldMessenger.of(context).showSnackBar(
                             SnackBar(
-                              content: Text(
-                                !isVerified
-                                    ? 'Este proveedor es exclusivo para usuarios verificados ($requiredTypes).'
-                                    : 'Tu tipo de verificación no permite acceder a este proveedor (Requiere: $requiredTypes).',
-                              ),
-                              action: SnackBarAction(
-                                label: 'Verificarme',
-                                onPressed: () {
-                                  // TODO: Navigate to Verification Screen
-                                },
+                              duration: const Duration(seconds: 5),
+                              content: Row(
+                                children: [
+                                  Expanded(
+                                    child: Text(
+                                      lockMessage,
+                                      style: const TextStyle(fontSize: 13),
+                                    ),
+                                  ),
+                                  TextButton(
+                                    onPressed: () {
+                                      ScaffoldMessenger.of(
+                                        context,
+                                      ).hideCurrentSnackBar();
+                                      Navigator.of(context).push(
+                                        MaterialPageRoute(
+                                          builder: (context) =>
+                                              const VerificationScreen(),
+                                        ),
+                                      );
+                                    },
+                                    child: const Text(
+                                      'Verificar',
+                                      style: TextStyle(
+                                        color: Colors.blueAccent,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                  ),
+                                  IconButton(
+                                    icon: const Icon(
+                                      Icons.close,
+                                      color: Colors.white,
+                                      size: 20,
+                                    ),
+                                    padding: EdgeInsets.zero,
+                                    constraints: const BoxConstraints(),
+                                    onPressed: () {
+                                      ScaffoldMessenger.of(
+                                        context,
+                                      ).hideCurrentSnackBar();
+                                    },
+                                  ),
+                                ],
                               ),
                             ),
                           );
                           return;
                         }
-                        // Navigate to Supplier Product Catalog with Filter
+
                         Navigator.of(context).push(
                           MaterialPageRoute(
                             builder: (context) => SupplierSearchScreen(

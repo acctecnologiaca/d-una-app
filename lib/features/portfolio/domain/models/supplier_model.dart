@@ -38,6 +38,10 @@ class Supplier extends Equatable {
     );
   }
 
+  factory Supplier.empty() {
+    return const Supplier(id: '', name: 'Desconocido');
+  }
+
   @override
   List<Object?> get props => [
     id,

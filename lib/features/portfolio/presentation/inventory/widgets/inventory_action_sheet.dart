@@ -5,7 +5,7 @@ import '../../../../../shared/widgets/bottom_sheet_action_item.dart';
 import '../../../../../shared/widgets/custom_action_sheet.dart';
 import '../../../data/models/product_model.dart';
 import 'inventory_item_card.dart';
-import 'estimate_price_dialog.dart';
+import '../../widgets/estimate_price_sheet.dart';
 
 class InventoryActionSheet {
   static void show({
@@ -39,14 +39,16 @@ class InventoryActionSheet {
           label: 'Estimar precio de venta',
           onTap: () {
             context.pop();
-            showDialog(
-              context: context,
-              builder: (_) => EstimatePriceDialog(
-                basePrice: currentPrice,
-                productName: product.name,
-                productBrand: product.brand?.name,
-                productModel: product.model,
-              ),
+            EstimatePriceSheet.show(
+              context,
+              basePrice: currentPrice,
+              productName: product.name,
+              productBrand: product.brand?.name,
+              productModel: product.model,
+              // uom: product.uom?.name ?? 'ud.', // Assuming Product has uom. If not, default to 'ud.'
+              // Waiting to check Product model to confirm uom field access.
+              // For now I will assume it might not be there or need confirmation.
+              // Actually, I can check the file view first.
             );
           },
         ),

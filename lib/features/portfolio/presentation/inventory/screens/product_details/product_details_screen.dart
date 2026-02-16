@@ -154,7 +154,7 @@ class _ProductDetailsScreenState extends ConsumerState<ProductDetailsScreen> {
                         shape: BoxShape.circle,
                         color: colors.surfaceContainerHighest,
                         border: Border.all(
-                          color: colors.outlineVariant.withOpacity(0.2),
+                          color: colors.outlineVariant.withValues(alpha: 0.2),
                           width: 1,
                         ),
                       ),

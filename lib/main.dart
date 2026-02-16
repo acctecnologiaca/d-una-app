@@ -20,7 +20,6 @@ void main() async {
   );
 
   // Check session validity (5 days inactivity rule)
-  // Check session validity (5 days inactivity rule)
   final sessionManager = SessionManager();
   sessionManager.checkSessionValidity(); // Fire and forget, don't block startup
 

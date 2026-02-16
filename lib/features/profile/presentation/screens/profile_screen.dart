@@ -86,7 +86,7 @@ class ProfileScreen extends ConsumerWidget {
         data: (profile) {
           final currentFirstName = profile?.firstName ?? 'Usuario';
           final currentLastName = profile?.lastName ?? '';
-          final currentOccupation = profile?.occupation ?? 'Sin ocupación';
+
           final currentFullName = '$currentFirstName $currentLastName'.trim();
           final currentAvatarUrl = profile?.avatarUrl;
 

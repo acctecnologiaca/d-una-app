@@ -23,7 +23,7 @@ class SupplierCard extends StatelessWidget {
         height: 180,
         foregroundDecoration: isLocked
             ? BoxDecoration(
-                color: Colors.grey.withOpacity(0.7),
+                color: Colors.grey.withValues(alpha: 0.7),
                 borderRadius: BorderRadius.circular(16),
               )
             : null,

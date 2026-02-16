@@ -1,3 +1,4 @@
+import 'package:d_una_app/shared/widgets/horizontal_filter_bar.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -23,8 +24,6 @@ class _ClientSearchScreenState extends ConsumerState<ClientSearchScreen> {
     final user = ref.read(authRepositoryProvider).currentUser;
     return 'client_search_history_${user?.id ?? "guest"}';
   }
-
-
 
   @override
   Widget build(BuildContext context) {
@@ -78,11 +77,10 @@ class _ClientSearchScreenState extends ConsumerState<ClientSearchScreen> {
           },
         ),
         FilterChipData(
-          label: _selectedFilterCities.isEmpty
-              ? 'Ciudad'
-              : (_selectedFilterCities.length == 1
-                    ? _selectedFilterCities.first
-                    : '${_selectedFilterCities.first}+${_selectedFilterCities.length - 1}'),
+          label: HorizontalFilterBar.formatLabel(
+            defaultLabel: 'Ciudad',
+            selectedValues: _selectedFilterCities.toList(),
+          ),
           isActive: _selectedFilterCities.isNotEmpty,
           onTap: () {
             clientsAsync.whenData((clients) {

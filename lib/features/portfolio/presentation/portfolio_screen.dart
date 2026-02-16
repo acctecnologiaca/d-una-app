@@ -98,7 +98,7 @@ class PortfolioScreen extends ConsumerWidget {
                     DashboardCard(
                       title: 'Proveedores',
                       subtitle: 'Inventario de mis proveedores o terceros',
-                      icon: Icon(Symbols.groups, weight: 100),
+                      icon: Icon(Symbols.warehouse, weight: 100),
                       backgroundColor: colors.secondary,
                       foregroundColor: colors.onSecondary,
                       onTap: () => context.go('/portfolio/supplier-inventory'),

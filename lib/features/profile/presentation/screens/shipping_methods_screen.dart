@@ -13,7 +13,28 @@ class ShippingMethodsScreen extends ConsumerStatefulWidget {
 }
 
 class _ShippingMethodsScreenState extends ConsumerState<ShippingMethodsScreen> {
+  final _searchController = TextEditingController();
+  bool _isSearching = false;
+  String _searchQuery = '';
+
+  @override
+  void initState() {
+    super.initState();
+    _searchController.addListener(() {
+      setState(() {
+        _searchQuery = _searchController.text.toLowerCase();
+      });
+    });
+  }
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
+
   Future<void> _removeMethod(ShippingMethod method) async {
+    // ... existing remove logic ...
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
@@ -72,22 +93,54 @@ class _ShippingMethodsScreenState extends ConsumerState<ShippingMethodsScreen> {
         elevation: 0,
         leading: IconButton(
           icon: Icon(Icons.arrow_back, color: colors.onSurface),
-          onPressed: () => context.pop(),
+          onPressed: () {
+            if (_isSearching) {
+              setState(() {
+                _isSearching = false;
+                _searchQuery = '';
+                _searchController.clear();
+              });
+            } else {
+              context.pop();
+            }
+          },
         ),
-        title: Text(
-          'Métodos de envío',
-          style: textTheme.titleLarge?.copyWith(
-            color: colors.onSurface,
-            fontSize: 22,
-            fontWeight: FontWeight.w500,
-          ),
-        ),
+        title: _isSearching
+            ? TextField(
+                controller: _searchController,
+                autofocus: true,
+                decoration: InputDecoration(
+                  hintText: 'Buscar...',
+                  border: InputBorder.none,
+                  hintStyle: TextStyle(color: colors.onSurfaceVariant),
+                ),
+                style: TextStyle(color: colors.onSurface),
+              )
+            : Text(
+                'Métodos de envío',
+                style: textTheme.titleLarge?.copyWith(
+                  color: colors.onSurface,
+                  fontSize: 22,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
         centerTitle: false,
         actions: [
           IconButton(
-            icon: Icon(Icons.search, color: colors.onSurface),
+            icon: Icon(
+              _isSearching ? Icons.close : Icons.search,
+              color: colors.onSurface,
+            ),
             onPressed: () {
-              // TODO: Implement search
+              setState(() {
+                if (_isSearching) {
+                  _isSearching = false;
+                  _searchQuery = '';
+                  _searchController.clear();
+                } else {
+                  _isSearching = true;
+                }
+              });
             },
           ),
         ],
@@ -106,10 +159,16 @@ class _ShippingMethodsScreenState extends ConsumerState<ShippingMethodsScreen> {
             loading: () => const Center(child: CircularProgressIndicator()),
             error: (e, st) => Center(child: Text('Error cargando métodos: $e')),
             data: (methods) {
-              if (methods.isEmpty) {
+              final filteredMethods = methods.where((m) {
+                return m.label.toLowerCase().contains(_searchQuery);
+              }).toList();
+
+              if (filteredMethods.isEmpty) {
                 return Center(
                   child: Text(
-                    'No hay método de envío agregado',
+                    methods.isEmpty
+                        ? 'No hay método de envío agregado'
+                        : 'No se encontraron resultados',
                     style: textTheme.bodyLarge?.copyWith(
                       color: colors.onSurfaceVariant,
                     ),
@@ -119,10 +178,10 @@ class _ShippingMethodsScreenState extends ConsumerState<ShippingMethodsScreen> {
 
               return ListView.separated(
                 padding: const EdgeInsets.fromLTRB(16, 24, 16, 100),
-                itemCount: methods.length,
+                itemCount: filteredMethods.length,
                 separatorBuilder: (context, index) => const Divider(height: 1),
                 itemBuilder: (context, index) {
-                  final method = methods[index];
+                  final method = filteredMethods[index];
                   final isPrimary = method.isPrimary;
 
                   return InkWell(

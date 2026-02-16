@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'package:d_una_app/shared/widgets/horizontal_filter_bar.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:d_una_app/shared/widgets/generic_search_screen.dart';
@@ -14,8 +15,11 @@ import 'package:d_una_app/features/portfolio/presentation/providers/suppliers_pr
 import 'package:d_una_app/features/portfolio/presentation/providers/product_search_provider.dart';
 import 'package:d_una_app/features/portfolio/presentation/providers/lookup_providers.dart';
 import 'package:d_una_app/features/portfolio/domain/models/product_search_filters.dart';
-import 'package:d_una_app/features/portfolio/presentation/suppliers_directory/widgets/product_action_sheet.dart';
 import 'package:d_una_app/features/portfolio/presentation/suppliers_directory/screens/product_suppliers_screen.dart';
+import 'package:go_router/go_router.dart';
+import 'package:d_una_app/features/profile/presentation/providers/profile_provider.dart';
+import '../../../../profile/domain/models/user_profile.dart'; // Ensure model is available if needed
+import '../../../domain/models/product_sort_option.dart';
 
 class SupplierSearchScreen extends ConsumerStatefulWidget {
   final String? initialSupplierId;
@@ -31,6 +35,7 @@ class _SupplierSearchScreenState extends ConsumerState<SupplierSearchScreen> {
   // Query state maintained by GenericSearchScreen, but we need it for provider params
   String _currentQuery = '';
   late ProductSearchFilters _filters;
+  ProductSortOption _currentSort = ProductSortOption.priceAsc;
 
   @override
   void initState() {
@@ -71,6 +76,7 @@ class _SupplierSearchScreenState extends ConsumerState<SupplierSearchScreen> {
     setState(() {
       _filters = const ProductSearchFilters();
       _selectedTradeTypes.clear();
+      _currentSort = ProductSortOption.priceAsc;
     });
   }
 
@@ -105,6 +111,96 @@ class _SupplierSearchScreenState extends ConsumerState<SupplierSearchScreen> {
     }
   }
 
+  void _showSortOptions() {
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
+      backgroundColor: Theme.of(context).colorScheme.surfaceContainer,
+      builder: (context) {
+        final colors = Theme.of(context).colorScheme;
+        return SafeArea(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Center(
+                child: Container(
+                  margin: const EdgeInsets.symmetric(vertical: 16),
+                  height: 4,
+                  width: 32,
+                  decoration: BoxDecoration(
+                    color: Colors.grey[400],
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16.0,
+                  vertical: 16.0,
+                ),
+                child: Row(
+                  children: [
+                    IconButton(
+                      icon: const Icon(Icons.close),
+                      onPressed: () => context.pop(),
+                    ),
+                    Expanded(
+                      child: Text(
+                        'Ordenar por',
+                        style: Theme.of(context).textTheme.titleMedium
+                            ?.copyWith(fontWeight: FontWeight.bold),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              ...ProductSortOption.values.map(
+                (option) => InkWell(
+                  onTap: () {
+                    setState(() => _currentSort = option);
+                    context.pop();
+                  },
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 24.0,
+                      vertical: 12.0,
+                    ),
+                    child: Row(
+                      children: [
+                        Icon(
+                          _currentSort == option
+                              ? Icons.radio_button_checked
+                              : Icons.radio_button_unchecked,
+                          color: _currentSort == option
+                              ? colors.primary
+                              : colors.onSurface,
+                          size: 20,
+                        ),
+                        const SizedBox(width: 16),
+                        Expanded(
+                          child: Text(
+                            option.label,
+                            style: TextStyle(
+                              fontSize: 16,
+                              color: colors.onSurface,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 16),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
   // --- Filter Logic ---
 
   void _showSupplierFilter() {
@@ -126,9 +222,56 @@ class _SupplierSearchScreenState extends ConsumerState<SupplierSearchScreen> {
     );
   }
 
+  // --- Facet Extraction ---
+
+  ({Set<String> categories, Set<String> brands}) _getAvailableFacets() {
+    // If no query, return empty sets to indicate "show all"
+    if (_currentQuery.trim().isEmpty) {
+      return (categories: <String>{}, brands: <String>{});
+    }
+
+    // Note: productSearchProvider returns List<AggregatedProduct>
+    final searchState = ref.read(
+      productSearchProvider(
+        ProductSearchParams(query: _currentQuery.normalized, filters: _filters),
+      ),
+    );
+
+    final items = searchState.valueOrNull ?? [];
+    final categories = <String>{};
+    final brands = <String>{};
+
+    for (final item in items) {
+      // item is AggregatedProduct directly
+      if (item.category.isNotEmpty) {
+        categories.add(item.category);
+      }
+      if (item.brand.isNotEmpty) {
+        brands.add(item.brand);
+      }
+    }
+
+    return (categories: categories, brands: brands);
+  }
+
   void _showCategoryFilter() async {
-    final categories = await ref.read(categoriesProvider.future);
-    final options = categories.map((c) => c.name).toList();
+    final allCategories = await ref.read(categoriesProvider.future);
+    final facets = _getAvailableFacets();
+
+    // Filter options:
+    // If facets are empty (no query), show all.
+    // If facets exist, show only those in facets OR currently selected.
+    final availableCategories = facets.categories.isEmpty
+        ? allCategories
+        : allCategories
+              .where(
+                (c) =>
+                    facets.categories.contains(c.name) ||
+                    _filters.categories.contains(c.name),
+              )
+              .toList();
+
+    final options = availableCategories.map((c) => c.name).toList();
 
     if (!mounted) return;
 
@@ -146,8 +289,23 @@ class _SupplierSearchScreenState extends ConsumerState<SupplierSearchScreen> {
   }
 
   void _showBrandFilter() async {
-    final brands = await ref.read(brandsProvider.future);
-    final options = brands.map((b) => b.name).toList();
+    final allBrands = await ref.read(brandsProvider.future);
+    final facets = _getAvailableFacets();
+
+    // Filter options:
+    // If facets are empty (no query), show all.
+    // If facets exist, show only those in facets OR currently selected.
+    final availableBrands = facets.brands.isEmpty
+        ? allBrands
+        : allBrands
+              .where(
+                (b) =>
+                    facets.brands.contains(b.name) ||
+                    _filters.brands.contains(b.name),
+              )
+              .toList();
+
+    final options = availableBrands.map((b) => b.name).toList();
 
     if (!mounted) return;
 
@@ -190,12 +348,20 @@ class _SupplierSearchScreenState extends ConsumerState<SupplierSearchScreen> {
       ),
     );
 
+    final userProfileAsync = ref.watch(userProfileProvider);
+    final userProfile = userProfileAsync.valueOrNull;
+
     // 2. Combine Data into unified list
-    final combinedAsync = _combineData(suppliersAsync, productsAsync);
+    final combinedAsync = _combineData(
+      suppliersAsync,
+      productsAsync,
+      userProfile,
+    );
 
     // Dynamic label helpers
     final suppliers = suppliersAsync.valueOrNull ?? [];
     final supplierNameMap = {for (var s in suppliers) s.id: s.name};
+    final colors = Theme.of(context).colorScheme;
 
     return GenericSearchScreen<SearchResultItem>(
       title: 'Proveedores',
@@ -212,14 +378,52 @@ class _SupplierSearchScreenState extends ConsumerState<SupplierSearchScreen> {
           right: 16,
           bottom: 8.0,
         ),
-        child: Text(
-          'Precios no incluyen impuesto y pueden variar sin previo aviso',
-          textAlign: TextAlign.center,
-          style: TextStyle(
-            fontSize: 12,
-            fontWeight: FontWeight.bold,
-            color: Theme.of(context).colorScheme.onSurface,
-          ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Text(
+              'Precios no incluyen impuesto y pueden variar sin previo aviso',
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.bold,
+                color: colors.onSurface,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Align(
+              alignment: Alignment.centerLeft,
+              child: InkWell(
+                onTap: _showSortOptions,
+                borderRadius: BorderRadius.circular(8),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(
+                    vertical: 8.0,
+                    horizontal: 4.0,
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        _currentSort.label,
+                        style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w700,
+                          color: colors.onSurface,
+                        ),
+                      ),
+                      const SizedBox(width: 4),
+                      Icon(
+                        Icons.keyboard_arrow_down,
+                        size: 18,
+                        color: colors.onSurface,
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ],
         ),
       ),
 
@@ -269,33 +473,60 @@ class _SupplierSearchScreenState extends ConsumerState<SupplierSearchScreen> {
         } else if (item is DividerResultItem) {
           return const Divider(height: 32);
         } else if (item is SupplierResultItem) {
+          final s = item.supplier;
+          bool isLocked = false;
+          final isVerified = userProfile?.verificationStatus == 'verified';
+          final isBusiness = userProfile?.verificationType == 'business';
+
+          if (!isVerified) {
+            // Unverified: Wholesale is visible but locked
+            if (s.tradeType == 'WHOLESALE') {
+              isLocked = true;
+            }
+          } else {
+            // Verified: Check specific restrictions
+            // If Business: Unlocked (isLocked remains false)
+            // If Individual: Lock if Wholesale doesn't accept 'individual'
+            if (!isBusiness && s.tradeType == 'WHOLESALE') {
+              // If allowedTypes is empty, we generally assume open or check specific rule.
+              // Assuming logic: if explicitly listed, must be in it.
+              // (Reuse logic from ProductSuppliersScreen)
+              if (s.allowedVerificationTypes.isNotEmpty &&
+                  !s.allowedVerificationTypes.contains('individual')) {
+                isLocked = true;
+              }
+            }
+          }
+
           return Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-            child: CompactSupplierCard(supplier: item.supplier, onTap: () {}),
+            child: CompactSupplierCard(
+              supplier: item.supplier,
+              isLocked: isLocked,
+              onTap: () {
+                if (isLocked) return;
+                // Navigate to Supplier Details (Product List filtered by Supplier)
+                // Re-use SupplierSearchScreen but pre-filtered
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) =>
+                        SupplierSearchScreen(initialSupplierId: s.id),
+                  ),
+                );
+              },
+            ),
           );
         } else if (item is ProductResultItem) {
+          final p = item.product;
+          final isProductLocked = p.isLocked;
+
           return Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
             child: AggregatedProductCard(
               product: item.product,
+              isLocked: isProductLocked,
               onTap: () {
-                // Always navigate to ProductSuppliersScreen as per new UX requirement.
-                // Single supplier might have multiple branches.
-                /* 
-                // Previous Logic: Open Action Sheet if single supplier
-                if (item.product.supplierCount == 1 &&
-                    item.product.firstSupplierId != null) {
-                  ProductActionSheet.show(
-                    context,
-                    supplierName: item.product.firstSupplierName ?? 'Proveedor',
-                    productName: item.product.name,
-                    price: item.product.minPrice,
-                    stock: item.product.totalQuantity,
-                    isWholesale:
-                        item.product.firstSupplierTradeType == 'WHOLESALE',
-                  );
-                } else { 
-                */
                 Navigator.push(
                   context,
                   MaterialPageRoute(
@@ -305,7 +536,6 @@ class _SupplierSearchScreenState extends ConsumerState<SupplierSearchScreen> {
                     ),
                   ),
                 );
-                // }
               },
             ),
           );
@@ -318,6 +548,7 @@ class _SupplierSearchScreenState extends ConsumerState<SupplierSearchScreen> {
   AsyncValue<List<SearchResultItem>> _combineData(
     AsyncValue<List<Supplier>> suppliersAsync,
     AsyncValue<List<AggregatedProduct>> productsAsync,
+    UserProfile? userProfile,
   ) {
     if (suppliersAsync.isLoading || productsAsync.isLoading) {
       return const AsyncValue.loading();
@@ -329,12 +560,10 @@ class _SupplierSearchScreenState extends ConsumerState<SupplierSearchScreen> {
     final products = productsAsync.valueOrNull ?? [];
 
     // Filter suppliers by query & types locally (matches previous logic)
+    // Filter suppliers by query & types locally (matches previous logic)
+    // We removed the visibility filter here so Unverified users can see Wholesale suppliers (locked).
     final matchedSuppliers = suppliers.where((s) {
       final matchesName = s.name.normalized.contains(_currentQuery.normalized);
-      // Simple Trade Filter logic if we were using it, but _selectedTradeTypes is cleared/unused in new filters?
-      // The new filter chips (Supplier, Cat, Brand, Price) are Product focused.
-      // The previous implementation used _selectedTradeTypes.
-      // I'll skip trade type logic for now as it wasn't in the new chips list.
       return matchesName;
     }).toList();
 
@@ -371,8 +600,44 @@ class _SupplierSearchScreenState extends ConsumerState<SupplierSearchScreen> {
 
     // 2. Products Section
     if (products.isNotEmpty) {
+      // Sort Products
+      var sortedProducts = List<AggregatedProduct>.from(products);
+
+      // Filter Logic for Products (Best Effort for Unverified)
+      final isVerified = userProfile?.verificationStatus == 'verified';
+      if (!isVerified) {
+        sortedProducts = sortedProducts.where((p) {
+          // If purely wholesale (or single wholesale supplier), hide it
+          if (p.supplierCount == 1 && p.firstSupplierTradeType == 'WHOLESALE') {
+            return false;
+          }
+          // If multiple suppliers, we assume some *might* be retail, allow visibility.
+          // Or strictly enforce 'no wholesale at all'? But we lack granular data here.
+          // Let's hide if we detect ANY wholesale flag if we want stricter rules,
+          // but firstSupplierTradeType is our best hint.
+          return true;
+        }).toList();
+      }
+
+      sortedProducts.sort((a, b) {
+        switch (_currentSort) {
+          case ProductSortOption.priceAsc:
+            return a.minPrice.compareTo(b.minPrice);
+          case ProductSortOption.priceDesc:
+            return b.minPrice.compareTo(a.minPrice);
+          case ProductSortOption.quantityAsc:
+            return a.totalQuantity.compareTo(b.totalQuantity);
+          case ProductSortOption.quantityDesc:
+            return b.totalQuantity.compareTo(a.totalQuantity);
+          case ProductSortOption.nameAZ:
+            return a.name.toLowerCase().compareTo(b.name.toLowerCase());
+          case ProductSortOption.nameZA:
+            return b.name.toLowerCase().compareTo(a.name.toLowerCase());
+        }
+      });
+
       items.add(const HeaderResultItem('Productos'));
-      for (final p in products) {
+      for (final p in sortedProducts) {
         items.add(ProductResultItem(p));
       }
     } else if (items.isEmpty && _currentQuery.isNotEmpty) {

@@ -14,6 +14,7 @@ class AggregatedProduct extends Equatable {
   final String? firstSupplierName;
   final String? firstSupplierTradeType;
   final String uom;
+  final bool isLocked;
 
   const AggregatedProduct({
     required this.name,
@@ -27,23 +28,36 @@ class AggregatedProduct extends Equatable {
     this.firstSupplierName,
     this.firstSupplierTradeType,
     required this.uom,
+    this.isLocked = false,
   });
 
   factory AggregatedProduct.fromJson(Map<String, dynamic> json) {
+    // Helper to safely parse numbers
+    double parseDouble(dynamic value) {
+      if (value is num) return value.toDouble();
+      if (value is String) return double.tryParse(value) ?? 0.0;
+      return 0.0;
+    }
+
+    int parseInt(dynamic value) {
+      if (value is num) return value.toInt();
+      if (value is String) return int.tryParse(value) ?? 0;
+      return 0;
+    }
+
     return AggregatedProduct(
       name: json['name'] as String,
       brand: json['brand'] as String,
-      model: json['model'] as String,
+      model: json['model'] as String? ?? '', // Handle potential null model
       category: json['category'] as String? ?? 'Sin Categoría',
-      minPrice: (json['min_price'] as num).toDouble(),
-      totalQuantity: (json['total_quantity'] as num)
-          .toInt(), // Safer cast for SUM
-      supplierCount: (json['supplier_count'] as num)
-          .toInt(), // Safer cast for COUNT
+      minPrice: parseDouble(json['min_price']),
+      totalQuantity: parseInt(json['total_quantity']),
+      supplierCount: parseInt(json['supplier_count']),
       firstSupplierId: json['first_supplier_id'] as String?,
       firstSupplierName: json['first_supplier_name'] as String?,
       firstSupplierTradeType: json['first_supplier_trade_type'] as String?,
       uom: json['uom'] as String? ?? 'Unidad',
+      isLocked: json['is_locked'] as bool? ?? false,
     );
   }
 
@@ -60,5 +74,6 @@ class AggregatedProduct extends Equatable {
     firstSupplierName,
     firstSupplierTradeType,
     uom,
+    isLocked,
   ];
 }

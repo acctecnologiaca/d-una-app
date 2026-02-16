@@ -440,11 +440,10 @@ class _AddProductScreenState extends ConsumerState<AddProductScreen> {
                   _selectedBrand = newBrand;
                 });
               } catch (e) {
-                if (mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text('Error al agregar marca: $e')),
-                  );
-                }
+                if (!context.mounted) return;
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text('Error al agregar marca: $e')),
+                );
               }
             },
           ),
@@ -487,6 +486,7 @@ class _AddProductScreenState extends ConsumerState<AddProductScreen> {
   }
 
   Future<void> _pickImageFromSource(ImageSource source) async {
+    final theme = Theme.of(context);
     final picker = ImagePicker();
     try {
       final XFile? pickedImage = await picker.pickImage(
@@ -502,8 +502,8 @@ class _AddProductScreenState extends ConsumerState<AddProductScreen> {
           uiSettings: [
             AndroidUiSettings(
               toolbarTitle: 'Recortar',
-              toolbarColor: Theme.of(context).colorScheme.primary,
-              toolbarWidgetColor: Theme.of(context).colorScheme.onPrimary,
+              toolbarColor: theme.colorScheme.primary,
+              toolbarWidgetColor: theme.colorScheme.onPrimary,
               initAspectRatio: CropAspectRatioPreset.square,
               lockAspectRatio: true,
             ),
