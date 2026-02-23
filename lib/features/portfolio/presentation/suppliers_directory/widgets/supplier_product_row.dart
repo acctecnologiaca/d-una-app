@@ -1,6 +1,8 @@
 import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:material_symbols_icons/symbols.dart';
+import '../../../../../shared/utils/currency_formatter.dart';
+import '../../../../../shared/widgets/standard_list_item.dart';
 
 class SupplierProductRow extends StatelessWidget {
   final String supplierName;
@@ -52,152 +54,115 @@ class SupplierProductRow extends StatelessWidget {
         : colors.errorContainer;
     final stockText = hasStock ? '$stock $uom' : 'Sin stock';
 
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(8),
-      child: Opacity(
-        opacity: contentOpacity,
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 0, vertical: 12),
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // LEFT SIDE: Supplier Info
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    // Badge
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 6,
-                        vertical: 3,
-                      ),
-                      decoration: BoxDecoration(
-                        color: badgeColor,
-                        borderRadius: BorderRadius.circular(4),
-                      ),
-                      child: Text(
-                        badgeText,
-                        style: TextStyle(
-                          fontSize: 9,
-                          fontWeight: FontWeight.w700,
-                          letterSpacing: 0.3,
-                          color: badgeTextColor,
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    // Name
-                    Text(
-                      supplierName,
-                      style: textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.w600,
-                        fontSize: 15,
-                      ),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                    // Location (Optional)
-                    if (locationName != null && locationName!.isNotEmpty) ...[
-                      const SizedBox(height: 4),
-                      Row(
-                        children: [
-                          Icon(
-                            Icons.location_on_outlined,
-                            size: 14,
-                            color: colors.onSurfaceVariant,
-                          ),
-                          const SizedBox(width: 4),
-                          Text(
-                            locationName!,
-                            style: textTheme.bodySmall?.copyWith(
-                              fontSize: 13,
-                              color: colors.onSurfaceVariant,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ],
-                  ],
-                ),
-              ),
-
-              const SizedBox(width: 12),
-
-              // RIGHT SIDE: Price & Stock
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.end,
+    return Opacity(
+      opacity: contentOpacity,
+      child: StandardListItem(
+        padding: const EdgeInsets.symmetric(horizontal: 0, vertical: 12),
+        onTap: onTap,
+        overline: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
+          decoration: BoxDecoration(
+            color: badgeColor,
+            borderRadius: BorderRadius.circular(4),
+          ),
+          child: Text(
+            badgeText,
+            style: TextStyle(
+              fontSize: 9,
+              fontWeight: FontWeight.w700,
+              letterSpacing: 0.3,
+              color: badgeTextColor,
+            ),
+          ),
+        ),
+        title: supplierName,
+        subtitle: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            if (locationName != null && locationName!.isNotEmpty) ...[
+              const SizedBox(height: 4),
+              Row(
                 children: [
-                  // Price Logic
-                  Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      if (isLocked) ...[
-                        Icon(
-                          Symbols.lock,
-                          size: 16,
-                          color: colors.onSurfaceVariant,
-                        ),
-                        const SizedBox(width: 4),
-                      ],
-
-                      // Price Display (Normal or Blurred)
-                      if (isLocked || isPartial)
-                        ImageFiltered(
-                          imageFilter: ImageFilter.blur(sigmaX: 4, sigmaY: 4),
-                          child: Text(
-                            '\$${price.toStringAsFixed(2)}',
-                            style: textTheme.titleLarge?.copyWith(
-                              fontWeight: FontWeight.w700,
-                              fontSize: 18,
-                              color: colors.onSurface.withValues(alpha: 0.6),
-                            ),
-                          ),
-                        )
-                      else
-                        Text(
-                          '\$${price.toStringAsFixed(2)}',
-                          style: textTheme.titleLarge?.copyWith(
-                            fontWeight: FontWeight.w700,
-                            fontSize: 18,
-                          ),
-                        ),
-                    ],
+                  Icon(
+                    Icons.location_on_outlined,
+                    size: 14,
+                    color: colors.onSurfaceVariant,
                   ),
-
-                  const SizedBox(height: 8),
-
-                  // Stock Validations
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 6,
-                      vertical: 2,
-                    ),
-                    decoration: BoxDecoration(
-                      color: stockBgColor,
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(Symbols.package_2, size: 14, color: stockColor),
-                        const SizedBox(width: 4),
-                        Text(
-                          stockText,
-                          style: TextStyle(
-                            fontSize: 12,
-                            fontWeight: FontWeight.bold,
-                            color: stockColor,
-                          ),
-                        ),
-                      ],
+                  const SizedBox(width: 4),
+                  Text(
+                    locationName!,
+                    style: textTheme.bodySmall?.copyWith(
+                      fontSize: 13,
+                      color: colors.onSurfaceVariant,
                     ),
                   ),
                 ],
               ),
             ],
-          ),
+          ],
+        ),
+        trailing: Column(
+          crossAxisAlignment: CrossAxisAlignment.end,
+          children: [
+            // Price Logic
+            Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                if (isLocked) ...[
+                  Icon(Symbols.lock, size: 16, color: colors.onSurfaceVariant),
+                  const SizedBox(width: 4),
+                ],
+
+                // Price Display (Normal or Blurred)
+                if (isLocked || isPartial)
+                  ImageFiltered(
+                    imageFilter: ImageFilter.blur(sigmaX: 4, sigmaY: 4),
+                    child: Text(
+                      CurrencyFormatter.format(price),
+                      style: textTheme.titleLarge?.copyWith(
+                        fontWeight: FontWeight.w700,
+                        fontSize: 18,
+                        color: colors.onSurface.withValues(alpha: 0.6),
+                      ),
+                    ),
+                  )
+                else
+                  Text(
+                    CurrencyFormatter.format(price),
+                    style: textTheme.titleLarge?.copyWith(
+                      fontWeight: FontWeight.w700,
+                      fontSize: 18,
+                    ),
+                  ),
+              ],
+            ),
+
+            const SizedBox(height: 8),
+
+            // Stock Validations
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+              decoration: BoxDecoration(
+                color: stockBgColor,
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(Symbols.package_2, size: 14, color: stockColor),
+                  const SizedBox(width: 4),
+                  Text(
+                    stockText,
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.bold,
+                      color: stockColor,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
         ),
       ),
     );

@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import '../../../../../../shared/utils/currency_formatter.dart';
+import '../../../../../../shared/widgets/standard_list_item.dart';
 
 class ServiceItemCard extends StatelessWidget {
   final String name;
@@ -16,76 +18,24 @@ class ServiceItemCard extends StatelessWidget {
     required this.onTap,
   });
 
-  String _getSymbol(String unit) {
-    final match = RegExp(r'\((.*?)\)').firstMatch(unit);
-    return match?.group(1) ?? unit;
-  }
-
-  String _formatPriceDisplay() {
-    final symbol = _getSymbol(priceUnit);
-    if (price == 0) {
-      return '??/$symbol';
-    }
-    return '${_formatPrice(price)}/$symbol';
-  }
-
-  String _formatPrice(double val) {
-    // Simple formatting #,##0.00
-    // Replace . with , for decimals
-    return '\$${val.toStringAsFixed(2).replaceAll('.', ',')}';
-  }
-
   @override
   Widget build(BuildContext context) {
-    final colors = Theme.of(context).colorScheme;
-
-    return InkWell(
+    return StandardListItem(
+      padding: const EdgeInsets.symmetric(vertical: 16.0),
       onTap: onTap,
-      child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 16.0),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Left Side: Name & Category
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    name,
-                    style: const TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  if (category != null && category!.isNotEmpty) ...[
-                    const SizedBox(height: 4),
-                    Text(
-                      category!,
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                      style: TextStyle(
-                        fontSize: 14,
-                        color: colors.onSurfaceVariant,
-                      ),
-                    ),
-                  ],
-                ],
-              ),
-            ),
-
-            // Right Side: Price
-            const SizedBox(width: 16),
-            Text(
-              _formatPriceDisplay(),
-              style: const TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.w600, // Slightly bolder for price
-              ),
-            ),
-          ],
-        ),
+      overline: (category != null && category!.isNotEmpty)
+          ? Text(category!)
+          : null,
+      title: name,
+      trailing: Text(
+        '${CurrencyFormatter.format(price)}/${_getShortUnit(priceUnit)}',
+        style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
       ),
     );
+  }
+
+  String _getShortUnit(String unit) {
+    final match = RegExp(r'\((.*?)\)').firstMatch(unit);
+    return match?.group(1) ?? unit;
   }
 }

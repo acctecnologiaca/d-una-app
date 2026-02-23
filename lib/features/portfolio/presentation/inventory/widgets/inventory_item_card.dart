@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:material_symbols_icons/symbols.dart';
 import 'package:cached_network_image/cached_network_image.dart';
+import '../../../../../../shared/utils/currency_formatter.dart';
+import '../../../../../shared/widgets/standard_list_item.dart';
 
 class InventoryItemCard extends StatelessWidget {
   final String brand;
@@ -32,119 +34,70 @@ class InventoryItemCard extends StatelessWidget {
     final displayUnit = unit ?? 'ud.';
     final unitIcon = _getUnitIcon(displayUnit);
 
-    return InkWell(
+    return StandardListItem(
+      padding: const EdgeInsets.symmetric(vertical: 16.0),
       onTap: onTap,
-      child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 16.0),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.center,
-          children: [
-            // Image
-            Container(
-              width: 60,
-              height: 60,
-              margin: const EdgeInsets.only(right: 16),
-              decoration: BoxDecoration(
-                color: colors.surfaceContainerHighest,
-                borderRadius: BorderRadius.circular(8),
+      leading: Container(
+        width: 60,
+        height: 60,
+        decoration: BoxDecoration(
+          color: colors.surfaceContainerHighest,
+          borderRadius: BorderRadius.circular(8),
+        ),
+        clipBehavior: Clip.antiAlias,
+        child: imageUrl != null && imageUrl!.isNotEmpty
+            ? CachedNetworkImage(
+                imageUrl: imageUrl!,
+                fit: BoxFit.cover,
+                placeholder: (context, url) =>
+                    const Icon(Icons.image, size: 30),
+                errorWidget: (context, url, error) =>
+                    const Icon(Icons.broken_image, size: 30),
+              )
+            : Icon(
+                Icons.inventory_2_outlined,
+                size: 30,
+                color: colors.onSurfaceVariant,
               ),
-              clipBehavior: Clip.antiAlias,
-              child: imageUrl != null && imageUrl!.isNotEmpty
-                  ? CachedNetworkImage(
-                      imageUrl: imageUrl!,
-                      fit: BoxFit.cover,
-                      placeholder: (context, url) =>
-                          const Icon(Icons.image, size: 30),
-                      errorWidget: (context, url, error) =>
-                          const Icon(Icons.broken_image, size: 30),
-                    )
-                  : Icon(
-                      Icons.inventory_2_outlined,
-                      size: 30,
-                      color: colors.onSurfaceVariant,
-                    ),
+      ),
+      overline: Text(brand),
+      title: name,
+      subtitle: Text(model), // Already styled by StandardListItem
+      trailing: Column(
+        crossAxisAlignment: CrossAxisAlignment.end,
+        children: [
+          Text(
+            CurrencyFormatter.format(price),
+            style: TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.bold,
+              color: colors.onSurfaceVariant,
             ),
-
-            // Left Content (Details)
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    brand,
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: colors.onSurfaceVariant, // Grey
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
-                  const SizedBox(height: 2),
-                  Text(
-                    name,
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w600, // Medium/Bold
-                      color: colors.onSurface,
-                    ),
-                  ),
-                  const SizedBox(height: 2),
-                  Text(
-                    model,
-                    style: TextStyle(
-                      fontSize: 14,
-                      color: colors.onSurfaceVariant, // Lighter Grey
-                    ),
-                  ),
-                ],
-              ),
+          ),
+          const SizedBox(height: 8),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+            decoration: BoxDecoration(
+              color: colors.secondaryContainer,
+              borderRadius: BorderRadius.circular(12),
             ),
-
-            // Right Content (Unit Badge & Price)
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.end,
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
               children: [
+                Icon(unitIcon, size: 16, color: colors.onSecondaryContainer),
+                const SizedBox(width: 4),
                 Text(
-                  formatCurrency(price),
+                  '$stock $displayUnit',
                   style: TextStyle(
-                    fontSize: 16,
+                    fontSize: 12,
                     fontWeight: FontWeight.bold,
-                    color: colors.onSurfaceVariant,
-                  ),
-                ),
-                const SizedBox(height: 8),
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 8,
-                    vertical: 4,
-                  ),
-                  decoration: BoxDecoration(
-                    color: colors.secondaryContainer,
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(
-                        unitIcon,
-                        size: 16,
-                        color: colors.onSecondaryContainer,
-                      ),
-                      const SizedBox(width: 4),
-                      Text(
-                        '$stock $displayUnit',
-                        style: TextStyle(
-                          fontSize: 12,
-                          fontWeight: FontWeight.bold,
-                          color: colors.onSecondaryContainer,
-                        ),
-                      ),
-                    ],
+                    color: colors.onSecondaryContainer,
                   ),
                 ),
               ],
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
@@ -172,13 +125,5 @@ class InventoryItemCard extends StatelessWidget {
       default:
         return Symbols.package_2;
     }
-  }
-
-  String formatCurrency(double amount) {
-    // Simple formatter, should use NumberFormat in real app
-    // Assuming USD for now based on screenshot ($150,00)
-    final intPart = amount.floor();
-    final decPart = ((amount - intPart) * 100).round();
-    return '\$$intPart,${decPart.toString().padLeft(2, '0')}';
   }
 }

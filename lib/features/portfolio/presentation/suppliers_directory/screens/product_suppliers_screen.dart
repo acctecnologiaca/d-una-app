@@ -5,7 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../domain/models/aggregated_product.dart';
 import '../../../presentation/providers/suppliers_provider.dart';
 
-import '../widgets/aggregated_product_card.dart';
+import 'package:d_una_app/shared/widgets/aggregated_product_card.dart';
 import '../widgets/supplier_product_row.dart';
 import 'package:go_router/go_router.dart';
 import '../../../../../../shared/widgets/horizontal_filter_bar.dart';
@@ -227,7 +227,13 @@ class _ProductSuppliersScreenState
             padding: const EdgeInsets.symmetric(horizontal: 16),
             color: colors.surface,
             child: AggregatedProductCard(
-              product: widget.product,
+              name: widget.product.name,
+              brand: widget.product.brand,
+              model: widget.product.model,
+              minPrice: widget.product.minPrice,
+              totalQuantity: widget.product.totalQuantity,
+              supplierCount: widget.product.supplierCount,
+              uom: widget.product.uom,
               onTap: () {},
               showPriceAndStock: false,
             ),
@@ -393,7 +399,7 @@ class _ProductSuppliersScreenState
                     height: 1,
                     indent: 16,
                     endIndent: 16,
-                    color: colors.outlineVariant.withValues(alpha: 0.2),
+                    color: Colors.transparent,
                   ),
                   itemBuilder: (context, index) {
                     // Helper to safely parse numbers from JSON

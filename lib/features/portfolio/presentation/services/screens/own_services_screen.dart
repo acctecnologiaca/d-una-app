@@ -7,8 +7,7 @@ import '../../../data/models/service_model.dart';
 import '../../providers/services_provider.dart';
 import '../widgets/service_item_card.dart';
 import '../widgets/service_action_sheet.dart';
-
-enum SortOption { recent, nameAZ, nameZA }
+import '../../../../../shared/widgets/sort_selector.dart';
 
 class OwnServicesScreen extends ConsumerStatefulWidget {
   const OwnServicesScreen({super.key});
@@ -26,137 +25,6 @@ class _OwnServicesScreenState extends ConsumerState<OwnServicesScreen> {
   void dispose() {
     _searchController.dispose();
     super.dispose();
-  }
-
-  void _showSortOptions(BuildContext context, ColorScheme colors) {
-    showModalBottomSheet(
-      context: context,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
-      ),
-      backgroundColor: colors.surfaceContainer,
-      builder: (context) {
-        return SafeArea(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Center(
-                child: Container(
-                  margin: const EdgeInsets.symmetric(vertical: 16),
-                  height: 4,
-                  width: 32,
-                  decoration: BoxDecoration(
-                    color: Colors.grey[400],
-                    borderRadius: BorderRadius.circular(2),
-                  ),
-                ),
-              ),
-              Padding(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 16.0,
-                  vertical: 16.0,
-                ),
-                child: Row(
-                  children: [
-                    IconButton(
-                      icon: const Icon(Icons.close),
-                      onPressed: () => context.pop(),
-                    ),
-                    Expanded(
-                      child: Text(
-                        'Ordenar por',
-                        style: Theme.of(context).textTheme.titleMedium
-                            ?.copyWith(fontWeight: FontWeight.bold),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              _buildSortOption(
-                context,
-                'Más reciente',
-                SortOption.recent,
-                colors,
-              ),
-              _buildSortOption(
-                context,
-                'Nombre (A-Z)',
-                SortOption.nameAZ,
-                colors,
-              ),
-              _buildSortOption(
-                context,
-                'Nombre (Z-A)',
-                SortOption.nameZA,
-                colors,
-              ),
-              const SizedBox(height: 16),
-            ],
-          ),
-        );
-      },
-    );
-  }
-
-  Widget _buildSortOption(
-    BuildContext context,
-    String label,
-    SortOption option,
-    ColorScheme colors,
-  ) {
-    final isSelected = _currentSort == option;
-    return InkWell(
-      onTap: () {
-        setState(() {
-          _currentSort = option;
-        });
-        context.pop();
-      },
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 16.0),
-        child: Row(
-          children: [
-            Icon(
-              isSelected
-                  ? (option == SortOption.recent
-                        ? Icons.arrow_downward
-                        : (option == SortOption.nameAZ
-                              ? Icons.arrow_upward
-                              : Icons.arrow_downward))
-                  : (option == SortOption.recent
-                        ? Icons.arrow_downward
-                        : (option == SortOption.nameAZ
-                              ? Icons.arrow_upward
-                              : Icons.arrow_downward)),
-              color: colors.onSurface,
-              size: 20,
-            ),
-            const SizedBox(width: 16),
-            Expanded(
-              child: Text(
-                label,
-                style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w400,
-                  color: colors.onSurface,
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  String _getSortLabel(SortOption option) {
-    switch (option) {
-      case SortOption.recent:
-        return 'Más reciente';
-      case SortOption.nameAZ:
-        return 'Nombre (A-Z)';
-      case SortOption.nameZA:
-        return 'Nombre (Z-A)';
-    }
   }
 
   @override
@@ -217,28 +85,9 @@ class _OwnServicesScreenState extends ConsumerState<OwnServicesScreen> {
             ),
             child: Row(
               children: [
-                GestureDetector(
-                  onTap: () {
-                    _showSortOptions(context, colors);
-                  },
-                  child: Row(
-                    children: [
-                      Text(
-                        _getSortLabel(_currentSort),
-                        style: TextStyle(
-                          fontSize: 14,
-                          fontWeight: FontWeight.bold,
-                          color: colors.onSurface,
-                        ),
-                      ),
-                      const SizedBox(width: 4),
-                      Icon(
-                        Icons.arrow_downward,
-                        size: 16,
-                        color: colors.onSurface,
-                      ),
-                    ],
-                  ),
+                SortSelector(
+                  currentSort: _currentSort,
+                  onSortChanged: (val) => setState(() => _currentSort = val),
                 ),
               ],
             ),
@@ -263,6 +112,7 @@ class _OwnServicesScreenState extends ConsumerState<OwnServicesScreen> {
                 finalServices.sort((a, b) {
                   switch (_currentSort) {
                     case SortOption.recent:
+                    case SortOption.frequency:
                       return b.createdAt.compareTo(a.createdAt);
                     case SortOption.nameAZ:
                       return a.name.toLowerCase().compareTo(
@@ -279,7 +129,7 @@ class _OwnServicesScreenState extends ConsumerState<OwnServicesScreen> {
                   padding: const EdgeInsets.symmetric(horizontal: 16),
                   itemCount: finalServices.length,
                   separatorBuilder: (context, index) =>
-                      const Divider(height: 1),
+                      const Divider(height: 1, color: Colors.transparent),
                   itemBuilder: (context, index) {
                     final service = finalServices[index];
                     return ServiceItemCard(

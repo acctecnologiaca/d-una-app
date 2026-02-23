@@ -17,7 +17,14 @@ import '../../features/portfolio/presentation/services/screens/service_details/s
 import '../../features/portfolio/presentation/services/screens/edit_service/edit_service_screen.dart';
 import '../../features/portfolio/data/models/product_model.dart';
 import '../../features/portfolio/data/models/service_model.dart';
-import 'package:d_una_app/features/quotes/presentation/quotes_screen.dart';
+import 'package:d_una_app/features/quotes/presentation/quotes_list/screens/quotes_list_screen.dart';
+import 'package:d_una_app/features/quotes/presentation/quotes_list/screens/quotes_search_screen.dart';
+import 'package:d_una_app/features/quotes/presentation/create_quote/screens/create_quote_screen.dart';
+import '../../features/quotes/presentation/create_quote/screens/select_product_screen.dart';
+import '../../features/quotes/presentation/create_quote/screens/quote_product_search_screen.dart';
+import '../../features/quotes/presentation/create_quote/screens/quote_product_sources_screen.dart';
+import '../../features/quotes/presentation/create_quote/screens/add_temporal_product_screen.dart';
+import '../../features/quotes/domain/models/quote_aggregated_product.dart';
 import 'package:d_una_app/features/reports/presentation/reports_screen.dart';
 import 'package:d_una_app/features/profile/presentation/screens/profile_screen.dart';
 import 'package:d_una_app/features/profile/presentation/screens/basic_data_screen.dart';
@@ -195,7 +202,48 @@ final appRouter = GoRouter(
           routes: [
             GoRoute(
               path: '/quotes',
-              builder: (context, state) => const QuotesScreen(),
+              builder: (context, state) => const QuotesListScreen(),
+              routes: [
+                GoRoute(
+                  path: 'search',
+                  builder: (context, state) => const QuotesSearchScreen(),
+                ),
+                GoRoute(
+                  path: 'create',
+                  parentNavigatorKey: _rootNavigatorKey,
+                  builder: (context, state) => const CreateQuoteScreen(),
+                  routes: [
+                    GoRoute(
+                      path: 'select-product',
+                      parentNavigatorKey: _rootNavigatorKey,
+                      builder: (context, state) => const SelectProductScreen(),
+                      routes: [
+                        GoRoute(
+                          path: 'search',
+                          parentNavigatorKey: _rootNavigatorKey,
+                          builder: (context, state) =>
+                              const QuoteProductSearchScreen(),
+                        ),
+                        GoRoute(
+                          path: 'product-sources',
+                          parentNavigatorKey: _rootNavigatorKey,
+                          builder: (context, state) {
+                            final product =
+                                state.extra as QuoteAggregatedProduct;
+                            return QuoteProductSourcesScreen(product: product);
+                          },
+                        ),
+                        GoRoute(
+                          path: 'temporal-product',
+                          parentNavigatorKey: _rootNavigatorKey,
+                          builder: (context, state) =>
+                              const AddTemporalProductScreen(),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ],
             ),
           ],
         ),

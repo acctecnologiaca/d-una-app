@@ -114,7 +114,7 @@ class _EstimatePriceSheetState extends State<EstimatePriceSheet> {
         color: colors.surfaceContainer, // Mimic dialog bg
         borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
       ),
-      padding: const EdgeInsets.fromLTRB(16, 12, 16, 40),
+      padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
       // Use SafeArea to respect bottom nav bar/gestures
       child: SafeArea(
         child: Column(
