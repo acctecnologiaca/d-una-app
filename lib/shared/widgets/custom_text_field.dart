@@ -146,9 +146,9 @@ class _CustomTextFieldState extends State<CustomTextField> {
               horizontal: 16,
               vertical: 16,
             ),
-            filled: true,
+            filled: !widget.enabled,
             fillColor: widget.enabled
-                ? colors.surfaceContainerLowest
+                ? Colors.transparent
                 : colors.surfaceContainerHighest,
           ),
         ),

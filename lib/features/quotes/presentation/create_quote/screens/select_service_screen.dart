@@ -4,29 +4,41 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../../shared/widgets/standard_app_bar.dart';
 import '../../../../../shared/widgets/custom_search_bar.dart';
 import '../../../../../shared/widgets/sort_selector.dart';
-import '../../../../../shared/widgets/aggregated_product_card.dart';
-import '../providers/quote_product_selection_provider.dart';
+import '../../../../../shared/widgets/standard_list_item.dart';
+import '../../../../../shared/utils/currency_formatter.dart';
+import '../providers/quote_service_selection_provider.dart';
+import '../providers/create_quote_provider.dart';
+import '../widgets/quote_service_sale_details_sheet.dart';
 
-class SelectProductScreen extends ConsumerStatefulWidget {
-  const SelectProductScreen({super.key});
+class SelectServiceScreen extends ConsumerStatefulWidget {
+  const SelectServiceScreen({super.key});
 
   @override
-  ConsumerState<SelectProductScreen> createState() =>
-      _SelectProductScreenState();
+  ConsumerState<SelectServiceScreen> createState() =>
+      _SelectServiceScreenState();
 }
 
-class _SelectProductScreenState extends ConsumerState<SelectProductScreen> {
+class _SelectServiceScreenState extends ConsumerState<SelectServiceScreen> {
   SortOption _currentSort = SortOption.recent;
+
+  String _getRateSuffix(String? rateName) {
+    if (rateName == null) return '/ud.';
+    final lower = rateName.toLowerCase();
+    if (lower.contains('hora') || lower.contains('h')) return '/h';
+    if (lower.contains('día') || lower.contains('dia')) return '/dia';
+    if (lower.contains('mes')) return '/mes';
+    if (lower.contains('serv')) return '/serv.';
+    return '/ud.';
+  }
 
   @override
   Widget build(BuildContext context) {
     final colors = Theme.of(context).colorScheme;
-
-    final suggestionsAsync = ref.watch(quoteProductSuggestionsProvider);
+    final suggestionsAsync = ref.watch(quoteServiceSuggestionsProvider);
 
     return Scaffold(
       appBar: StandardAppBar(
-        title: 'Agregar producto',
+        title: 'Agregar servicio',
         subtitle: 'Cotización #C-00000011', // Should be dynamic
       ),
       body: Column(
@@ -37,11 +49,10 @@ class _SelectProductScreenState extends ConsumerState<SelectProductScreen> {
             padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
             child: InkWell(
               onTap: () {
-                context.push('/quotes/create/select-product/search').then((
+                context.push('/quotes/create/select-service/search').then((
                   result,
                 ) {
                   if (result == true) {
-                    // Passed back from search (which means a product was added)
                     if (context.mounted) {
                       context.pop();
                     }
@@ -51,7 +62,7 @@ class _SelectProductScreenState extends ConsumerState<SelectProductScreen> {
               borderRadius: BorderRadius.circular(12),
               child: IgnorePointer(
                 child: CustomSearchBar(
-                  hintText: 'Buscar producto...',
+                  hintText: 'Buscar servicio...',
                   onChanged: (_) {}, // No-op, handled by onTap
                   readOnly: true,
                   showFilterIcon: true,
@@ -60,18 +71,16 @@ class _SelectProductScreenState extends ConsumerState<SelectProductScreen> {
             ),
           ),
 
-          // 2. Add Temporal Product Button
+          // 2. Add Temporal Service Button
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
             child: OutlinedButton(
               onPressed: () {
                 context
-                    .push('/quotes/create/select-product/temporal-product')
+                    .push('/quotes/create/select-service/temporal-service')
                     .then((result) {
-                      if (result == true) {
-                        if (context.mounted) {
-                          context.pop();
-                        }
+                      if (result == true && context.mounted) {
+                        context.pop(); // Go back to create quote if added
                       }
                     });
               },
@@ -84,7 +93,7 @@ class _SelectProductScreenState extends ConsumerState<SelectProductScreen> {
                 foregroundColor: colors.onSurface,
               ),
               child: const Text(
-                'Agregar producto temporal',
+                'Agregar servicio temporal',
                 style: TextStyle(fontWeight: FontWeight.w600),
               ),
             ),
@@ -94,7 +103,7 @@ class _SelectProductScreenState extends ConsumerState<SelectProductScreen> {
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
             child: Text(
-              'Precios no incluyen impuesto y pueden variar sin previo aviso',
+              'Precios no incluyen impuesto',
               textAlign: TextAlign.center,
               style: TextStyle(
                 fontSize: 12,
@@ -121,15 +130,17 @@ class _SelectProductScreenState extends ConsumerState<SelectProductScreen> {
           Expanded(
             child: suggestionsAsync.when(
               loading: () => const Center(child: CircularProgressIndicator()),
-              error: (err, stack) => Center(child: Text('Error: $err')),
-              data: (products) {
+              error: (err, stack) => Center(child: Text('Error: \$err')),
+              data: (services) {
                 // Determine sort list
-                final sortedProducts = List.of(products);
-                sortedProducts.sort((a, b) {
+                final sortedServices = List.of(services);
+                sortedServices.sort((a, b) {
                   switch (_currentSort) {
                     case SortOption.recent:
                     case SortOption.frequency:
-                      return 0; // Default RPC order
+                      return b.createdAt.compareTo(
+                        a.createdAt,
+                      ); // Default to recent
                     case SortOption.nameAZ:
                       return a.name.toLowerCase().compareTo(
                         b.name.toLowerCase(),
@@ -141,10 +152,10 @@ class _SelectProductScreenState extends ConsumerState<SelectProductScreen> {
                   }
                 });
 
-                if (sortedProducts.isEmpty) {
+                if (sortedServices.isEmpty) {
                   return Center(
                     child: Text(
-                      'No hay sugerencias disponibles',
+                      'No hay servicios disponibles',
                       style: TextStyle(color: colors.outline),
                     ),
                   );
@@ -152,35 +163,37 @@ class _SelectProductScreenState extends ConsumerState<SelectProductScreen> {
 
                 return ListView.separated(
                   padding: const EdgeInsets.symmetric(horizontal: 16),
-                  itemCount: sortedProducts.length,
+                  itemCount: sortedServices.length,
                   separatorBuilder: (_, _) =>
                       const Divider(height: 1, color: Colors.transparent),
                   itemBuilder: (context, index) {
-                    final product = sortedProducts[index];
-                    return AggregatedProductCard(
-                      name: product.name,
-                      brand: product.brand,
-                      model: product.model,
-                      minPrice: product.minPrice,
-                      totalQuantity: product.totalQuantity,
-                      supplierCount: product.supplierCount,
-                      uom: product.uom,
-                      showPriceAndStock: true,
-                      onTap: () {
-                        context
-                            .push(
-                              '/quotes/create/select-product/product-sources',
-                              extra: product,
-                            )
-                            .then((result) {
-                              if (result == true) {
-                                // Re-fetch or close? Just close for now
-                                if (context.mounted) {
-                                  context.pop();
-                                }
-                              }
-                            });
+                    final service = sortedServices[index];
+                    return StandardListItem(
+                      onTap: () async {
+                        final addedService =
+                            await QuoteServiceSaleDetailsSheet.show(
+                              context,
+                              service: service,
+                            );
+
+                        if (addedService != null) {
+                          ref
+                              .read(createQuoteProvider.notifier)
+                              .addService(addedService);
+                          if (context.mounted) {
+                            context.pop();
+                          }
+                        }
                       },
+                      title: service.name,
+                      subtitle: Text(service.category?.name ?? 'Sin categoría'),
+                      trailing: Text(
+                        '${CurrencyFormatter.format(service.price)}${_getRateSuffix(service.serviceRate?.name)}',
+                        style: const TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
                     );
                   },
                 );

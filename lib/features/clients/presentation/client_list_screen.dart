@@ -7,6 +7,7 @@ import 'providers/add_client_provider.dart';
 import 'package:d_una_app/core/utils/string_extensions.dart';
 import '../../../../shared/widgets/custom_search_bar.dart';
 import '../../../../shared/widgets/sort_selector.dart';
+import '../../../shared/widgets/custom_extended_fab.dart';
 
 class ClientListScreen extends ConsumerStatefulWidget {
   const ClientListScreen({super.key});
@@ -233,23 +234,14 @@ class _ClientListScreenState extends ConsumerState<ClientListScreen> {
       ),
       floatingActionButton: Padding(
         padding: const EdgeInsets.only(bottom: 0.0),
-        child: FloatingActionButton.extended(
+        child: CustomExtendedFab(
           onPressed: () {
             // Reset provider state before starting new wizard
             ref.read(addClientProvider.notifier).reset();
             context.push('/clients/add');
           },
-          icon: const Icon(Icons.add),
-          label: const Text(
-            'Agregar',
-            style: TextStyle(fontWeight: FontWeight.bold),
-          ),
-          backgroundColor: colors.primaryContainer,
-          foregroundColor: colors.onPrimaryContainer,
-          elevation: 4,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(16),
-          ),
+          label: 'Agregar',
+          icon: Icons.add,
         ),
       ),
     );

@@ -42,14 +42,14 @@ class QuoteProductSource {
 
   QuoteProductSource copyWith({double? selectedQuantity}) {
     return QuoteProductSource(
-      id: this.id,
-      sourceType: this.sourceType,
-      sourceName: this.sourceName,
-      location: this.location,
-      price: this.price,
-      maxStock: this.maxStock,
-      tradeType: this.tradeType,
-      accessLevel: this.accessLevel,
+      id: id,
+      sourceType: sourceType,
+      sourceName: sourceName,
+      location: location,
+      price: price,
+      maxStock: maxStock,
+      tradeType: tradeType,
+      accessLevel: accessLevel,
       selectedQuantity: selectedQuantity ?? this.selectedQuantity,
     );
   }

@@ -1,5 +1,3 @@
-import '../../../../core/utils/string_extensions.dart';
-
 class QuoteAggregatedSource {
   final String supplierName;
   final double price;

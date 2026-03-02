@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:d_una_app/features/clients/presentation/providers/clients_provider.dart';
 import 'package:d_una_app/features/clients/presentation/widgets/contact_list_tile.dart';
 import 'package:d_una_app/core/utils/contact_utils.dart';
+import '../../../../../shared/widgets/custom_extended_fab.dart';
 
 class ManageContactsScreen extends ConsumerWidget {
   final String clientId;
@@ -115,20 +116,15 @@ class ManageContactsScreen extends ConsumerWidget {
                 ),
           floatingActionButton: Padding(
             padding: const EdgeInsets.only(bottom: 40.0),
-            child: FloatingActionButton.extended(
+            child: CustomExtendedFab(
               onPressed: () {
                 context.go(
                   '/clients/$clientId/contacts/add',
                   extra: companyName,
                 );
               },
-              label: const Text(
-                'Agregar',
-                style: TextStyle(fontWeight: FontWeight.bold),
-              ),
-              icon: const Icon(Icons.add),
-              backgroundColor: colors.primaryContainer,
-              foregroundColor: colors.onPrimaryContainer,
+              label: 'Agregar',
+              icon: Icons.add,
             ),
           ),
         );

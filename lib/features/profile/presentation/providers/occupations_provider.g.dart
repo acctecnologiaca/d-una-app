@@ -45,7 +45,7 @@ final occupationsProvider =
 // ignore: unused_element
 typedef OccupationsRef =
     AutoDisposeFutureProviderRef<List<Map<String, dynamic>>>;
-String _$occupationNameHash() => r'49797d23ff051f722a67c9e2071b667be4d258cb';
+String _$occupationNameHash() => r'891ba60a741bae663b613be0ade752fe60adf2aa';
 
 /// Copied from Dart SDK
 class _SystemHash {

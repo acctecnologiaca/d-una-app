@@ -85,10 +85,19 @@ class GenericSortSelector<T> extends StatelessWidget {
                   ],
                 ),
               ),
-              ...options.map(
-                (option) => _buildSortOption(context, option, colors),
+              Flexible(
+                child: SingleChildScrollView(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      ...options.map(
+                        (option) => _buildSortOption(context, option, colors),
+                      ),
+                      const SizedBox(height: 16),
+                    ],
+                  ),
+                ),
               ),
-              const SizedBox(height: 16),
             ],
           ),
         );

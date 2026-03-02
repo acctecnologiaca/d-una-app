@@ -2,12 +2,18 @@ import 'package:flutter/material.dart';
 import '../../../../../../../shared/widgets/custom_dropdown.dart';
 import '../../../../../../../shared/widgets/wizard_bottom_bar.dart';
 import '../../../../../data/models/category_model.dart';
+import '../../../../../data/models/uom_model.dart';
 
 class AddProductStep3 extends StatefulWidget {
   final Category? selectedCategory;
   final ValueChanged<Category?> onCategoryChanged;
   final List<Category> categories;
   final VoidCallback onAddCategory;
+
+  final Uom? selectedUom;
+  final ValueChanged<Uom?> onUomChanged;
+  final List<Uom> uoms;
+
   final VoidCallback onNext;
   final VoidCallback onBack;
   final VoidCallback onCancel;
@@ -18,6 +24,9 @@ class AddProductStep3 extends StatefulWidget {
     required this.onCategoryChanged,
     required this.categories,
     required this.onAddCategory,
+    required this.selectedUom,
+    required this.onUomChanged,
+    required this.uoms,
     required this.onNext,
     required this.onBack,
     required this.onCancel,
@@ -46,7 +55,7 @@ class _AddProductStep3State extends State<AddProductStep3> {
                 children: [
                   Center(
                     child: Text(
-                      'Categoría del producto',
+                      'Detalles adicionales',
                       style: Theme.of(context).textTheme.headlineSmall
                           ?.copyWith(
                             fontWeight: FontWeight.w400,
@@ -58,7 +67,7 @@ class _AddProductStep3State extends State<AddProductStep3> {
                   ),
                   const SizedBox(height: 16),
                   Text(
-                    '¿En qué categoría incluirías al producto?',
+                    'Categoría y Unidad de Medida del producto.',
                     style: TextStyle(
                       fontSize: 14,
                       color: colors.onSurfaceVariant,
@@ -88,6 +97,23 @@ class _AddProductStep3State extends State<AddProductStep3> {
                       return null;
                     },
                   ),
+
+                  const SizedBox(height: 24),
+
+                  CustomDropdown<Uom>(
+                    label: 'Unidad de Medida',
+                    value: widget.selectedUom,
+                    items: widget.uoms,
+                    onChanged: widget.onUomChanged,
+                    itemLabelBuilder: (item) => '${item.name} (${item.symbol})',
+                    showAddOption: false,
+                    validator: (val) {
+                      if (val == null) {
+                        return 'Requerido';
+                      }
+                      return null;
+                    },
+                  ),
                 ],
               ),
             ),
@@ -100,7 +126,8 @@ class _AddProductStep3State extends State<AddProductStep3> {
             onBack: widget.onBack,
             onNext:
                 widget.selectedCategory != null &&
-                    widget.selectedCategory!.id != 'ADD_NEW'
+                    widget.selectedCategory!.id != 'ADD_NEW' &&
+                    widget.selectedUom != null
                 ? widget.onNext
                 : null,
           ),

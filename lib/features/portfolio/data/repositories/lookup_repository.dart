@@ -2,6 +2,9 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import '../models/service_rate_model.dart';
 import '../models/category_model.dart';
 import '../models/brand_model.dart';
+import '../models/uom_model.dart';
+import '../../../quotes/data/models/collaborator.dart';
+import '../../../quotes/data/models/commercial_condition.dart';
 
 class LookupRepository {
   final SupabaseClient _client;
@@ -30,6 +33,34 @@ class LookupRepository {
         .select()
         .order('name', ascending: true);
     return (response as List).map((e) => ServiceRate.fromJson(e)).toList();
+  }
+
+  Future<List<Uom>> getUoms() async {
+    final response = await _client
+        .from('uoms')
+        .select()
+        .order('name', ascending: true);
+    return (response as List).map((e) => Uom.fromJson(e)).toList();
+  }
+
+  Future<List<Collaborator>> getCollaborators() async {
+    final response = await _client
+        .from('collaborators')
+        .select()
+        .eq('is_active', true)
+        .order('full_name', ascending: true);
+    return (response as List).map((e) => Collaborator.fromJson(e)).toList();
+  }
+
+  Future<List<CommercialCondition>> getCommercialConditions() async {
+    final response = await _client
+        .from('commercial_conditions')
+        .select()
+        .eq('is_active', true)
+        .order('description', ascending: true);
+    return (response as List)
+        .map((e) => CommercialCondition.fromJson(e))
+        .toList();
   }
 
   // ...

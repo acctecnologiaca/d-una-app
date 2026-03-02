@@ -325,18 +325,24 @@ class _QuoteProductSearchScreenState
                 onSortChanged: (val) => setState(() => _currentSort = val),
                 labelBuilder: (option) => option.label,
                 iconBuilder: (option) {
-                  if (option == ProductSortOption.priceAsc)
+                  if (option == ProductSortOption.priceAsc) {
                     return Icons.arrow_upward;
-                  if (option == ProductSortOption.priceDesc)
+                  }
+                  if (option == ProductSortOption.priceDesc) {
                     return Icons.arrow_downward;
-                  if (option == ProductSortOption.quantityAsc)
+                  }
+                  if (option == ProductSortOption.quantityAsc) {
                     return Icons.arrow_upward;
-                  if (option == ProductSortOption.quantityDesc)
+                  }
+                  if (option == ProductSortOption.quantityDesc) {
                     return Icons.arrow_downward;
-                  if (option == ProductSortOption.nameAZ)
+                  }
+                  if (option == ProductSortOption.nameAZ) {
                     return Icons.arrow_upward;
-                  if (option == ProductSortOption.nameZA)
+                  }
+                  if (option == ProductSortOption.nameZA) {
                     return Icons.arrow_downward;
+                  }
                   return null;
                 },
               ),

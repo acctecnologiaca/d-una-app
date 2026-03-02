@@ -14,6 +14,7 @@ import 'package:d_una_app/features/clients/presentation/screens/edit_client/edit
 import 'package:d_una_app/features/clients/presentation/screens/edit_client/edit_client_person_screen.dart';
 import 'package:d_una_app/features/clients/presentation/screens/manage_contacts/manage_contacts_screen.dart';
 import 'package:d_una_app/features/clients/presentation/screens/manage_contacts/add_edit_contact_screen.dart';
+import 'package:d_una_app/core/router/app_router.dart';
 import 'package:d_una_app/features/clients/presentation/screens/manage_contacts/contact_details_screen.dart';
 import 'package:d_una_app/features/clients/presentation/screens/manage_contacts/contact_search_screen.dart';
 
@@ -28,6 +29,7 @@ final clientRoutes = <RouteBase>[
       ),
       GoRoute(
         path: 'add', // /clients/add
+        parentNavigatorKey: rootNavigatorKey,
         builder: (context, state) => const AddClientTypeScreen(),
         routes: [
           GoRoute(
@@ -78,6 +80,7 @@ final clientRoutes = <RouteBase>[
             routes: [
               GoRoute(
                 path: 'add', // /clients/:id/contacts/add
+                parentNavigatorKey: rootNavigatorKey,
                 builder: (context, state) => AddEditContactScreen(
                   clientId: state.pathParameters['id']!,
                   companyName: state.extra is String

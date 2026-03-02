@@ -13,6 +13,7 @@ import '../../../../../../shared/widgets/filter_bottom_sheet.dart';
 import '../../../../../../shared/widgets/price_filter_sheet.dart';
 import '../widgets/product_action_sheet.dart';
 import '../../../domain/models/product_sort_option.dart';
+import '../../../../../../shared/widgets/sort_selector.dart';
 
 // Create a simplified provider for this screen's data
 final productSuppliersProvider =
@@ -81,96 +82,6 @@ class _ProductSuppliersScreenState
       _minPrice = null;
       _maxPrice = null;
     });
-  }
-
-  void _showSortOptions() {
-    showModalBottomSheet(
-      context: context,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
-      ),
-      backgroundColor: Theme.of(context).colorScheme.surfaceContainer,
-      builder: (context) {
-        final colors = Theme.of(context).colorScheme;
-        return SafeArea(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Center(
-                child: Container(
-                  margin: const EdgeInsets.symmetric(vertical: 16),
-                  height: 4,
-                  width: 32,
-                  decoration: BoxDecoration(
-                    color: Colors.grey[400],
-                    borderRadius: BorderRadius.circular(2),
-                  ),
-                ),
-              ),
-              Padding(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 16.0,
-                  vertical: 16.0,
-                ),
-                child: Row(
-                  children: [
-                    IconButton(
-                      icon: const Icon(Icons.close),
-                      onPressed: () => context.pop(),
-                    ),
-                    Expanded(
-                      child: Text(
-                        'Ordenar por',
-                        style: Theme.of(context).textTheme.titleMedium
-                            ?.copyWith(fontWeight: FontWeight.bold),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              ...ProductSortOption.values.map(
-                (option) => InkWell(
-                  onTap: () {
-                    setState(() => _currentSort = option);
-                    context.pop();
-                  },
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 24.0,
-                      vertical: 12.0,
-                    ),
-                    child: Row(
-                      children: [
-                        Icon(
-                          _currentSort == option
-                              ? Icons.radio_button_checked
-                              : Icons.radio_button_unchecked,
-                          color: _currentSort == option
-                              ? colors.primary
-                              : colors.onSurface,
-                          size: 20,
-                        ),
-                        const SizedBox(width: 16),
-                        Expanded(
-                          child: Text(
-                            option.label,
-                            style: TextStyle(
-                              fontSize: 16,
-                              color: colors.onSurface,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              ),
-              const SizedBox(height: 16),
-            ],
-          ),
-        );
-      },
-    );
   }
 
   @override
@@ -255,34 +166,32 @@ class _ProductSuppliersScreenState
                 const SizedBox(height: 12),
                 Align(
                   alignment: Alignment.centerLeft,
-                  child: InkWell(
-                    onTap: _showSortOptions,
-                    borderRadius: BorderRadius.circular(8),
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(
-                        vertical: 8.0,
-                        horizontal: 4.0,
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Text(
-                            _currentSort.label,
-                            style: TextStyle(
-                              fontSize: 14,
-                              fontWeight: FontWeight.w700,
-                              color: colors.onSurface,
-                            ),
-                          ),
-                          const SizedBox(width: 4),
-                          Icon(
-                            Icons.keyboard_arrow_down,
-                            size: 18,
-                            color: colors.onSurface,
-                          ),
-                        ],
-                      ),
-                    ),
+                  child: GenericSortSelector<ProductSortOption>(
+                    currentSort: _currentSort,
+                    options: ProductSortOption.values,
+                    onSortChanged: (val) => setState(() => _currentSort = val),
+                    labelBuilder: (option) => option.label,
+                    iconBuilder: (option) {
+                      if (option == ProductSortOption.priceAsc) {
+                        return Icons.arrow_upward;
+                      }
+                      if (option == ProductSortOption.priceDesc) {
+                        return Icons.arrow_downward;
+                      }
+                      if (option == ProductSortOption.quantityAsc) {
+                        return Icons.arrow_upward;
+                      }
+                      if (option == ProductSortOption.quantityDesc) {
+                        return Icons.arrow_downward;
+                      }
+                      if (option == ProductSortOption.nameAZ) {
+                        return Icons.arrow_upward;
+                      }
+                      if (option == ProductSortOption.nameZA) {
+                        return Icons.arrow_downward;
+                      }
+                      return null;
+                    },
                   ),
                 ),
               ],

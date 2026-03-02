@@ -8,47 +8,46 @@ import '../../../../../shared/widgets/custom_text_field.dart';
 import '../../../../../shared/widgets/custom_dropdown.dart';
 import '../../../../../shared/widgets/form_bottom_bar.dart';
 import '../../../../../shared/widgets/custom_stepper.dart';
-import '../../../../../features/portfolio/presentation/providers/lookup_providers.dart';
-import '../../../data/models/quote_item_product.dart';
+import '../../../data/models/quote_item_service.dart';
 import '../providers/create_quote_provider.dart';
-import '../../../../../features/portfolio/data/models/product_model.dart';
-import '../../../../../features/portfolio/presentation/providers/products_provider.dart';
+import '../../../../portfolio/presentation/providers/services_provider.dart';
+import '../../../../portfolio/data/models/service_rate_model.dart';
+import '../../../../portfolio/presentation/providers/lookup_providers.dart';
 import '../../../../../shared/utils/currency_formatter.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
 
-class AddTemporalProductScreen extends ConsumerStatefulWidget {
-  final QuoteItemProduct? existingItem;
+class AddTemporalServiceScreen extends ConsumerStatefulWidget {
+  final QuoteItemService? existingItem;
 
-  const AddTemporalProductScreen({super.key, this.existingItem});
+  const AddTemporalServiceScreen({super.key, this.existingItem});
 
   @override
-  ConsumerState<AddTemporalProductScreen> createState() =>
-      _AddTemporalProductScreenState();
+  ConsumerState<AddTemporalServiceScreen> createState() =>
+      _AddTemporalServiceScreenState();
 }
 
-class _AddTemporalProductScreenState
-    extends ConsumerState<AddTemporalProductScreen> {
+class _AddTemporalServiceScreenState
+    extends ConsumerState<AddTemporalServiceScreen> {
   final _formKey = GlobalKey<FormState>();
   final _nameController = TextEditingController();
-  final _modelController = TextEditingController();
-
-  // Combos / Text
-  String _selectedBrand = 'Genérico';
+  final _descriptionController = TextEditingController();
   final _quantityController = TextEditingController(text: '1');
-  String _selectedMeasure = 'Unidades';
+
+  String? _selectedRate;
 
   // Prices
   final _costController = TextEditingController();
   final _marginController = TextEditingController();
   final _salePriceController = TextEditingController();
 
-  // Warranty
-  bool _noWarranty = false;
-  final _warrantyQtyController = TextEditingController(text: '30');
+  // Settings
+  bool _hasWarranty = true;
+  final _warrantyQtyController = TextEditingController(text: '15');
   String _warrantyPeriod = 'Días';
 
-  // Inventory
-  bool _addToInventory = false;
+  bool _isOutsourced = false; // Based on screenshot
+  bool _addToOwnServices = false;
+
+  bool _isCalculating = false;
 
   @override
   void initState() {
@@ -56,28 +55,38 @@ class _AddTemporalProductScreenState
     final existing = widget.existingItem;
     if (existing != null) {
       _nameController.text = existing.name;
-      _modelController.text = existing.model ?? '';
-      _selectedBrand = existing.brand ?? 'Genérico';
+      _descriptionController.text = existing.description ?? '';
       _quantityController.text =
           existing.quantity.truncateToDouble() == existing.quantity
           ? existing.quantity.toInt().toString()
           : existing.quantity.toString();
-      _selectedMeasure = existing.uom;
-      _costController.text = CurrencyFormatter.formatNumber(existing.costPrice);
-      _marginController.text = (existing.profitMargin * 100)
-          .toStringAsFixed(2)
-          .replaceAll('.', ',');
+      _selectedRate =
+          existing.serviceRateId != null && existing.serviceRateId!.isNotEmpty
+          ? existing.serviceRateId
+          : null;
       _salePriceController.text = CurrencyFormatter.formatNumber(
         existing.unitPrice,
       );
-      if (existing.warrantyTime == null) {
-        _noWarranty = true;
+      if (existing.costPrice > 0) {
+        _isOutsourced = true;
+        _costController.text = CurrencyFormatter.formatNumber(
+          existing.costPrice,
+        );
+        _marginController.text = (existing.profitMargin * 100)
+            .toStringAsFixed(2)
+            .replaceAll('.', ',');
       } else {
+        _isOutsourced = false;
+      }
+      if (existing.warrantyTime != null) {
+        _hasWarranty = true;
         final parts = existing.warrantyTime!.split(' ');
         if (parts.length == 2) {
           _warrantyQtyController.text = parts[0];
           _warrantyPeriod = parts[1];
         }
+      } else {
+        _hasWarranty = false;
       }
     } else {
       WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -90,12 +99,13 @@ class _AddTemporalProductScreenState
 
     _costController.addListener(_calculateSalePriceFromMargin);
     _marginController.addListener(_calculateSalePriceFromMargin);
+    _quantityController.addListener(() => setState(() {}));
   }
 
   @override
   void dispose() {
     _nameController.dispose();
-    _modelController.dispose();
+    _descriptionController.dispose();
     _quantityController.dispose();
     _costController.dispose();
     _marginController.dispose();
@@ -104,10 +114,8 @@ class _AddTemporalProductScreenState
     super.dispose();
   }
 
-  bool _isCalculating = false;
-
   void _calculateSalePriceFromMargin() {
-    if (_isCalculating) return;
+    if (_isCalculating || !_isOutsourced) return;
     _isCalculating = true;
 
     final cost = CurrencyFormatter.parse(_costController.text) ?? 0;
@@ -126,7 +134,7 @@ class _AddTemporalProductScreenState
   }
 
   void _calculateMarginFromSalePrice() {
-    if (_isCalculating) return;
+    if (_isCalculating || !_isOutsourced) return;
     _isCalculating = true;
 
     final cost = CurrencyFormatter.parse(_costController.text) ?? 0;
@@ -144,83 +152,72 @@ class _AddTemporalProductScreenState
     _isCalculating = false;
   }
 
-  Future<void> _saveProduct() async {
+  Future<void> _saveService() async {
     if (!_formKey.currentState!.validate()) return;
 
-    final quoteState = ref.read(createQuoteProvider);
-    final cost = CurrencyFormatter.parse(_costController.text) ?? 0;
+    final cost = _isOutsourced
+        ? (CurrencyFormatter.parse(_costController.text) ?? 0)
+        : 0.0;
     final qty =
         double.tryParse(_quantityController.text.replaceAll(',', '.')) ?? 1;
     final marginPercent =
         double.tryParse(_marginController.text.replaceAll(',', '.')) ?? 0;
-    final margin = marginPercent / 100;
+    final margin = _isOutsourced ? (marginPercent / 100) : 0.0;
 
-    final taxRate = quoteState.globalTaxRate;
-    final unitPrice = cost * (1 + margin);
-    final taxAmount = unitPrice * taxRate;
-    final totalPrice = (unitPrice + taxAmount) * qty;
+    final salePrice = CurrencyFormatter.parse(_salePriceController.text) ?? 0;
 
-    final warrantyTime = _noWarranty
-        ? null
-        : '${_warrantyQtyController.text} $_warrantyPeriod';
+    final warrantyTime = _hasWarranty
+        ? '${_warrantyQtyController.text} $_warrantyPeriod'
+        : null;
 
-    final product = QuoteItemProduct(
+    // In temporal services, we might not have a full UUID for serviceRateId, but we can store a string representation or leave null
+    // Here we'll map the name to a dummy ID or just leave it null since it's draft.
+
+    final rateSymbol =
+        ref
+            .read(serviceRatesProvider)
+            .value
+            ?.where((r) => r.id == _selectedRate)
+            .firstOrNull
+            ?.symbol ??
+        'ud.';
+
+    final item = QuoteItemService(
       id: widget.existingItem?.id ?? const Uuid().v4(),
       quoteId: 'draft',
       name: _nameController.text.trim(),
-      brand: _selectedBrand.trim().isNotEmpty && _selectedBrand != 'Genérico'
-          ? _selectedBrand.trim()
-          : null,
-      model: _modelController.text.trim().isNotEmpty
-          ? _modelController.text.trim()
-          : null,
-      uom:
-          ref
-              .read(uomsProvider)
-              .value
-              ?.where((u) => u.name == _selectedMeasure)
-              .firstOrNull
-              ?.symbol ??
-          _selectedMeasure,
+      description: _descriptionController.text.trim(),
       quantity: qty,
       costPrice: cost,
       profitMargin: margin,
-      unitPrice: unitPrice,
-      taxRate: taxRate,
-      taxAmount: taxAmount,
-      totalPrice: totalPrice,
+      unitPrice: salePrice,
+      taxRate: ref.read(createQuoteProvider).globalTaxRate,
+      totalPrice: salePrice * qty,
       warrantyTime: warrantyTime,
-      isTemporal: true,
+      serviceRateId: _selectedRate ?? '',
+      rateSymbol: rateSymbol,
     );
 
     if (widget.existingItem != null) {
-      ref.read(createQuoteProvider.notifier).updateProduct(product);
+      ref.read(createQuoteProvider.notifier).updateService(item);
     } else {
-      ref.read(createQuoteProvider.notifier).addProduct(product);
+      ref.read(createQuoteProvider.notifier).addService(item);
     }
 
-    if (_addToInventory) {
+    if (_addToOwnServices) {
       try {
-        final userId = Supabase.instance.client.auth.currentUser?.id;
-        if (userId != null) {
-          final selectedUom = ref
-              .read(uomsProvider)
-              .value
-              ?.where((u) => u.name == _selectedMeasure)
-              .firstOrNull;
-          final draftProduct = Product(
-            id: const Uuid().v4(),
-            userId: userId,
-            name: _nameController.text.trim(),
-            model: _modelController.text.trim(),
-            uomId: selectedUom?.id,
-            createdAt: DateTime.now(),
-            updatedAt: DateTime.now(),
-          );
-          await ref.read(productsProvider.notifier).createProduct(draftProduct);
-        }
+        await ref
+            .read(servicesProvider.notifier)
+            .addService(
+              name: _nameController.text.trim(),
+              description: _descriptionController.text.trim(),
+              price: salePrice,
+              serviceRateId: _selectedRate ?? '',
+              categoryId: null,
+              hasWarranty: _hasWarranty,
+            );
       } catch (e) {
-        debugPrint('Failed to add to inventory: $e');
+        debugPrint('Failed to add to own services: $e');
       }
     }
 
@@ -232,33 +229,28 @@ class _AddTemporalProductScreenState
   @override
   Widget build(BuildContext context) {
     final colors = Theme.of(context).colorScheme;
-    final brandsAsync = ref.watch(brandsProvider);
-    final brands = brandsAsync.value ?? [];
-    final brandItems = ['Genérico', ...brands.map((b) => b.name)];
-    final uomsAsync = ref.watch(uomsProvider);
-    final uoms = uomsAsync.value ?? [];
-    final uomNames = uoms.map((u) => u.name).toList();
-    // Set a valid default once the list first loads — prefer 'Unidad'
-    if (uomNames.isNotEmpty && !uomNames.contains(_selectedMeasure)) {
+    final ratesAsync = ref.watch(serviceRatesProvider);
+    final rates = ratesAsync.value ?? [];
+    // Auto-select default rate on first load — prefer 'serv.'
+    if (rates.isNotEmpty && _selectedRate == null) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (mounted) {
-          final preferred = uomNames.firstWhere(
-            (n) => n.toLowerCase().contains('unidad'),
-            orElse: () => uomNames.first,
+          final preferred = rates.firstWhere(
+            (r) => r.symbol.toLowerCase().contains('serv'),
+            orElse: () => rates.first,
           );
-          setState(() => _selectedMeasure = preferred);
+          setState(() => _selectedRate = preferred.id);
         }
       });
     }
-    final selectedUomSymbol =
-        uoms.where((u) => u.name == _selectedMeasure).firstOrNull?.symbol ??
-        _selectedMeasure;
+    final selectedRateSymbol =
+        rates.where((r) => r.id == _selectedRate).firstOrNull?.symbol ?? '';
 
     return Scaffold(
       appBar: StandardAppBar(
         title: widget.existingItem != null
-            ? 'Modificar producto temporal'
-            : 'Agregar producto temporal',
+            ? 'Modificar servicio temporal'
+            : 'Agregar servicio temporal',
       ),
       body: Form(
         key: _formKey,
@@ -267,28 +259,15 @@ class _AddTemporalProductScreenState
           children: [
             CustomTextField(
               controller: _nameController,
-              label: 'Nombre del producto*',
-              hintText: 'Ej: Cámara Web 4K',
+              label: 'Nombre del servicio*',
+              hintText: 'Ej: Instalación de cámara de seguridad',
               validator: (v) => v == null || v.isEmpty ? 'Requerido' : null,
             ),
             const SizedBox(height: 24),
             CustomTextField(
-              controller: _modelController,
-              label: 'Modelo/Nro. parte',
-            ),
-            const SizedBox(height: 24),
-            CustomDropdown<String>(
-              value: _selectedBrand,
-              items: brandItems,
-              label: 'Marca',
-              itemLabelBuilder: (String value) => value,
-              onChanged: (newValue) {
-                if (newValue != null) {
-                  setState(() {
-                    _selectedBrand = newValue;
-                  });
-                }
-              },
+              controller: _descriptionController,
+              label: 'Descripción breve',
+              maxLines: 4,
             ),
             const SizedBox(height: 24),
             Row(
@@ -306,11 +285,8 @@ class _AddTemporalProductScreenState
                         RegExp(r'^\d*[.,]?\d*'),
                       ),
                     ],
-                    onChanged: (_) => setState(() {}),
                     validator: (v) {
-                      if (v == null || v.isEmpty) {
-                        return 'Requerido';
-                      }
+                      if (v == null || v.isEmpty) return 'Requerido';
                       if (double.tryParse(v.replaceAll(',', '.')) == null) {
                         return 'Inválido';
                       }
@@ -321,26 +297,27 @@ class _AddTemporalProductScreenState
                     },
                   ),
                 ),
-                const SizedBox(width: 24),
+                const SizedBox(width: 16),
                 Expanded(
                   child: CustomDropdown<String>(
-                    value: uomNames.contains(_selectedMeasure)
-                        ? _selectedMeasure
-                        : null,
-                    items: uomNames,
-                    label: 'Medida',
+                    value: _selectedRate,
+                    items: rates.map((r) => r.id).toList(),
+                    label: 'Tarifa por',
                     itemLabelBuilder: (String value) {
-                      final match = uoms
-                          .where((u) => u.name == value)
-                          .firstOrNull;
-                      return match != null
-                          ? '${match.name} (${match.symbol})'
-                          : value;
+                      final rate = rates.firstWhere(
+                        (r) => r.id == value,
+                        orElse: () => const ServiceRate(
+                          id: '',
+                          name: 'Desconocido',
+                          symbol: '',
+                        ),
+                      );
+                      return '${rate.name} (${rate.symbol})';
                     },
                     onChanged: (newValue) {
                       if (newValue != null) {
                         setState(() {
-                          _selectedMeasure = newValue;
+                          _selectedRate = newValue;
                         });
                       }
                     },
@@ -348,29 +325,39 @@ class _AddTemporalProductScreenState
                 ),
               ],
             ),
-            const SizedBox(height: 24),
-            CustomTextField(
-              controller: _costController,
-              label: 'Precio costo unitario*',
-              prefixText: '\$ ',
-              keyboardType: const TextInputType.numberWithOptions(
-                decimal: true,
+            const SizedBox(height: 16),
+            SwitchListTile(
+              contentPadding: EdgeInsets.zero,
+              title: const Text(
+                'Servicio tercerizado',
+                style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
               ),
-              inputFormatters: [CurrencyInputFormatter()],
-              helperText: 'Sin impuesto',
-              validator: (v) {
-                if (v == null || v.isEmpty) {
-                  return 'Requerido';
-                }
-                if (CurrencyFormatter.parse(v) == null) {
-                  return 'Inválido';
-                }
-                return null;
-              },
+              value: _isOutsourced,
+              onChanged: (v) => setState(() => _isOutsourced = v),
+              activeThumbColor: colors.onPrimary,
+              activeTrackColor: colors.primary,
             ),
+            if (_isOutsourced) ...[
+              const SizedBox(height: 16),
+              CustomTextField(
+                controller: _costController,
+                label: 'Precio costo*',
+                prefixText: '\$ ',
+                keyboardType: const TextInputType.numberWithOptions(
+                  decimal: true,
+                ),
+                inputFormatters: [CurrencyInputFormatter()],
+                helperText: 'Sin impuesto',
+                validator: (v) {
+                  if (v == null || v.isEmpty) return 'Requerido';
+                  if (CurrencyFormatter.parse(v) == null) return 'Inválido';
+                  return null;
+                },
+              ),
+            ],
             const SizedBox(height: 24),
             Text(
-              'Precio de venta unitario',
+              'Precio de venta',
               style: TextStyle(
                 fontSize: 14,
                 fontWeight: FontWeight.bold,
@@ -379,38 +366,41 @@ class _AddTemporalProductScreenState
             ),
             const SizedBox(height: 16),
             Row(
-              mainAxisAlignment: MainAxisAlignment.center,
+              mainAxisAlignment: _isOutsourced
+                  ? MainAxisAlignment.center
+                  : MainAxisAlignment.start,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // const Spacer(),
-                CustomStepper(
-                  controller: _marginController,
-                  label: 'Porcentaje',
-                  prefixText: '%',
-                  onIncrement: () {
-                    final current =
-                        double.tryParse(
-                          _marginController.text.replaceAll(',', '.'),
-                        ) ??
-                        0;
-                    _marginController.text = (current + 1)
-                        .toStringAsFixed(2)
-                        .replaceAll('.', ',');
-                  },
-                  onDecrement: () {
-                    final current =
-                        double.tryParse(
-                          _marginController.text.replaceAll(',', '.'),
-                        ) ??
-                        0;
-                    if (current >= 1) {
-                      _marginController.text = (current - 1)
+                if (_isOutsourced) ...[
+                  CustomStepper(
+                    controller: _marginController,
+                    label: 'Porcentaje',
+                    prefixText: '%',
+                    onIncrement: () {
+                      final current =
+                          double.tryParse(
+                            _marginController.text.replaceAll(',', '.'),
+                          ) ??
+                          0;
+                      _marginController.text = (current + 1)
                           .toStringAsFixed(2)
                           .replaceAll('.', ',');
-                    }
-                  },
-                ),
-                const SizedBox(width: 4),
+                    },
+                    onDecrement: () {
+                      final current =
+                          double.tryParse(
+                            _marginController.text.replaceAll(',', '.'),
+                          ) ??
+                          0;
+                      if (current >= 1) {
+                        _marginController.text = (current - 1)
+                            .toStringAsFixed(2)
+                            .replaceAll('.', ',');
+                      }
+                    },
+                  ),
+                  const SizedBox(width: 4),
+                ],
                 Expanded(
                   child: CustomTextField(
                     controller: _salePriceController,
@@ -422,24 +412,25 @@ class _AddTemporalProductScreenState
                     inputFormatters: [CurrencyInputFormatter()],
                     helperText: 'Sin impuesto',
                     onChanged: (_) => _calculateMarginFromSalePrice(),
+                    validator: (v) =>
+                        v == null || v.isEmpty ? 'Requerido' : null,
                   ),
                 ),
               ],
             ),
             const SizedBox(height: 24),
-
             SwitchListTile(
               contentPadding: EdgeInsets.zero,
               title: const Text(
-                'Este producto no tiene garantía',
+                'No ofrezco garantía para este servicio',
                 style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
               ),
-              value: _noWarranty,
-              onChanged: (v) => setState(() => _noWarranty = v),
+              value: !_hasWarranty,
+              onChanged: (v) => setState(() => _hasWarranty = !v),
               activeThumbColor: colors.onPrimary,
               activeTrackColor: colors.primary,
             ),
-            if (!_noWarranty) ...[
+            if (_hasWarranty) ...[
               const SizedBox(height: 8),
               Text(
                 'Garantía',
@@ -456,9 +447,11 @@ class _AddTemporalProductScreenState
                   Expanded(
                     child: CustomTextField(
                       controller: _warrantyQtyController,
-                      label: 'Cantidad',
+                      label: 'Cantidad*',
                       keyboardType: TextInputType.number,
                       inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                      validator: (v) =>
+                          v == null || v.isEmpty ? 'Requerido' : null,
                     ),
                   ),
                   const SizedBox(width: 16),
@@ -484,12 +477,12 @@ class _AddTemporalProductScreenState
             SwitchListTile(
               contentPadding: EdgeInsets.zero,
               title: const Text(
-                'Incluir en el inventario propio',
+                'Incluir en servicios propios',
                 style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
               ),
               subtitle: const Text('(deberás completar otros datos luego).'),
-              value: _addToInventory,
-              onChanged: (v) => setState(() => _addToInventory = v),
+              value: _addToOwnServices,
+              onChanged: (v) => setState(() => _addToOwnServices = v),
               activeThumbColor: colors.onPrimary,
               activeTrackColor: colors.primary,
             ),
@@ -503,9 +496,9 @@ class _AddTemporalProductScreenState
               ),
               child: FormBottomBar(
                 onCancel: () => context.pop(),
-                onSave: _saveProduct,
+                onSave: _saveService,
                 saveLabel:
-                    'Confirmar (${_quantityController.text} $selectedUomSymbol)',
+                    'Confirmar (${_quantityController.text} $selectedRateSymbol)',
               ),
             ),
           ],

@@ -23,8 +23,13 @@ import 'package:d_una_app/features/quotes/presentation/create_quote/screens/crea
 import '../../features/quotes/presentation/create_quote/screens/select_product_screen.dart';
 import '../../features/quotes/presentation/create_quote/screens/quote_product_search_screen.dart';
 import '../../features/quotes/presentation/create_quote/screens/quote_product_sources_screen.dart';
+import '../../features/quotes/presentation/create_quote/screens/select_service_screen.dart';
+import '../../features/quotes/presentation/create_quote/screens/quote_service_search_screen.dart';
 import '../../features/quotes/presentation/create_quote/screens/add_temporal_product_screen.dart';
+import '../../features/quotes/presentation/create_quote/screens/add_temporal_service_screen.dart';
 import '../../features/quotes/domain/models/quote_aggregated_product.dart';
+import '../../features/quotes/data/models/quote_item_product.dart';
+import '../../features/quotes/data/models/quote_item_service.dart';
 import 'package:d_una_app/features/reports/presentation/reports_screen.dart';
 import 'package:d_una_app/features/profile/presentation/screens/profile_screen.dart';
 import 'package:d_una_app/features/profile/presentation/screens/basic_data_screen.dart';
@@ -41,7 +46,7 @@ import '../../features/portfolio/presentation/suppliers_directory/screens/suppli
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../router/router_notifier.dart';
 
-final _rootNavigatorKey = GlobalKey<NavigatorState>();
+final rootNavigatorKey = GlobalKey<NavigatorState>();
 final _shellNavigatorClientsKey = GlobalKey<NavigatorState>(
   debugLabel: 'shellClients',
 );
@@ -56,7 +61,7 @@ final _shellNavigatorReportsKey = GlobalKey<NavigatorState>(
 );
 
 final appRouter = GoRouter(
-  navigatorKey: _rootNavigatorKey,
+  navigatorKey: rootNavigatorKey,
   initialLocation: '/login',
   refreshListenable: GoRouterRefreshStream(
     Supabase.instance.client.auth.onAuthStateChange,
@@ -112,7 +117,7 @@ final appRouter = GoRouter(
                     GoRoute(
                       path: 'add',
                       parentNavigatorKey:
-                          _rootNavigatorKey, // Full screen, cover shell? Or standard?
+                          rootNavigatorKey, // Full screen, cover shell? Or standard?
                       // Design shows back arrow, likely full screen or standard nested.
                       // Let's use nested for now, but design implies it might be a full flow.
                       // Usually "Add" flows are better as root or full screen.
@@ -210,34 +215,78 @@ final appRouter = GoRouter(
                 ),
                 GoRoute(
                   path: 'create',
-                  parentNavigatorKey: _rootNavigatorKey,
+                  parentNavigatorKey: rootNavigatorKey,
                   builder: (context, state) => const CreateQuoteScreen(),
                   routes: [
                     GoRoute(
                       path: 'select-product',
-                      parentNavigatorKey: _rootNavigatorKey,
+                      parentNavigatorKey: rootNavigatorKey,
                       builder: (context, state) => const SelectProductScreen(),
                       routes: [
                         GoRoute(
                           path: 'search',
-                          parentNavigatorKey: _rootNavigatorKey,
+                          parentNavigatorKey: rootNavigatorKey,
                           builder: (context, state) =>
                               const QuoteProductSearchScreen(),
                         ),
                         GoRoute(
                           path: 'product-sources',
-                          parentNavigatorKey: _rootNavigatorKey,
+                          parentNavigatorKey: rootNavigatorKey,
                           builder: (context, state) {
-                            final product =
-                                state.extra as QuoteAggregatedProduct;
-                            return QuoteProductSourcesScreen(product: product);
+                            if (state.extra is QuoteAggregatedProduct) {
+                              return QuoteProductSourcesScreen(
+                                product: state.extra as QuoteAggregatedProduct,
+                              );
+                            } else if (state.extra is Map<String, dynamic>) {
+                              final map = state.extra as Map<String, dynamic>;
+                              return QuoteProductSourcesScreen(
+                                product:
+                                    map['product'] as QuoteAggregatedProduct,
+                                initialSelections:
+                                    map['initialSelections']
+                                        as Map<String, double>?,
+                              );
+                            }
+                            // Fallback
+                            return const SizedBox.shrink();
                           },
                         ),
                         GoRoute(
                           path: 'temporal-product',
-                          parentNavigatorKey: _rootNavigatorKey,
+                          parentNavigatorKey: rootNavigatorKey,
+                          builder: (context, state) {
+                            final existingItem = state.extra is QuoteItemProduct
+                                ? state.extra as QuoteItemProduct
+                                : null;
+                            return AddTemporalProductScreen(
+                              existingItem: existingItem,
+                            );
+                          },
+                        ),
+                      ],
+                    ),
+                    GoRoute(
+                      path: 'select-service',
+                      parentNavigatorKey: rootNavigatorKey,
+                      builder: (context, state) => const SelectServiceScreen(),
+                      routes: [
+                        GoRoute(
+                          path: 'search',
+                          parentNavigatorKey: rootNavigatorKey,
                           builder: (context, state) =>
-                              const AddTemporalProductScreen(),
+                              const QuoteServiceSearchScreen(),
+                        ),
+                        GoRoute(
+                          path: 'temporal-service',
+                          parentNavigatorKey: rootNavigatorKey,
+                          builder: (context, state) {
+                            final existingItem = state.extra is QuoteItemService
+                                ? state.extra as QuoteItemService
+                                : null;
+                            return AddTemporalServiceScreen(
+                              existingItem: existingItem,
+                            );
+                          },
                         ),
                       ],
                     ),

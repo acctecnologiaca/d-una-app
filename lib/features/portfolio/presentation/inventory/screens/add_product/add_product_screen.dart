@@ -14,6 +14,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../data/models/product_model.dart';
 import '../../../../data/models/category_model.dart';
 import '../../../../data/models/brand_model.dart';
+import '../../../../data/models/uom_model.dart';
 import '../../../../domain/utils/product_validators.dart';
 import '../../../providers/products_provider.dart';
 import '../../../providers/lookup_providers.dart';
@@ -41,6 +42,7 @@ class _AddProductScreenState extends ConsumerState<AddProductScreen> {
 
   // Step 3
   Category? _selectedCategory;
+  Uom? _selectedUom;
 
   // Step 4
   File? _productImage;
@@ -234,6 +236,8 @@ class _AddProductScreenState extends ConsumerState<AddProductScreen> {
       specs: _specsController.text,
       categoryId: _selectedCategory?.id,
       category: _selectedCategory,
+      uomId: _selectedUom?.id,
+      uom: _selectedUom?.symbol,
       createdAt: DateTime.now(),
       updatedAt: DateTime.now(),
     );
@@ -386,10 +390,18 @@ class _AddProductScreenState extends ConsumerState<AddProductScreen> {
     final categoriesList = (categoriesAsync.valueOrNull ?? [])
         .toList(); // Create mutable copy
 
+    final uomsAsync = ref.watch(uomsProvider);
+    final uomsList = uomsAsync.valueOrNull ?? [];
+
     // Ensure selected category is in the list
     if (_selectedCategory != null &&
         !categoriesList.contains(_selectedCategory)) {
       categoriesList.add(_selectedCategory!);
+    }
+
+    // Ensure selected uom is in the list
+    if (_selectedUom != null && !uomsList.contains(_selectedUom)) {
+      uomsList.add(_selectedUom!);
     }
 
     return Scaffold(
@@ -464,6 +476,15 @@ class _AddProductScreenState extends ConsumerState<AddProductScreen> {
               });
             },
             onAddCategory: _showAddCategoryDialog,
+
+            selectedUom: _selectedUom,
+            uoms: uomsList,
+            onUomChanged: (val) {
+              setState(() {
+                _selectedUom = val;
+              });
+            },
+
             onNext: nextStep,
             onBack: prevStep,
             onCancel: () => context.pop(),

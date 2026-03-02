@@ -35,9 +35,9 @@ class CustomStepper extends StatelessWidget {
           icon: const Icon(Icons.remove),
           color: colors.onSurface,
         ),
-        const SizedBox(width: 8),
+        const SizedBox(width: 4),
         SizedBox(
-          width: 120,
+          width: 95,
           child: InputDecorator(
             decoration: InputDecoration(
               labelText: label,
@@ -51,11 +51,11 @@ class CustomStepper extends StatelessWidget {
                 borderSide: BorderSide(color: Colors.grey.shade400),
               ),
               contentPadding: const EdgeInsets.symmetric(
-                horizontal: 16,
+                horizontal: 8,
                 vertical: 16,
               ),
               filled: true,
-              fillColor: colors.surfaceContainerLow,
+              fillColor: Colors.transparent,
             ),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.center,
@@ -92,6 +92,8 @@ class CustomStepper extends StatelessWidget {
                       isDense: true,
                       border: InputBorder.none,
                       contentPadding: EdgeInsets.zero,
+                      filled: false,
+                      fillColor: Colors.transparent,
                     ),
                     validator: validator,
                   ),
@@ -100,7 +102,7 @@ class CustomStepper extends StatelessWidget {
             ),
           ),
         ),
-        const SizedBox(width: 8),
+        const SizedBox(width: 4),
         IconButton(
           onPressed: onIncrement,
           icon: const Icon(Icons.add),

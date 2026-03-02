@@ -18,6 +18,9 @@ class QuoteItemService {
   final double totalPrice;
   final String? warrantyTime;
 
+  // Runtime-only, not persisted
+  final String rateSymbol;
+
   QuoteItemService({
     required this.id,
     required this.quoteId,
@@ -33,6 +36,7 @@ class QuoteItemService {
     required this.taxRate,
     required this.totalPrice,
     this.warrantyTime,
+    this.rateSymbol = 'ud.',
   });
 
   factory QuoteItemService.fromJson(Map<String, dynamic> json) {

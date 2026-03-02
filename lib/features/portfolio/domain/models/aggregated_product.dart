@@ -1,7 +1,7 @@
 import 'package:equatable/equatable.dart';
 
 /// Represents an aggregated product result from the search.
-/// Data is aggregated from `supplier_products` and `product_stock` (Multi-Branch).
+/// Data is aggregated from `supplier_products` and `supplier_branch_stock` (Multi-Branch).
 class AggregatedProduct extends Equatable {
   final String name;
   final String brand;

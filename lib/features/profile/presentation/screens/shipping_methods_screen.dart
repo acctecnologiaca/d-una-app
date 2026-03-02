@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../domain/models/shipping_method.dart';
 import '../providers/profile_provider.dart';
+import '../../../../../shared/widgets/custom_extended_fab.dart';
 
 class ShippingMethodsScreen extends ConsumerStatefulWidget {
   const ShippingMethodsScreen({super.key});
@@ -261,22 +262,15 @@ class _ShippingMethodsScreenState extends ConsumerState<ShippingMethodsScreen> {
       ),
       floatingActionButton: Padding(
         padding: const EdgeInsets.only(bottom: 40.0),
-        child: FloatingActionButton.extended(
+        child: CustomExtendedFab(
           onPressed: () async {
             await context.push('/profile/shipping-methods/add');
             ref.invalidate(shippingMethodsProvider);
           },
+          label: 'Agregar',
+          icon: Icons.add,
           backgroundColor: colors.tertiaryContainer,
           foregroundColor: colors.onTertiaryContainer,
-          elevation: 4,
-          icon: const Icon(Icons.add),
-          label: const Text(
-            'Agregar',
-            style: TextStyle(fontWeight: FontWeight.bold),
-          ),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(16),
-          ),
         ),
       ),
     );

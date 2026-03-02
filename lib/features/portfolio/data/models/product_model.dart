@@ -12,6 +12,8 @@ class Product extends Equatable {
   final String? specs; // Mapped from 'specifications'
   final String? categoryId;
   final Category? category;
+  final String? uomId; // Replaces fixed unit text
+  final String? uom; // Symbol of the UOM
   final String? imageUrl;
   final DateTime createdAt;
   final DateTime updatedAt;
@@ -26,6 +28,8 @@ class Product extends Equatable {
     this.specs,
     this.categoryId,
     this.category,
+    this.uomId,
+    this.uom,
     this.imageUrl,
     required this.createdAt,
     required this.updatedAt,
@@ -44,6 +48,8 @@ class Product extends Equatable {
       category: json['categories'] != null
           ? Category.fromJson(json['categories'])
           : null,
+      uomId: json['uom_id'],
+      uom: json['uoms'] != null ? json['uoms']['symbol'] : null,
       imageUrl: json['image_url'],
       createdAt: DateTime.parse(json['created_at']),
       updatedAt: DateTime.parse(json['updated_at']),
@@ -61,6 +67,7 @@ class Product extends Equatable {
       'specifications': specs,
       'category_id': categoryId,
       // 'categories': category?.toJson(),
+      'uom_id': uomId,
       'image_url': imageUrl,
       'created_at': createdAt.toIso8601String(),
       'updated_at': updatedAt.toIso8601String(),
@@ -77,6 +84,8 @@ class Product extends Equatable {
     String? specs,
     String? categoryId,
     Category? category,
+    String? uomId,
+    String? uom,
     String? imageUrl,
     DateTime? createdAt,
     DateTime? updatedAt,
@@ -91,6 +100,8 @@ class Product extends Equatable {
       specs: specs ?? this.specs,
       categoryId: categoryId ?? this.categoryId,
       category: category ?? this.category,
+      uomId: uomId ?? this.uomId,
+      uom: uom ?? this.uom,
       imageUrl: imageUrl ?? this.imageUrl,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
@@ -108,6 +119,8 @@ class Product extends Equatable {
     specs,
     categoryId,
     category,
+    uomId,
+    uom,
     imageUrl,
     createdAt,
     updatedAt,

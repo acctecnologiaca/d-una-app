@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'custom_extended_fab.dart';
 
 class FilterOption {
   final String label;
@@ -265,18 +266,14 @@ class _FilterBottomSheetState extends State<FilterBottomSheet> {
             Positioned(
               bottom: 40,
               right: 16,
-              child: FloatingActionButton.extended(
+              child: CustomExtendedFab(
                 onPressed: () {
                   widget.onApply?.call(_tempSelected);
                   context.pop();
                 },
-                label: Text(
-                  'Aplicar (${_tempSelected.isEmpty ? "Todas" : _tempSelected.length})',
-                  style: const TextStyle(fontWeight: FontWeight.bold),
-                ),
-                icon: const Icon(Icons.check),
-                backgroundColor: colors.primaryContainer,
-                foregroundColor: colors.onPrimaryContainer,
+                label:
+                    'Aplicar (${_tempSelected.isEmpty ? "Todas" : _tempSelected.length})',
+                icon: Icons.check,
               ),
             ),
           ],

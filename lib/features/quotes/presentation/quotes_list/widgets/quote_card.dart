@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../../../domain/models/quote_model.dart';
-import '../../../../../core/utils/string_extensions.dart'; // For TitleCase if needed
+// For TitleCase if needed
 import '../../../../../shared/utils/currency_formatter.dart';
 import '../../../../../shared/widgets/standard_list_item.dart';
 

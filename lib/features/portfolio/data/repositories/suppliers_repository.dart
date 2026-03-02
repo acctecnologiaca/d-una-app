@@ -40,7 +40,7 @@ class SuppliersRepository {
         'search_supplier_products',
         params: {
           'query_text': query,
-          // ... filters remain same but RPC now queries product_stock
+          // ... filters remain same but RPC now queries supplier_branch_stock
           'brand_filter': brands?.isNotEmpty == true ? brands : null,
           'category_filter': categories?.isNotEmpty == true ? categories : null,
           'supplier_filter': supplierIds?.isNotEmpty == true

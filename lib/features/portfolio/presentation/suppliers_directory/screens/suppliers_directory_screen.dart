@@ -102,14 +102,14 @@ class SuppliersDirectoryScreen extends ConsumerWidget {
                         isLocked = true;
                         // Generic message for restricted access
                         lockMessage =
-                              "Para acceder a los productos de este proveedor debes estar verificado.";
+                            "Para acceder a los productos de este proveedor debes estar verificado.";
                       } else {
                         // Verified User (Individual or Business)
                         // 2. Verified Individual ->
                         //    - Wholesale (Individual) -> Full -> Open
                         //    - Wholesale (Business) -> Partial -> Open (Blur inside)
                         // 3. Verified Business -> Full -> Open
-                        
+
                         // Therefore, for Verified users, the Card is ALWAYS Open in the directory.
                         // The restriction (Partial) is handled inside the details screen.
                         isLocked = false;

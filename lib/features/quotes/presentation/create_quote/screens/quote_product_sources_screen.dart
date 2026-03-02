@@ -1,26 +1,31 @@
-import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:uuid/uuid.dart';
-import '../../../../../shared/utils/currency_formatter.dart';
 import '../../../domain/models/quote_aggregated_product.dart';
 import '../../../domain/models/quote_product_source.dart';
 import '../../../data/models/quote_item_product.dart';
 import '../providers/quote_product_selection_provider.dart';
 import '../providers/create_quote_provider.dart';
-import 'package:material_symbols_icons/symbols.dart';
 import '../../../../../shared/widgets/aggregated_product_card.dart';
 import '../../../../../shared/widgets/horizontal_filter_bar.dart';
 import '../../../../../shared/widgets/filter_bottom_sheet.dart';
 import '../../../../../shared/widgets/price_filter_sheet.dart';
+import '../../../../../shared/widgets/sort_selector.dart';
 import '../../../../portfolio/domain/models/product_sort_option.dart';
-import '../../../../profile/presentation/screens/verification_screen.dart';
+import '../../../../../shared/widgets/custom_extended_fab.dart';
+import '../widgets/quote_product_sale_details_sheet.dart';
+import '../widgets/quote_product_source_card.dart';
 
 class QuoteProductSourcesScreen extends ConsumerStatefulWidget {
   final QuoteAggregatedProduct product;
+  final Map<String, double>? initialSelections;
 
-  const QuoteProductSourcesScreen({super.key, required this.product});
+  const QuoteProductSourcesScreen({
+    super.key,
+    required this.product,
+    this.initialSelections,
+  });
 
   @override
   ConsumerState<QuoteProductSourcesScreen> createState() =>
@@ -35,6 +40,21 @@ class _QuoteProductSourcesScreenState
   double? _minPrice;
   double? _maxPrice;
   ProductSortOption _currentSort = ProductSortOption.priceAsc;
+
+  @override
+  void initState() {
+    super.initState();
+    if (widget.initialSelections != null &&
+        widget.initialSelections!.isNotEmpty) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        for (final entry in widget.initialSelections!.entries) {
+          ref
+              .read(quoteSourceSelectionProvider.notifier)
+              .setSelection(entry.key, entry.value);
+        }
+      });
+    }
+  }
 
   void _toggleFilters() {
     setState(() {
@@ -51,96 +71,6 @@ class _QuoteProductSourcesScreenState
     });
   }
 
-  void _showSortOptions() {
-    showModalBottomSheet(
-      context: context,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
-      ),
-      backgroundColor: Theme.of(context).colorScheme.surfaceContainer,
-      builder: (context) {
-        final colors = Theme.of(context).colorScheme;
-        return SafeArea(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Center(
-                child: Container(
-                  margin: const EdgeInsets.symmetric(vertical: 16),
-                  height: 4,
-                  width: 32,
-                  decoration: BoxDecoration(
-                    color: Colors.grey[400],
-                    borderRadius: BorderRadius.circular(2),
-                  ),
-                ),
-              ),
-              Padding(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 16.0,
-                  vertical: 16.0,
-                ),
-                child: Row(
-                  children: [
-                    IconButton(
-                      icon: const Icon(Icons.close),
-                      onPressed: () => context.pop(),
-                    ),
-                    Expanded(
-                      child: Text(
-                        'Ordenar por',
-                        style: Theme.of(context).textTheme.titleMedium
-                            ?.copyWith(fontWeight: FontWeight.bold),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              ...ProductSortOption.values.map(
-                (option) => InkWell(
-                  onTap: () {
-                    setState(() => _currentSort = option);
-                    context.pop();
-                  },
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 24.0,
-                      vertical: 12.0,
-                    ),
-                    child: Row(
-                      children: [
-                        Icon(
-                          _currentSort == option
-                              ? Icons.radio_button_checked
-                              : Icons.radio_button_unchecked,
-                          color: _currentSort == option
-                              ? colors.primary
-                              : colors.onSurface,
-                          size: 20,
-                        ),
-                        const SizedBox(width: 16),
-                        Expanded(
-                          child: Text(
-                            option.label,
-                            style: TextStyle(
-                              fontSize: 16,
-                              color: colors.onSurface,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              ),
-              const SizedBox(height: 16),
-            ],
-          ),
-        );
-      },
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
     final colors = Theme.of(context).colorScheme;
@@ -151,7 +81,6 @@ class _QuoteProductSourcesScreenState
     final selectionController = ref.read(quoteSourceSelectionProvider.notifier);
 
     double totalQuantity = 0;
-    double totalCost = 0;
 
     // We need the data to calculate real totals based on selection
     final sourceList = sourcesAsync.valueOrNull ?? [];
@@ -160,13 +89,12 @@ class _QuoteProductSourcesScreenState
       if (selectionState.containsKey(source.id)) {
         final qty = selectionState[source.id]!;
         totalQuantity += qty;
-        totalCost += (qty * source.price);
       }
     }
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Seleccionar Origen'),
+        title: const Text('Proveedor y cantidades'),
         centerTitle: false,
         titleTextStyle: TextStyle(
           color: colors.onSurface,
@@ -236,34 +164,32 @@ class _QuoteProductSourcesScreenState
                 const SizedBox(height: 12),
                 Align(
                   alignment: Alignment.centerLeft,
-                  child: InkWell(
-                    onTap: _showSortOptions,
-                    borderRadius: BorderRadius.circular(8),
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(
-                        vertical: 8.0,
-                        horizontal: 4.0,
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Text(
-                            _currentSort.label,
-                            style: TextStyle(
-                              fontSize: 14,
-                              fontWeight: FontWeight.w700,
-                              color: colors.onSurface,
-                            ),
-                          ),
-                          const SizedBox(width: 4),
-                          Icon(
-                            Icons.keyboard_arrow_down,
-                            size: 18,
-                            color: colors.onSurface,
-                          ),
-                        ],
-                      ),
-                    ),
+                  child: GenericSortSelector<ProductSortOption>(
+                    currentSort: _currentSort,
+                    options: ProductSortOption.values,
+                    onSortChanged: (val) => setState(() => _currentSort = val),
+                    labelBuilder: (option) => option.label,
+                    iconBuilder: (option) {
+                      if (option == ProductSortOption.priceAsc) {
+                        return Icons.arrow_upward;
+                      }
+                      if (option == ProductSortOption.priceDesc) {
+                        return Icons.arrow_downward;
+                      }
+                      if (option == ProductSortOption.quantityAsc) {
+                        return Icons.arrow_upward;
+                      }
+                      if (option == ProductSortOption.quantityDesc) {
+                        return Icons.arrow_downward;
+                      }
+                      if (option == ProductSortOption.nameAZ) {
+                        return Icons.arrow_upward;
+                      }
+                      if (option == ProductSortOption.nameZA) {
+                        return Icons.arrow_downward;
+                      }
+                      return null;
+                    },
                   ),
                 ),
               ],
@@ -281,14 +207,17 @@ class _QuoteProductSourcesScreenState
                   // 1. Initial Product Sources Filter
                   // Only show suppliers that were included in the aggregated product
                   // (which respects any supplier filters chosen on the previous screen).
-                  final allowedSuppliers = widget.product.sources
-                      .map((s) => s.supplierName.toLowerCase())
-                      .toSet();
+                  // If no sources are provided, show all.
+                  if (widget.product.sources.isNotEmpty) {
+                    final allowedSuppliers = widget.product.sources
+                        .map((s) => s.supplierName.toLowerCase())
+                        .toSet();
 
-                  if (!allowedSuppliers.contains(
-                    item.sourceName.toLowerCase(),
-                  )) {
-                    return false;
+                    if (!allowedSuppliers.contains(
+                      item.sourceName.toLowerCase(),
+                    )) {
+                      return false;
+                    }
                   }
 
                   // 2. User-Selected Supplier Filter (Local to this screen)
@@ -363,148 +292,128 @@ class _QuoteProductSourcesScreenState
                   );
                 }
                 return ListView.builder(
-                  padding: const EdgeInsets.symmetric(vertical: 8),
+                  padding: const EdgeInsets.only(top: 8, bottom: 120),
                   itemCount: filteredSources.length,
                   itemBuilder: (context, index) {
-                    final source = filteredSources[index];
-                    final isOwn = source.sourceType == ProductSourceType.own;
-                    final maxToSelect = isOwn ? 1.0 : source.maxStock;
-                    final selectedQty = selectionState[source.id] ?? 0.0;
-
-                    return _SourceCard(
-                      source: source,
-                      selectedQty: selectedQty,
+                    final item = filteredSources[index];
+                    return QuoteProductSourceCard(
+                      source: item,
+                      selectedQty: selectionState[item.id] ?? 0.0,
                       uom: widget.product.uom,
-                      onSelectAll: () => selectionController.setSelection(
-                        source.id,
-                        maxToSelect,
-                      ),
-                      onDeselectAll: () =>
-                          selectionController.setSelection(source.id, 0.0),
-                      onQtyChanged: (qty) =>
-                          selectionController.setSelection(source.id, qty),
+                      onSelectAll: () {
+                        final isOwn = item.sourceType == ProductSourceType.own;
+                        final maxQty = isOwn
+                            ? 0.0
+                            : item.maxStock; // 0.0 flags unlimited basically or 1 default
+                        selectionController.toggleSelection(item.id, maxQty);
+                      },
+                      onDeselectAll: () {
+                        selectionController.setSelection(item.id, 0);
+                      },
+                      onQtyChanged: (qty) {
+                        selectionController.setSelection(item.id, qty);
+                      },
                     );
                   },
                 );
               },
             ),
           ),
-          // Bottom Summary Bar
-          Container(
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: colors.surface,
-              border: Border(top: BorderSide(color: colors.outlineVariant)),
-            ),
-            child: SafeArea(
-              child: Row(
-                children: [
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Text(
-                          'Total a agregar',
-                          style: textTheme.bodySmall?.copyWith(
-                            color: colors.onSurfaceVariant,
-                          ),
-                        ),
-                        Row(
-                          children: [
-                            Text(
-                              '${totalQuantity.toStringAsFixed(totalQuantity.truncateToDouble() == totalQuantity ? 0 : 2)} ${widget.product.uom}',
-                              style: textTheme.titleMedium?.copyWith(
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                            const SizedBox(width: 8),
-                            Text(
-                              CurrencyFormatter.format(totalCost),
-                              style: textTheme.titleMedium?.copyWith(
-                                color: colors.primary,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ],
-                    ),
-                  ),
-                  FilledButton(
-                    onPressed: totalQuantity > 0
-                        ? () {
-                            final createQuoteNotifier = ref.read(
-                              createQuoteProvider.notifier,
-                            );
-                            final quoteState = ref.read(createQuoteProvider);
-                            final uuid = const Uuid();
-
-                            // Ensure global margins/taxes are loaded
-                            final margin = quoteState.globalMargin;
-                            final taxRate = quoteState.globalTaxRate;
-
-                            for (final source in sourceList) {
-                              if (selectionState.containsKey(source.id)) {
-                                final qty = selectionState[source.id]!;
-                                if (qty <= 0) continue;
-
-                                final costPrice = source.price;
-                                // Simple unit price calculation: cost * (1 + margin)
-                                final unitPrice = costPrice * (1 + margin);
-                                final taxAmount = unitPrice * taxRate;
-                                final totalPrice =
-                                    (unitPrice + taxAmount) * qty;
-
-                                final quoteItem = QuoteItemProduct(
-                                  id: uuid.v4(),
-                                  quoteId:
-                                      'draft', // Placeholder until quote is saved
-                                  productId:
-                                      source.sourceType == ProductSourceType.own
-                                      ? source.id
-                                      : null,
-                                  supplierProductId:
-                                      source.sourceType ==
-                                          ProductSourceType.supplier
-                                      ? source.id
-                                      : null,
-                                  name: widget.product.name,
-                                  brand: widget.product.brand,
-                                  model: widget.product.model,
-                                  uom: widget.product.uom,
-                                  quantity: qty,
-                                  costPrice: costPrice,
-                                  profitMargin: margin,
-                                  unitPrice: unitPrice,
-                                  taxRate: taxRate,
-                                  taxAmount: taxAmount,
-                                  totalPrice: totalPrice,
-                                );
-
-                                createQuoteNotifier.addProduct(quoteItem);
-                              }
-                            }
-                            // Pop true to indicate success to SelectProductScreen
-                            context.pop(true);
-                          }
-                        : null,
-                    style: FilledButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 24,
-                        vertical: 12,
-                      ),
-                    ),
-                    child: const Text(
-                      'Confirmar',
-                      style: TextStyle(fontWeight: FontWeight.bold),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
         ],
+      ),
+      floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
+      floatingActionButton: Padding(
+        padding: const EdgeInsets.only(bottom: 40.0),
+        child: CustomExtendedFab(
+          onPressed: () async {
+            final createQuoteNotifier = ref.read(createQuoteProvider.notifier);
+            final quoteState = ref.read(createQuoteProvider);
+            final uuid = const Uuid();
+
+            final taxRate = quoteState.globalTaxRate;
+
+            // Gather selected sources
+            final selectedSources = <QuoteProductSource, double>{};
+            double totalCostSum = 0;
+            double totalQtySelected = 0;
+
+            for (final source in sourceList) {
+              if (selectionState.containsKey(source.id)) {
+                final qty = selectionState[source.id]!;
+                if (qty <= 0) continue;
+                selectedSources[source] = qty;
+                totalQtySelected += qty;
+                totalCostSum += (source.price * qty);
+              }
+            }
+
+            if (selectedSources.isEmpty) return;
+
+            final averageCost = totalCostSum / totalQtySelected;
+
+            // Show Selling Price Sheet
+            final result = await QuoteProductSaleDetailsSheet.show(
+              context,
+              averageCost: averageCost,
+              productName: widget.product.name,
+              brand: widget.product.brand,
+              model: widget.product.model,
+            );
+
+            if (result == null) return; // User cancelled
+
+            final double sellingPrice = result['sellingPrice'];
+            final double profitMargin = result['profitMargin'];
+
+            // 1. Remove previously added items for this product to prevent duplication
+            createQuoteNotifier.removeProductGroup(widget.product.name);
+
+            // 2. Add the newly selected sizes/sources
+            for (final entry in selectedSources.entries) {
+              final source = entry.key;
+              final qty = entry.value;
+
+              final costPrice = source.price;
+              final unitPrice = sellingPrice;
+              final taxAmount = unitPrice * taxRate;
+              final totalPrice = (unitPrice + taxAmount) * qty;
+
+              final quoteItem = QuoteItemProduct(
+                id: uuid.v4(),
+                quoteId: 'draft', // Placeholder until quote is saved
+                productId: source.sourceType == ProductSourceType.own
+                    ? source.id
+                    : null,
+                supplierProductId:
+                    source.sourceType == ProductSourceType.supplier
+                    ? source.id
+                    : null,
+                name: widget.product.name,
+                brand: widget.product.brand,
+                model: widget.product.model,
+                uom: widget.product.uom,
+                description: null, // Depending on if we have it
+                availableStock: source.maxStock,
+                quantity: qty,
+                costPrice: costPrice,
+                profitMargin: profitMargin,
+                unitPrice: unitPrice,
+                taxRate: taxRate,
+                taxAmount: taxAmount,
+                totalPrice: totalPrice,
+              );
+
+              createQuoteNotifier.addProduct(quoteItem);
+            }
+            if (context.mounted) {
+              context.pop(true);
+            }
+          },
+          icon: Icons.check,
+          label:
+              'Confirmar (${totalQuantity.toStringAsFixed(totalQuantity.truncateToDouble() == totalQuantity ? 0 : 2)} ${widget.product.uom})',
+          isEnabled: totalQuantity > 0,
+        ),
       ),
     );
   }
@@ -620,400 +529,6 @@ class _QuoteProductSourcesScreenState
           });
         },
       ),
-    );
-  }
-}
-
-class _SourceCard extends StatefulWidget {
-  final QuoteProductSource source;
-  final double selectedQty;
-  final String uom;
-  final VoidCallback onSelectAll;
-  final VoidCallback onDeselectAll;
-  final ValueChanged<double> onQtyChanged;
-
-  const _SourceCard({
-    required this.source,
-    required this.selectedQty,
-    required this.uom,
-    required this.onSelectAll,
-    required this.onDeselectAll,
-    required this.onQtyChanged,
-  });
-
-  @override
-  State<_SourceCard> createState() => _SourceCardState();
-}
-
-class _SourceCardState extends State<_SourceCard> {
-  bool _isExpanded = false;
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = Theme.of(context).colorScheme;
-    final isOwn = widget.source.sourceType == ProductSourceType.own;
-    final maxQty = isOwn ? 99999.0 : widget.source.maxStock;
-
-    // Access Level Parsing
-    final accessLevel = widget.source.accessLevel;
-    final isRestricted = accessLevel == 'restricted'; // Locked + SnackBar
-    final isPartial = accessLevel == 'partial'; // Unlocked + Blurred Price
-    final shouldShowSnackBar = isRestricted || isPartial;
-
-    // Determine the checkbox state
-    bool? checkboxState;
-    if (widget.selectedQty == 0) {
-      checkboxState = false;
-    } else if (isOwn || widget.selectedQty == widget.source.maxStock) {
-      checkboxState = true;
-    } else {
-      checkboxState = null; // Indeterminate
-    }
-
-    // Always keep it expanded if there's a selected quantity,
-    // or if the user actively expanded it
-    final showStepper = _isExpanded || widget.selectedQty > 0;
-
-    // Visual State Logic for Trade Type
-    final isWholesale = widget.source.tradeType == 'WHOLESALE';
-    final badgeColor = isWholesale ? Colors.blue.shade50 : Colors.green.shade50;
-    final badgeTextColor = isWholesale
-        ? Colors.blue.shade700
-        : Colors.green.shade700;
-    final badgeText = isOwn
-        ? 'PROPIO'
-        : (isWholesale ? 'MAYORISTA' : 'MINORISTA');
-
-    // Stock Styling
-    final hasStock = isOwn ? true : widget.source.maxStock > 0;
-    final stockColor = hasStock
-        ? colors.onSecondaryContainer
-        : colors.onErrorContainer;
-    final stockBgColor = hasStock
-        ? colors.secondaryContainer
-        : colors.errorContainer;
-    final stockText = isOwn
-        ? 'Stock Ilimitado'
-        : (hasStock
-              ? '${widget.source.maxStock.truncateToDouble() == widget.source.maxStock ? widget.source.maxStock.toInt() : widget.source.maxStock} ${widget.uom}'
-              : 'Sin stock');
-
-    return Card(
-      margin: const EdgeInsets.symmetric(vertical: 4),
-      elevation: 0,
-      color: colors.surfaceContainerLowest,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
-        side: BorderSide.none,
-      ),
-      child: InkWell(
-        onTap: () {
-          if (shouldShowSnackBar) {
-            ScaffoldMessenger.of(context).hideCurrentSnackBar();
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                duration: const Duration(seconds: 5),
-                content: Row(
-                  children: [
-                    const Expanded(
-                      child: Text(
-                        'Requiere que estés verificado con una compañía o firma personal',
-                        style: TextStyle(fontSize: 13),
-                      ),
-                    ),
-                    TextButton(
-                      onPressed: () {
-                        ScaffoldMessenger.of(context).hideCurrentSnackBar();
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => const VerificationScreen(),
-                          ),
-                        );
-                      },
-                      child: const Text(
-                        'Verificar',
-                        style: TextStyle(
-                          color: Colors.blueAccent,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ),
-                    IconButton(
-                      icon: const Icon(Icons.close, color: Colors.white),
-                      padding: EdgeInsets.zero,
-                      constraints: const BoxConstraints(),
-                      onPressed: () {
-                        ScaffoldMessenger.of(context).hideCurrentSnackBar();
-                      },
-                    ),
-                  ],
-                ),
-              ),
-            );
-            return;
-          }
-
-          setState(() {
-            _isExpanded = !_isExpanded;
-          });
-        },
-        borderRadius: BorderRadius.circular(12),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                crossAxisAlignment: isOwn
-                    ? CrossAxisAlignment.center
-                    : CrossAxisAlignment.start,
-                children: [
-                  Container(
-                    margin: isOwn ? null : const EdgeInsets.only(top: 2),
-                    child: Checkbox(
-                      value: checkboxState,
-                      tristate: true,
-                      activeColor: colors.primary,
-                      side: BorderSide(
-                        color: checkboxState == false
-                            ? colors.onSurfaceVariant
-                            : colors.primary,
-                        width: 2,
-                      ),
-                      onChanged: shouldShowSnackBar
-                          ? null
-                          : (bool? newValue) {
-                              if (checkboxState == false) {
-                                widget.onSelectAll();
-                              } else {
-                                widget.onDeselectAll();
-                              }
-                            },
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      mainAxisAlignment: isOwn
-                          ? MainAxisAlignment.center
-                          : MainAxisAlignment.start,
-                      children: [
-                        if (!isOwn) ...[
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 6,
-                              vertical: 3,
-                            ),
-                            decoration: BoxDecoration(
-                              color: badgeColor,
-                              borderRadius: BorderRadius.circular(4),
-                            ),
-                            child: Text(
-                              badgeText,
-                              style: TextStyle(
-                                fontSize: 9,
-                                fontWeight: FontWeight.w700,
-                                letterSpacing: 0.3,
-                                color: badgeTextColor,
-                              ),
-                            ),
-                          ),
-                          const SizedBox(height: 6),
-                        ],
-                        Text(
-                          widget.source.sourceName,
-                          style: const TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.bold,
-                          ),
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                        if (widget.source.location != null &&
-                            widget.source.location!.isNotEmpty) ...[
-                          const SizedBox(height: 4),
-                          Row(
-                            children: [
-                              Icon(
-                                Icons.location_on_outlined,
-                                size: 14,
-                                color: colors.onSurfaceVariant,
-                              ),
-                              const SizedBox(width: 4),
-                              Expanded(
-                                child: Text(
-                                  widget.source.location!,
-                                  style: Theme.of(context).textTheme.bodySmall
-                                      ?.copyWith(
-                                        fontSize: 13,
-                                        color: colors.onSurfaceVariant,
-                                      ),
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ],
-                      ],
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.end,
-                    mainAxisAlignment: isOwn
-                        ? MainAxisAlignment.center
-                        : MainAxisAlignment.start,
-                    children: [
-                      Row(
-                        children: [
-                          if (shouldShowSnackBar)
-                            Padding(
-                              padding: const EdgeInsets.only(right: 6.0),
-                              child: Icon(
-                                Icons.lock_outline,
-                                size: 16,
-                                color: colors.onSurfaceVariant,
-                              ),
-                            ),
-                          ImageFiltered(
-                            imageFilter: shouldShowSnackBar
-                                ? ImageFilter.blur(sigmaX: 4, sigmaY: 4)
-                                : ImageFilter.blur(sigmaX: 0, sigmaY: 0),
-                            child: Text(
-                              isOwn
-                                  ? 'Costo Base'
-                                  : CurrencyFormatter.format(
-                                      widget.source.price,
-                                    ),
-                              style: Theme.of(context).textTheme.titleLarge
-                                  ?.copyWith(
-                                    fontWeight: FontWeight.w700,
-                                    fontSize: 18,
-                                  ),
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 8),
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 6,
-                          vertical: 2,
-                        ),
-                        decoration: BoxDecoration(
-                          color: stockBgColor,
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Icon(
-                              Symbols.package_2,
-                              size: 14,
-                              color: stockColor,
-                            ),
-                            const SizedBox(width: 4),
-                            Text(
-                              stockText,
-                              style: TextStyle(
-                                fontSize: 12,
-                                fontWeight: FontWeight.bold,
-                                color: stockColor,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-              if (showStepper) ...[
-                const Padding(
-                  padding: EdgeInsets.symmetric(vertical: 8),
-                  child: Divider(height: 1),
-                ),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.end,
-                  children: [
-                    Text(
-                      'Cantidad:',
-                      style: TextStyle(
-                        fontSize: 13,
-                        color: colors.onSurfaceVariant,
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    _QuantitySelector(
-                      value: widget.selectedQty,
-                      min: 0,
-                      max: maxQty,
-                      onChanged: widget.onQtyChanged,
-                    ),
-                  ],
-                ),
-              ],
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _QuantitySelector extends StatelessWidget {
-  final double value;
-  final double min;
-  final double max;
-  final ValueChanged<double> onChanged;
-
-  const _QuantitySelector({
-    required this.value,
-    required this.min,
-    required this.max,
-    required this.onChanged,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = Theme.of(context).colorScheme;
-
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        IconButton(
-          onPressed: value > min
-              ? () => onChanged((value - 1).clamp(min, max))
-              : null,
-          icon: const Icon(Icons.remove),
-          iconSize: 20,
-          visualDensity: VisualDensity.compact,
-          color: colors.primary,
-        ),
-        Container(
-          width: 50,
-          alignment: Alignment.center,
-          child: Text(
-            value.truncateToDouble() == value
-                ? value.toInt().toString()
-                : value.toStringAsFixed(1),
-            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
-          ),
-        ),
-        IconButton(
-          onPressed: value < max
-              ? () => onChanged((value + 1).clamp(min, max))
-              : null,
-          icon: const Icon(Icons.add),
-          iconSize: 20,
-          visualDensity: VisualDensity.compact,
-          color: colors.primary,
-        ),
-      ],
     );
   }
 }

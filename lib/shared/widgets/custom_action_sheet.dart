@@ -4,12 +4,14 @@ import 'package:go_router/go_router.dart';
 class CustomActionSheet extends StatelessWidget {
   final String title;
   final Widget? content; // Optional content below title (e.g. ServiceItemCard)
+  final bool showDivider; // Optional flag to hide the divider below content
   final List<Widget> actions; // List of BottomSheetActionItems or other widgets
 
   const CustomActionSheet({
     super.key,
     required this.title,
     this.content,
+    this.showDivider = true,
     required this.actions,
   });
 
@@ -17,6 +19,7 @@ class CustomActionSheet extends StatelessWidget {
     required BuildContext context,
     required String title,
     Widget? content,
+    bool showDivider = true,
     required List<Widget> actions,
   }) {
     showModalBottomSheet(
@@ -26,8 +29,12 @@ class CustomActionSheet extends StatelessWidget {
         borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
       ),
       backgroundColor: Theme.of(context).colorScheme.surfaceContainer,
-      builder: (context) =>
-          CustomActionSheet(title: title, content: content, actions: actions),
+      builder: (context) => CustomActionSheet(
+        title: title,
+        content: content,
+        showDivider: showDivider,
+        actions: actions,
+      ),
     );
   }
 
@@ -52,7 +59,7 @@ class CustomActionSheet extends StatelessWidget {
 
           // Title Row
           Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16.0),
+            padding: const EdgeInsets.fromLTRB(8, 0, 16.0, 0),
             child: Row(
               children: [
                 IconButton(
@@ -77,15 +84,19 @@ class CustomActionSheet extends StatelessWidget {
               padding: const EdgeInsets.symmetric(horizontal: 16.0),
               child: content!,
             ),
-            const SizedBox(height: 8),
-            const Divider(height: 1),
-            const SizedBox(height: 8),
+            if (showDivider) ...[
+              const SizedBox(height: 8),
+              const Divider(height: 1),
+              const SizedBox(height: 8),
+            ] else ...[
+              const SizedBox(height: 16),
+            ],
           ],
 
           // Actions
           ...actions,
 
-          const SizedBox(height: 24),
+          const SizedBox(height: 40),
         ],
       ),
     );

@@ -8,6 +8,7 @@ import '../../../../../shared/widgets/custom_search_bar.dart';
 import '../../../../../core/utils/string_extensions.dart';
 import '../widgets/inventory_action_sheet.dart';
 import '../../../../../shared/widgets/sort_selector.dart';
+import '../../../../../shared/widgets/custom_extended_fab.dart';
 
 class OwnInventoryScreen extends ConsumerStatefulWidget {
   const OwnInventoryScreen({super.key});
@@ -191,21 +192,12 @@ class _OwnInventoryScreenState extends ConsumerState<OwnInventoryScreen> {
       ),
       floatingActionButton: Padding(
         padding: const EdgeInsets.only(bottom: 40.0),
-        child: FloatingActionButton.extended(
+        child: CustomExtendedFab(
           onPressed: () {
             context.go('/portfolio/own-inventory/add');
           },
-          icon: const Icon(Icons.add),
-          label: const Text(
-            'Agregar',
-            style: TextStyle(fontWeight: FontWeight.bold),
-          ),
-          backgroundColor: colors.primaryContainer,
-          foregroundColor: colors.onPrimaryContainer,
-          elevation: 4,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(16),
-          ),
+          label: 'Agregar',
+          icon: Icons.add,
         ),
       ),
     );

@@ -1,4 +1,3 @@
-
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../domain/repositories/quotes_repository.dart';
 import '../../data/models/quote.dart';
@@ -22,7 +21,7 @@ class SupabaseQuotesRepository implements QuotesRepository {
         .select()
         .eq('is_active', true)
         .order('name');
-    
+
     return (response as List).map((e) => DeliveryTime.fromJson(e)).toList();
   }
 
@@ -34,7 +33,9 @@ class SupabaseQuotesRepository implements QuotesRepository {
         .eq('is_active', true)
         .order('description');
 
-    return (response as List).map((e) => CommercialCondition.fromJson(e)).toList();
+    return (response as List)
+        .map((e) => CommercialCondition.fromJson(e))
+        .toList();
   }
 
   @override
@@ -55,7 +56,7 @@ class SupabaseQuotesRepository implements QuotesRepository {
         .select()
         .limit(1)
         .single();
-    
+
     return FinancialParameter.fromJson(response);
   }
 
@@ -69,10 +70,10 @@ class SupabaseQuotesRepository implements QuotesRepository {
     if (clientId != null) {
       query = query.eq('client_id', clientId);
     }
-    
+
     // Order by date issued descending
     final response = await query.order('date_issued', ascending: false);
-    
+
     return (response as List).map((e) => Quote.fromJson(e)).toList();
   }
 
@@ -80,7 +81,9 @@ class SupabaseQuotesRepository implements QuotesRepository {
   Future<Quote> getQuoteById(String id) async {
     final response = await _client
         .from('quotes')
-        .select('*, quote_items_products(*), quote_items_services(*), quote_conditions(*)')
+        .select(
+          '*, quote_items_products(*), quote_items_services(*), quote_conditions(*)',
+        )
         .eq('id', id)
         .single();
 
@@ -88,7 +91,8 @@ class SupabaseQuotesRepository implements QuotesRepository {
   }
 
   @override
-  Future<Quote> createQuote(Quote quote, {
+  Future<Quote> createQuote(
+    Quote quote, {
     List<QuoteItemProduct>? products,
     List<QuoteItemService>? services,
     List<QuoteCondition>? conditions,
@@ -104,7 +108,7 @@ class SupabaseQuotesRepository implements QuotesRepository {
           'validity_days': quote.validityDays,
           'notes': quote.notes,
           'status': 'draft', // Always draft initially
-          // Subtotal/Total/Tax are calculated via trigger or app logic? 
+          // Subtotal/Total/Tax are calculated via trigger or app logic?
           // For MVP, letting App logic send them or defaulting to 0 and updating later.
           // Sending calculated totals:
           'subtotal': quote.subtotal,
@@ -113,61 +117,73 @@ class SupabaseQuotesRepository implements QuotesRepository {
         })
         .select()
         .single();
-    
+
     final newQuoteId = headerResponse['id'] as String;
 
     // 2. Insert Products
     if (products != null && products.isNotEmpty) {
-      final productsData = products.map((e) => {
-        'quote_id': newQuoteId,
-        'product_id': e.productId,
-        'supplier_product_id': e.supplierProductId,
-        'delivery_time_id': e.deliveryTimeId,
-        'name': e.name,
-        'brand': e.brand,
-        'model': e.model,
-        'uom': e.uom,
-        'description': e.description,
-        'quantity': e.quantity,
-        'cost_price': e.costPrice,
-        'profit_margin': e.profitMargin,
-        'unit_price': e.unitPrice,
-        'tax_rate': e.taxRate,
-        'tax_amount': e.taxAmount,
-        'total_price': e.totalPrice,
-        'warranty_time': e.warrantyTime,
-      }).toList();
+      final productsData = products
+          .map(
+            (e) => {
+              'quote_id': newQuoteId,
+              'product_id': e.productId,
+              'supplier_product_id': e.supplierProductId,
+              'delivery_time_id': e.deliveryTimeId,
+              'name': e.name,
+              'brand': e.brand,
+              'model': e.model,
+              'uom': e.uom,
+              'description': e.description,
+              'quantity': e.quantity,
+              'cost_price': e.costPrice,
+              'profit_margin': e.profitMargin,
+              'unit_price': e.unitPrice,
+              'tax_rate': e.taxRate,
+              'tax_amount': e.taxAmount,
+              'total_price': e.totalPrice,
+              'warranty_time': e.warrantyTime,
+            },
+          )
+          .toList();
       await _client.from('quote_items_products').insert(productsData);
     }
 
     // 3. Insert Services
     if (services != null && services.isNotEmpty) {
-       final servicesData = services.map((e) => {
-        'quote_id': newQuoteId,
-        'service_id': e.serviceId,
-        'service_rate_id': e.serviceRateId,
-        'execution_time_id': e.executionTimeId,
-        'name': e.name,
-        'description': e.description,
-        'quantity': e.quantity,
-        'cost_price': e.costPrice,
-        'profit_margin': e.profitMargin,
-        'unit_price': e.unitPrice,
-        'tax_rate': e.taxRate,
-        'total_price': e.totalPrice,
-        'warranty_time': e.warrantyTime,
-      }).toList();
+      final servicesData = services
+          .map(
+            (e) => {
+              'quote_id': newQuoteId,
+              'service_id': e.serviceId,
+              'service_rate_id': e.serviceRateId,
+              'execution_time_id': e.executionTimeId,
+              'name': e.name,
+              'description': e.description,
+              'quantity': e.quantity,
+              'cost_price': e.costPrice,
+              'profit_margin': e.profitMargin,
+              'unit_price': e.unitPrice,
+              'tax_rate': e.taxRate,
+              'total_price': e.totalPrice,
+              'warranty_time': e.warrantyTime,
+            },
+          )
+          .toList();
       await _client.from('quote_items_services').insert(servicesData);
     }
 
     // 4. Insert Conditions
     if (conditions != null && conditions.isNotEmpty) {
-      final conditionsData = conditions.map((e) => {
-        'quote_id': newQuoteId,
-        'condition_id': e.conditionId,
-        'description': e.description,
-        'order_index': e.orderIndex,
-      }).toList();
+      final conditionsData = conditions
+          .map(
+            (e) => {
+              'quote_id': newQuoteId,
+              'condition_id': e.conditionId,
+              'description': e.description,
+              'order_index': e.orderIndex,
+            },
+          )
+          .toList();
       await _client.from('quote_conditions').insert(conditionsData);
     }
 

@@ -7,7 +7,7 @@ part of 'services_provider.dart';
 // **************************************************************************
 
 String _$servicesRepositoryHash() =>
-    r'b128953d881d7b62c6e0ac426e4a12f4e1b3703f';
+    r'd3bb6a1ec8cc013e10074ed58bceecd05c3bce31';
 
 /// See also [servicesRepository].
 @ProviderFor(servicesRepository)

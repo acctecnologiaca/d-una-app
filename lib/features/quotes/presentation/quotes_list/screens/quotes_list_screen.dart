@@ -6,6 +6,7 @@ import '../../../../../shared/widgets/sort_selector.dart';
 import '../../../../../features/profile/presentation/providers/profile_provider.dart';
 import '../../../domain/models/quote_model.dart'; // New Import
 import '../widgets/quote_card.dart'; // New Import
+import '../../../../../shared/widgets/custom_extended_fab.dart';
 
 class QuotesListScreen extends ConsumerStatefulWidget {
   const QuotesListScreen({super.key});
@@ -196,21 +197,12 @@ class _QuotesListScreenState extends ConsumerState<QuotesListScreen> {
       ),
       floatingActionButton: Padding(
         padding: const EdgeInsets.only(bottom: 0.0),
-        child: FloatingActionButton.extended(
+        child: CustomExtendedFab(
           onPressed: () {
             context.push('/quotes/create');
           },
-          icon: const Icon(Icons.add),
-          label: const Text(
-            'Nueva',
-            style: TextStyle(fontWeight: FontWeight.bold),
-          ),
-          backgroundColor: colors.primaryContainer,
-          foregroundColor: colors.onPrimaryContainer,
-          elevation: 4,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(16),
-          ),
+          icon: Icons.add,
+          label: 'Nueva',
         ),
       ),
     );

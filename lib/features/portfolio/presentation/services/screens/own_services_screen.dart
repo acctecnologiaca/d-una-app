@@ -3,11 +3,12 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../../shared/widgets/custom_search_bar.dart';
+import '../../../../../shared/widgets/sort_selector.dart';
+import '../../../../../shared/widgets/custom_extended_fab.dart';
 import '../../../data/models/service_model.dart';
 import '../../providers/services_provider.dart';
 import '../widgets/service_item_card.dart';
 import '../widgets/service_action_sheet.dart';
-import '../../../../../shared/widgets/sort_selector.dart';
 
 class OwnServicesScreen extends ConsumerStatefulWidget {
   const OwnServicesScreen({super.key});
@@ -152,18 +153,13 @@ class _OwnServicesScreenState extends ConsumerState<OwnServicesScreen> {
       ),
       floatingActionButton: Padding(
         padding: const EdgeInsets.only(bottom: 40.0),
-        child: FloatingActionButton.extended(
+        child: CustomExtendedFab(
           onPressed: () {
             // Navigate to Add Service Wizard
             context.push('/portfolio/own-services/add');
           },
-          icon: const Icon(Icons.add),
-          label: const Text(
-            'Agregar',
-            style: TextStyle(fontWeight: FontWeight.bold),
-          ),
-          backgroundColor: colors.primaryContainer,
-          foregroundColor: colors.onPrimaryContainer,
+          label: 'Agregar',
+          icon: Icons.add,
         ),
       ),
     );

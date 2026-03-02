@@ -137,7 +137,7 @@ class AggregatedProductCard extends StatelessWidget {
                           ),
                           const SizedBox(width: 4),
                           Text(
-                            '$totalQuantity $uom',
+                            '${totalQuantity % 1 == 0 ? totalQuantity.toInt() : totalQuantity} $uom',
                             style: TextStyle(
                               fontSize: 12,
                               fontWeight: FontWeight.w600,

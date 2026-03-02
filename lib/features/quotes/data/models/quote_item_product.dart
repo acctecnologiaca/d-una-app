@@ -11,6 +11,7 @@ class QuoteItemProduct {
   final String? model;
   final String uom;
   final String? description;
+  final double? availableStock; // UI helper for tracking total stock available
 
   // Economic
   final double quantity;
@@ -21,6 +22,9 @@ class QuoteItemProduct {
   final double taxAmount;
   final double totalPrice;
   final String? warrantyTime;
+
+  // Runtime-only flag, not persisted to DB
+  final bool isTemporal;
 
   QuoteItemProduct({
     required this.id,
@@ -33,6 +37,7 @@ class QuoteItemProduct {
     this.model,
     required this.uom,
     this.description,
+    this.availableStock,
     required this.quantity,
     required this.costPrice,
     required this.profitMargin,
@@ -41,6 +46,7 @@ class QuoteItemProduct {
     required this.taxAmount,
     required this.totalPrice,
     this.warrantyTime,
+    this.isTemporal = false,
   });
 
   factory QuoteItemProduct.fromJson(Map<String, dynamic> json) {
@@ -55,6 +61,9 @@ class QuoteItemProduct {
       model: json['model'] as String?,
       uom: json['uom'] as String,
       description: json['description'] as String?,
+      availableStock: json['available_stock'] != null
+          ? (json['available_stock'] as num).toDouble()
+          : null,
 
       quantity: (json['quantity'] as num).toDouble(),
       costPrice: (json['cost_price'] as num).toDouble(),
@@ -80,6 +89,7 @@ class QuoteItemProduct {
       'model': model,
       'uom': uom,
       'description': description,
+      'available_stock': availableStock,
       'quantity': quantity,
       'cost_price': costPrice,
       'profit_margin': profitMargin,
