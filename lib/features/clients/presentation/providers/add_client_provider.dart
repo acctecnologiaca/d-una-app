@@ -65,7 +65,7 @@ class AddClient extends _$AddClient {
     state = {'type': 'company', 'contacts': []};
   }
 
-  Future<void> submit() async {
+  Future<String> submit() async {
     // Validate required fields based on type
 
     // Safety check: specific logic for 'person' type to ignore contacts list
@@ -77,11 +77,15 @@ class AddClient extends _$AddClient {
     }
 
     // Call main ClientsProvider to save
-    await ref.read(clientsProvider.notifier).addClient(submissionState);
+    final newId = await ref
+        .read(clientsProvider.notifier)
+        .addClient(submissionState);
 
     // Reset state after success if needed, or let the provider be disposed (autoDispose handles this)
     // Since keepAlive is true, we should reset it here too or let the UI handle it.
     // Ideally reset after success to be clean.
     reset();
+
+    return newId;
   }
 }

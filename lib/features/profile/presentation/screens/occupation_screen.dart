@@ -73,13 +73,10 @@ class _OccupationScreenState extends ConsumerState<OccupationScreen> {
 
     // Calculate if the SET of occupations has changed
     final initialSet = {
-      if (_initialPrimaryOccupationId != null) _initialPrimaryOccupationId!,
+      ?_initialPrimaryOccupationId,
       ..._initialSecondaryOccupationIds,
     };
-    final currentSet = {
-      if (_primaryOccupationId != null) _primaryOccupationId!,
-      ..._secondaryOccupationIds,
-    };
+    final currentSet = {?_primaryOccupationId, ..._secondaryOccupationIds};
 
     final isSubstantiveChange =
         initialSet.length != currentSet.length ||

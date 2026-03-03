@@ -21,6 +21,9 @@ class _AddClientPersonInfoScreenState
   final _nameController = TextEditingController();
   final _idController = TextEditingController();
 
+  String? get _returnTo =>
+      GoRouterState.of(context).uri.queryParameters['returnTo'];
+
   bool _isLoading = false;
   String? _idError;
 
@@ -70,7 +73,8 @@ class _AddClientPersonInfoScreenState
               name: _nameController.text,
               personalID: _idController.text,
             );
-        context.push('/clients/add/address?type=person');
+        final returnToParam = _returnTo != null ? '&returnTo=$_returnTo' : '';
+        context.push('/clients/add/address?type=person$returnToParam');
       }
     }
   }
@@ -150,7 +154,11 @@ class _AddClientPersonInfoScreenState
               padding: const EdgeInsets.only(bottom: 40),
               child: WizardButtonBar(
                 onCancel: () {
-                  context.go('/clients');
+                  if (_returnTo != null) {
+                    context.go(_returnTo!);
+                  } else {
+                    context.go('/clients');
+                  }
                 },
                 onBack: () => context.pop(),
                 onNext: _onNext,

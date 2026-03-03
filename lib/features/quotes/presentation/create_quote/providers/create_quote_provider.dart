@@ -18,6 +18,7 @@ class QuoteState {
   final String? advisorId;
   final String? advisorName; // For UI display
   final String? notes;
+  final String? label;
   final DateTime dateIssued;
   final bool isLoading;
   final String? error;
@@ -41,6 +42,7 @@ class QuoteState {
     this.advisorId,
     this.advisorName,
     this.notes,
+    this.label,
     DateTime? dateIssued,
     this.isLoading = false,
     this.error,
@@ -63,6 +65,7 @@ class QuoteState {
     String? advisorId,
     String? advisorName,
     String? notes,
+    String? label,
     DateTime? dateIssued,
     bool? isLoading,
     String? error,
@@ -84,6 +87,7 @@ class QuoteState {
       advisorId: advisorId ?? this.advisorId,
       advisorName: advisorName ?? this.advisorName,
       notes: notes ?? this.notes,
+      label: label ?? this.label,
       dateIssued: dateIssued ?? this.dateIssued,
       isLoading: isLoading ?? this.isLoading,
       error: error,
@@ -135,6 +139,7 @@ class CreateQuoteNotifier extends StateNotifier<QuoteState> {
       advisorId: state.advisorId,
       advisorName: state.advisorName,
       notes: state.notes,
+      label: state.label,
       dateIssued: state.dateIssued,
     );
   }
@@ -151,6 +156,7 @@ class CreateQuoteNotifier extends StateNotifier<QuoteState> {
     String? advisorId,
     String? advisorName,
     String? notes,
+    String? label,
     DateTime? dateIssued,
   }) {
     state = state.copyWith(
@@ -160,6 +166,7 @@ class CreateQuoteNotifier extends StateNotifier<QuoteState> {
       advisorId: advisorId,
       advisorName: advisorName,
       notes: notes,
+      label: label,
       dateIssued: dateIssued,
     );
   }
@@ -174,6 +181,40 @@ class CreateQuoteNotifier extends StateNotifier<QuoteState> {
       orderIndex: state.conditions.length,
     );
     state = state.copyWith(conditions: [...state.conditions, condition]);
+  }
+
+  void addConditions(List<CommercialCondition> newConditions) {
+    if (newConditions.isEmpty) return;
+
+    final conditionsToAdd = newConditions
+        .map(
+          (c) => QuoteCondition(
+            id:
+                DateTime.now().millisecondsSinceEpoch.toString() +
+                c.id, // Temp ID
+            quoteId: '', // To be filled on save
+            conditionId: c.id,
+            description: c.description,
+            orderIndex: 0, // Will be updated below
+          ),
+        )
+        .toList();
+
+    var currentList = List<QuoteCondition>.from(state.conditions);
+    currentList.addAll(conditionsToAdd);
+
+    // Update order indices
+    for (int i = 0; i < currentList.length; i++) {
+      currentList[i] = QuoteCondition(
+        id: currentList[i].id,
+        quoteId: currentList[i].quoteId,
+        conditionId: currentList[i].conditionId,
+        description: currentList[i].description,
+        orderIndex: i,
+      );
+    }
+
+    state = state.copyWith(conditions: currentList);
   }
 
   void removeCondition(String id) {

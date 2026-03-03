@@ -23,6 +23,9 @@ class _AddClientAddressScreenState
   bool get _isPerson =>
       GoRouterState.of(context).uri.queryParameters['type'] == 'person';
 
+  String? get _returnTo =>
+      GoRouterState.of(context).uri.queryParameters['returnTo'];
+
   String? _selectedState;
   String? _selectedCity;
   String? _selectedCountry;
@@ -45,7 +48,8 @@ class _AddClientAddressScreenState
           );
 
       final type = _isPerson ? 'person' : 'company';
-      context.push('/clients/add/contact?type=$type');
+      final returnToParam = _returnTo != null ? '&returnTo=$_returnTo' : '';
+      context.push('/clients/add/contact?type=$type$returnToParam');
     }
   }
 
@@ -198,7 +202,11 @@ class _AddClientAddressScreenState
               padding: const EdgeInsets.only(bottom: 40),
               child: WizardButtonBar(
                 onCancel: () {
-                  context.go('/clients');
+                  if (_returnTo != null) {
+                    context.go(_returnTo!);
+                  } else {
+                    context.go('/clients');
+                  }
                 },
                 onBack: () => context.pop(),
                 onNext: _onNext,

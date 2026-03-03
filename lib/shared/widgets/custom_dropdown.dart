@@ -46,6 +46,7 @@ class _CustomDropdownState<T extends Object> extends State<CustomDropdown<T>> {
           ? widget.itemLabelBuilder(widget.value as T)
           : '',
     );
+    _textController.addListener(_onTextChanged);
   }
 
   @override
@@ -56,12 +57,19 @@ class _CustomDropdownState<T extends Object> extends State<CustomDropdown<T>> {
           ? widget.itemLabelBuilder(widget.value as T)
           : '';
       // Only sync if the external value actually changed.
-      _textController.text = newText;
+      if (_textController.text != newText) {
+        _textController.text = newText;
+      }
     }
+  }
+
+  void _onTextChanged() {
+    setState(() {}); // Rebuild to toggle clear button visibility
   }
 
   @override
   void dispose() {
+    _textController.removeListener(_onTextChanged);
     _textController.dispose();
     super.dispose();
   }
@@ -85,69 +93,33 @@ class _CustomDropdownState<T extends Object> extends State<CustomDropdown<T>> {
       decoration: _decoration(),
       icon: const Icon(Icons.arrow_drop_down),
       selectedItemBuilder: (BuildContext context) {
-        final List<Widget> selectedItems = [];
-        if (widget.showAddOption && widget.addOptionValue != null) {
-          selectedItems.add(const SizedBox());
-        }
-        selectedItems.addAll(
-          widget.items.map<Widget>((T item) {
-            return Text(
-              widget.itemLabelBuilder(item),
-              overflow: TextOverflow.ellipsis,
-              style: TextStyle(color: colors.onSurface),
-            );
-          }),
-        );
-        return selectedItems;
-      },
-      items: [
-        if (widget.showAddOption && widget.addOptionValue != null) ...[
-          DropdownMenuItem<T>(
-            value: widget.addOptionValue,
-            child: Row(
-              children: [
-                Icon(Icons.add, color: colors.onSurface),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Text(
-                    widget.addOptionLabel,
-                    style: TextStyle(
-                      fontWeight: FontWeight.w500,
-                      color: colors.onSurface,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
-        ...widget.items.map((item) {
-          return DropdownMenuItem<T>(
-            value: item,
-            child: Text(
-              widget.itemLabelBuilder(item),
-              softWrap: true,
-              overflow: TextOverflow.visible,
-            ),
+        return widget.items.map<Widget>((T item) {
+          return Text(
+            widget.itemLabelBuilder(item),
+            overflow: TextOverflow.ellipsis,
+            style: TextStyle(color: colors.onSurface),
           );
-        }),
-      ],
+        }).toList();
+      },
+      items: widget.items.map((item) {
+        return DropdownMenuItem<T>(
+          value: item,
+          child: Text(
+            widget.itemLabelBuilder(item),
+            softWrap: true,
+            overflow: TextOverflow.visible,
+          ),
+        );
+      }).toList(),
       validator: widget.validator,
-      onChanged: widget.onChanged == null
-          ? null
-          : (val) {
-              if (widget.showAddOption && val == widget.addOptionValue) {
-                widget.onAddPressed?.call();
-              } else {
-                widget.onChanged?.call(val);
-              }
-            },
+      onChanged: widget.onChanged,
     );
   }
 
   // ── Searchable (Autocomplete) ────────────────────────────────────────────────
 
   Widget _buildSearchable(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
     return FormField<T>(
       initialValue: widget.value,
       validator: widget.validator,
@@ -162,17 +134,32 @@ class _CustomDropdownState<T extends Object> extends State<CustomDropdown<T>> {
               enabled: widget.onChanged != null,
               errorText: state.errorText,
               enableFilter: true,
-              enableSearch: true,
+              enableSearch:
+                  false, // We use custom filter callback instead of native search string jump
+              filterCallback:
+                  (List<DropdownMenuEntry<T>> entries, String filter) {
+                    final filtered = entries.where((entry) {
+                      // Always show the Add option
+                      if (widget.showAddOption &&
+                          entry.value == widget.addOptionValue) {
+                        return true;
+                      }
+                      // Otherwise match text
+                      return entry.label.toLowerCase().contains(
+                        filter.toLowerCase(),
+                      );
+                    }).toList();
+                    return filtered;
+                  },
               requestFocusOnTap: true,
-              textStyle: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                color: Theme.of(context).colorScheme.onSurface,
+              textStyle: TextStyle(
+                fontWeight: FontWeight.w500,
+                color: colors.onSurface,
               ),
               menuHeight: 240,
               expandedInsets: EdgeInsets.zero,
               menuStyle: MenuStyle(
-                backgroundColor: WidgetStatePropertyAll(
-                  Theme.of(context).colorScheme.surface,
-                ),
+                backgroundColor: WidgetStatePropertyAll(colors.surface),
                 elevation: const WidgetStatePropertyAll(4),
                 shape: WidgetStatePropertyAll(
                   RoundedRectangleBorder(
@@ -180,63 +167,64 @@ class _CustomDropdownState<T extends Object> extends State<CustomDropdown<T>> {
                   ),
                 ),
               ),
-              dropdownMenuEntries: widget.items.map((item) {
-                return DropdownMenuEntry<T>(
-                  value: item,
-                  label: widget.itemLabelBuilder(item),
-                );
-              }).toList(),
+              dropdownMenuEntries: [
+                if (widget.showAddOption && widget.addOptionValue != null)
+                  DropdownMenuEntry<T>(
+                    value: widget.addOptionValue as T,
+                    label: widget.addOptionLabel,
+                    labelWidget: Row(
+                      children: [
+                        Icon(Icons.add, color: colors.onSurface),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            widget.addOptionLabel,
+                            style: TextStyle(
+                              fontWeight: FontWeight.w500,
+                              color: colors.onSurface,
+                              fontSize: 16,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ...widget.items.map((item) {
+                  return DropdownMenuEntry<T>(
+                    value: item,
+                    label: widget.itemLabelBuilder(item),
+                    labelWidget: Text(
+                      widget.itemLabelBuilder(item),
+                      style: TextStyle(
+                        color: colors.onSurface,
+                        fontSize: 16,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  );
+                }),
+              ],
               onSelected: (T? selection) {
-                state.didChange(selection);
-                widget.onChanged?.call(selection);
+                if (selection == widget.addOptionValue &&
+                    widget.showAddOption) {
+                  // Restore old text to avoid showing the 'Add' placeholder text
+                  _textController.text = widget.value != null
+                      ? widget.itemLabelBuilder(widget.value as T)
+                      : '';
+                  widget.onAddPressed?.call();
+                } else {
+                  state.didChange(selection);
+                  widget.onChanged?.call(selection);
+                }
               },
-              trailingIcon: widget.showAddOption && widget.onAddPressed != null
-                  ? Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        IconButton(
-                          icon: const Icon(Icons.add),
-                          tooltip: widget.addOptionLabel,
-                          onPressed: () {
-                            FocusManager.instance.primaryFocus?.unfocus();
-                            // Delay ensures any internal focus overlays are fully cleared before navigation
-                            Future.delayed(
-                              const Duration(milliseconds: 100),
-                              () {
-                                widget.onAddPressed?.call();
-                              },
-                            );
-                          },
-                        ),
-                        const Icon(Icons.arrow_drop_down),
-                      ],
-                    )
-                  : const Icon(Icons.arrow_drop_down),
-              selectedTrailingIcon:
-                  widget.showAddOption && widget.onAddPressed != null
-                  ? Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        IconButton(
-                          icon: const Icon(Icons.add),
-                          tooltip: widget.addOptionLabel,
-                          onPressed: () {
-                            FocusManager.instance.primaryFocus?.unfocus();
-                            Future.delayed(
-                              const Duration(milliseconds: 100),
-                              () {
-                                widget.onAddPressed?.call();
-                              },
-                            );
-                          },
-                        ),
-                        const Icon(Icons.arrow_drop_down),
-                      ],
-                    )
-                  : const Icon(Icons.arrow_drop_up),
+              trailingIcon: _buildSearchableTrailingIcons(state),
+              selectedTrailingIcon: _buildSearchableTrailingIcons(
+                state,
+                isSelected: true,
+              ),
               inputDecorationTheme: InputDecorationTheme(
                 isDense: true,
-                constraints: const BoxConstraints(maxHeight: 56),
+                constraints: const BoxConstraints(minHeight: 56, maxHeight: 56),
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(8.0),
                 ),
@@ -262,7 +250,48 @@ class _CustomDropdownState<T extends Object> extends State<CustomDropdown<T>> {
     );
   }
 
-  InputDecoration _decoration({bool isSearchable = false}) {
+  Widget _buildSearchableTrailingIcons(
+    FormFieldState<T> state, {
+    bool isSelected = false,
+  }) {
+    final arrowIcon = Icon(
+      isSelected ? Icons.arrow_drop_up : Icons.arrow_drop_down,
+    );
+
+    // If no text is typed/selected, just show the arrow
+    if (_textController.text.isEmpty) {
+      return arrowIcon;
+    }
+
+    // If there is text, show a Clear button + Arrow
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.center,
+      children: [
+        InkWell(
+          borderRadius: BorderRadius.circular(16),
+          onTap: () {
+            // Clear the text UI
+            _textController.clear();
+            // Clear the form field state
+            state.didChange(null);
+            // Notify external listeners
+            widget.onChanged?.call(null);
+            // Rebuild so the "X" disappears
+            setState(() {});
+          },
+          child: const Padding(
+            padding: EdgeInsets.all(4.0),
+            child: Icon(Icons.cancel_outlined, size: 20),
+          ),
+        ),
+        const SizedBox(width: 4),
+        arrowIcon,
+      ],
+    );
+  }
+
+  InputDecoration _decoration() {
     return InputDecoration(
       labelText: '${widget.label}*',
       floatingLabelBehavior: FloatingLabelBehavior.auto,
@@ -278,24 +307,6 @@ class _CustomDropdownState<T extends Object> extends State<CustomDropdown<T>> {
       contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
       filled: false,
       fillColor: Colors.transparent,
-      suffixIcon:
-          isSearchable && widget.showAddOption && widget.onAddPressed != null
-          ? Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                IconButton(
-                  icon: const Icon(Icons.add),
-                  tooltip: widget.addOptionLabel,
-                  onPressed: () {
-                    FocusManager.instance.primaryFocus?.unfocus();
-                    widget.onAddPressed?.call();
-                  },
-                ),
-                const Icon(Icons.arrow_drop_down),
-                const SizedBox(width: 8),
-              ],
-            )
-          : const Icon(Icons.arrow_drop_down),
     );
   }
 }

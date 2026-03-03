@@ -13,6 +13,8 @@ class QuoteProductSaleDetailsSheet extends ConsumerStatefulWidget {
   final String productName;
   final String? brand;
   final String? model;
+  final double? initialPrice;
+  final double? initialMargin;
 
   const QuoteProductSaleDetailsSheet({
     super.key,
@@ -20,6 +22,8 @@ class QuoteProductSaleDetailsSheet extends ConsumerStatefulWidget {
     required this.productName,
     this.brand,
     this.model,
+    this.initialPrice,
+    this.initialMargin,
   });
 
   static Future<Map<String, dynamic>?> show(
@@ -28,6 +32,8 @@ class QuoteProductSaleDetailsSheet extends ConsumerStatefulWidget {
     required String productName,
     String? brand,
     String? model,
+    double? initialPrice,
+    double? initialMargin,
   }) {
     return showModalBottomSheet<Map<String, dynamic>>(
       context: context,
@@ -45,6 +51,8 @@ class QuoteProductSaleDetailsSheet extends ConsumerStatefulWidget {
           productName: productName,
           brand: brand,
           model: model,
+          initialPrice: initialPrice,
+          initialMargin: initialMargin,
         ),
       ),
     );
@@ -75,8 +83,15 @@ class _QuoteProductSaleDetailsSheetState
   @override
   void initState() {
     super.initState();
-    _currentMargin = ref.read(createQuoteProvider).globalMargin;
-    _recalculatePriceFromMargin();
+    if (widget.initialPrice != null && widget.initialMargin != null) {
+      _currentPrice = widget.initialPrice!;
+      _currentMargin = widget.initialMargin! * 100;
+      _priceController.text = CurrencyFormatter.formatNumber(_currentPrice);
+      _marginController.text = CurrencyFormatter.formatNumber(_currentMargin);
+    } else {
+      _currentMargin = ref.read(createQuoteProvider).globalMargin;
+      _recalculatePriceFromMargin();
+    }
   }
 
   @override

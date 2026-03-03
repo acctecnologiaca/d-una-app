@@ -23,6 +23,8 @@ import 'package:d_una_app/features/quotes/presentation/create_quote/screens/crea
 import '../../features/quotes/presentation/create_quote/screens/select_product_screen.dart';
 import '../../features/quotes/presentation/create_quote/screens/quote_product_search_screen.dart';
 import '../../features/quotes/presentation/create_quote/screens/quote_product_sources_screen.dart';
+import '../../features/quotes/presentation/create_quote/screens/select_condition_screen.dart';
+import '../../features/quotes/presentation/create_quote/screens/quote_condition_search_screen.dart';
 import '../../features/quotes/presentation/create_quote/screens/select_service_screen.dart';
 import '../../features/quotes/presentation/create_quote/screens/quote_service_search_screen.dart';
 import '../../features/quotes/presentation/create_quote/screens/add_temporal_product_screen.dart';
@@ -287,6 +289,20 @@ final appRouter = GoRouter(
                               existingItem: existingItem,
                             );
                           },
+                        ),
+                      ],
+                    ),
+                    GoRoute(
+                      path: 'conditions',
+                      parentNavigatorKey: rootNavigatorKey,
+                      builder: (context, state) =>
+                          const SelectConditionScreen(),
+                      routes: [
+                        GoRoute(
+                          path: 'search',
+                          parentNavigatorKey: rootNavigatorKey,
+                          builder: (context, state) =>
+                              const QuoteConditionSearchScreen(),
                         ),
                       ],
                     ),

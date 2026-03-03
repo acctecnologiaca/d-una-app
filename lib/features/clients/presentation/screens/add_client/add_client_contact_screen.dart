@@ -8,6 +8,7 @@ import 'package:d_una_app/shared/widgets/wizard_bottom_bar.dart';
 import 'package:d_una_app/shared/widgets/wizard_progress_bar.dart';
 import '../../providers/add_client_provider.dart';
 import '../../providers/clients_provider.dart';
+import 'package:d_una_app/features/quotes/presentation/create_quote/providers/create_quote_provider.dart';
 
 class AddClientContactScreen extends ConsumerStatefulWidget {
   const AddClientContactScreen({super.key});
@@ -23,6 +24,9 @@ class _AddClientContactScreenState
 
   bool get _isPerson =>
       GoRouterState.of(context).uri.queryParameters['type'] == 'person';
+
+  String? get _returnTo =>
+      GoRouterState.of(context).uri.queryParameters['returnTo'];
 
   final _nameController = TextEditingController();
   final _phoneController = TextEditingController();
@@ -80,7 +84,7 @@ class _AddClientContactScreenState
       }
 
       // 2. Submit
-      await notifier.submit();
+      final newClientId = await notifier.submit();
 
       // Check for success (optional, or rely on ClientsProvider state)
       // Since `addClient` (provider) awaits, we can check `ref.read(clientsProvider)` for value vs error
@@ -92,7 +96,38 @@ class _AddClientContactScreenState
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(content: Text('Cliente agregado exitosamente')),
           );
-          context.go('/clients');
+
+          if (_returnTo != null && _returnTo!.contains('/quotes/create')) {
+            final clients = clientsState.value!;
+            final newClient = clients.firstWhere(
+              (c) => c.id == newClientId,
+              orElse: () => clients.last, // Fallback safely
+            );
+
+            // Auto-select client
+            ref
+                .read(createQuoteProvider.notifier)
+                .setClient(newClient.id, newClient.name);
+
+            // Auto-select contact
+            if (newClient.type != 'person' && newClient.contacts.isNotEmpty) {
+              final contactToSelect = newClient.contacts.firstWhere(
+                (c) => c.isPrimary,
+                orElse: () => newClient.contacts.first,
+              );
+              ref
+                  .read(createQuoteProvider.notifier)
+                  .setContact(contactToSelect.id, contactToSelect.name);
+            } else if (newClient.type == 'person') {
+              ref.read(createQuoteProvider.notifier).setContact('', '');
+            }
+          }
+
+          if (_returnTo != null) {
+            context.go(_returnTo!);
+          } else {
+            context.go('/clients');
+          }
         }
       } else if (clientsState is AsyncError) {
         if (mounted) {
@@ -243,7 +278,11 @@ class _AddClientContactScreenState
               padding: const EdgeInsets.only(bottom: 40),
               child: WizardButtonBar(
                 onCancel: () {
-                  context.go('/clients');
+                  if (_returnTo != null) {
+                    context.go(_returnTo!);
+                  } else {
+                    context.go('/clients');
+                  }
                 },
                 onBack: () => context.pop(),
                 onNext: _onFinish,

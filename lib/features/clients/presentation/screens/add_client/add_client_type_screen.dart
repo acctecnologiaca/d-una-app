@@ -17,6 +17,9 @@ class _AddClientTypeScreenState extends ConsumerState<AddClientTypeScreen> {
   // 'company' or 'person'
   String _selectedType = 'company';
 
+  String? get _returnTo =>
+      GoRouterState.of(context).uri.queryParameters['returnTo'];
+
   void _onTypeChanged(String type) {
     setState(() {
       _selectedType = type;
@@ -25,10 +28,11 @@ class _AddClientTypeScreenState extends ConsumerState<AddClientTypeScreen> {
 
   void _onNext() {
     ref.read(addClientProvider.notifier).updateType(_selectedType);
+    final returnToParam = _returnTo != null ? '?returnTo=$_returnTo' : '';
     if (_selectedType == 'company') {
-      context.push('/clients/add/company-info');
+      context.push('/clients/add/company-info$returnToParam');
     } else {
-      context.push('/clients/add/person-info');
+      context.push('/clients/add/person-info$returnToParam');
     }
   }
 
@@ -45,7 +49,9 @@ class _AddClientTypeScreenState extends ConsumerState<AddClientTypeScreen> {
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
           onPressed: () {
-            if (context.canPop()) {
+            if (_returnTo != null) {
+              context.go(_returnTo!);
+            } else if (context.canPop()) {
               context.pop();
             } else {
               context.go('/clients');
@@ -104,7 +110,13 @@ class _AddClientTypeScreenState extends ConsumerState<AddClientTypeScreen> {
               // Footer Buttons
               WizardButtonBar(
                 onCancel: () {
-                  context.pop();
+                  if (_returnTo != null) {
+                    context.go(_returnTo!);
+                  } else if (context.canPop()) {
+                    context.pop();
+                  } else {
+                    context.go('/clients');
+                  }
                 },
                 onNext: _onNext,
               ),

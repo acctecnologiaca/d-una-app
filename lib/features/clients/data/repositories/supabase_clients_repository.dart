@@ -29,7 +29,7 @@ class SupabaseClientsRepository {
     return Client.fromJson(response);
   }
 
-  Future<void> addClient(Map<String, dynamic> clientData) async {
+  Future<String> addClient(Map<String, dynamic> clientData) async {
     final userId = _supabase.auth.currentUser!.id;
 
     final taxId = clientData['rif'] ?? clientData['personalID'];
@@ -78,6 +78,8 @@ class SupabaseClientsRepository {
         await addContact(clientId, c);
       }
     }
+
+    return clientId;
   }
 
   Future<void> updateClient(String id, Map<String, dynamic> updates) async {

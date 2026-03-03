@@ -22,6 +22,9 @@ class _AddClientCompanyInfoScreenState
   final _idController = TextEditingController(); // RIF
   final _aliasController = TextEditingController();
 
+  String? get _returnTo =>
+      GoRouterState.of(context).uri.queryParameters['returnTo'];
+
   String? _rifError;
 
   @override
@@ -65,7 +68,8 @@ class _AddClientCompanyInfoScreenState
               rif: _idController.text, // Mapping ID to RIF for company
               alias: _aliasController.text,
             );
-        context.push('/clients/add/address');
+        final returnToParam = _returnTo != null ? '?returnTo=$_returnTo' : '';
+        context.push('/clients/add/address$returnToParam');
       }
     }
   }
@@ -154,7 +158,11 @@ class _AddClientCompanyInfoScreenState
               padding: const EdgeInsets.only(bottom: 40),
               child: WizardButtonBar(
                 onCancel: () {
-                  context.go('/clients');
+                  if (_returnTo != null) {
+                    context.go(_returnTo!);
+                  } else {
+                    context.go('/clients');
+                  }
                 },
                 onBack: () => context.pop(),
                 onNext: _onNext,

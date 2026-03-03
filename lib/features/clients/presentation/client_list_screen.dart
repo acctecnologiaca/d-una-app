@@ -238,7 +238,7 @@ class _ClientListScreenState extends ConsumerState<ClientListScreen> {
           onPressed: () {
             // Reset provider state before starting new wizard
             ref.read(addClientProvider.notifier).reset();
-            context.push('/clients/add');
+            context.push('/clients/add?returnTo=/clients');
           },
           label: 'Agregar',
           icon: Icons.add,

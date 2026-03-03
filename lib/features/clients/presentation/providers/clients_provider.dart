@@ -20,12 +20,16 @@ class Clients extends _$Clients {
     return ref.read(clientsRepositoryProvider).getClients();
   }
 
-  Future<void> addClient(Map<String, dynamic> clientData) async {
+  Future<String> addClient(Map<String, dynamic> clientData) async {
+    String? newClientId;
     state = AsyncValue<List<Client>>.loading().copyWithPrevious(state);
     state = await AsyncValue.guard(() async {
-      await ref.read(clientsRepositoryProvider).addClient(clientData);
+      newClientId = await ref
+          .read(clientsRepositoryProvider)
+          .addClient(clientData);
       return ref.read(clientsRepositoryProvider).getClients();
     });
+    return newClientId!;
   }
 
   Future<void> updateClient(String id, Map<String, dynamic> updates) async {

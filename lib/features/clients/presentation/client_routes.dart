@@ -34,18 +34,22 @@ final clientRoutes = <RouteBase>[
         routes: [
           GoRoute(
             path: 'company-info', // /clients/add/company-info
+            parentNavigatorKey: rootNavigatorKey,
             builder: (context, state) => const AddClientCompanyInfoScreen(),
           ),
           GoRoute(
             path: 'person-info', // /clients/add/person-info
+            parentNavigatorKey: rootNavigatorKey,
             builder: (context, state) => const AddClientPersonInfoScreen(),
           ),
           GoRoute(
             path: 'address', // /clients/add/address
+            parentNavigatorKey: rootNavigatorKey,
             builder: (context, state) => const AddClientAddressScreen(),
           ),
           GoRoute(
             path: 'contact', // /clients/add/contact
+            parentNavigatorKey: rootNavigatorKey,
             builder: (context, state) => const AddClientContactScreen(),
           ),
         ],

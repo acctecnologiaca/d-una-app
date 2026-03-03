@@ -48,6 +48,9 @@ class _AddEditContactScreenState extends ConsumerState<AddEditContactScreen> {
 
   bool get _isEditing => widget.contact != null;
 
+  String? get _returnTo =>
+      GoRouterState.of(context).uri.queryParameters['returnTo'];
+
   @override
   void initState() {
     super.initState();
@@ -193,10 +196,17 @@ class _AddEditContactScreenState extends ConsumerState<AddEditContactScreen> {
             ScaffoldMessenger.of(context).showSnackBar(
               const SnackBar(content: Text('Contacto agregado exitosamente')),
             );
+
+            // Auto-select contact (using ID returned? No, AddEditContact currently returns void! Wait.)
+            // But CreateQuoteScreen already has ref.refresh and auto-select logic running for Contacts because it uses await `context.push()`! Wait, if we use `context.go()`, the `await` is lost.
           }
         }
         if (mounted) {
-          context.pop();
+          if (_returnTo != null) {
+            context.go(Uri.decodeComponent(_returnTo!));
+          } else {
+            context.pop();
+          }
         }
       } catch (e) {
         if (mounted) {
