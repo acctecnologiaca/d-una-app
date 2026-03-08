@@ -13,6 +13,7 @@ import '../providers/create_quote_provider.dart';
 import '../../../../portfolio/presentation/providers/services_provider.dart';
 import '../../../../portfolio/data/models/service_rate_model.dart';
 import '../../../../portfolio/presentation/providers/lookup_providers.dart';
+import '../../../../portfolio/data/models/delivery_time_model.dart';
 import '../../../../../shared/utils/currency_formatter.dart';
 
 class AddTemporalServiceScreen extends ConsumerStatefulWidget {
@@ -43,6 +44,9 @@ class _AddTemporalServiceScreenState
   bool _hasWarranty = true;
   final _warrantyQtyController = TextEditingController(text: '15');
   String _warrantyPeriod = 'Días';
+
+  // Execution Time
+  String? _selectedExecutionTimeId;
 
   bool _isOutsourced = false; // Based on screenshot
   bool _addToOwnServices = false;
@@ -88,6 +92,7 @@ class _AddTemporalServiceScreenState
       } else {
         _hasWarranty = false;
       }
+      _selectedExecutionTimeId = existing.executionTimeId;
     } else {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         final state = ref.read(createQuoteProvider);
@@ -182,6 +187,14 @@ class _AddTemporalServiceScreenState
             ?.symbol ??
         'ud.';
 
+    // Check if rate is time based
+    final isTimeBased =
+        rateSymbol.toLowerCase().contains('h') ||
+        rateSymbol.toLowerCase().contains('dia') ||
+        rateSymbol.toLowerCase().contains('día') ||
+        rateSymbol.toLowerCase().contains('mes') ||
+        rateSymbol.toLowerCase().contains('año');
+
     final item = QuoteItemService(
       id: widget.existingItem?.id ?? const Uuid().v4(),
       quoteId: 'draft',
@@ -196,6 +209,7 @@ class _AddTemporalServiceScreenState
       warrantyTime: warrantyTime,
       serviceRateId: _selectedRate ?? '',
       rateSymbol: rateSymbol,
+      executionTimeId: isTimeBased ? null : _selectedExecutionTimeId,
     );
 
     if (widget.existingItem != null) {
@@ -243,8 +257,16 @@ class _AddTemporalServiceScreenState
         }
       });
     }
+
     final selectedRateSymbol =
         rates.where((r) => r.id == _selectedRate).firstOrNull?.symbol ?? '';
+
+    final isTimeBased =
+        selectedRateSymbol.toLowerCase().contains('h') ||
+        selectedRateSymbol.toLowerCase().contains('dia') ||
+        selectedRateSymbol.toLowerCase().contains('día') ||
+        selectedRateSymbol.toLowerCase().contains('mes') ||
+        selectedRateSymbol.toLowerCase().contains('año');
 
     return Scaffold(
       appBar: StandardAppBar(
@@ -474,6 +496,64 @@ class _AddTemporalServiceScreenState
               ),
             ],
             const SizedBox(height: 16),
+            if (!isTimeBased) ...[
+              const SizedBox(height: 8),
+              Text(
+                'Tiempo de ejecución',
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.bold,
+                  color: colors.onSurface,
+                ),
+              ),
+              const SizedBox(height: 16),
+              ref
+                  .watch(deliveryTimesForExecutionProvider)
+                  .when(
+                    data: (executionTimes) {
+                      if (_selectedExecutionTimeId == null &&
+                          executionTimes.isNotEmpty) {
+                        WidgetsBinding.instance.addPostFrameCallback((_) {
+                          if (mounted) {
+                            setState(() {
+                              _selectedExecutionTimeId =
+                                  executionTimes.first.id;
+                            });
+                          }
+                        });
+                      }
+
+                      return CustomDropdown<String>(
+                        value: _selectedExecutionTimeId,
+                        items: executionTimes.map((e) => e.id).toList(),
+                        label: 'Seleccionar tiempo',
+                        itemLabelBuilder: (id) {
+                          final dt = executionTimes.firstWhere(
+                            (e) => e.id == id,
+                            orElse: () => DeliveryTime(
+                              id: '',
+                              name: 'Desconocido',
+                              unit: 'days',
+                              type: 'delivery',
+                              orderIdx: 0,
+                            ),
+                          );
+                          return dt.name;
+                        },
+                        onChanged: (val) {
+                          if (val != null) {
+                            setState(() => _selectedExecutionTimeId = val);
+                          }
+                        },
+                      );
+                    },
+                    loading: () =>
+                        const Center(child: CircularProgressIndicator()),
+                    error: (err, stack) =>
+                        Text('Error al cargar tiempos de ejecución: $err'),
+                  ),
+              const SizedBox(height: 16),
+            ],
             SwitchListTile(
               contentPadding: EdgeInsets.zero,
               title: const Text(

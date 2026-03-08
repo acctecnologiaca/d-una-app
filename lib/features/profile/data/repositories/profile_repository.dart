@@ -1,7 +1,7 @@
 import 'dart:typed_data';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../domain/models/user_profile.dart';
-import '../../domain/models/shipping_method.dart';
+import '../../../settings/data/models/shipping_method.dart';
 
 class ProfileRepository {
   final SupabaseClient _supabase;
@@ -39,7 +39,7 @@ class ProfileRepository {
     try {
       final data = await _supabase
           .from('shipping_methods')
-          .select()
+          .select('*, company:shipping_companies(*)')
           .eq('user_id', userId)
           .order('is_primary', ascending: false) // Primary first
           .order('created_at', ascending: true);

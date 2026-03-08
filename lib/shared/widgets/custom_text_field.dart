@@ -112,6 +112,7 @@ class _CustomTextFieldState extends State<CustomTextField> {
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisSize: MainAxisSize.min,
       children: [
         TextFormField(
           controller: _controller,

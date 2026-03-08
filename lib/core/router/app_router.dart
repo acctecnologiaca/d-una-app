@@ -37,13 +37,22 @@ import 'package:d_una_app/features/profile/presentation/screens/profile_screen.d
 import 'package:d_una_app/features/profile/presentation/screens/basic_data_screen.dart';
 import 'package:d_una_app/features/profile/presentation/screens/contact_data_screen.dart';
 import 'package:d_una_app/features/profile/presentation/screens/main_address_screen.dart';
-import 'package:d_una_app/features/profile/presentation/screens/shipping_methods_screen.dart';
-import 'package:d_una_app/features/profile/presentation/screens/add_shipping_method_screen.dart';
-import 'package:d_una_app/features/profile/domain/models/shipping_method.dart';
+import 'package:d_una_app/features/settings/presentation/screens/shipping_methods_screen.dart';
+import 'package:d_una_app/features/settings/presentation/screens/add_shipping_method_screen.dart';
+import 'package:d_una_app/features/settings/data/models/shipping_method.dart';
 import 'package:d_una_app/features/profile/presentation/screens/occupation_screen.dart';
 import 'package:d_una_app/features/profile/presentation/screens/security_screen.dart';
 import 'package:d_una_app/features/profile/presentation/screens/verification_screen.dart';
 import '../../features/portfolio/presentation/suppliers_directory/screens/suppliers_directory_screen.dart';
+import 'package:d_una_app/features/settings/presentation/screens/settings_screen.dart';
+import 'package:d_una_app/features/settings/presentation/screens/brands_list_screen.dart';
+import 'package:d_una_app/features/settings/presentation/screens/categories_list_screen.dart';
+import 'package:d_una_app/features/settings/presentation/screens/uoms_list_screen.dart';
+import 'package:d_una_app/features/settings/presentation/screens/service_rates_list_screen.dart';
+import 'package:d_una_app/features/settings/presentation/screens/unaffiliated_suppliers_list_screen.dart';
+import 'package:d_una_app/features/settings/presentation/screens/shipping_companies_list_screen.dart';
+import '../../features/settings/presentation/screens/delivery_times_list_screen.dart';
+import '../../features/settings/presentation/screens/commercial_conditions_list_screen.dart';
 
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../router/router_notifier.dart';
@@ -341,6 +350,58 @@ final appRouter = GoRouter(
           path: 'main-address',
           builder: (context, state) => const MainAddressScreen(),
         ),
+
+        GoRoute(
+          path: 'occupation',
+          builder: (context, state) => const OccupationScreen(),
+        ),
+        GoRoute(
+          path: 'security',
+          builder: (context, state) => const SecurityScreen(),
+        ),
+        GoRoute(
+          path: 'verification',
+          builder: (context, state) => const VerificationScreen(),
+        ),
+      ],
+    ),
+
+    GoRoute(
+      path: '/settings',
+      builder: (context, state) => const SettingsScreen(),
+      routes: [
+        GoRoute(
+          path: 'brands',
+          builder: (context, state) => const BrandsListScreen(),
+        ),
+        GoRoute(
+          path: 'categories',
+          builder: (context, state) => const CategoriesListScreen(),
+        ),
+        GoRoute(
+          path: 'uoms',
+          builder: (context, state) => const UomsListScreen(),
+        ),
+        GoRoute(
+          path: 'service-rates',
+          builder: (context, state) => const ServiceRatesListScreen(),
+        ),
+        GoRoute(
+          path: 'unaffiliated-suppliers',
+          builder: (context, state) => const UnaffiliatedSuppliersListScreen(),
+        ),
+        GoRoute(
+          path: 'shipping-companies',
+          builder: (context, state) => const ShippingCompaniesListScreen(),
+        ),
+        GoRoute(
+          path: 'delivery-times',
+          builder: (context, state) => const DeliveryTimesListScreen(),
+        ),
+        GoRoute(
+          path: 'commercial-conditions',
+          builder: (context, state) => const CommercialConditionsListScreen(),
+        ),
         GoRoute(
           path: 'shipping-methods',
           builder: (context, state) => const ShippingMethodsScreen(),
@@ -361,18 +422,6 @@ final appRouter = GoRouter(
               },
             ),
           ],
-        ),
-        GoRoute(
-          path: 'occupation',
-          builder: (context, state) => const OccupationScreen(),
-        ),
-        GoRoute(
-          path: 'security',
-          builder: (context, state) => const SecurityScreen(),
-        ),
-        GoRoute(
-          path: 'verification',
-          builder: (context, state) => const VerificationScreen(),
         ),
       ],
     ),

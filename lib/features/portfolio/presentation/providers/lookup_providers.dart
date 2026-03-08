@@ -5,8 +5,11 @@ import '../../data/models/service_rate_model.dart';
 import '../../data/models/category_model.dart';
 import '../../data/models/brand_model.dart';
 import '../../data/models/uom_model.dart';
+import '../../domain/models/unaffiliated_supplier_model.dart';
 import '../../../quotes/data/models/collaborator.dart';
 import '../../../quotes/data/models/commercial_condition.dart';
+import '../../../settings/data/models/shipping_company.dart';
+import '../../data/models/delivery_time_model.dart';
 
 final lookupRepositoryProvider = Provider<LookupRepository>((ref) {
   return LookupRepository(Supabase.instance.client);
@@ -28,6 +31,11 @@ final uomsProvider = FutureProvider<List<Uom>>((ref) async {
   return ref.watch(lookupRepositoryProvider).getUoms();
 });
 
+final unaffiliatedSuppliersProvider =
+    FutureProvider<List<UnaffiliatedSupplier>>((ref) async {
+      return ref.watch(lookupRepositoryProvider).getUnaffiliatedSuppliers();
+    });
+
 final collaboratorsProvider = FutureProvider<List<Collaborator>>((ref) async {
   return ref.watch(lookupRepositoryProvider).getCollaborators();
 });
@@ -36,4 +44,32 @@ final commercialConditionsProvider = FutureProvider<List<CommercialCondition>>((
   ref,
 ) async {
   return ref.watch(lookupRepositoryProvider).getCommercialConditions();
+});
+
+final shippingCompaniesProvider = FutureProvider<List<ShippingCompany>>((
+  ref,
+) async {
+  return ref.watch(lookupRepositoryProvider).getShippingCompanies();
+});
+
+final deliveryTimesProvider = FutureProvider<List<DeliveryTime>>((ref) async {
+  return ref.watch(lookupRepositoryProvider).getDeliveryTimes();
+});
+
+final deliveryTimesForDeliveryProvider = FutureProvider<List<DeliveryTime>>((
+  ref,
+) async {
+  final allTimes = await ref.watch(deliveryTimesProvider.future);
+  return allTimes
+      .where((dt) => dt.type == 'delivery' || dt.type == 'both')
+      .toList();
+});
+
+final deliveryTimesForExecutionProvider = FutureProvider<List<DeliveryTime>>((
+  ref,
+) async {
+  final allTimes = await ref.watch(deliveryTimesProvider.future);
+  return allTimes
+      .where((dt) => dt.type == 'execution' || dt.type == 'both')
+      .toList();
 });

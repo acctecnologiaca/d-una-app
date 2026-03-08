@@ -3,18 +3,22 @@ import 'package:go_router/go_router.dart';
 
 class StandardAppBar extends StatelessWidget implements PreferredSizeWidget {
   final String title;
+  final Widget? customTitle;
   final String? subtitle;
   final List<Widget>? actions;
   final PreferredSizeWidget? bottom;
   final bool centerTitle;
+  final Color? backgroundColor;
 
   const StandardAppBar({
     super.key,
     required this.title,
+    this.customTitle,
     this.subtitle,
     this.actions,
     this.bottom,
     this.centerTitle = false,
+    this.backgroundColor,
   });
 
   @override
@@ -22,7 +26,7 @@ class StandardAppBar extends StatelessWidget implements PreferredSizeWidget {
     final colors = Theme.of(context).colorScheme;
 
     return AppBar(
-      backgroundColor: colors.surface,
+      backgroundColor: backgroundColor ?? colors.surface,
       elevation: 0,
       centerTitle: centerTitle,
       leading: IconButton(
@@ -34,14 +38,15 @@ class StandardAppBar extends StatelessWidget implements PreferredSizeWidget {
             ? CrossAxisAlignment.center
             : CrossAxisAlignment.start,
         children: [
-          Text(
-            title,
-            style: TextStyle(
-              color: colors.onSurface,
-              fontSize: 22,
-              fontWeight: FontWeight.w400,
-            ),
-          ),
+          customTitle ??
+              Text(
+                title,
+                style: TextStyle(
+                  color: colors.onSurface,
+                  fontSize: 22,
+                  fontWeight: FontWeight.w400,
+                ),
+              ),
           if (subtitle != null)
             Text(
               subtitle!,

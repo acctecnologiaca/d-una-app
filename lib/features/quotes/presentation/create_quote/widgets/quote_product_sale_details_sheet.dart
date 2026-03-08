@@ -7,6 +7,8 @@ import '../../../../../shared/widgets/custom_action_sheet.dart';
 import '../../../../../shared/utils/currency_formatter.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../providers/create_quote_provider.dart';
+import '../../../../portfolio/data/models/delivery_time_model.dart';
+import '../../../../portfolio/presentation/providers/lookup_providers.dart';
 
 class QuoteProductSaleDetailsSheet extends ConsumerStatefulWidget {
   final double averageCost;
@@ -70,15 +72,7 @@ class _QuoteProductSaleDetailsSheetState
 
   double _currentMargin = 25.0; // Default margin
   double _currentPrice = 0.0;
-  String _selectedDeliveryTime = 'Un día hábil';
-
-  final List<String> _deliveryOptions = [
-    'Entrega inmediata',
-    'Un día hábil',
-    '2 a 3 días hábiles',
-    '5 días hábiles',
-    'Bajo pedido',
-  ];
+  String? _selectedDeliveryTimeId;
 
   @override
   void initState() {
@@ -112,7 +106,14 @@ class _QuoteProductSaleDetailsSheetState
 
   void _recalculateMarginFromPrice() {
     if (widget.averageCost > 0) {
-      _currentMargin = ((_currentPrice / widget.averageCost) - 1) * 100;
+      if (_currentPrice <= widget.averageCost) {
+        _currentMargin = 0;
+      } else {
+        _currentMargin = ((_currentPrice / widget.averageCost) - 1) * 100;
+      }
+      _marginController.text = CurrencyFormatter.formatNumber(_currentMargin);
+    } else {
+      _currentMargin = 100.0;
       _marginController.text = CurrencyFormatter.formatNumber(_currentMargin);
     }
     setState(() {});
@@ -144,7 +145,7 @@ class _QuoteProductSaleDetailsSheetState
     Navigator.of(context).pop({
       'sellingPrice': _currentPrice,
       'profitMargin': _currentMargin / 100, // as decimal
-      'deliveryTime': _selectedDeliveryTime,
+      'deliveryTimeId': _selectedDeliveryTimeId, // Pass the ID now
     });
   }
 
@@ -334,17 +335,50 @@ class _QuoteProductSaleDetailsSheetState
               ],
             ),
             const SizedBox(height: 16),
-            CustomDropdown<String>(
-              value: _selectedDeliveryTime,
-              items: _deliveryOptions,
-              label: 'Tiempo de entrega',
-              itemLabelBuilder: (time) => time,
-              onChanged: (val) {
-                if (val != null) {
-                  setState(() => _selectedDeliveryTime = val);
-                }
-              },
-            ),
+            ref
+                .watch(deliveryTimesForDeliveryProvider)
+                .when(
+                  data: (deliveryTimes) {
+                    if (_selectedDeliveryTimeId == null &&
+                        deliveryTimes.isNotEmpty) {
+                      WidgetsBinding.instance.addPostFrameCallback((_) {
+                        if (mounted) {
+                          setState(() {
+                            _selectedDeliveryTimeId = deliveryTimes.first.id;
+                          });
+                        }
+                      });
+                    }
+
+                    return CustomDropdown<String>(
+                      value: _selectedDeliveryTimeId,
+                      items: deliveryTimes.map((e) => e.id).toList(),
+                      label: 'Tiempo de entrega',
+                      itemLabelBuilder: (id) {
+                        final dt = deliveryTimes.firstWhere(
+                          (e) => e.id == id,
+                          orElse: () => DeliveryTime(
+                            id: '',
+                            name: 'Desconocido',
+                            unit: 'days',
+                            type: 'delivery',
+                            orderIdx: 0,
+                          ),
+                        );
+                        return dt.name;
+                      },
+                      onChanged: (val) {
+                        if (val != null) {
+                          setState(() => _selectedDeliveryTimeId = val);
+                        }
+                      },
+                    );
+                  },
+                  loading: () =>
+                      const Center(child: CircularProgressIndicator()),
+                  error: (err, stack) =>
+                      Text('Error al cargar tiempos de entrega: $err'),
+                ),
             const SizedBox(height: 32),
           ],
         ),

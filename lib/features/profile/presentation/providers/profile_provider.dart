@@ -1,7 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../domain/models/user_profile.dart';
-import '../../domain/models/shipping_method.dart';
+import '../../../settings/data/models/shipping_method.dart';
 import '../../domain/models/verification_document.dart';
 import '../../data/repositories/profile_repository.dart';
 

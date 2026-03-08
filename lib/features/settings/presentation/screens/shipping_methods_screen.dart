@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import '../../domain/models/shipping_method.dart';
-import '../providers/profile_provider.dart';
+import '../../data/models/shipping_method.dart';
+import '../../../profile/presentation/providers/profile_provider.dart';
 import '../../../../../shared/widgets/custom_extended_fab.dart';
 
 class ShippingMethodsScreen extends ConsumerStatefulWidget {
@@ -188,7 +188,7 @@ class _ShippingMethodsScreenState extends ConsumerState<ShippingMethodsScreen> {
                   return InkWell(
                     onTap: () async {
                       await context.push(
-                        '/profile/shipping-methods/edit',
+                        '/settings/shipping-methods/edit',
                         extra: method,
                         // Route expects ShippingMethod object?
                         // Note: In AddShippingMethodScreen I updated it to expect ShippingMethod?
@@ -207,13 +207,27 @@ class _ShippingMethodsScreenState extends ConsumerState<ShippingMethodsScreen> {
                             child: Row(
                               children: [
                                 Flexible(
-                                  child: Text(
-                                    method.label,
-                                    style: textTheme.bodyLarge?.copyWith(
-                                      color: colors.onSurface,
-                                      fontSize: 16,
-                                    ),
-                                    overflow: TextOverflow.ellipsis,
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        method.label,
+                                        style: textTheme.bodyLarge?.copyWith(
+                                          color: colors.onSurface,
+                                          fontSize: 16,
+                                        ),
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                      Text(
+                                        method.company?.displayName ??
+                                            'Desconocida',
+                                        style: textTheme.bodyMedium?.copyWith(
+                                          color: colors.onSurfaceVariant,
+                                        ),
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                    ],
                                   ),
                                 ),
                                 if (isPrimary) ...[
@@ -264,7 +278,7 @@ class _ShippingMethodsScreenState extends ConsumerState<ShippingMethodsScreen> {
         padding: const EdgeInsets.only(bottom: 40.0),
         child: CustomExtendedFab(
           onPressed: () async {
-            await context.push('/profile/shipping-methods/add');
+            await context.push('/settings/shipping-methods/add');
             ref.invalidate(shippingMethodsProvider);
           },
           label: 'Agregar',

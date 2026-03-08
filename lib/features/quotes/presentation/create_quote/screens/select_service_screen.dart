@@ -149,6 +149,8 @@ class _SelectServiceScreenState extends ConsumerState<SelectServiceScreen> {
                       return b.name.toLowerCase().compareTo(
                         a.name.toLowerCase(),
                       );
+                    default:
+                      return 0;
                   }
                 });
 

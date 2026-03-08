@@ -141,6 +141,8 @@ class _OwnInventoryScreenState extends ConsumerState<OwnInventoryScreen> {
                       return b.name.toLowerCase().compareTo(
                         a.name.toLowerCase(),
                       );
+                    default:
+                      return 0;
                   }
                 });
 

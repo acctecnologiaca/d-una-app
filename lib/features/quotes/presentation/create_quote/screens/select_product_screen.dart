@@ -138,6 +138,8 @@ class _SelectProductScreenState extends ConsumerState<SelectProductScreen> {
                       return b.name.toLowerCase().compareTo(
                         a.name.toLowerCase(),
                       );
+                    default:
+                      return 0;
                   }
                 });
 

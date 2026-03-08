@@ -23,6 +23,14 @@ class _QuoteServicesTabState extends ConsumerState<QuoteServicesTab> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
+            Icon(
+              Icons.handyman_outlined,
+              size: 64,
+              color: Theme.of(
+                context,
+              ).colorScheme.onSurfaceVariant.withValues(alpha: 0.5),
+            ),
+            const SizedBox(height: 16),
             Text(
               'No hay servicios agregados',
               style: TextStyle(

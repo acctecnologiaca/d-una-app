@@ -209,6 +209,8 @@ class _QuoteServiceSearchScreenState
           return a.name.toLowerCase().compareTo(b.name.toLowerCase());
         case SortOption.nameZA:
           return b.name.toLowerCase().compareTo(a.name.toLowerCase());
+        default:
+          return 0;
       }
     });
 

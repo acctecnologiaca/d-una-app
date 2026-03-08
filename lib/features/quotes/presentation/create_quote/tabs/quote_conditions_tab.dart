@@ -11,14 +11,25 @@ class QuoteConditionsTab extends ConsumerWidget {
     final state = ref.watch(createQuoteProvider);
 
     if (state.conditions.isEmpty) {
-      return Center(
-        child: Text(
-          'No hay condiciones comerciales agregadas',
-          style: TextStyle(
-            color: Theme.of(context).colorScheme.onSurfaceVariant,
-            fontSize: 16,
+      return Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(
+            Symbols.notes,
+            size: 64,
+            color: Theme.of(
+              context,
+            ).colorScheme.onSurfaceVariant.withValues(alpha: 0.5),
           ),
-        ),
+          const SizedBox(height: 16),
+          Text(
+            'No hay condiciones comerciales agregadas',
+            style: TextStyle(
+              color: Theme.of(context).colorScheme.onSurfaceVariant,
+              fontSize: 16,
+            ),
+          ),
+        ],
       );
     }
 

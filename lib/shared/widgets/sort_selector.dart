@@ -5,18 +5,27 @@ enum SortOption {
   frequency,
   recent,
   nameAZ,
-  nameZA;
+  nameZA,
+  durationAsc,
+  durationDesc,
+  type;
 
   String get label {
     switch (this) {
       case SortOption.frequency:
-        return 'Frecuencia';
+        return 'Más Frecuente';
       case SortOption.recent:
         return 'Más reciente';
       case SortOption.nameAZ:
         return 'Nombre (A-Z)';
       case SortOption.nameZA:
         return 'Nombre (Z-A)';
+      case SortOption.durationAsc:
+        return 'Tiempo (0-9)';
+      case SortOption.durationDesc:
+        return 'Tiempo (9-0)';
+      case SortOption.type:
+        return 'Por tipo';
     }
   }
 }
@@ -171,25 +180,31 @@ class GenericSortSelector<T> extends StatelessWidget {
 class SortSelector extends StatelessWidget {
   final SortOption currentSort;
   final Function(SortOption) onSortChanged;
+  final List<SortOption> options;
 
   const SortSelector({
     super.key,
     required this.currentSort,
     required this.onSortChanged,
+    this.options = SortOption.values,
   });
 
   @override
   Widget build(BuildContext context) {
     return GenericSortSelector<SortOption>(
       currentSort: currentSort,
-      options: SortOption.values,
+      options: options,
       onSortChanged: onSortChanged,
       labelBuilder: (option) => option.label,
       iconBuilder: (option) {
         if (option == SortOption.frequency) return Icons.trending_up;
         if (option == SortOption.recent) return Icons.arrow_downward;
         if (option == SortOption.nameAZ) return Icons.arrow_upward;
-        return Icons.arrow_downward; // nameZA
+        if (option == SortOption.nameZA) return Icons.arrow_downward;
+        if (option == SortOption.durationAsc) return Icons.timer_outlined;
+        if (option == SortOption.durationDesc) return Icons.timer;
+        if (option == SortOption.type) return Icons.category_outlined;
+        return Icons.sort;
       },
     );
   }

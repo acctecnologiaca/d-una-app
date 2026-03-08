@@ -9,6 +9,7 @@ import '../../../../../shared/widgets/custom_dropdown.dart';
 import '../../../../../shared/widgets/form_bottom_bar.dart';
 import '../../../../../shared/widgets/custom_stepper.dart';
 import '../../../../../features/portfolio/presentation/providers/lookup_providers.dart';
+import '../../../../../features/portfolio/data/models/delivery_time_model.dart';
 import '../../../data/models/quote_item_product.dart';
 import '../providers/create_quote_provider.dart';
 import '../../../../../features/portfolio/data/models/product_model.dart';
@@ -50,6 +51,9 @@ class _AddTemporalProductScreenState
   // Inventory
   bool _addToInventory = false;
 
+  // Delivery Time
+  String? _selectedDeliveryTimeId;
+
   @override
   void initState() {
     super.initState();
@@ -79,6 +83,7 @@ class _AddTemporalProductScreenState
           _warrantyPeriod = parts[1];
         }
       }
+      _selectedDeliveryTimeId = existing.deliveryTimeId;
     } else {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         final state = ref.read(createQuoteProvider);
@@ -190,6 +195,7 @@ class _AddTemporalProductScreenState
       taxAmount: taxAmount,
       totalPrice: totalPrice,
       warrantyTime: warrantyTime,
+      deliveryTimeId: _selectedDeliveryTimeId,
       isTemporal: true,
     );
 
@@ -480,6 +486,61 @@ class _AddTemporalProductScreenState
                 ],
               ),
             ],
+            const SizedBox(height: 16),
+            const SizedBox(height: 8),
+            Text(
+              'Tiempo de entrega',
+              style: TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.bold,
+                color: colors.onSurface,
+              ),
+            ),
+            const SizedBox(height: 16),
+            ref
+                .watch(deliveryTimesForDeliveryProvider)
+                .when(
+                  data: (deliveryTimes) {
+                    if (_selectedDeliveryTimeId == null &&
+                        deliveryTimes.isNotEmpty) {
+                      WidgetsBinding.instance.addPostFrameCallback((_) {
+                        if (mounted) {
+                          setState(() {
+                            _selectedDeliveryTimeId = deliveryTimes.first.id;
+                          });
+                        }
+                      });
+                    }
+
+                    return CustomDropdown<String>(
+                      value: _selectedDeliveryTimeId,
+                      items: deliveryTimes.map((e) => e.id).toList(),
+                      label: 'Seleccionar tiempo',
+                      itemLabelBuilder: (id) {
+                        final dt = deliveryTimes.firstWhere(
+                          (e) => e.id == id,
+                          orElse: () => DeliveryTime(
+                            id: '',
+                            name: 'Desconocido',
+                            unit: 'days',
+                            type: 'delivery',
+                            orderIdx: 0,
+                          ),
+                        );
+                        return dt.name;
+                      },
+                      onChanged: (val) {
+                        if (val != null) {
+                          setState(() => _selectedDeliveryTimeId = val);
+                        }
+                      },
+                    );
+                  },
+                  loading: () =>
+                      const Center(child: CircularProgressIndicator()),
+                  error: (err, stack) =>
+                      Text('Error al cargar tiempos de entrega: $err'),
+                ),
             const SizedBox(height: 16),
             SwitchListTile(
               contentPadding: EdgeInsets.zero,

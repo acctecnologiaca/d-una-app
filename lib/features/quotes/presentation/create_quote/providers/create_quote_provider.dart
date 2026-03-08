@@ -485,6 +485,7 @@ class CreateQuoteNotifier extends StateNotifier<QuoteState> {
           taxRate: item.taxRate,
           totalPrice: newTotalPrice,
           warrantyTime: item.warrantyTime,
+          rateSymbol: item.rateSymbol,
         );
       }
       return item;

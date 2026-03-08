@@ -6,6 +6,7 @@ class CustomActionSheet extends StatelessWidget {
   final Widget? content; // Optional content below title (e.g. ServiceItemCard)
   final bool showDivider; // Optional flag to hide the divider below content
   final List<Widget> actions; // List of BottomSheetActionItems or other widgets
+  final bool isContentScrollable;
 
   const CustomActionSheet({
     super.key,
@@ -13,6 +14,7 @@ class CustomActionSheet extends StatelessWidget {
     this.content,
     this.showDivider = true,
     required this.actions,
+    this.isContentScrollable = false,
   });
 
   static void show({
@@ -21,6 +23,7 @@ class CustomActionSheet extends StatelessWidget {
     Widget? content,
     bool showDivider = true,
     required List<Widget> actions,
+    bool isContentScrollable = false,
   }) {
     showModalBottomSheet(
       context: context,
@@ -34,6 +37,7 @@ class CustomActionSheet extends StatelessWidget {
         content: content,
         showDivider: showDivider,
         actions: actions,
+        isContentScrollable: isContentScrollable,
       ),
     );
   }
@@ -80,10 +84,18 @@ class CustomActionSheet extends StatelessWidget {
 
           // Optional Content
           if (content != null) ...[
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16.0),
-              child: content!,
-            ),
+            if (isContentScrollable)
+              Flexible(
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                  child: content!,
+                ),
+              )
+            else
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                child: content!,
+              ),
             if (showDivider) ...[
               const SizedBox(height: 8),
               const Divider(height: 1),

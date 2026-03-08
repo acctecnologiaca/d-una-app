@@ -61,7 +61,7 @@ class _ClientListScreenState extends ConsumerState<ClientListScreen> {
                       IconButton(
                         icon: const Icon(Icons.menu),
                         onPressed: () {
-                          // Open drawer
+                          Scaffold.of(context).openDrawer();
                         },
                       ),
                       Text(
@@ -173,6 +173,8 @@ class _ClientListScreenState extends ConsumerState<ClientListScreen> {
                         return b.name.toLowerCase().compareTo(
                           a.name.toLowerCase(),
                         );
+                      default:
+                        return 0;
                     }
                   });
 

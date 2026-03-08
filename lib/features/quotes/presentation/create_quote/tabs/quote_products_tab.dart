@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:material_symbols_icons/symbols.dart';
 import '../providers/create_quote_provider.dart';
 import '../../../domain/models/quote_aggregated_product.dart';
 import '../../../data/models/quote_item_product.dart';
@@ -19,6 +20,14 @@ class QuoteProductsTab extends ConsumerWidget {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
+            Icon(
+              Symbols.package_2,
+              size: 64,
+              color: Theme.of(
+                context,
+              ).colorScheme.onSurfaceVariant.withValues(alpha: 0.5),
+            ),
+            const SizedBox(height: 16),
             Text(
               'No hay productos agregados',
               style: TextStyle(

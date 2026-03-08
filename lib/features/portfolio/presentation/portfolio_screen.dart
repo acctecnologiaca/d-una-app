@@ -27,7 +27,7 @@ class PortfolioScreen extends ConsumerWidget {
                   IconButton(
                     icon: const Icon(Icons.menu),
                     onPressed: () {
-                      // Open drawer
+                      Scaffold.of(context).openDrawer();
                     },
                   ),
                   Text(

@@ -83,6 +83,8 @@ class _QuotesListScreenState extends ConsumerState<QuotesListScreen> {
           return a.clientName.compareTo(b.clientName);
         case SortOption.nameZA:
           return b.clientName.compareTo(a.clientName);
+        default:
+          return 0;
       }
     });
 
@@ -97,7 +99,12 @@ class _QuotesListScreenState extends ConsumerState<QuotesListScreen> {
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  IconButton(icon: const Icon(Icons.menu), onPressed: () {}),
+                  IconButton(
+                    icon: const Icon(Icons.menu),
+                    onPressed: () {
+                      Scaffold.of(context).openDrawer();
+                    },
+                  ),
                   Text(
                     'Cotizaciones',
                     style: Theme.of(context).textTheme.titleLarge?.copyWith(

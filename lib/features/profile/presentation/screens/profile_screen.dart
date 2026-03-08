@@ -215,13 +215,6 @@ class ProfileScreen extends ConsumerWidget {
                   onTap: () => context.push('/profile/main-address'),
                 ),
                 ProfileMenuTile(
-                  icon: Icons.local_shipping_outlined,
-                  title: 'Métodos de envío',
-                  subtitle:
-                      'Las empresas de envíos que usas para recibir productos desde otra ciudad.',
-                  onTap: () => context.push('/profile/shipping-methods'),
-                ),
-                ProfileMenuTile(
                   icon: Icons.manage_accounts_outlined,
                   title: 'Ocupación',
                   subtitle: 'A lo que te dedicas.',

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:material_symbols_icons/symbols.dart';
+import '../../../shared/widgets/main_navigation_drawer.dart';
 
 class HomeScreen extends StatelessWidget {
   final StatefulNavigationShell navigationShell;
@@ -21,6 +22,7 @@ class HomeScreen extends StatelessWidget {
     ].contains(location);
 
     return Scaffold(
+      drawer: const MainNavigationDrawer(),
       body: navigationShell,
       bottomNavigationBar: showBottomBar
           ? NavigationBar(

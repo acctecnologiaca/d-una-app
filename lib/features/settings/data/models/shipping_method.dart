@@ -1,8 +1,11 @@
+import 'shipping_company.dart';
+
 class ShippingMethod {
   final String id;
   final String userId;
   final String label;
-  final String company;
+  final String companyId;
+  final ShippingCompany? company;
   final String deliveryOption;
   final String? branchCode;
   final String? address;
@@ -17,7 +20,8 @@ class ShippingMethod {
     required this.id,
     required this.userId,
     required this.label,
-    required this.company,
+    required this.companyId,
+    this.company,
     required this.deliveryOption,
     this.branchCode,
     this.address,
@@ -34,7 +38,19 @@ class ShippingMethod {
       id: json['id'] as String,
       userId: json['user_id'] as String,
       label: json['label'] as String,
-      company: json['company'] as String,
+      companyId: json['company_id'] as String,
+      company: json['company'] != null
+          ? (json['company'] is String
+                ? ShippingCompany(
+                    id: json['company_id'],
+                    legalName: json['company'],
+                    taxId: 'N/A',
+                    name: json['company'],
+                  ) // Handles legacy data during migration if needed
+                : ShippingCompany.fromJson(
+                    json['company'] as Map<String, dynamic>,
+                  ))
+          : null,
       deliveryOption: json['delivery_option'] as String,
       branchCode: json['branch_code'] as String?,
       address: json['address'] as String?,
@@ -54,7 +70,7 @@ class ShippingMethod {
       'id': id,
       'user_id': userId,
       'label': label,
-      'company': company,
+      'company_id': companyId,
       'delivery_option': deliveryOption,
       'branch_code': branchCode,
       'address': address,
@@ -69,7 +85,8 @@ class ShippingMethod {
 
   ShippingMethod copyWith({
     String? label,
-    String? company,
+    String? companyId,
+    ShippingCompany? company,
     String? deliveryOption,
     String? branchCode,
     String? address,
@@ -83,6 +100,7 @@ class ShippingMethod {
       id: id,
       userId: userId,
       label: label ?? this.label,
+      companyId: companyId ?? this.companyId,
       company: company ?? this.company,
       deliveryOption: deliveryOption ?? this.deliveryOption,
       branchCode: branchCode ?? this.branchCode,

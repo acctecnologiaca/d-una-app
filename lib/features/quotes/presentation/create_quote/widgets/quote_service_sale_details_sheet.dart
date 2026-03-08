@@ -8,6 +8,8 @@ import '../../../../../shared/utils/currency_formatter.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../portfolio/data/models/service_model.dart';
 import '../../../data/models/quote_item_service.dart';
+import '../../../../portfolio/data/models/delivery_time_model.dart';
+import '../../../../portfolio/presentation/providers/lookup_providers.dart';
 
 class QuoteServiceSaleDetailsSheet extends ConsumerStatefulWidget {
   final ServiceModel service;
@@ -60,15 +62,7 @@ class _QuoteServiceSaleDetailsSheetState
   bool _modifyPrice = false;
   bool _isOutsourced = false;
 
-  String _selectedExecutionTime = 'Un día hábil';
-
-  final List<String> _executionOptions = [
-    'Entrega inmediata',
-    'Un día hábil',
-    '2 a 3 días hábiles',
-    '5 días hábiles',
-    'Bajo pedido',
-  ];
+  String? _selectedExecutionTimeId;
 
   @override
   void initState() {
@@ -97,7 +91,7 @@ class _QuoteServiceSaleDetailsSheetState
       );
 
       if (item.executionTimeId != null) {
-        _selectedExecutionTime = item.executionTimeId!;
+        _selectedExecutionTimeId = item.executionTimeId;
       }
     } else {
       _descriptionController.text = widget.service.description ?? '';
@@ -164,9 +158,7 @@ class _QuoteServiceSaleDetailsSheetState
       quoteId: widget.existingItem?.quoteId ?? '', // Preserved if modifying
       serviceId: widget.service.id,
       serviceRateId: widget.service.serviceRateId,
-      executionTimeId: _isRateTimeBased()
-          ? null
-          : _selectedExecutionTime, // Using the string as ID for now or null if N/A
+      executionTimeId: _isRateTimeBased() ? null : _selectedExecutionTimeId,
       name: widget.service.name,
       description: finalDescription,
       quantity: _quantity,
@@ -311,17 +303,52 @@ class _QuoteServiceSaleDetailsSheetState
                 ],
               ),
               const SizedBox(height: 12),
-              CustomDropdown<String>(
-                value: _selectedExecutionTime,
-                items: _executionOptions,
-                label: 'Seleccionar tiempo',
-                itemLabelBuilder: (val) => val,
-                onChanged: (val) {
-                  if (val != null) {
-                    setState(() => _selectedExecutionTime = val);
-                  }
-                },
-              ),
+              ref
+                  .watch(deliveryTimesForExecutionProvider)
+                  .when(
+                    data: (executionTimes) {
+                      // Set initial value if not set and options exist
+                      if (_selectedExecutionTimeId == null &&
+                          executionTimes.isNotEmpty) {
+                        WidgetsBinding.instance.addPostFrameCallback((_) {
+                          if (mounted) {
+                            setState(() {
+                              _selectedExecutionTimeId =
+                                  executionTimes.first.id;
+                            });
+                          }
+                        });
+                      }
+
+                      return CustomDropdown<String>(
+                        value: _selectedExecutionTimeId,
+                        items: executionTimes.map((e) => e.id).toList(),
+                        label: 'Seleccionar tiempo',
+                        itemLabelBuilder: (id) {
+                          final dt = executionTimes.firstWhere(
+                            (e) => e.id == id,
+                            orElse: () => DeliveryTime(
+                              id: '',
+                              name: 'Desconocido',
+                              unit: 'days',
+                              type: 'delivery',
+                              orderIdx: 0,
+                            ),
+                          );
+                          return dt.name;
+                        },
+                        onChanged: (val) {
+                          if (val != null) {
+                            setState(() => _selectedExecutionTimeId = val);
+                          }
+                        },
+                      );
+                    },
+                    loading: () =>
+                        const Center(child: CircularProgressIndicator()),
+                    error: (err, stack) =>
+                        Text('Error al cargar tiempos de ejecución: $err'),
+                  ),
             ],
             const SizedBox(height: 24),
 

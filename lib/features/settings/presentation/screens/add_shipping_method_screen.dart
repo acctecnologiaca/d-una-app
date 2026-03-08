@@ -2,12 +2,14 @@ import 'package:csc_picker_plus/csc_picker_plus.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import '../../domain/models/shipping_method.dart';
-import '../../domain/models/user_profile.dart'; // Needed for main address
-import '../providers/profile_provider.dart';
+import '../../data/models/shipping_method.dart';
+import '../../../profile/domain/models/user_profile.dart'; // Needed for main address
+import '../../../profile/presentation/providers/profile_provider.dart';
 import '../../../../shared/widgets/custom_text_field.dart';
 import '../../../../shared/widgets/custom_dropdown.dart';
 import '../../../../shared/widgets/form_bottom_bar.dart';
+import '../../../portfolio/presentation/providers/lookup_providers.dart';
+import '../../data/models/shipping_company.dart';
 
 class AddShippingMethodScreen extends ConsumerStatefulWidget {
   final ShippingMethod? shippingMethod;
@@ -54,13 +56,6 @@ class _AddShippingMethodScreenState
   bool _initialUseMainAddress = false;
   bool _initialIsDefaultMethod = false;
 
-  final List<String> _companies = [
-    'MRW',
-    'Tealca',
-    'Zoom',
-    'Domesa',
-    'Liberty Express',
-  ];
   final List<String> _deliveryOptions = [
     'Entrega a domicilio',
     'Retiro en sucursal',
@@ -96,7 +91,7 @@ class _AddShippingMethodScreenState
 
   void _loadData(ShippingMethod method) {
     _labelController.text = method.label;
-    _selectedCompany = method.company;
+    _selectedCompany = method.companyId;
     _selectedDeliveryOption = method.deliveryOption;
     _branchCodeController.text = method.branchCode ?? '';
     _addressController.text = method.address ?? '';
@@ -190,7 +185,7 @@ class _AddShippingMethodScreenState
             '', // ID handled by DB if empty/null, but model requires non-null
         userId: userId,
         label: _labelController.text,
-        company: _selectedCompany!,
+        companyId: _selectedCompany!,
         deliveryOption: _selectedDeliveryOption!,
         branchCode: _branchCodeController.text.isNotEmpty
             ? _branchCodeController.text
@@ -269,6 +264,8 @@ class _AddShippingMethodScreenState
             return const Center(child: Text('No se encontró el perfil'));
           }
 
+          final companiesAsync = ref.watch(shippingCompaniesProvider);
+
           return _isLoading
               ? const Center(child: CircularProgressIndicator())
               : SingleChildScrollView(
@@ -286,13 +283,28 @@ class _AddShippingMethodScreenState
                         const SizedBox(height: 16),
 
                         // Company Dropdown
-                        CustomDropdown<String>(
-                          label: 'Empresa',
-                          value: _selectedCompany,
-                          items: _companies,
-                          itemLabelBuilder: (item) => item,
-                          onChanged: (val) =>
-                              setState(() => _selectedCompany = val),
+                        companiesAsync.when(
+                          loading: () =>
+                              const Center(child: CircularProgressIndicator()),
+                          error: (e, st) =>
+                              Text('Error al cargar las empresas: $e'),
+                          data: (companies) => CustomDropdown<String>(
+                            label: 'Empresa',
+                            value: _selectedCompany,
+                            items: companies.map((c) => c.id).toList(),
+                            itemLabelBuilder: (id) => companies
+                                .firstWhere(
+                                  (c) => c.id == id,
+                                  orElse: () => ShippingCompany(
+                                    id: id,
+                                    legalName: 'Desconocido',
+                                    taxId: '',
+                                  ),
+                                )
+                                .displayName,
+                            onChanged: (val) =>
+                                setState(() => _selectedCompany = val),
+                          ),
                         ),
                         const SizedBox(height: 16),
 
