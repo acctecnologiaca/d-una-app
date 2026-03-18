@@ -364,6 +364,7 @@ class _QuoteProductSearchScreenState
             totalQuantity: product.totalQuantity,
             supplierCount: product.supplierCount,
             uom: product.uom,
+            uomSymbolName: product.uomSymbolName,
             showPriceAndStock: true,
             isLocked: product.isLocked,
             onTap: () {

@@ -5,7 +5,8 @@ import '../../../../../shared/widgets/custom_dropdown.dart';
 import 'package:intl/intl.dart';
 import '../../../../portfolio/data/models/category_model.dart';
 import '../../../../portfolio/presentation/providers/lookup_providers.dart';
-import '../../../data/models/collaborator.dart';
+import '../../../../collaborators/domain/models/collaborator.dart';
+import '../../../../collaborators/presentation/providers/collaborators_providers.dart';
 import '../../../../../shared/widgets/custom_text_field.dart';
 import '../../../../profile/presentation/providers/profile_provider.dart';
 
@@ -182,6 +183,7 @@ class _QuoteDetailsTabState extends ConsumerState<QuoteDetailsTab> {
                 if (fullName.isNotEmpty) {
                   userCollaborator = Collaborator(
                     id: userProfile.id,
+                    userId: userProfile.id,
                     fullName: fullName,
                     isActive: true,
                   );
@@ -221,6 +223,7 @@ class _QuoteDetailsTabState extends ConsumerState<QuoteDetailsTab> {
                 addOptionLabel: 'Agregar asesor',
                 addOptionValue: Collaborator(
                   id: '___ADD___',
+                  userId: '',
                   fullName: '___ADD___',
                   isActive: true,
                 ),

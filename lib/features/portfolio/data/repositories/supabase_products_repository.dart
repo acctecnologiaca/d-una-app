@@ -14,7 +14,7 @@ class SupabaseProductsRepository {
     try {
       final response = await _supabase
           .from('products')
-          .select('*, categories(*), brands(*)')
+          .select('*, categories(*), brands(*), uoms(*)')
           .eq('user_id', userId)
           .order('created_at', ascending: false);
 
@@ -28,7 +28,7 @@ class SupabaseProductsRepository {
     try {
       final response = await _supabase
           .from('products')
-          .select('*, categories(*), brands(*)')
+          .select('*, categories(*), brands(*), uoms(*)')
           .eq('id', id)
           .maybeSingle();
 

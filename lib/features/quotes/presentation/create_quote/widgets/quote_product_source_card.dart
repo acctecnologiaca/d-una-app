@@ -1,7 +1,7 @@
 import 'dart:ui';
 import 'package:flutter/material.dart';
-import 'package:material_symbols_icons/symbols.dart';
 import '../../../../../shared/utils/currency_formatter.dart';
+import '../../../../../shared/widgets/dynamic_material_symbol.dart';
 import '../../../domain/models/quote_product_source.dart';
 import '../../../../profile/presentation/screens/verification_screen.dart';
 
@@ -45,9 +45,8 @@ class _QuoteProductSourceCardState extends State<QuoteProductSourceCard> {
     final maxQty = isOwn ? 99999.0 : widget.source.maxStock;
 
     // Access Level Parsing
-    final accessLevel = widget.source.accessLevel;
-    final isRestricted = accessLevel == 'restricted'; // Locked + SnackBar
-    final isPartial = accessLevel == 'partial'; // Unlocked + Blurred Price
+    final isRestricted = !widget.source.isAccessible; // Locked + SnackBar
+    final isPartial = false; // Unlocked + Blurred Price
     final shouldShowSnackBar = isRestricted || isPartial;
 
     // Determine the checkbox state
@@ -304,8 +303,8 @@ class _QuoteProductSourceCardState extends State<QuoteProductSourceCard> {
                         child: Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            Icon(
-                              Symbols.package_2,
+                            DynamicMaterialSymbol(
+                              symbolName: widget.source.uomSymbolName,
                               size: 14,
                               color: stockColor,
                             ),

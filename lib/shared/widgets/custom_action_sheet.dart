@@ -44,72 +44,75 @@ class CustomActionSheet extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return SafeArea(
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          // Handle bar
-          Center(
-            child: Container(
-              margin: const EdgeInsets.symmetric(vertical: 16),
-              height: 4,
-              width: 32,
-              decoration: BoxDecoration(
-                color: Colors.grey[400],
-                borderRadius: BorderRadius.circular(2),
+    return Padding(
+      padding: EdgeInsets.only(bottom: MediaQuery.viewInsetsOf(context).bottom),
+      child: SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            // Handle bar
+            Center(
+              child: Container(
+                margin: const EdgeInsets.symmetric(vertical: 16),
+                height: 4,
+                width: 32,
+                decoration: BoxDecoration(
+                  color: Colors.grey[400],
+                  borderRadius: BorderRadius.circular(2),
+                ),
               ),
             ),
-          ),
 
-          // Title Row
-          Padding(
-            padding: const EdgeInsets.fromLTRB(8, 0, 16.0, 0),
-            child: Row(
-              children: [
-                IconButton(
-                  icon: const Icon(Icons.close),
-                  onPressed: () => context.pop(),
-                ),
-                Expanded(
-                  child: Text(
-                    title,
-                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                      fontWeight: FontWeight.bold,
+            // Title Row
+            Padding(
+              padding: const EdgeInsets.fromLTRB(8, 0, 16.0, 0),
+              child: Row(
+                children: [
+                  IconButton(
+                    icon: const Icon(Icons.close),
+                    onPressed: () => context.pop(),
+                  ),
+                  Expanded(
+                    child: Text(
+                      title,
+                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
-          ),
 
-          // Optional Content
-          if (content != null) ...[
-            if (isContentScrollable)
-              Flexible(
-                child: Padding(
+            // Optional Content
+            if (content != null) ...[
+              if (isContentScrollable)
+                Flexible(
+                  child: SingleChildScrollView(
+                    padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                    child: content!,
+                  ),
+                )
+              else
+                Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 16.0),
                   child: content!,
                 ),
-              )
-            else
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16.0),
-                child: content!,
-              ),
-            if (showDivider) ...[
-              const SizedBox(height: 8),
-              const Divider(height: 1),
-              const SizedBox(height: 8),
-            ] else ...[
-              const SizedBox(height: 16),
+              if (showDivider) ...[
+                const SizedBox(height: 8),
+                const Divider(height: 1),
+                const SizedBox(height: 8),
+              ] else ...[
+                const SizedBox(height: 16),
+              ],
             ],
+
+            // Actions
+            ...actions,
+
+            const SizedBox(height: 40),
           ],
-
-          // Actions
-          ...actions,
-
-          const SizedBox(height: 40),
-        ],
+        ),
       ),
     );
   }

@@ -1,6 +1,7 @@
 import 'package:equatable/equatable.dart';
 import 'category_model.dart';
 import 'brand_model.dart';
+import 'uom_model.dart';
 
 class Product extends Equatable {
   final String id;
@@ -14,6 +15,7 @@ class Product extends Equatable {
   final Category? category;
   final String? uomId; // Replaces fixed unit text
   final String? uom; // Symbol of the UOM
+  final Uom? uomModel; // Full UOM object
   final String? imageUrl;
   final DateTime createdAt;
   final DateTime updatedAt;
@@ -30,6 +32,7 @@ class Product extends Equatable {
     this.category,
     this.uomId,
     this.uom,
+    this.uomModel,
     this.imageUrl,
     required this.createdAt,
     required this.updatedAt,
@@ -50,6 +53,7 @@ class Product extends Equatable {
           : null,
       uomId: json['uom_id'],
       uom: json['uoms'] != null ? json['uoms']['symbol'] : null,
+      uomModel: json['uoms'] != null ? Uom.fromJson(json['uoms']) : null,
       imageUrl: json['image_url'],
       createdAt: DateTime.parse(json['created_at']),
       updatedAt: DateTime.parse(json['updated_at']),
@@ -86,6 +90,7 @@ class Product extends Equatable {
     Category? category,
     String? uomId,
     String? uom,
+    Uom? uomModel,
     String? imageUrl,
     DateTime? createdAt,
     DateTime? updatedAt,
@@ -102,6 +107,7 @@ class Product extends Equatable {
       category: category ?? this.category,
       uomId: uomId ?? this.uomId,
       uom: uom ?? this.uom,
+      uomModel: uomModel ?? this.uomModel,
       imageUrl: imageUrl ?? this.imageUrl,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
@@ -121,6 +127,7 @@ class Product extends Equatable {
     category,
     uomId,
     uom,
+    uomModel,
     imageUrl,
     createdAt,
     updatedAt,

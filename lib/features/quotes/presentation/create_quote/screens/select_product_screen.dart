@@ -167,6 +167,7 @@ class _SelectProductScreenState extends ConsumerState<SelectProductScreen> {
                       totalQuantity: product.totalQuantity,
                       supplierCount: product.supplierCount,
                       uom: product.uom,
+                      uomSymbolName: product.uomSymbolName,
                       showPriceAndStock: true,
                       onTap: () {
                         context

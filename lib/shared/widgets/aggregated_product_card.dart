@@ -2,6 +2,7 @@ import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:material_symbols_icons/symbols.dart';
 // Removed model dependency to make this a truly shared widget
+import 'dynamic_material_symbol.dart';
 import '../../core/utils/string_extensions.dart';
 import '../utils/currency_formatter.dart';
 import 'standard_list_item.dart';
@@ -14,6 +15,7 @@ class AggregatedProductCard extends StatelessWidget {
   final num totalQuantity;
   final int supplierCount;
   final String uom;
+  final String? uomSymbolName;
   final bool showPriceAndStock;
   final bool isLocked;
 
@@ -28,6 +30,7 @@ class AggregatedProductCard extends StatelessWidget {
     required this.totalQuantity,
     required this.supplierCount,
     required this.uom,
+    this.uomSymbolName,
     required this.onTap,
     this.showPriceAndStock = true,
     this.isLocked = false,
@@ -130,8 +133,8 @@ class AggregatedProductCard extends StatelessWidget {
                       ),
                       child: Row(
                         children: [
-                          Icon(
-                            Symbols.package_2,
+                          DynamicMaterialSymbol(
+                            symbolName: uomSymbolName,
                             size: 14,
                             color: colors.onSecondaryContainer,
                           ),

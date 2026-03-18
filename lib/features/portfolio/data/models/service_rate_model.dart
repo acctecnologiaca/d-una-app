@@ -4,14 +4,14 @@ class ServiceRate extends Equatable {
   final String id;
   final String name;
   final String symbol;
-  final String? createdBy;
+  final String? userId;
   final bool isVerified;
 
   const ServiceRate({
     required this.id,
     required this.name,
     required this.symbol,
-    this.createdBy,
+    this.userId,
     this.isVerified = false,
   });
 
@@ -20,7 +20,7 @@ class ServiceRate extends Equatable {
       id: json['id'],
       name: json['name'],
       symbol: json['symbol'] ?? '',
-      createdBy: json['created_by'],
+      userId: json['user_id'],
       isVerified: json['is_verified'] ?? false,
     );
   }
@@ -30,11 +30,11 @@ class ServiceRate extends Equatable {
       'id': id,
       'name': name,
       'symbol': symbol,
-      'created_by': createdBy,
+      'user_id': userId,
       'is_verified': isVerified,
     };
   }
 
   @override
-  List<Object?> get props => [id, name, symbol, createdBy, isVerified];
+  List<Object?> get props => [id, name, symbol, userId, isVerified];
 }

@@ -32,6 +32,7 @@ class QuoteAggregatedProduct {
   final String brand;
   final String model;
   final String uom;
+  final String uomSymbolName;
   final double minPrice;
   final double totalQuantity;
   final int supplierCount;
@@ -49,6 +50,7 @@ class QuoteAggregatedProduct {
     required this.brand,
     required this.model,
     required this.uom,
+    required this.uomSymbolName,
     required this.minPrice,
     required this.totalQuantity,
     required this.supplierCount,
@@ -68,6 +70,7 @@ class QuoteAggregatedProduct {
       brand: map['brand'] ?? '',
       model: map['model'] ?? '',
       uom: map['uom'] ?? 'ud.',
+      uomSymbolName: map['uom_symbol_name'] ?? 'package_2',
       minPrice: (map['min_price'] as num?)?.toDouble() ?? 0.0,
       totalQuantity: (map['total_quantity'] as num?)?.toDouble() ?? 0.0,
       supplierCount: map['supplier_count'] ?? 0,
@@ -144,6 +147,7 @@ class QuoteAggregatedProduct {
       brand: brand,
       model: model,
       uom: uom,
+      uomSymbolName: uomSymbolName,
       minPrice: newMinPrice,
       totalQuantity: newTotalQuantity,
       supplierCount: newSupplierCount,

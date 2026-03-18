@@ -185,6 +185,7 @@ class _AddEditCommercialConditionSheetState
 
     return CustomActionSheet(
       title: isEditing ? 'Modificar condición' : 'Agregar condición',
+      showDivider: false,
       actions: actions,
       content: Column(
         crossAxisAlignment: CrossAxisAlignment.start,

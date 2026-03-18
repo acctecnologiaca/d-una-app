@@ -4,9 +4,9 @@ import '../models/category_model.dart';
 import '../models/brand_model.dart';
 import '../models/uom_model.dart';
 import '../../domain/models/unaffiliated_supplier_model.dart';
-import '../../../quotes/data/models/collaborator.dart';
 import '../../../quotes/data/models/commercial_condition.dart';
 import '../../../settings/data/models/shipping_company.dart';
+import '../../../settings/data/models/observation.dart';
 import '../models/delivery_time_model.dart';
 
 class LookupRepository {
@@ -44,15 +44,6 @@ class LookupRepository {
         .select()
         .order('name', ascending: true);
     return (response as List).map((e) => Uom.fromJson(e)).toList();
-  }
-
-  Future<List<Collaborator>> getCollaborators() async {
-    final response = await _client
-        .from('collaborators')
-        .select()
-        .eq('is_active', true)
-        .order('full_name', ascending: true);
-    return (response as List).map((e) => Collaborator.fromJson(e)).toList();
   }
 
   Future<List<CommercialCondition>> getCommercialConditions() async {
@@ -118,7 +109,11 @@ class LookupRepository {
   Future<Brand> addBrand(String name) async {
     final response = await _client
         .from('brands')
-        .insert({'name': name})
+        .insert({
+          'name': name,
+          'user_id': _client.auth.currentUser?.id,
+          'is_verified': false,
+        })
         .select()
         .single();
     return Brand.fromJson(response);
@@ -144,7 +139,12 @@ class LookupRepository {
   Future<Category> addCategory(String name) async {
     final response = await _client
         .from('categories')
-        .insert({'name': name, 'type': 'product'})
+        .insert({
+          'name': name,
+          'type': 'product',
+          'user_id': _client.auth.currentUser?.id,
+          'is_verified': false,
+        })
         .select()
         .single();
     return Category.fromJson(response);
@@ -170,7 +170,11 @@ class LookupRepository {
   Future<ServiceRate> addServiceRate(String name, String symbol) async {
     final response = await _client
         .from('service_rates')
-        .insert({'name': name, 'symbol': symbol})
+        .insert({
+          'name': name,
+          'symbol': symbol,
+          'user_id': _client.auth.currentUser?.id,
+        })
         .select()
         .single();
     return ServiceRate.fromJson(response);
@@ -203,7 +207,12 @@ class LookupRepository {
   Future<Uom> addUom(String name, String symbol) async {
     final response = await _client
         .from('uoms')
-        .insert({'name': name, 'symbol': symbol})
+        .insert({
+          'name': name,
+          'symbol': symbol,
+          'user_id': _client.auth.currentUser?.id,
+          'is_verified': false,
+        })
         .select()
         .single();
     return Uom.fromJson(response);
@@ -227,11 +236,23 @@ class LookupRepository {
 
   // ── Proveedores No Afiliados ────────────────────────────────────────────────
 
+  Future<List<UnaffiliatedSupplier>> getAllSuppliers() async {
+    final response = await _client
+        .from('suppliers')
+        .select(
+          'id, name, legal_name, phone, email, tax_id, user_id, is_verified',
+        )
+        .order('name');
+    return (response as List)
+        .map((json) => UnaffiliatedSupplier.fromJson(json))
+        .toList();
+  }
+
   Future<List<UnaffiliatedSupplier>> getUnaffiliatedSuppliers() async {
     final response = await _client
         .from('suppliers')
         .select(
-          'id, name, legal_name, phone, email, tax_id, created_by, is_verified',
+          'id, name, legal_name, phone, email, tax_id, user_id, is_verified',
         )
         .eq('is_affiliated', false)
         .order('name');
@@ -256,6 +277,7 @@ class LookupRepository {
           'email': email,
           'tax_id': taxId,
           'is_affiliated': false,
+          'user_id': _client.auth.currentUser?.id,
         })
         .select()
         .single();
@@ -319,7 +341,7 @@ class LookupRepository {
           'tax_id': taxId,
           'name': name,
           'is_verified': false,
-          'created_by': _client.auth.currentUser?.id,
+          'user_id': _client.auth.currentUser?.id,
         })
         .select()
         .single();
@@ -429,6 +451,61 @@ class LookupRepository {
           .from('delivery_times')
           .update({'order_idx': update['order_idx']})
           .eq('id', update['id']);
+    }
+  }
+
+  // ── Observaciones ─────────────────────────────────────────────────────────
+
+  Future<List<Observation>> getObservations() async {
+    final response = await _client
+        .from('observations')
+        .select()
+        .eq('is_active', true)
+        .order('description', ascending: true);
+    return (response as List).map((e) => Observation.fromJson(e)).toList();
+  }
+
+  Future<Observation> addObservation({
+    required String description,
+    required bool isDefaultDeliveryNote,
+  }) async {
+    final response = await _client
+        .from('observations')
+        .insert({
+          'description': description,
+          'is_default_delivery_note': isDefaultDeliveryNote,
+          'is_active': true,
+          'user_id': _client.auth.currentUser?.id,
+        })
+        .select()
+        .single();
+    return Observation.fromJson(response);
+  }
+
+  Future<void> updateObservation({
+    required String id,
+    required String description,
+    required bool isDefaultDeliveryNote,
+  }) async {
+    await _client
+        .from('observations')
+        .update({
+          'description': description,
+          'is_default_delivery_note': isDefaultDeliveryNote,
+        })
+        .eq('id', id);
+  }
+
+  Future<void> deleteObservation(String id) async {
+    final response = await _client
+        .from('observations')
+        .delete()
+        .eq('id', id)
+        .select();
+    if ((response as List).isEmpty) {
+      throw Exception(
+        'La observación no pudo ser eliminada (posible bloqueo por permisos RLS o uso en otros registros).',
+      );
     }
   }
 }

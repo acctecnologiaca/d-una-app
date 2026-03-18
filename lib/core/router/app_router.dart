@@ -29,6 +29,9 @@ import '../../features/quotes/presentation/create_quote/screens/select_service_s
 import '../../features/quotes/presentation/create_quote/screens/quote_service_search_screen.dart';
 import '../../features/quotes/presentation/create_quote/screens/add_temporal_product_screen.dart';
 import '../../features/quotes/presentation/create_quote/screens/add_temporal_service_screen.dart';
+import '../../features/collaborators/presentation/screens/collaborators_screen.dart';
+import '../../features/collaborators/presentation/screens/add_collaborator_screen.dart';
+import '../../features/collaborators/domain/models/collaborator.dart';
 import '../../features/quotes/domain/models/quote_aggregated_product.dart';
 import '../../features/quotes/data/models/quote_item_product.dart';
 import '../../features/quotes/data/models/quote_item_service.dart';
@@ -53,6 +56,12 @@ import 'package:d_una_app/features/settings/presentation/screens/unaffiliated_su
 import 'package:d_una_app/features/settings/presentation/screens/shipping_companies_list_screen.dart';
 import '../../features/settings/presentation/screens/delivery_times_list_screen.dart';
 import '../../features/settings/presentation/screens/commercial_conditions_list_screen.dart';
+import '../../features/settings/presentation/screens/observations_list_screen.dart';
+import '../../features/settings/presentation/screens/financial_parameters_screen.dart';
+import '../../features/purchases/presentation/screens/purchases_list_screen.dart';
+import '../../features/purchases/presentation/screens/add_purchase_screen.dart';
+import '../../features/purchases/presentation/screens/add_purchase_select_product_screen.dart';
+import '../../features/purchases/presentation/screens/add_purchase_product_search_screen.dart';
 
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../router/router_notifier.dart';
@@ -367,6 +376,43 @@ final appRouter = GoRouter(
     ),
 
     GoRoute(
+      path: '/collaborators',
+      builder: (context, state) => const CollaboratorsScreen(),
+      routes: [
+        GoRoute(
+          path: 'add',
+          builder: (context, state) {
+            final collaborator = state.extra is Collaborator
+                ? state.extra as Collaborator
+                : null;
+            return AddCollaboratorScreen(collaborator: collaborator);
+          },
+        ),
+      ],
+    ),
+    GoRoute(
+      path: '/my-purchases',
+      builder: (context, state) => const PurchasesListScreen(),
+      routes: [
+        GoRoute(
+          path: 'add',
+          builder: (context, state) => const AddPurchaseScreen(),
+          routes: [
+            GoRoute(
+              path: 'select-product',
+              builder: (context, state) => const AddPurchaseSelectProductScreen(),
+              routes: [
+                GoRoute(
+                  path: 'search',
+                  builder: (context, state) => const AddPurchaseProductSearchScreen(),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ],
+    ),
+    GoRoute(
       path: '/settings',
       builder: (context, state) => const SettingsScreen(),
       routes: [
@@ -422,6 +468,14 @@ final appRouter = GoRouter(
               },
             ),
           ],
+        ),
+        GoRoute(
+          path: 'observations',
+          builder: (context, state) => const ObservationsListScreen(),
+        ),
+        GoRoute(
+          path: 'financial-parameters',
+          builder: (context, state) => const FinancialParametersScreen(),
         ),
       ],
     ),

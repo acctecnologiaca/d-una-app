@@ -35,11 +35,15 @@ class SettingsScreen extends StatelessWidget {
             context,
             onTap: () => context.push('/settings/uoms'),
           ),
-          _buildSettingsItem('Parámetros financieros', context, onTap: () {}),
           _buildSettingsItem(
             'Tarifas de servicios',
             context,
             onTap: () => context.push('/settings/service-rates'),
+          ),
+          _buildSettingsItem(
+            'Parámetros financieros',
+            context,
+            onTap: () => context.push('/settings/financial-parameters'),
           ),
           const Divider(height: 32),
 
@@ -74,7 +78,11 @@ class SettingsScreen extends StatelessWidget {
             context,
             onTap: () => context.push('/settings/commercial-conditions'),
           ),
-          _buildSettingsItem('Observaciones', context, onTap: () {}),
+          _buildSettingsItem(
+            'Observaciones',
+            context,
+            onTap: () => context.push('/settings/observations'),
+          ),
           const Divider(height: 32),
 
           // Group 4: General (No header)

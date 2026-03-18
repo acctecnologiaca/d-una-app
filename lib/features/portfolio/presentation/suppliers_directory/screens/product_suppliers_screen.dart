@@ -331,17 +331,12 @@ class _ProductSuppliersScreenState
                     final branchCity = item['branch_city'] as String? ?? '';
                     final price = parseDouble(item['price']);
                     final stock = parseInt(item['stock_quantity']);
-                    final uom = item['uom'] as String? ?? 'Unidad';
+                    final uom = item['uom_label'] as String? ?? item['uom'] as String? ?? 'Unidad';
+                    final uomSymbolName = item['uom_symbol_name'] as String?;
 
                     // Parse Access Level from Backend
-                    // Default to 'restricted' if not found for safety
-                    final accessLevel =
-                        item['access_level'] as String? ?? 'restricted';
-
-                    final isRestricted =
-                        accessLevel == 'restricted'; // Locked + SnackBar
-                    final isPartial =
-                        accessLevel == 'partial'; // Unlocked + Blurred Price
+                    final isRestricted = !(item['is_accessible'] as bool? ?? false); // Locked + SnackBar
+                    final isPartial = false; // We only have binary access currently
 
                     // Logic for SnackBar (OnTap)
                     // Restricted OR Partial items block navigation/action and show SnackBar
@@ -353,6 +348,7 @@ class _ProductSuppliersScreenState
                       price: price,
                       stock: stock,
                       uom: uom,
+                      uomSymbolName: uomSymbolName,
                       isWholesale: tradeType == 'WHOLESALE',
                       isLocked: isRestricted,
                       isPartial: isPartial,

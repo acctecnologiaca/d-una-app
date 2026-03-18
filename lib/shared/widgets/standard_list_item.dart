@@ -4,6 +4,7 @@ class StandardListItem extends StatelessWidget {
   final Widget? leading;
   final Widget? overline; // New: Top subtitle (simpler/smaller)
   final String title;
+  final Widget? titleTrailing; // Widget to place to the right of the title
   final Widget? subtitle;
   final Widget? trailing; // Usually column with price + badges
   final VoidCallback? onTap;
@@ -14,6 +15,7 @@ class StandardListItem extends StatelessWidget {
     this.leading,
     this.overline,
     required this.title,
+    this.titleTrailing,
     this.subtitle,
     this.trailing,
     this.onTap,
@@ -53,15 +55,26 @@ class StandardListItem extends StatelessWidget {
                     ),
                     const SizedBox(height: 2),
                   ],
-                  Text(
-                    title,
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w600,
-                      color: colors.onSurface,
-                    ),
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
+                  Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Flexible(
+                        child: Text(
+                          title,
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w600,
+                            color: colors.onSurface,
+                          ),
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                      if (titleTrailing != null) ...[
+                        const SizedBox(width: 8),
+                        titleTrailing!,
+                      ],
+                    ],
                   ),
                   if (subtitle != null) ...[
                     const SizedBox(height: 2),

@@ -142,7 +142,7 @@ class MainNavigationDrawer extends StatelessWidget {
         // Close drawer
         Navigator.pop(context);
 
-        if (route == '/settings') {
+        if (route == '/settings' || route == '/collaborators' || route == '/my-purchases') {
           context.push(route);
         } else {
           // Disable navigation if route is placeholder and doesn't exist yet,

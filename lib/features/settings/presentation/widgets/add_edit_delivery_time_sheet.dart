@@ -280,128 +280,136 @@ class _AddEditDeliveryTimeSheetState
 
     return CustomActionSheet(
       title: isEditing ? 'Modificar tiempo' : 'Agregar tiempo',
+      showDivider: false,
+      isContentScrollable: true,
       actions: actions,
       content: Form(
         key: _formKey,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const SizedBox(height: 16),
-            CustomDropdown<String>(
-              label: 'Aplica para',
-              items: _typeOptions.map((e) => e['value']!).toList(),
-              value: _selectedType,
-              itemLabelBuilder: (val) {
-                return _typeOptions.firstWhere(
-                  (e) => e['value'] == val,
-                )['label']!;
-              },
-              onChanged: (val) {
-                if (val != null) {
-                  setState(() => _selectedType = val);
-                  _updateHasChanged();
-                }
-              },
-            ),
-            const SizedBox(height: 16),
-            CustomTextField(
-              label: 'Nombre a mostrar',
-              hintText: 'Ej. 1 a 2 semanas, Bajo pedido...',
-              controller: _nameController,
-              textCapitalization: TextCapitalization.sentences,
-              validator: (v) {
-                if (v == null || v.trim().isEmpty) return 'Campo requerido';
-                return null;
-              },
-            ),
-            const SizedBox(height: 16),
-            Row(
-              children: [
-                Checkbox(
-                  value: _isIndefinite,
-                  onChanged: (val) {
-                    setState(() {
-                      _isIndefinite = val ?? false;
-                    });
-                    _updateHasChanged();
-                  },
-                ),
-                Expanded(
-                  child: GestureDetector(
-                    onTap: () {
-                      setState(() => _isIndefinite = !_isIndefinite);
-                      _updateHasChanged();
-                    },
-                    child: Text(
-                      'Es un tiempo indefinido (sin rango numérico claro, ej. Bajo Pedido)',
-                      style: textTheme.bodyMedium,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-            if (!_isIndefinite) ...[
+        child: SingleChildScrollView(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
               const SizedBox(height: 16),
-              const Divider(),
-              const SizedBox(height: 16),
-              Text(
-                'Valores estructurados',
-                style: textTheme.titleSmall?.copyWith(
-                  color: colors.primary,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              const SizedBox(height: 12),
               CustomDropdown<String>(
-                label: 'Unidad de tiempo',
-                items: _unitOptions.map((e) => e['value']!).toList(),
-                value: _selectedUnit,
+                label: 'Aplica para',
+                items: _typeOptions.map((e) => e['value']!).toList(),
+                value: _selectedType,
                 itemLabelBuilder: (val) {
-                  return _unitOptions.firstWhere(
+                  return _typeOptions.firstWhere(
                     (e) => e['value'] == val,
                   )['label']!;
                 },
                 onChanged: (val) {
                   if (val != null) {
-                    setState(() => _selectedUnit = val);
+                    setState(() => _selectedType = val);
                     _updateHasChanged();
                   }
                 },
               ),
               const SizedBox(height: 16),
+              CustomTextField(
+                label: 'Nombre a mostrar',
+                hintText: 'Ej. 1 a 2 semanas, Bajo pedido...',
+                controller: _nameController,
+                textCapitalization: TextCapitalization.sentences,
+                validator: (v) {
+                  if (v == null || v.trim().isEmpty) return 'Campo requerido';
+                  return null;
+                },
+              ),
+              const SizedBox(height: 16),
               Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Expanded(
-                    child: CustomTextField(
-                      label: 'Mínimo',
-                      controller: _minController,
-                      keyboardType: TextInputType.number,
-                      inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-                      validator: (v) {
-                        if (v == null || v.trim().isEmpty) return 'Requerido';
-                        return null;
-                      },
-                    ),
+                  Checkbox(
+                    value: _isIndefinite,
+                    onChanged: (val) {
+                      setState(() {
+                        _isIndefinite = val ?? false;
+                      });
+                      _updateHasChanged();
+                    },
                   ),
-                  const SizedBox(width: 16),
                   Expanded(
-                    child: CustomTextField(
-                      label: 'Máximo',
-                      controller: _maxController,
-                      keyboardType: TextInputType.number,
-                      inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-                      validator: (v) {
-                        if (v == null || v.trim().isEmpty) return 'Requerido';
-                        return null;
+                    child: GestureDetector(
+                      onTap: () {
+                        setState(() => _isIndefinite = !_isIndefinite);
+                        _updateHasChanged();
                       },
+                      child: Text(
+                        'Es un tiempo indefinido (sin rango numérico claro, ej. Bajo Pedido)',
+                        style: textTheme.bodyMedium,
+                      ),
                     ),
                   ),
                 ],
               ),
-              const SizedBox(height: 8),
+              if (!_isIndefinite) ...[
+                const SizedBox(height: 16),
+                const Divider(),
+                const SizedBox(height: 16),
+                Text(
+                  'Valores estructurados',
+                  style: textTheme.titleSmall?.copyWith(
+                    color: colors.primary,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                const SizedBox(height: 12),
+                CustomDropdown<String>(
+                  label: 'Unidad de tiempo',
+                  items: _unitOptions.map((e) => e['value']!).toList(),
+                  value: _selectedUnit,
+                  itemLabelBuilder: (val) {
+                    return _unitOptions.firstWhere(
+                      (e) => e['value'] == val,
+                    )['label']!;
+                  },
+                  onChanged: (val) {
+                    if (val != null) {
+                      setState(() => _selectedUnit = val);
+                      _updateHasChanged();
+                    }
+                  },
+                ),
+                const SizedBox(height: 16),
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Expanded(
+                      child: CustomTextField(
+                        label: 'Mínimo',
+                        controller: _minController,
+                        keyboardType: TextInputType.number,
+                        inputFormatters: [
+                          FilteringTextInputFormatter.digitsOnly,
+                        ],
+                        validator: (v) {
+                          if (v == null || v.trim().isEmpty) return 'Requerido';
+                          return null;
+                        },
+                      ),
+                    ),
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: CustomTextField(
+                        label: 'Máximo',
+                        controller: _maxController,
+                        keyboardType: TextInputType.number,
+                        inputFormatters: [
+                          FilteringTextInputFormatter.digitsOnly,
+                        ],
+                        validator: (v) {
+                          if (v == null || v.trim().isEmpty) return 'Requerido';
+                          return null;
+                        },
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+              ],
             ],
-          ],
+          ),
         ),
       ),
     );

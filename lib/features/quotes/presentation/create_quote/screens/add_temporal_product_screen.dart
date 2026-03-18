@@ -53,6 +53,7 @@ class _AddTemporalProductScreenState
 
   // Delivery Time
   String? _selectedDeliveryTimeId;
+  late final String _pricingMethod;
 
   @override
   void initState() {
@@ -93,6 +94,8 @@ class _AddTemporalProductScreenState
       });
     }
 
+    _pricingMethod = ref.read(createQuoteProvider).pricingMethod;
+
     _costController.addListener(_calculateSalePriceFromMargin);
     _marginController.addListener(_calculateSalePriceFromMargin);
   }
@@ -121,7 +124,15 @@ class _AddTemporalProductScreenState
 
     if (cost > 0) {
       final margin = marginPercent / 100;
-      final salePrice = cost * (1 + margin);
+      double salePrice;
+      if (_pricingMethod == 'margin') {
+        // Margin: price = cost / (1 - margin)
+        final factor = 1 - margin;
+        salePrice = factor > 0 ? cost / factor : cost;
+      } else {
+        // Markup: price = cost * (1 + margin)
+        salePrice = cost * (1 + margin);
+      }
       _salePriceController.text = CurrencyFormatter.formatNumber(salePrice);
     } else {
       _salePriceController.text = '';
@@ -138,7 +149,14 @@ class _AddTemporalProductScreenState
     final salePrice = CurrencyFormatter.parse(_salePriceController.text) ?? 0;
 
     if (cost > 0 && salePrice > 0) {
-      final margin = (salePrice - cost) / cost;
+      double margin;
+      if (_pricingMethod == 'margin') {
+        // Margin: margin = (1 - cost/price)
+        margin = 1 - (cost / salePrice);
+      } else {
+        // Markup: margin = (price - cost) / cost
+        margin = (salePrice - cost) / cost;
+      }
       _marginController.text = (margin * 100)
           .toStringAsFixed(2)
           .replaceAll('.', ',');
@@ -160,8 +178,14 @@ class _AddTemporalProductScreenState
         double.tryParse(_marginController.text.replaceAll(',', '.')) ?? 0;
     final margin = marginPercent / 100;
 
-    final taxRate = quoteState.globalTaxRate;
-    final unitPrice = cost * (1 + margin);
+    final taxRate = quoteState.globalTaxRate / 100;
+    double unitPrice;
+    if (_pricingMethod == 'margin') {
+      final factor = 1 - margin;
+      unitPrice = factor > 0 ? cost / factor : cost;
+    } else {
+      unitPrice = cost * (1 + margin);
+    }
     final taxAmount = unitPrice * taxRate;
     final totalPrice = (unitPrice + taxAmount) * qty;
 

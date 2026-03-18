@@ -4,9 +4,9 @@ import 'package:go_router/go_router.dart';
 import 'package:d_una_app/features/clients/presentation/providers/clients_provider.dart';
 import 'package:d_una_app/features/clients/presentation/widgets/contact_list_tile.dart';
 import 'package:d_una_app/core/utils/contact_utils.dart';
-import '../../../../../shared/widgets/custom_extended_fab.dart';
+import '../../../../../shared/widgets/generic_list_screen.dart';
 
-class ManageContactsScreen extends ConsumerWidget {
+class ManageContactsScreen extends ConsumerStatefulWidget {
   final String clientId;
   final Map<String, dynamic>? initialData;
 
@@ -17,116 +17,68 @@ class ManageContactsScreen extends ConsumerWidget {
   });
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final colors = Theme.of(context).colorScheme;
-    final textTheme = Theme.of(context).textTheme;
+  ConsumerState<ManageContactsScreen> createState() =>
+      _ManageContactsScreenState();
+}
 
+class _ManageContactsScreenState extends ConsumerState<ManageContactsScreen> {
+  @override
+  Widget build(BuildContext context) {
+    final clientId = widget.clientId;
     final clientsState = ref.watch(clientsProvider);
 
-    return clientsState.when(
-      loading: () =>
-          const Scaffold(body: Center(child: CircularProgressIndicator())),
-      error: (err, stack) =>
-          Scaffold(body: Center(child: Text('Error loading clients: $err'))),
-      data: (clientsList) {
-        final client = clientsList.firstWhere(
-          (c) => c.id == clientId,
-          orElse: () => throw Exception('Client not found'),
-        );
+    // We need to wrap the nested contacts list in an AsyncValue for GenericListScreen
+    final contactsAsync = clientsState.whenData((clients) {
+      final client = clients.firstWhere(
+        (c) => c.id == clientId,
+        orElse: () => throw Exception('Client not found'),
+      );
+      return client.contacts;
+    });
 
-        final companyName = client.name;
-        final contacts = client.contacts;
+    final companyName =
+        clientsState.valueOrNull
+            ?.firstWhere(
+              (c) => c.id == clientId,
+              orElse: () => throw Exception('Client not found'),
+            )
+            .name ??
+        '';
 
-        return Scaffold(
-          appBar: AppBar(
-            centerTitle: false,
-            title: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Contactos',
-                  style: textTheme.titleLarge?.copyWith(
-                    fontWeight: FontWeight.w500,
-                    fontSize: 20,
-                  ),
-                ),
-                Text(
-                  companyName,
-                  style: textTheme.bodySmall?.copyWith(
-                    color: colors.onSurfaceVariant,
-                    fontSize: 14,
-                  ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ],
-            ),
-            actions: [
-              IconButton(
-                icon: const Icon(Icons.search),
-                onPressed: () {
-                  context.push(
-                    '/clients/$clientId/contacts/search',
-                    extra: companyName,
-                  );
-                },
-              ),
-            ],
-            backgroundColor: colors.surface,
-            foregroundColor: colors.onSurface,
-            elevation: 0,
-          ),
-          body: contacts.isEmpty
-              ? Center(
-                  child: Text(
-                    'No hay contactos registrados',
-                    style: TextStyle(color: colors.onSurfaceVariant),
-                  ),
-                )
-              : ListView.separated(
-                  padding: const EdgeInsets.fromLTRB(16, 24, 16, 100),
-                  itemCount: contacts.length,
-                  separatorBuilder: (context, index) =>
-                      const Divider(height: 0),
-                  itemBuilder: (context, index) {
-                    final contact = contacts[index];
-                    return ContactListTile(
-                      name: contact.name,
-                      role: contact.role ?? 'Sin cargo',
-                      initial: contact.name.isNotEmpty
-                          ? contact.name[0].toUpperCase()
-                          : '?',
-                      isPrimary: contact.isPrimary,
-                      onPhoneTap: () =>
-                          ContactUtils.makePhoneCall(contact.phone),
-                      onWhatsAppTap: () =>
-                          ContactUtils.launchWhatsApp(contact.phone),
-                      onTap: () {
-                        context.go(
-                          '/clients/$clientId/contacts/details',
-                          extra: {
-                            'companyName': companyName,
-                            'contact': contact,
-                            'contactCount': contacts.length,
-                          },
-                        );
-                      },
-                    );
-                  },
-                ),
-          floatingActionButton: Padding(
-            padding: const EdgeInsets.only(bottom: 40.0),
-            child: CustomExtendedFab(
-              onPressed: () {
-                context.go(
-                  '/clients/$clientId/contacts/add',
-                  extra: companyName,
-                );
+    return GenericListScreen<dynamic>(
+      title: 'Contactos',
+      subtitle: companyName,
+      itemsAsync: contactsAsync,
+      onSearch: (c, query) {
+        final q = query.toLowerCase();
+        final matchName = c.name.toLowerCase().contains(q);
+        final matchRole = (c.role ?? '').toLowerCase().contains(q);
+        return matchName || matchRole;
+      },
+      onAddPressed: () {
+        context.go('/clients/$clientId/contacts/add', extra: companyName);
+      },
+      emptyListMessage: 'No hay contactos registrados',
+      itemBuilder: (context, contact) {
+        return ContactListTile(
+          name: contact.name,
+          role: contact.role ?? 'Sin cargo',
+          initial: contact.name.isNotEmpty
+              ? contact.name[0].toUpperCase()
+              : '?',
+          isPrimary: contact.isPrimary,
+          onPhoneTap: () => ContactUtils.makePhoneCall(contact.phone),
+          onWhatsAppTap: () => ContactUtils.launchWhatsApp(contact.phone),
+          onTap: () {
+            context.go(
+              '/clients/$clientId/contacts/details',
+              extra: {
+                'companyName': companyName,
+                'contact': contact,
+                'contactCount': contactsAsync.valueOrNull?.length ?? 0,
               },
-              label: 'Agregar',
-              icon: Icons.add,
-            ),
-          ),
+            );
+          },
         );
       },
     );

@@ -73,10 +73,12 @@ class _QuoteProductSaleDetailsSheetState
   double _currentMargin = 25.0; // Default margin
   double _currentPrice = 0.0;
   String? _selectedDeliveryTimeId;
+  late final String _pricingMethod;
 
   @override
   void initState() {
     super.initState();
+    _pricingMethod = ref.read(createQuoteProvider).pricingMethod;
     if (widget.initialPrice != null && widget.initialMargin != null) {
       _currentPrice = widget.initialPrice!;
       _currentMargin = widget.initialMargin! * 100;
@@ -96,9 +98,16 @@ class _QuoteProductSaleDetailsSheetState
   }
 
   void _recalculatePriceFromMargin() {
-    // Basic calculation: Price = Cost * (1 + Margin / 100)
-    // Adjust logic if it should be Cost / (1 - Margin/100) instead.
-    _currentPrice = widget.averageCost * (1 + (_currentMargin / 100));
+    if (_pricingMethod == 'margin') {
+      // Margin: price = cost / (1 - margin/100)
+      final factor = 1 - (_currentMargin / 100);
+      _currentPrice = factor > 0
+          ? widget.averageCost / factor
+          : widget.averageCost;
+    } else {
+      // Markup: price = cost * (1 + margin/100)
+      _currentPrice = widget.averageCost * (1 + (_currentMargin / 100));
+    }
     _marginController.text = CurrencyFormatter.formatNumber(_currentMargin);
     _priceController.text = CurrencyFormatter.formatNumber(_currentPrice);
     setState(() {});
@@ -108,7 +117,11 @@ class _QuoteProductSaleDetailsSheetState
     if (widget.averageCost > 0) {
       if (_currentPrice <= widget.averageCost) {
         _currentMargin = 0;
+      } else if (_pricingMethod == 'margin') {
+        // Margin: margin% = (1 - cost/price) * 100
+        _currentMargin = (1 - (widget.averageCost / _currentPrice)) * 100;
       } else {
+        // Markup: margin% = (price/cost - 1) * 100
         _currentMargin = ((_currentPrice / widget.averageCost) - 1) * 100;
       }
       _marginController.text = CurrencyFormatter.formatNumber(_currentMargin);
@@ -145,6 +158,8 @@ class _QuoteProductSaleDetailsSheetState
     Navigator.of(context).pop({
       'sellingPrice': _currentPrice,
       'profitMargin': _currentMargin / 100, // as decimal
+      'taxRate':
+          ref.read(createQuoteProvider).globalTaxRate / 100, // as decimal
       'deliveryTimeId': _selectedDeliveryTimeId, // Pass the ID now
     });
   }
@@ -248,7 +263,7 @@ class _QuoteProductSaleDetailsSheetState
                   child: CustomTextField(
                     controller: _priceController,
                     label: 'Precio*',
-                    prefixText: '\$ ',
+                    prefixText: r'$ ',
                     keyboardType: const TextInputType.numberWithOptions(
                       decimal: true,
                     ),

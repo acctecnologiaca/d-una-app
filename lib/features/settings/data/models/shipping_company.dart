@@ -6,7 +6,7 @@ class ShippingCompany extends Equatable {
   final String taxId;
   final String? name; // Commercial name
   final bool isVerified;
-  final String? createdBy;
+  final String? userId;
 
   const ShippingCompany({
     required this.id,
@@ -14,7 +14,7 @@ class ShippingCompany extends Equatable {
     required this.taxId,
     this.name,
     this.isVerified = false,
-    this.createdBy,
+    this.userId,
   });
 
   factory ShippingCompany.fromJson(Map<String, dynamic> json) {
@@ -24,16 +24,18 @@ class ShippingCompany extends Equatable {
       taxId: json['tax_id'] as String,
       name: json['name'] as String?,
       isVerified: json['is_verified'] as bool? ?? false,
-      createdBy: json['created_by'] as String?,
+      userId: json['user_id'] as String?,
     );
   }
 
   Map<String, dynamic> toJson() {
     return {
+      'id': id,
       'legal_name': legalName,
       'tax_id': taxId,
       'name': name,
       'is_verified': isVerified,
+      'user_id': userId,
     };
   }
 
@@ -47,6 +49,6 @@ class ShippingCompany extends Equatable {
     taxId,
     name,
     isVerified,
-    createdBy,
+    userId,
   ];
 }

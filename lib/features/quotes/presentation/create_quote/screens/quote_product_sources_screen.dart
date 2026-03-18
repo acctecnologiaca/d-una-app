@@ -143,6 +143,7 @@ class _QuoteProductSourcesScreenState
               totalQuantity: widget.product.totalQuantity,
               supplierCount: widget.product.supplierCount,
               uom: widget.product.uom,
+              uomSymbolName: widget.product.uomSymbolName,
               onTap: () {},
               showPriceAndStock: false,
             ),

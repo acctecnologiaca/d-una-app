@@ -3,7 +3,6 @@ import '../../domain/repositories/quotes_repository.dart';
 import '../../data/models/quote.dart';
 import '../../data/models/delivery_time.dart';
 import '../../data/models/commercial_condition.dart';
-import '../../data/models/collaborator.dart';
 import '../../data/models/financial_parameter.dart';
 import '../../data/models/quote_item_product.dart';
 import '../../data/models/quote_item_service.dart';
@@ -39,25 +38,51 @@ class SupabaseQuotesRepository implements QuotesRepository {
   }
 
   @override
-  Future<List<Collaborator>> getCollaborators() async {
-    final response = await _client
-        .from('collaborators')
-        .select()
-        .eq('is_active', true)
-        .order('full_name');
-
-    return (response as List).map((e) => Collaborator.fromJson(e)).toList();
-  }
-
-  @override
   Future<FinancialParameter> getFinancialParameters() async {
+    final userId = _client.auth.currentUser?.id;
+    if (userId == null) {
+      throw Exception('User not authenticated');
+    }
+
     final response = await _client
         .from('financial_parameters')
         .select()
-        .limit(1)
-        .single();
+        .eq('user_id', userId)
+        .maybeSingle();
+
+    if (response == null) {
+      // Return default parameters if none exist for user
+      return FinancialParameter(
+        id: '',
+        userId: userId,
+        profitMargin: 20.0,
+        taxRate: 16.0,
+        currencyCode: 'USD',
+        pricingMethod: 'margin',
+        updatedAt: DateTime.now(),
+      );
+    }
 
     return FinancialParameter.fromJson(response);
+  }
+
+  @override
+  Future<void> updateFinancialParameters(FinancialParameter params) async {
+    final userId = _client.auth.currentUser?.id;
+    if (userId == null) {
+      throw Exception('User not authenticated');
+    }
+
+    final data = params.toJson();
+    data['user_id'] = userId;
+
+    if (params.id.isEmpty) {
+      // If it's a new record (no ID), insert without ID to let DB generate it
+      data.remove('id');
+      await _client.from('financial_parameters').insert(data);
+    } else {
+      await _client.from('financial_parameters').upsert(data);
+    }
   }
 
   @override

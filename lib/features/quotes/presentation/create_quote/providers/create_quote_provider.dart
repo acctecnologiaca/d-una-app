@@ -26,6 +26,7 @@ class QuoteState {
   // Financial Context
   final double globalMargin;
   final double globalTaxRate;
+  final String pricingMethod; // 'markup' or 'margin'
 
   QuoteState({
     this.quote,
@@ -47,7 +48,8 @@ class QuoteState {
     this.isLoading = false,
     this.error,
     this.globalMargin = 30.0,
-    this.globalTaxRate = 0.16,
+    this.globalTaxRate = 16.0,
+    this.pricingMethod = 'margin',
   }) : dateIssued = dateIssued ?? DateTime.now();
 
   QuoteState copyWith({
@@ -71,6 +73,7 @@ class QuoteState {
     String? error,
     double? globalMargin,
     double? globalTaxRate,
+    String? pricingMethod,
   }) {
     return QuoteState(
       quote: quote ?? this.quote,
@@ -93,6 +96,7 @@ class QuoteState {
       error: error,
       globalMargin: globalMargin ?? this.globalMargin,
       globalTaxRate: globalTaxRate ?? this.globalTaxRate,
+      pricingMethod: pricingMethod ?? this.pricingMethod,
     );
   }
 }
@@ -101,16 +105,17 @@ class CreateQuoteNotifier extends StateNotifier<QuoteState> {
   final QuotesRepository _repository;
 
   CreateQuoteNotifier(this._repository) : super(QuoteState()) {
-    _loadFinancialDefaults();
+    loadFinancialParameters();
   }
 
-  Future<void> _loadFinancialDefaults() async {
+  Future<void> loadFinancialParameters() async {
     try {
       state = state.copyWith(isLoading: true);
       final params = await _repository.getFinancialParameters();
       state = state.copyWith(
         globalMargin: params.profitMargin,
         globalTaxRate: params.taxRate,
+        pricingMethod: params.pricingMethod,
         isLoading: false,
       );
     } catch (e) {
@@ -129,6 +134,7 @@ class CreateQuoteNotifier extends StateNotifier<QuoteState> {
       conditions: state.conditions,
       globalMargin: state.globalMargin,
       globalTaxRate: state.globalTaxRate,
+      pricingMethod: state.pricingMethod,
       clientId: id,
       clientName: name,
       contactId: null,
@@ -277,7 +283,7 @@ class CreateQuoteNotifier extends StateNotifier<QuoteState> {
   void updateGroupPrice(String name, double newUnitPrice, double newMargin) {
     final updatedProducts = state.products.map((item) {
       if (item.name == name) {
-        final taxAmount = newUnitPrice * item.taxRate;
+        final taxAmount = newUnitPrice * (item.taxRate / 100);
         final totalPrice = (newUnitPrice + taxAmount) * item.quantity;
         return QuoteItemProduct(
           id: item.id,
@@ -373,12 +379,18 @@ class CreateQuoteNotifier extends StateNotifier<QuoteState> {
 
       double currentGroupMargin = remainingGroupItems.first.profitMargin;
 
-      double newUnitPrice = newAvgCost * (1 + currentGroupMargin);
+      double newUnitPrice;
+      if (state.pricingMethod == 'margin') {
+        final factor = 1 - currentGroupMargin;
+        newUnitPrice = factor > 0 ? newAvgCost / factor : newAvgCost;
+      } else {
+        newUnitPrice = newAvgCost * (1 + currentGroupMargin);
+      }
 
       for (int i = 0; i < updatedProducts.length; i++) {
         if (updatedProducts[i].name == name) {
           final item = updatedProducts[i];
-          final taxAmount = newUnitPrice * item.taxRate;
+          final taxAmount = newUnitPrice * (item.taxRate / 100);
           updatedProducts[i] = _copyWithPricing(
             item,
             newUnitPrice,
@@ -469,7 +481,8 @@ class CreateQuoteNotifier extends StateNotifier<QuoteState> {
     final updatedServices = state.services.map((item) {
       if (item.id == id || (item.serviceId != null && item.serviceId == id)) {
         // Fallback if id is not fully generated yet
-        final newTotalPrice = (item.unitPrice * (1 + item.taxRate)) * newQty;
+        final newTotalPrice =
+            (item.unitPrice * (1 + (item.taxRate / 100))) * newQty;
         return QuoteItemService(
           id: item.id,
           quoteId: item.quoteId,

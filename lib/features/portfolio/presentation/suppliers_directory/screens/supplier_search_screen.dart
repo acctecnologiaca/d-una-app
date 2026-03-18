@@ -439,6 +439,7 @@ class _SupplierSearchScreenState extends ConsumerState<SupplierSearchScreen> {
               totalQuantity: item.product.totalQuantity,
               supplierCount: item.product.supplierCount,
               uom: item.product.uom,
+              uomSymbolName: item.product.uomSymbolName,
               isLocked: isProductLocked,
               onTap: () {
                 Navigator.push(

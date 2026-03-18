@@ -9,7 +9,7 @@ class UnaffiliatedSupplier extends Equatable {
   final String? phone;
   final String? email;
   final String? taxId;
-  final String? createdBy;
+  final String? userId;
   final bool isVerified;
 
   const UnaffiliatedSupplier({
@@ -19,7 +19,7 @@ class UnaffiliatedSupplier extends Equatable {
     this.phone,
     this.email,
     this.taxId,
-    this.createdBy,
+    this.userId,
     this.isVerified = false,
   });
 
@@ -31,7 +31,7 @@ class UnaffiliatedSupplier extends Equatable {
       phone: json['phone'],
       email: json['email'],
       taxId: json['tax_id'],
-      createdBy: json['created_by'],
+      userId: json['user_id'],
       isVerified: json['is_verified'] ?? false,
     );
   }
@@ -43,6 +43,7 @@ class UnaffiliatedSupplier extends Equatable {
       'phone': phone,
       'email': email,
       'tax_id': taxId,
+      'user_id': userId,
       'is_affiliated': false,
     };
   }
@@ -55,7 +56,7 @@ class UnaffiliatedSupplier extends Equatable {
     phone,
     email,
     taxId,
-    createdBy,
+    userId,
     isVerified,
   ];
 }

@@ -112,30 +112,47 @@ class _QuoteServiceSaleDetailsSheetState
   }
 
   bool _isRateTimeBased() {
-    final rateName = widget.service.serviceRate?.name.toLowerCase() ?? '';
-    return rateName.contains('hora') ||
-        rateName.contains('h') ||
-        rateName.contains('día') ||
-        rateName.contains('dia') ||
-        rateName.contains('mes') ||
-        rateName.contains('año');
+    final name = widget.service.serviceRate?.name.toLowerCase() ?? '';
+    final symbol = widget.service.serviceRate?.symbol.toLowerCase() ?? '';
+    return symbol == 'h' ||
+        symbol == 'hr' ||
+        symbol == 'hrs' ||
+        name.contains('segundo') ||
+        name.contains('minuto') ||
+        name.contains('hora') ||
+        name.contains('día') ||
+        name.contains('dia') ||
+        name.contains('mes') ||
+        name.contains('año');
   }
 
   String _getRateLabel() {
-    final rateName = widget.service.serviceRate?.name.toLowerCase() ?? 'ud.';
-    if (rateName.contains('hora') || rateName.contains('h')) return 'Horas';
-    if (rateName.contains('día') || rateName.contains('dia')) return 'Días';
-    if (rateName.contains('mes')) return 'Meses';
-    if (rateName.contains('serv')) return 'Serv.';
+    final name = widget.service.serviceRate?.name.toLowerCase() ?? '';
+    final symbol = widget.service.serviceRate?.symbol.toLowerCase() ?? '';
+
+    if (name.contains('hora') || symbol == 'h' || symbol == 'hr') {
+      return 'Horas';
+    }
+    if (name.contains('día') || name.contains('dia')) {
+      return 'Días';
+    }
+    if (name.contains('mes')) {
+      return 'Meses';
+    }
+    if (name.contains('serv')) {
+      return 'Serv.';
+    }
     return 'Ud.';
   }
 
   String _getRateSuffix() {
-    final rateName = widget.service.serviceRate?.name.toLowerCase() ?? 'ud.';
-    if (rateName.contains('hora') || rateName.contains('h')) return '/h';
-    if (rateName.contains('día') || rateName.contains('dia')) return '/dia';
-    if (rateName.contains('mes')) return '/mes';
-    if (rateName.contains('serv')) return '/serv.';
+    final name = widget.service.serviceRate?.name.toLowerCase() ?? '';
+    final symbol = widget.service.serviceRate?.symbol.toLowerCase() ?? '';
+
+    if (name.contains('hora') || symbol == 'h' || symbol == 'hr') return '/h';
+    if (name.contains('día') || name.contains('dia')) return '/dia';
+    if (name.contains('mes')) return '/mes';
+    if (name.contains('serv')) return '/serv.';
     return '/ud.';
   }
 

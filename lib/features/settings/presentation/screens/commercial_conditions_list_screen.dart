@@ -1,35 +1,17 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import 'package:d_una_app/shared/widgets/standard_app_bar.dart';
+import 'package:d_una_app/shared/widgets/generic_list_screen.dart';
+import 'package:d_una_app/shared/widgets/standard_list_item.dart';
 import 'package:d_una_app/shared/widgets/sort_selector.dart';
-import 'package:d_una_app/shared/widgets/custom_extended_fab.dart';
 import 'package:d_una_app/features/quotes/data/models/commercial_condition.dart';
 import 'package:d_una_app/features/portfolio/presentation/providers/lookup_providers.dart';
 import '../widgets/add_edit_commercial_condition_sheet.dart';
 
-class CommercialConditionsListScreen extends ConsumerStatefulWidget {
+class CommercialConditionsListScreen extends ConsumerWidget {
   const CommercialConditionsListScreen({super.key});
 
-  @override
-  ConsumerState<CommercialConditionsListScreen> createState() =>
-      _CommercialConditionsListScreenState();
-}
-
-class _CommercialConditionsListScreenState
-    extends ConsumerState<CommercialConditionsListScreen> {
-  SortOption _currentSort = SortOption.nameAZ;
-  String _searchQuery = '';
-  bool _isSearching = false;
-  final TextEditingController _searchController = TextEditingController();
-
-  @override
-  void dispose() {
-    _searchController.dispose();
-    super.dispose();
-  }
-
-  void _showAddSheet() {
+  void _showAddSheet(BuildContext context) {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -41,7 +23,7 @@ class _CommercialConditionsListScreenState
     );
   }
 
-  void _showEditSheet(CommercialCondition condition) {
+  void _showEditSheet(BuildContext context, CommercialCondition condition) {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -55,178 +37,64 @@ class _CommercialConditionsListScreenState
   }
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final colors = Theme.of(context).colorScheme;
-    final textTheme = Theme.of(context).textTheme;
     final conditionsAsync = ref.watch(commercialConditionsProvider);
 
-    return Scaffold(
-      backgroundColor: colors.surface,
-      appBar: StandardAppBar(
-        backgroundColor: _isSearching ? colors.surfaceContainerHigh : null,
-        title: 'Condiciones comerciales',
-        customTitle: _isSearching
-            ? TextField(
-                controller: _searchController,
-                autofocus: true,
-                decoration: InputDecoration(
-                  hintText: 'Buscar condición...',
-                  border: InputBorder.none,
-                  fillColor: colors.surfaceContainerHigh,
+    return GenericListScreen<CommercialCondition>(
+      title: 'Condiciones comerciales',
+      descriptionText:
+          'Define todas aquellas condiciones comerciales que pudieses ofrecerles a tus cliente dentro de tus cotizaciones o reportes.',
+      itemsAsync: conditionsAsync,
+      emptyListMessage: 'No tienes condiciones registradas',
+      onAddPressed: () => _showAddSheet(context),
+      sortOptions: const [SortOption.nameAZ, SortOption.nameZA],
+      initialSort: SortOption.nameAZ,
+      preFilter: (items) {
+        final currentUserId = Supabase.instance.client.auth.currentUser?.id;
+        return items.where((c) => c.userId == currentUserId).toList();
+      },
+      onSearch: (item, query) =>
+          item.description.toLowerCase().contains(query.toLowerCase()),
+      onSort: (a, b, sort) {
+        if (sort == SortOption.nameZA) {
+          return b.description.compareTo(a.description);
+        }
+        return a.description.compareTo(b.description);
+      },
+      itemBuilder: (context, condition) {
+        return StandardListItem(
+          title: condition.description,
+          trailing: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              if (condition.isDefaultQuote)
+                Tooltip(
+                  message: 'Por defecto en cotizaciones',
+                  child: Image.asset(
+                    'assets/icons/request_quote_checked.png',
+                    width: 20,
+                    height: 20,
+                    color: colors.onSurfaceVariant,
+                  ),
                 ),
-                style: textTheme.titleLarge?.copyWith(
-                  fontWeight: FontWeight.w400,
-                  fontSize: 16,
-                  color: colors.onSurface,
+              if (condition.isDefaultReport) ...[
+                if (condition.isDefaultQuote) const SizedBox(width: 4),
+                Tooltip(
+                  message: 'Por defecto en reportes',
+                  child: Image.asset(
+                    'assets/icons/contract_checked.png',
+                    width: 20,
+                    height: 20,
+                    color: colors.onSurfaceVariant,
+                  ),
                 ),
-                onChanged: (value) => setState(() => _searchQuery = value),
-              )
-            : null,
-        actions: [
-          if (!_isSearching)
-            IconButton(
-              icon: Icon(Icons.search, color: colors.onSurface),
-              onPressed: () {
-                setState(() => _isSearching = true);
-              },
-            )
-          else
-            IconButton(
-              icon: Icon(Icons.close, color: colors.onSurface),
-              onPressed: () {
-                setState(() {
-                  _isSearching = false;
-                  _searchQuery = '';
-                  _searchController.clear();
-                });
-              },
-            ),
-        ],
-      ),
-      floatingActionButton: Padding(
-        padding: const EdgeInsets.only(bottom: 40.0),
-        child: CustomExtendedFab(
-          onPressed: _showAddSheet,
-          label: 'Agregar',
-          icon: Icons.add,
-        ),
-      ),
-      body: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Padding(
-            padding: const EdgeInsets.all(16.0),
-            child: Text(
-              'Define todas aquellas condiciones comerciales que pudieses ofrecerles a tus cliente dentro de tus cotizaciones o reportes.',
-              style: textTheme.bodyMedium?.copyWith(
-                color: colors.onSurface,
-                height: 1.5,
-              ),
-            ),
+              ],
+            ],
           ),
-
-          Padding(
-            padding: const EdgeInsets.symmetric(
-              horizontal: 16.0,
-              vertical: 8.0,
-            ),
-            child: SortSelector(
-              currentSort: _currentSort,
-              options: const [SortOption.nameAZ, SortOption.nameZA],
-              onSortChanged: (sort) {
-                setState(() => _currentSort = sort);
-              },
-            ),
-          ),
-
-          const SizedBox(height: 8),
-
-          Expanded(
-            child: conditionsAsync.when(
-              data: (conditions) {
-                final currentUserId =
-                    Supabase.instance.client.auth.currentUser?.id;
-
-                // Filter by current user and search query
-                var filtered = conditions.where((c) {
-                  final isOwner = c.userId == currentUserId;
-                  final matchesSearch = c.description.toLowerCase().contains(
-                    _searchQuery.toLowerCase(),
-                  );
-                  return isOwner && matchesSearch;
-                }).toList();
-
-                filtered.sort((a, b) {
-                  switch (_currentSort) {
-                    case SortOption.nameZA:
-                      return b.description.compareTo(a.description);
-                    case SortOption.nameAZ:
-                      return a.description.compareTo(b.description);
-                    default:
-                      return 0;
-                  }
-                });
-
-                if (filtered.isEmpty) {
-                  return Center(
-                    child: Text(
-                      'No tienes condiciones registradas',
-                      style: textTheme.bodyLarge,
-                    ),
-                  );
-                }
-
-                return ListView.separated(
-                  itemCount: filtered.length,
-                  separatorBuilder: (context, index) =>
-                      const Divider(height: 1),
-                  itemBuilder: (context, index) {
-                    final condition = filtered[index];
-                    return ListTile(
-                      title: Text(
-                        condition.description,
-                        style: textTheme.bodyLarge?.copyWith(
-                          color: colors.onSurface,
-                        ),
-                      ),
-                      trailing: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          if (condition.isDefaultQuote)
-                            Tooltip(
-                              message: 'Por defecto en cotizaciones',
-                              child: Icon(
-                                Icons.description_outlined,
-                                size: 20,
-                                color: colors.onSurfaceVariant,
-                              ),
-                            ),
-                          if (condition.isDefaultReport) ...[
-                            if (condition.isDefaultQuote)
-                              const SizedBox(width: 4),
-                            Tooltip(
-                              message: 'Por defecto en reportes',
-                              child: Icon(
-                                Icons.assignment_outlined,
-                                size: 20,
-                                color: colors.onSurfaceVariant,
-                              ),
-                            ),
-                          ],
-                        ],
-                      ),
-                      onTap: () => _showEditSheet(condition),
-                    );
-                  },
-                );
-              },
-              loading: () => const Center(child: CircularProgressIndicator()),
-              error: (err, stack) =>
-                  const Center(child: Text('Error al cargar condiciones')),
-            ),
-          ),
-        ],
-      ),
+          onTap: () => _showEditSheet(context, condition),
+        );
+      },
     );
   }
 }

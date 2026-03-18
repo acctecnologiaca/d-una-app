@@ -58,11 +58,14 @@ class EstimatePriceSheet extends ConsumerStatefulWidget {
 class _EstimatePriceSheetState extends ConsumerState<EstimatePriceSheet> {
   double _profitPercentage = 25.0; // Default will be overwritten in initState
   late final TextEditingController _percentageController;
+  late final String _pricingMethod;
 
   @override
   void initState() {
     super.initState();
-    _profitPercentage = ref.read(createQuoteProvider).globalMargin;
+    final quoteState = ref.read(createQuoteProvider);
+    _profitPercentage = quoteState.globalMargin;
+    _pricingMethod = quoteState.pricingMethod;
     _percentageController = TextEditingController(
       text: _formatNumber(_profitPercentage),
     );
@@ -74,7 +77,16 @@ class _EstimatePriceSheetState extends ConsumerState<EstimatePriceSheet> {
     super.dispose();
   }
 
-  double get _sellingPrice => widget.basePrice * (1 + _profitPercentage / 100);
+  double get _sellingPrice {
+    if (_pricingMethod == 'margin') {
+      // Margin: price = cost / (1 - %/100)
+      final factor = 1 - (_profitPercentage / 100);
+      return factor > 0 ? widget.basePrice / factor : widget.basePrice;
+    }
+    // Markup: price = cost * (1 + %/100)
+    return widget.basePrice * (1 + _profitPercentage / 100);
+  }
+
   double get _profitPerUnit => _sellingPrice - widget.basePrice;
 
   String _formatNumber(double value) {

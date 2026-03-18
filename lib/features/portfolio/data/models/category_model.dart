@@ -4,14 +4,14 @@ class Category extends Equatable {
   final String id;
   final String name;
   final String type; // 'product', 'service', 'both', 'other'
-  final String? createdBy;
+  final String? userId;
   final bool isVerified;
 
   const Category({
     required this.id,
     required this.name,
     required this.type,
-    this.createdBy,
+    this.userId,
     this.isVerified = false,
   });
 
@@ -20,7 +20,7 @@ class Category extends Equatable {
       id: json['id'],
       name: json['name'],
       type: json['type'] ?? 'other',
-      createdBy: json['created_by'],
+      userId: json['user_id'],
       isVerified: json['is_verified'] ?? false,
     );
   }
@@ -30,11 +30,11 @@ class Category extends Equatable {
       'id': id,
       'name': name,
       'type': type,
-      'created_by': createdBy,
+      'user_id': userId,
       'is_verified': isVerified,
     };
   }
 
   @override
-  List<Object?> get props => [id, name, type, createdBy, isVerified];
+  List<Object?> get props => [id, name, type, userId, isVerified];
 }

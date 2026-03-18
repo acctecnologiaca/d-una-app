@@ -6,8 +6,8 @@ import '../../data/models/category_model.dart';
 import '../../data/models/brand_model.dart';
 import '../../data/models/uom_model.dart';
 import '../../domain/models/unaffiliated_supplier_model.dart';
-import '../../../quotes/data/models/collaborator.dart';
 import '../../../quotes/data/models/commercial_condition.dart';
+import '../../../settings/data/models/observation.dart';
 import '../../../settings/data/models/shipping_company.dart';
 import '../../data/models/delivery_time_model.dart';
 
@@ -36,14 +36,19 @@ final unaffiliatedSuppliersProvider =
       return ref.watch(lookupRepositoryProvider).getUnaffiliatedSuppliers();
     });
 
-final collaboratorsProvider = FutureProvider<List<Collaborator>>((ref) async {
-  return ref.watch(lookupRepositoryProvider).getCollaborators();
-});
+final allSuppliersProvider =
+    FutureProvider<List<UnaffiliatedSupplier>>((ref) async {
+      return ref.watch(lookupRepositoryProvider).getAllSuppliers();
+    });
 
 final commercialConditionsProvider = FutureProvider<List<CommercialCondition>>((
   ref,
 ) async {
   return ref.watch(lookupRepositoryProvider).getCommercialConditions();
+});
+
+final observationsProvider = FutureProvider<List<Observation>>((ref) async {
+  return ref.watch(lookupRepositoryProvider).getObservations();
 });
 
 final shippingCompaniesProvider = FutureProvider<List<ShippingCompany>>((

@@ -3,7 +3,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../data/models/shipping_method.dart';
 import '../../../profile/presentation/providers/profile_provider.dart';
-import '../../../../../shared/widgets/custom_extended_fab.dart';
+import '../../../../../shared/widgets/generic_list_screen.dart';
+import '../../../../../shared/widgets/standard_list_item.dart';
+import '../../../portfolio/presentation/providers/lookup_providers.dart';
 
 class ShippingMethodsScreen extends ConsumerStatefulWidget {
   const ShippingMethodsScreen({super.key});
@@ -14,26 +16,6 @@ class ShippingMethodsScreen extends ConsumerStatefulWidget {
 }
 
 class _ShippingMethodsScreenState extends ConsumerState<ShippingMethodsScreen> {
-  final _searchController = TextEditingController();
-  bool _isSearching = false;
-  String _searchQuery = '';
-
-  @override
-  void initState() {
-    super.initState();
-    _searchController.addListener(() {
-      setState(() {
-        _searchQuery = _searchController.text.toLowerCase();
-      });
-    });
-  }
-
-  @override
-  void dispose() {
-    _searchController.dispose();
-    super.dispose();
-  }
-
   Future<void> _removeMethod(ShippingMethod method) async {
     // ... existing remove logic ...
     final confirmed = await showDialog<bool>(
@@ -87,206 +69,92 @@ class _ShippingMethodsScreenState extends ConsumerState<ShippingMethodsScreen> {
     final textTheme = Theme.of(context).textTheme;
     final userProfileAsync = ref.watch(userProfileProvider);
 
-    return Scaffold(
-      backgroundColor: colors.surface,
-      appBar: AppBar(
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        leading: IconButton(
-          icon: Icon(Icons.arrow_back, color: colors.onSurface),
-          onPressed: () {
-            if (_isSearching) {
-              setState(() {
-                _isSearching = false;
-                _searchQuery = '';
-                _searchController.clear();
-              });
-            } else {
-              context.pop();
-            }
-          },
-        ),
-        title: _isSearching
-            ? TextField(
-                controller: _searchController,
-                autofocus: true,
-                decoration: InputDecoration(
-                  hintText: 'Buscar...',
-                  border: InputBorder.none,
-                  hintStyle: TextStyle(color: colors.onSurfaceVariant),
-                ),
-                style: TextStyle(color: colors.onSurface),
-              )
-            : Text(
-                'Métodos de envío',
-                style: textTheme.titleLarge?.copyWith(
-                  color: colors.onSurface,
-                  fontSize: 22,
-                  fontWeight: FontWeight.w500,
-                ),
-              ),
-        centerTitle: false,
-        actions: [
-          IconButton(
-            icon: Icon(
-              _isSearching ? Icons.close : Icons.search,
-              color: colors.onSurface,
-            ),
-            onPressed: () {
-              setState(() {
-                if (_isSearching) {
-                  _isSearching = false;
-                  _searchQuery = '';
-                  _searchController.clear();
-                } else {
-                  _isSearching = true;
-                }
-              });
-            },
-          ),
-        ],
-      ),
-      body: userProfileAsync.when(
-        loading: () => const Center(child: CircularProgressIndicator()),
-        error: (e, st) => Center(child: Text('Error: $e')),
-        data: (profile) {
-          if (profile == null) {
-            return const Center(child: Text('Perfil no encontrado'));
-          }
-
-          final shippingMethodsAsync = ref.watch(shippingMethodsProvider);
-
-          return shippingMethodsAsync.when(
-            loading: () => const Center(child: CircularProgressIndicator()),
-            error: (e, st) => Center(child: Text('Error cargando métodos: $e')),
-            data: (methods) {
-              final filteredMethods = methods.where((m) {
-                return m.label.toLowerCase().contains(_searchQuery);
-              }).toList();
-
-              if (filteredMethods.isEmpty) {
-                return Center(
-                  child: Text(
-                    methods.isEmpty
-                        ? 'No hay método de envío agregado'
-                        : 'No se encontraron resultados',
-                    style: textTheme.bodyLarge?.copyWith(
-                      color: colors.onSurfaceVariant,
-                    ),
-                  ),
-                );
-              }
-
-              return ListView.separated(
-                padding: const EdgeInsets.fromLTRB(16, 24, 16, 100),
-                itemCount: filteredMethods.length,
-                separatorBuilder: (context, index) => const Divider(height: 1),
-                itemBuilder: (context, index) {
-                  final method = filteredMethods[index];
-                  final isPrimary = method.isPrimary;
-
-                  return InkWell(
-                    onTap: () async {
-                      await context.push(
-                        '/settings/shipping-methods/edit',
-                        extra: method,
-                        // Route expects ShippingMethod object?
-                        // Note: In AddShippingMethodScreen I updated it to expect ShippingMethod?
-                        // But I need to verify go_router route definition.
-                      );
-                    },
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 0.0,
-                        vertical: 16.0,
-                      ),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Expanded(
-                            child: Row(
-                              children: [
-                                Flexible(
-                                  child: Column(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.start,
-                                    children: [
-                                      Text(
-                                        method.label,
-                                        style: textTheme.bodyLarge?.copyWith(
-                                          color: colors.onSurface,
-                                          fontSize: 16,
-                                        ),
-                                        overflow: TextOverflow.ellipsis,
-                                      ),
-                                      Text(
-                                        method.company?.displayName ??
-                                            'Desconocida',
-                                        style: textTheme.bodyMedium?.copyWith(
-                                          color: colors.onSurfaceVariant,
-                                        ),
-                                        overflow: TextOverflow.ellipsis,
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                                if (isPrimary) ...[
-                                  const SizedBox(width: 8),
-                                  Container(
-                                    padding: const EdgeInsets.symmetric(
-                                      horizontal: 8,
-                                      vertical: 2,
-                                    ),
-                                    decoration: BoxDecoration(
-                                      color: Colors.orange.withValues(
-                                        alpha: 0.2,
-                                      ),
-                                      borderRadius: BorderRadius.circular(12),
-                                    ),
-                                    child: Text(
-                                      'P',
-                                      style: TextStyle(
-                                        color: Colors.orange.shade800,
-                                        fontSize: 12,
-                                        fontWeight: FontWeight.bold,
-                                      ),
-                                    ),
-                                  ),
-                                ],
-                              ],
-                            ),
-                          ),
-                          IconButton(
-                            icon: const Icon(Icons.close, size: 20),
-                            color: colors.onSurfaceVariant,
-                            onPressed: () => _removeMethod(method),
-                            splashRadius: 20,
-                            padding: EdgeInsets.zero,
-                            constraints: const BoxConstraints(),
-                          ),
-                        ],
-                      ),
-                    ),
-                  );
-                },
-              );
-            },
+    return userProfileAsync.when(
+      loading: () =>
+          const Scaffold(body: Center(child: CircularProgressIndicator())),
+      error: (e, st) => Scaffold(body: Center(child: Text('Error: $e'))),
+      data: (profile) {
+        if (profile == null) {
+          return const Scaffold(
+            body: Center(child: Text('Perfil no encontrado')),
           );
-        },
-      ),
-      floatingActionButton: Padding(
-        padding: const EdgeInsets.only(bottom: 40.0),
-        child: CustomExtendedFab(
-          onPressed: () async {
+        }
+
+        final shippingMethodsAsync = ref.watch(shippingMethodsProvider);
+        final shippingCompaniesAsync = ref.watch(shippingCompaniesProvider);
+        final companies = shippingCompaniesAsync.valueOrNull ?? [];
+
+        return GenericListScreen<ShippingMethod>(
+          title: 'Métodos de envío',
+          itemsAsync: shippingMethodsAsync,
+          onSearch: (method, query) {
+            return method.label.toLowerCase().contains(query.toLowerCase());
+          },
+          onAddPressed: () async {
             await context.push('/settings/shipping-methods/add');
             ref.invalidate(shippingMethodsProvider);
           },
-          label: 'Agregar',
-          icon: Icons.add,
-          backgroundColor: colors.tertiaryContainer,
-          foregroundColor: colors.onTertiaryContainer,
-        ),
-      ),
+          emptyListMessage: 'No hay método de envío agregado',
+          itemBuilder: (context, method) {
+            final isPrimary = method.isPrimary;
+
+            final company = companies
+                .where((c) => c.id == method.companyId)
+                .firstOrNull;
+            final companyName = company?.displayName ?? 'Desconocida';
+
+            return StandardListItem(
+              onTap: () async {
+                await context.push(
+                  '/settings/shipping-methods/edit',
+                  extra: method,
+                );
+              },
+              title: method.label,
+              titleTrailing: isPrimary
+                  ? Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 2,
+                      ),
+                      decoration: BoxDecoration(
+                        color: Colors.orange.withValues(alpha: 0.2),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Text(
+                        'P',
+                        style: TextStyle(
+                          color: Colors.orange.shade800,
+                          fontSize: 12,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    )
+                  : null,
+              subtitle: Text(
+                companyName,
+                style: textTheme.bodyMedium?.copyWith(
+                  color: colors.onSurfaceVariant,
+                ),
+                overflow: TextOverflow.ellipsis,
+              ),
+              trailing: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  IconButton(
+                    icon: const Icon(Icons.close, size: 20),
+                    color: colors.onSurfaceVariant,
+                    onPressed: () => _removeMethod(method),
+                    splashRadius: 20,
+                    padding: EdgeInsets.zero,
+                    constraints: const BoxConstraints(),
+                  ),
+                ],
+              ),
+            );
+          },
+        );
+      },
     );
   }
 }

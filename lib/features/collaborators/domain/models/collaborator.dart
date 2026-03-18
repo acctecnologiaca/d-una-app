@@ -1,5 +1,6 @@
 class Collaborator {
   final String id;
+  final String userId;
   final String fullName;
   final String? identificationId;
   final String? phone;
@@ -9,6 +10,7 @@ class Collaborator {
 
   Collaborator({
     required this.id,
+    required this.userId,
     required this.fullName,
     this.identificationId,
     this.phone,
@@ -20,6 +22,7 @@ class Collaborator {
   factory Collaborator.fromJson(Map<String, dynamic> json) {
     return Collaborator(
       id: json['id'] as String,
+      userId: json['user_id'] as String,
       fullName: json['full_name'] as String,
       identificationId: json['identification_id'] as String?,
       phone: json['phone'] as String?,
@@ -32,6 +35,7 @@ class Collaborator {
   Map<String, dynamic> toJson() {
     return {
       'id': id,
+      'user_id': userId,
       'full_name': fullName,
       'identification_id': identificationId,
       'phone': phone,

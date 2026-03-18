@@ -21,6 +21,7 @@ class CustomTextField extends StatefulWidget {
   final int? minLines;
   final FocusNode? focusNode;
   final String? prefixText;
+  final bool autofocus;
 
   const CustomTextField({
     super.key,
@@ -43,6 +44,7 @@ class CustomTextField extends StatefulWidget {
     this.minLines,
     this.focusNode,
     this.prefixText,
+    this.autofocus = false,
   });
 
   @override
@@ -117,6 +119,7 @@ class _CustomTextFieldState extends State<CustomTextField> {
         TextFormField(
           controller: _controller,
           focusNode: widget.focusNode,
+          autofocus: widget.autofocus,
           obscureText: widget.obscureText,
           keyboardType: widget.keyboardType,
           inputFormatters: widget.inputFormatters,

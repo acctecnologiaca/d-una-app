@@ -8,7 +8,10 @@ enum SortOption {
   nameZA,
   durationAsc,
   durationDesc,
-  type;
+  type,
+  oldest,
+  highestPrice,
+  lowestPrice;
 
   String get label {
     switch (this) {
@@ -26,6 +29,12 @@ enum SortOption {
         return 'Tiempo (9-0)';
       case SortOption.type:
         return 'Por tipo';
+      case SortOption.oldest:
+        return 'Más antigua';
+      case SortOption.highestPrice:
+        return 'Mayor precio';
+      case SortOption.lowestPrice:
+        return 'Menor precio';
     }
   }
 }
@@ -204,6 +213,9 @@ class SortSelector extends StatelessWidget {
         if (option == SortOption.durationAsc) return Icons.timer_outlined;
         if (option == SortOption.durationDesc) return Icons.timer;
         if (option == SortOption.type) return Icons.category_outlined;
+        if (option == SortOption.oldest) return Icons.history;
+        if (option == SortOption.highestPrice) return Icons.arrow_upward;
+        if (option == SortOption.lowestPrice) return Icons.arrow_downward;
         return Icons.sort;
       },
     );
