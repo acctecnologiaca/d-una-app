@@ -73,6 +73,7 @@ class _AddEditServiceRateSheetState
       navigator.pop();
       scaffoldMessenger.showSnackBar(
         SnackBar(
+          behavior: SnackBarBehavior.floating,
           content: Text(
             isEditing
                 ? 'Tarifa actualizada a "$name"'
@@ -82,7 +83,7 @@ class _AddEditServiceRateSheetState
       );
     } catch (e) {
       setState(() => _isLoading = false);
-      scaffoldMessenger.showSnackBar(SnackBar(content: Text('Error: $e')));
+      scaffoldMessenger.showSnackBar(SnackBar(behavior: SnackBarBehavior.floating, content: Text('Error: $e')));
     }
   }
 
@@ -121,10 +122,10 @@ class _AddEditServiceRateSheetState
       ref.invalidate(serviceRatesProvider);
       navigator.pop();
       scaffoldMessenger.showSnackBar(
-        SnackBar(content: Text('Tarifa "${widget.rate!.name}" eliminada')),
+        SnackBar(behavior: SnackBarBehavior.floating, content: Text('Tarifa "${widget.rate!.name}" eliminada')),
       );
     } catch (e) {
-      scaffoldMessenger.showSnackBar(SnackBar(content: Text('Error: $e')));
+      scaffoldMessenger.showSnackBar(SnackBar(behavior: SnackBarBehavior.floating, content: Text('Error: $e')));
     }
   }
 

@@ -74,7 +74,7 @@ class _AddEditSupplierSheetState extends ConsumerState<AddEditSupplierSheet> {
 
     if (legalName.isEmpty || taxId.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('La Razón Social y el RIF son obligatorios.')),
+        const SnackBar(behavior: SnackBarBehavior.floating, content: Text('La Razón Social y el RIF son obligatorios.')),
       );
       return;
     }
@@ -126,6 +126,7 @@ class _AddEditSupplierSheetState extends ConsumerState<AddEditSupplierSheet> {
 
       scaffoldMessenger.showSnackBar(
         SnackBar(
+          behavior: SnackBarBehavior.floating,
           content: Text(
             isEditing
                 ? 'Proveedor actualizado a "$legalName"'
@@ -135,7 +136,7 @@ class _AddEditSupplierSheetState extends ConsumerState<AddEditSupplierSheet> {
       );
     } catch (e) {
       setState(() => _isLoading = false);
-      scaffoldMessenger.showSnackBar(SnackBar(content: Text('Error: $e')));
+      scaffoldMessenger.showSnackBar(SnackBar(behavior: SnackBarBehavior.floating, content: Text('Error: $e')));
     }
   }
 
@@ -172,10 +173,10 @@ class _AddEditSupplierSheetState extends ConsumerState<AddEditSupplierSheet> {
       ref.invalidate(unaffiliatedSuppliersProvider);
       navigator.pop();
       scaffoldMessenger.showSnackBar(
-        SnackBar(content: Text('Proveedor "${widget.supplier!.legalName ?? widget.supplier!.name}" eliminado')),
+        SnackBar(behavior: SnackBarBehavior.floating, content: Text('Proveedor "${widget.supplier!.legalName ?? widget.supplier!.name}" eliminado')),
       );
     } catch (e) {
-      scaffoldMessenger.showSnackBar(SnackBar(content: Text('Error: $e')));
+      scaffoldMessenger.showSnackBar(SnackBar(behavior: SnackBarBehavior.floating, content: Text('Error: $e')));
     }
   }
 

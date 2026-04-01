@@ -13,8 +13,9 @@ class AggregatedProduct extends Equatable {
   final String? firstSupplierId;
   final String? firstSupplierName;
   final String? firstSupplierTradeType;
+  final List<String> supplierIds;
   final String uom;
-  final String? uomSymbolName;
+  final String? uomIconName;
   final bool isLocked;
 
   const AggregatedProduct({
@@ -28,8 +29,9 @@ class AggregatedProduct extends Equatable {
     this.firstSupplierId,
     this.firstSupplierName,
     this.firstSupplierTradeType,
+    this.supplierIds = const [],
     required this.uom,
-    this.uomSymbolName,
+    this.uomIconName,
     this.isLocked = false,
   });
 
@@ -58,8 +60,12 @@ class AggregatedProduct extends Equatable {
       firstSupplierId: json['first_supplier_id'] as String?,
       firstSupplierName: json['first_supplier_name'] as String?,
       firstSupplierTradeType: json['first_supplier_trade_type'] as String?,
+      supplierIds: (json['supplier_ids'] as List<dynamic>?)
+              ?.map((e) => e.toString())
+              .toList() ??
+          [],
       uom: json['uom_label'] as String? ?? json['uom'] as String? ?? 'Unidad',
-      uomSymbolName: json['uom_symbol_name'] as String?,
+      uomIconName: json['uom_icon_name'] as String?,
       isLocked: json['is_locked'] as bool? ?? false,
     );
   }
@@ -76,8 +82,9 @@ class AggregatedProduct extends Equatable {
     firstSupplierId,
     firstSupplierName,
     firstSupplierTradeType,
+    supplierIds,
     uom,
-    uomSymbolName,
+    uomIconName,
     isLocked,
   ];
 }

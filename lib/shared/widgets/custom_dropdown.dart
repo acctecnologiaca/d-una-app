@@ -85,23 +85,31 @@ class _CustomDropdownState<T extends Object> extends State<CustomDropdown<T>> {
 
   Widget _buildStandard(BuildContext context) {
     final colors = Theme.of(context).colorScheme;
+    final dropdownItems = <DropdownMenuItem<T>>[];
 
-    return DropdownButtonFormField<T>(
-      initialValue: widget.value,
-      isExpanded: true,
-      itemHeight: null,
-      decoration: _decoration(),
-      icon: const Icon(Icons.arrow_drop_down),
-      selectedItemBuilder: (BuildContext context) {
-        return widget.items.map<Widget>((T item) {
-          return Text(
-            widget.itemLabelBuilder(item),
-            overflow: TextOverflow.ellipsis,
-            style: TextStyle(color: colors.onSurface),
-          );
-        }).toList();
-      },
-      items: widget.items.map((item) {
+    if (widget.showAddOption && widget.addOptionValue != null) {
+      dropdownItems.add(
+        DropdownMenuItem<T>(
+          value: widget.addOptionValue as T,
+          child: Row(
+            children: [
+              Icon(Icons.add, color: colors.primary, size: 20),
+              const SizedBox(width: 8),
+              Text(
+                widget.addOptionLabel,
+                style: TextStyle(
+                  color: colors.primary,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
+    dropdownItems.addAll(
+      widget.items.map((item) {
         return DropdownMenuItem<T>(
           value: item,
           child: Text(
@@ -110,9 +118,36 @@ class _CustomDropdownState<T extends Object> extends State<CustomDropdown<T>> {
             overflow: TextOverflow.visible,
           ),
         );
-      }).toList(),
+      }),
+    );
+
+    return DropdownButtonFormField<T>(
+      initialValue: widget.value,
+      isExpanded: true,
+      itemHeight: null,
+      decoration: _decoration(),
+      icon: const Icon(Icons.arrow_drop_down),
+      selectedItemBuilder: (BuildContext context) {
+        return dropdownItems.map<Widget>((DropdownMenuItem<T> item) {
+          if (item.value == widget.addOptionValue) {
+            return const SizedBox.shrink();
+          }
+          return Text(
+            widget.itemLabelBuilder(item.value as T),
+            overflow: TextOverflow.ellipsis,
+            style: TextStyle(color: colors.onSurface),
+          );
+        }).toList();
+      },
+      items: dropdownItems,
       validator: widget.validator,
-      onChanged: widget.onChanged,
+      onChanged: (T? newValue) {
+        if (newValue == widget.addOptionValue && widget.showAddOption) {
+          widget.onAddPressed?.call();
+        } else {
+          widget.onChanged?.call(newValue);
+        }
+      },
     );
   }
 

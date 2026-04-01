@@ -114,9 +114,23 @@ class _SupplierSearchScreenState extends ConsumerState<SupplierSearchScreen> {
   // --- Filter Logic ---
 
   void _showSupplierFilter() {
-    final suppliers = ref.read(suppliersProvider).valueOrNull ?? [];
-    final options = suppliers.map((s) => s.id).toList();
-    final nameMap = {for (var s in suppliers) s.id: s.name};
+    final allSuppliers = ref.read(suppliersProvider).valueOrNull ?? [];
+    final facets = _getAvailableFacets();
+
+    // Filters:
+    // 1. Matched by name (from combinedAsync/suppliersAsync)
+    // 2. Associated with products matching the query
+    final availableSuppliers = facets.supplierIds.isEmpty && _currentQuery.isEmpty
+        ? allSuppliers
+        : allSuppliers.where((s) {
+            final matchesQuery = s.name.normalized.contains(_currentQuery.normalized);
+            final matchesFacet = facets.supplierIds.contains(s.id);
+            final isSelected = _filters.supplierIds.contains(s.id);
+            return matchesQuery || matchesFacet || isSelected;
+          }).toList();
+
+    final options = availableSuppliers.map((s) => s.id).toList();
+    final nameMap = {for (var s in availableSuppliers) s.id: s.name};
 
     FilterBottomSheet.showMulti(
       context: context,
@@ -133,11 +147,11 @@ class _SupplierSearchScreenState extends ConsumerState<SupplierSearchScreen> {
   }
 
   // --- Facet Extraction ---
-
-  ({Set<String> categories, Set<String> brands}) _getAvailableFacets() {
+  
+  ({Set<String> categories, Set<String> brands, Set<String> supplierIds}) _getAvailableFacets() {
     // If no query, return empty sets to indicate "show all"
     if (_currentQuery.trim().isEmpty) {
-      return (categories: <String>{}, brands: <String>{});
+      return (categories: <String>{}, brands: <String>{}, supplierIds: <String>{});
     }
 
     // Note: productSearchProvider returns List<AggregatedProduct>
@@ -150,6 +164,7 @@ class _SupplierSearchScreenState extends ConsumerState<SupplierSearchScreen> {
     final items = searchState.valueOrNull ?? [];
     final categories = <String>{};
     final brands = <String>{};
+    final supplierIds = <String>{};
 
     for (final item in items) {
       // item is AggregatedProduct directly
@@ -159,9 +174,14 @@ class _SupplierSearchScreenState extends ConsumerState<SupplierSearchScreen> {
       if (item.brand.isNotEmpty) {
         brands.add(item.brand);
       }
+      for (final id in item.supplierIds) {
+        if (id.isNotEmpty) {
+          supplierIds.add(id);
+        }
+      }
     }
 
-    return (categories: categories, brands: brands);
+    return (categories: categories, brands: brands, supplierIds: supplierIds);
   }
 
   void _showCategoryFilter() async {
@@ -439,7 +459,7 @@ class _SupplierSearchScreenState extends ConsumerState<SupplierSearchScreen> {
               totalQuantity: item.product.totalQuantity,
               supplierCount: item.product.supplierCount,
               uom: item.product.uom,
-              uomSymbolName: item.product.uomSymbolName,
+              uomIconName: item.product.uomIconName,
               isLocked: isProductLocked,
               onTap: () {
                 Navigator.push(

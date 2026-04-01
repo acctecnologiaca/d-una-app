@@ -6,7 +6,7 @@ class Uom extends Equatable {
   final String symbol;
   final String? userId;
   final bool isVerified;
-  final String? symbolName;
+  final String? iconName;
 
   const Uom({
     required this.id,
@@ -14,7 +14,7 @@ class Uom extends Equatable {
     required this.symbol,
     this.userId,
     this.isVerified = false,
-    this.symbolName,
+    this.iconName,
   });
 
   factory Uom.fromJson(Map<String, dynamic> json) {
@@ -24,7 +24,7 @@ class Uom extends Equatable {
       symbol: json['symbol'] ?? '',
       userId: json['user_id'],
       isVerified: json['is_verified'] ?? false,
-      symbolName: json['symbol_name'],
+      iconName: json['icon_name'],
     );
   }
 
@@ -35,10 +35,10 @@ class Uom extends Equatable {
       'symbol': symbol,
       'user_id': userId,
       'is_verified': isVerified,
-      'symbol_name': symbolName,
+      'icon_name': iconName,
     };
   }
 
   @override
-  List<Object?> get props => [id, name, symbol, userId, isVerified, symbolName];
+  List<Object?> get props => [id, name, symbol, userId, isVerified, iconName];
 }

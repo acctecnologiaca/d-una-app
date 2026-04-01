@@ -1,3 +1,4 @@
+import 'package:d_una_app/features/purchases/presentation/providers/add_purchase_provider.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -6,7 +7,7 @@ import 'package:d_una_app/shared/widgets/custom_search_bar.dart';
 import 'package:d_una_app/shared/widgets/sort_selector.dart';
 import 'package:d_una_app/shared/widgets/custom_extended_fab.dart';
 import 'package:d_una_app/core/utils/string_extensions.dart';
-import '../providers/purchases_providers.dart';
+import 'package:d_una_app/features/purchases/presentation/providers/purchases_providers.dart';
 import '../widgets/purchase_list_item.dart';
 
 class PurchasesListScreen extends ConsumerStatefulWidget {
@@ -44,11 +45,14 @@ class _PurchasesListScreenState extends ConsumerState<PurchasesListScreen> {
   @override
   Widget build(BuildContext context) {
     final colors = Theme.of(context).colorScheme;
-    final purchasesAsync = ref.watch(purchasesProvider);
+    final productId = GoRouterState.of(context).uri.queryParameters['productId'];
+    final purchasesAsync = ref.watch(purchasesProvider(productId));
 
     return Scaffold(
       backgroundColor: colors.surface,
-      appBar: const StandardAppBar(title: 'Mis compras'),
+      appBar: StandardAppBar(
+        title: productId != null ? 'Compras del producto' : 'Mis compras',
+      ),
       body: Column(
         children: [
           // Search & Filter Bar
@@ -62,6 +66,7 @@ class _PurchasesListScreenState extends ConsumerState<PurchasesListScreen> {
               hintText: 'Buscar...',
               readOnly: true,
               showFilterIcon: true,
+              onTap: () => context.push('/my-purchases/search'),
             ),
           ),
 
@@ -144,16 +149,7 @@ class _PurchasesListScreenState extends ConsumerState<PurchasesListScreen> {
                     return PurchaseListItem(
                       purchase: purchase,
                       onTap: () {
-                        // TODO: Navigate to purchase details screen when ready
-                        ScaffoldMessenger.of(context)
-                          ..hideCurrentSnackBar()
-                          ..showSnackBar(
-                            SnackBar(
-                              content: Text(
-                                'Abriendo detalle de la compra: ${purchase.documentNumber}',
-                              ),
-                            ),
-                          );
+                        context.push('/my-purchases/view/${purchase.id}');
                       },
                     );
                   },
@@ -167,6 +163,7 @@ class _PurchasesListScreenState extends ConsumerState<PurchasesListScreen> {
         padding: const EdgeInsets.only(bottom: 40.0),
         child: CustomExtendedFab(
           onPressed: () {
+            ref.read(addPurchaseProvider.notifier).reset();
             context.push('/my-purchases/add');
           },
           label: 'Registrar',

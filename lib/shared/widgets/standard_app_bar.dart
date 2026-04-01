@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:go_router/go_router.dart';
 
 class StandardAppBar extends StatefulWidget implements PreferredSizeWidget {
   final String title;
@@ -77,11 +76,17 @@ class _StandardAppBarState extends State<StandardAppBar> {
       centerTitle: widget.centerTitle,
       leading: IconButton(
         icon: Icon(Icons.arrow_back, color: colors.onSurface),
-        onPressed: () {
+        onPressed: () async {
           if (_isSearching) {
             _stopSearch();
           } else {
-            context.pop();
+            // Usa Navigator.maybePop para respetar el PopScope.
+            // context.pop() de go_router fuerza la salida.
+            final navigator = Navigator.of(context);
+            if (await navigator.maybePop() == false) {
+              // Si maybePop retorna false, el PopScope lo interceptó (si canPop es false)
+              // o no hay rutas en el Navigator. El PopScope decide qué hacer en onPopInvokedWithResult.
+            }
           }
         },
       ),

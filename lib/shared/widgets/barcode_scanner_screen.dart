@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 
 class BarcodeScannerScreen extends StatefulWidget {
@@ -41,17 +42,34 @@ class _BarcodeScannerScreenState extends State<BarcodeScannerScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
+    final textTheme = Theme.of(context).textTheme;
+
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Escanear Código'),
-        centerTitle: true,
+        title: Text(
+          'Escanear Código',
+          style: textTheme.titleLarge?.copyWith(
+            fontWeight: FontWeight.w400,
+            fontSize: 22,
+            color: colors.onSurface,
+          ),
+        ),
+        centerTitle: false,
+        backgroundColor: colors.surface,
+        leading: IconButton(
+          icon: Icon(Icons.arrow_back, color: colors.onSurface),
+          onPressed: () => context.pop(),
+        ),
         actions: [
           IconButton(
             icon: const Icon(Icons.flash_on),
+            color: colors.onSurface,
             onPressed: () => controller.toggleTorch(),
           ),
           IconButton(
             icon: const Icon(Icons.cameraswitch),
+            color: colors.onSurface,
             onPressed: () => controller.switchCamera(),
           ),
         ],

@@ -5,6 +5,7 @@ import '../../../../../shared/widgets/standard_app_bar.dart';
 import '../../../../../shared/widgets/custom_search_bar.dart';
 import '../../../../../shared/widgets/sort_selector.dart';
 import '../../../../../shared/widgets/aggregated_product_card.dart';
+import '../../../../portfolio/presentation/providers/product_search_provider.dart';
 import '../providers/quote_product_selection_provider.dart';
 
 class SelectProductScreen extends ConsumerStatefulWidget {
@@ -22,7 +23,9 @@ class _SelectProductScreenState extends ConsumerState<SelectProductScreen> {
   Widget build(BuildContext context) {
     final colors = Theme.of(context).colorScheme;
 
-    final suggestionsAsync = ref.watch(quoteProductSuggestionsProvider);
+    final suggestionsAsync = ref.watch(
+      quoteProductSuggestionsProvider(const ProductSearchParams(query: '')),
+    );
 
     return Scaffold(
       appBar: StandardAppBar(
@@ -165,9 +168,10 @@ class _SelectProductScreenState extends ConsumerState<SelectProductScreen> {
                       model: product.model,
                       minPrice: product.minPrice,
                       totalQuantity: product.totalQuantity,
-                      supplierCount: product.supplierCount,
+                      supplierCount: product.supplierCount +
+                          (product.hasOwnInventory ? 1 : 0),
                       uom: product.uom,
-                      uomSymbolName: product.uomSymbolName,
+                      uomIconName: product.uomIconName,
                       showPriceAndStock: true,
                       onTap: () {
                         context

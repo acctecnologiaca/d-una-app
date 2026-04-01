@@ -82,6 +82,7 @@ class _AddEditObservationSheetState
       navigator.pop();
       scaffoldMessenger.showSnackBar(
         SnackBar(
+          behavior: SnackBarBehavior.floating,
           content: Text(
             isEditing ? 'Observación actualizada' : 'Observación agregada',
           ),
@@ -89,7 +90,7 @@ class _AddEditObservationSheetState
       );
     } catch (e) {
       setState(() => _isLoading = false);
-      scaffoldMessenger.showSnackBar(SnackBar(content: Text('Error: $e')));
+      scaffoldMessenger.showSnackBar(SnackBar(behavior: SnackBarBehavior.floating, content: Text('Error: $e')));
     }
   }
 
@@ -130,10 +131,10 @@ class _AddEditObservationSheetState
       ref.invalidate(observationsProvider);
       navigator.pop();
       scaffoldMessenger.showSnackBar(
-        const SnackBar(content: Text('Observación eliminada')),
+        const SnackBar(behavior: SnackBarBehavior.floating, content: Text('Observación eliminada')),
       );
     } catch (e) {
-      scaffoldMessenger.showSnackBar(SnackBar(content: Text('Error: $e')));
+      scaffoldMessenger.showSnackBar(SnackBar(behavior: SnackBarBehavior.floating, content: Text('Error: $e')));
     }
   }
 

@@ -1,3 +1,4 @@
+import 'package:d_una_app/core/utils/string_extensions.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -16,6 +17,7 @@ import '../../../../../features/portfolio/data/models/product_model.dart';
 import '../../../../../features/portfolio/presentation/providers/products_provider.dart';
 import '../../../../../shared/utils/currency_formatter.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import '../../../../../features/settings/presentation/widgets/add_edit_brand_sheet.dart';
 
 class AddTemporalProductScreen extends ConsumerStatefulWidget {
   final QuoteItemProduct? existingItem;
@@ -34,7 +36,7 @@ class _AddTemporalProductScreenState
   final _modelController = TextEditingController();
 
   // Combos / Text
-  String _selectedBrand = 'Genérico';
+  String _selectedBrand = 'SIN MARCA';
   final _quantityController = TextEditingController(text: '1');
   String _selectedMeasure = 'Unidades';
 
@@ -62,7 +64,7 @@ class _AddTemporalProductScreenState
     if (existing != null) {
       _nameController.text = existing.name;
       _modelController.text = existing.model ?? '';
-      _selectedBrand = existing.brand ?? 'Genérico';
+      _selectedBrand = existing.brand ?? 'SIN MARCA';
       _quantityController.text =
           existing.quantity.truncateToDouble() == existing.quantity
           ? existing.quantity.toInt().toString()
@@ -197,7 +199,7 @@ class _AddTemporalProductScreenState
       id: widget.existingItem?.id ?? const Uuid().v4(),
       quoteId: 'draft',
       name: _nameController.text.trim(),
-      brand: _selectedBrand.trim().isNotEmpty && _selectedBrand != 'Genérico'
+      brand: _selectedBrand.trim().isNotEmpty && _selectedBrand != 'SIN MARCA'
           ? _selectedBrand.trim()
           : null,
       model: _modelController.text.trim().isNotEmpty
@@ -259,12 +261,25 @@ class _AddTemporalProductScreenState
     }
   }
 
+  Future<void> _showAddBrandDialog() async {
+    final newBrand = await AddEditBrandSheet.show(context);
+    if (newBrand != null && mounted) {
+      setState(() {
+        _selectedBrand = newBrand.name;
+      });
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final colors = Theme.of(context).colorScheme;
     final brandsAsync = ref.watch(brandsProvider);
-    final brands = brandsAsync.value ?? [];
-    final brandItems = ['Genérico', ...brands.map((b) => b.name)];
+    final brands = brandsAsync.valueOrNull ?? [];
+    final brandNames = brands.map((b) => b.name).toList();
+    if (!brandNames.any((n) => n.toUpperCase() == 'SIN MARCA')) {
+      brandNames.insert(0, 'SIN MARCA');
+    }
+    final brandItems = brandNames;
     final uomsAsync = ref.watch(uomsProvider);
     final uoms = uomsAsync.value ?? [];
     final uomNames = uoms.map((u) => u.name).toList();
@@ -311,7 +326,11 @@ class _AddTemporalProductScreenState
               value: _selectedBrand,
               items: brandItems,
               label: 'Marca',
-              itemLabelBuilder: (String value) => value,
+              itemLabelBuilder: (String value) => value.toTitleCase,
+              showAddOption: true,
+              addOptionValue: '___ADD___',
+              addOptionLabel: 'Agregar',
+              onAddPressed: _showAddBrandDialog,
               onChanged: (newValue) {
                 if (newValue != null) {
                   setState(() {
@@ -364,7 +383,7 @@ class _AddTemporalProductScreenState
                           .where((u) => u.name == value)
                           .firstOrNull;
                       return match != null
-                          ? '${match.name} (${match.symbol})'
+                          ? '${match.name.toTitleCase} (${match.symbol})'
                           : value;
                     },
                     onChanged: (newValue) {

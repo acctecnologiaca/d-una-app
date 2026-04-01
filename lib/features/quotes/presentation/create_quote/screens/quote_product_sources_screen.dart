@@ -143,7 +143,7 @@ class _QuoteProductSourcesScreenState
               totalQuantity: widget.product.totalQuantity,
               supplierCount: widget.product.supplierCount,
               uom: widget.product.uom,
-              uomSymbolName: widget.product.uomSymbolName,
+              uomIconName: widget.product.uomIconName,
               onTap: () {},
               showPriceAndStock: false,
             ),
@@ -208,15 +208,14 @@ class _QuoteProductSourcesScreenState
                   // 1. Initial Product Sources Filter
                   // Only show suppliers that were included in the aggregated product
                   // (which respects any supplier filters chosen on the previous screen).
-                  // If no sources are provided, show all.
-                  if (widget.product.sources.isNotEmpty) {
-                    final allowedSuppliers = widget.product.sources
-                        .map((s) => s.supplierName.toLowerCase())
+                  if (item.sourceType == ProductSourceType.own) {
+                    if (!widget.product.hasOwnInventory) return false;
+                  } else {
+                    final allowedSuppliers = widget.product.supplierNames
+                        .map((s) => s.toLowerCase())
                         .toSet();
 
-                    if (!allowedSuppliers.contains(
-                      item.sourceName.toLowerCase(),
-                    )) {
+                    if (!allowedSuppliers.contains(item.sourceName.toLowerCase())) {
                       return false;
                     }
                   }

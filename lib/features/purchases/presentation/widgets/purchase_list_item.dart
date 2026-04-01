@@ -1,16 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../../domain/models/purchase_model.dart';
+import 'package:d_una_app/shared/utils/currency_formatter.dart';
 
 class PurchaseListItem extends StatelessWidget {
   final Purchase purchase;
   final VoidCallback? onTap;
 
-  const PurchaseListItem({
-    super.key,
-    required this.purchase,
-    this.onTap,
-  });
+  const PurchaseListItem({super.key, required this.purchase, this.onTap});
 
   @override
   Widget build(BuildContext context) {
@@ -21,13 +18,7 @@ class PurchaseListItem extends StatelessWidget {
     final dateFormatter = DateFormat('dd/MM/yyyy');
     final formattedDate = dateFormatter.format(purchase.date);
 
-    // Format Amount: "$725,00"
-    final currencyFormatter = NumberFormat.currency(
-      locale: 'es_VE', // Assuming VE standard, adjust if needed
-      symbol: '\$',
-      decimalDigits: 2,
-    );
-    final formattedAmount = currencyFormatter.format(purchase.subtotal);
+    final formattedAmount = CurrencyFormatter.format(purchase.subtotal);
 
     // Document Icon
     final docIcon = purchase.documentType == 'invoice'
@@ -36,7 +27,7 @@ class PurchaseListItem extends StatelessWidget {
 
     // Background Color logic - red tint if missing serials
     final backgroundColor = purchase.hasMissingSerials
-        ? colors.errorContainer.withValues(alpha: 0.3)
+        ? colors.errorContainer.withValues(alpha: 0.8)
         : Colors.transparent;
 
     return Material(

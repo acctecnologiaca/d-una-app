@@ -1,23 +1,26 @@
 import 'package:flutter/material.dart';
 
 class InfoBlock extends StatelessWidget {
-  final IconData icon;
+  final IconData? icon;
+  final Widget? iconWidget;
   final String label;
   final Widget content;
   final Widget? action;
 
   const InfoBlock({
     super.key,
-    required this.icon,
+    this.icon,
+    this.iconWidget,
     required this.label,
     required this.content,
     this.action,
-  });
+  }) : assert(icon != null || iconWidget != null, 'Either icon or iconWidget must be provided');
 
   // Convenience constructor when content is just text
   factory InfoBlock.text({
     Key? key,
-    required IconData icon,
+    IconData? icon,
+    Widget? iconWidget,
     required String label,
     required String value,
     Widget? action,
@@ -25,6 +28,7 @@ class InfoBlock extends StatelessWidget {
     return InfoBlock(
       key: key,
       icon: icon,
+      iconWidget: iconWidget,
       label: label,
       content: Builder(
         builder: (context) {
@@ -51,7 +55,18 @@ class InfoBlock extends StatelessWidget {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.center, // Vertically centered
       children: [
-        Icon(icon, size: 32, color: colors.onSurfaceVariant), // 32x32 size
+        SizedBox(
+          width: 32,
+          height: 32,
+          child: Center(
+            child: iconWidget ??
+                Icon(
+                  icon!,
+                  size: 32,
+                  color: colors.onSurfaceVariant,
+                ),
+          ),
+        ),
         const SizedBox(width: 16), // 16px gap
         Expanded(
           child: Column(

@@ -63,6 +63,7 @@ class QuotesSearchScreen extends ConsumerStatefulWidget {
 class _QuotesSearchScreenState extends ConsumerState<QuotesSearchScreen> {
   // Filters
   final Set<String> _selectedStatuses = {};
+  String _searchQuery = '';
 
   String _getChipLabel(Set<String> selected, String defaultLabel) {
     if (selected.isEmpty) return defaultLabel;
@@ -72,12 +73,17 @@ class _QuotesSearchScreenState extends ConsumerState<QuotesSearchScreen> {
 
   void _showStatusFilter(List<Quote> quotes) {
     // Collect specific strings (labels) for the filter UI
-    final options = quotes.map((e) => e.status.label).toSet().toList()..sort();
+    final queryNormalized = _searchQuery.normalized;
+    final availableStatuses = quotes.where((q) {
+      return queryNormalized.isEmpty ||
+          q.clientName.normalized.contains(queryNormalized) ||
+          q.quoteNumber.normalized.contains(queryNormalized);
+    }).map((e) => e.status.label).toSet().toList()..sort();
 
     FilterBottomSheet.showMulti(
       context: context,
       title: 'Estado',
-      options: options,
+      options: availableStatuses,
       selectedValues: _selectedStatuses, // Fixed parameter name
       onApply: (selected) {
         setState(() {
@@ -100,6 +106,12 @@ class _QuotesSearchScreenState extends ConsumerState<QuotesSearchScreen> {
       onResetFilters: () {
         setState(() {
           _selectedStatuses.clear();
+          _searchQuery = '';
+        });
+      },
+      onQueryChanged: (query) {
+        setState(() {
+          _searchQuery = query;
         });
       },
       itemBuilder: (context, quote) {

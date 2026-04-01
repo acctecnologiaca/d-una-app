@@ -67,7 +67,7 @@ class _AddProductStep3State extends State<AddProductStep3> {
                   ),
                   const SizedBox(height: 16),
                   Text(
-                    'Categoría y Unidad de Medida del producto.',
+                    'Categoría y unidad de medida del producto.',
                     style: TextStyle(
                       fontSize: 14,
                       color: colors.onSurfaceVariant,

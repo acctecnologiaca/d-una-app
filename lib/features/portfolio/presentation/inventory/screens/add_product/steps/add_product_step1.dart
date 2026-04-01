@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:d_una_app/features/settings/presentation/widgets/add_edit_brand_sheet.dart';
 import '../../../../../data/models/brand_model.dart';
 import '../../../../../../../shared/widgets/custom_text_field.dart';
 import '../../../../../../../shared/widgets/custom_dropdown.dart';
@@ -126,37 +127,10 @@ class _AddProductStep1State extends State<AddProductStep1> {
     );
   }
 
-  void _showAddBrandDialog() {
-    final textController = TextEditingController();
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Agregar nueva marca'),
-        content: TextField(
-          controller: textController,
-          decoration: const InputDecoration(
-            labelText: 'Nombre de la marca',
-            hintText: 'Ej. Samsung',
-          ),
-          textCapitalization: TextCapitalization.words,
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cancelar'),
-          ),
-          FilledButton(
-            onPressed: () {
-              final val = textController.text.trim();
-              if (val.isNotEmpty) {
-                widget.onAddBrand(val);
-                Navigator.pop(context);
-              }
-            },
-            child: const Text('Agregar'),
-          ),
-        ],
-      ),
-    );
+  Future<void> _showAddBrandDialog() async {
+    final newBrand = await AddEditBrandSheet.show(context);
+    if (newBrand != null && mounted) {
+      widget.onAddBrand(newBrand.name);
+    }
   }
 }

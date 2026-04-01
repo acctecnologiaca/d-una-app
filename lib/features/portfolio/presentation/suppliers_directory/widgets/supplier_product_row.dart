@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:material_symbols_icons/symbols.dart';
 import '../../../../../shared/widgets/dynamic_material_symbol.dart';
 import '../../../../../shared/widgets/standard_list_item.dart';
+import '../../../../../shared/widgets/status_badge.dart';
 import '../../../../../shared/utils/currency_formatter.dart';
 
 class SupplierProductRow extends StatelessWidget {
@@ -11,7 +12,7 @@ class SupplierProductRow extends StatelessWidget {
   final double price;
   final int stock;
   final String uom;
-  final String? uomSymbolName;
+  final String? uomIconName;
   final bool isWholesale;
   final bool isLocked; // Fully restricted (Start with this)
   final bool isPartial; // Access allowed but price hidden/blurred
@@ -24,7 +25,7 @@ class SupplierProductRow extends StatelessWidget {
     required this.price,
     required this.stock,
     this.uom = 'ud.', // Default unit
-    this.uomSymbolName,
+    this.uomIconName,
     required this.isWholesale,
     this.isLocked = false,
     this.isPartial = false,
@@ -57,21 +58,13 @@ class SupplierProductRow extends StatelessWidget {
     return StandardListItem(
       padding: const EdgeInsets.symmetric(horizontal: 0, vertical: 12),
       onTap: onTap,
-      overline: Container(
+      overline: StatusBadge(
+        backgroundColor: badgeColor,
+        textColor: badgeTextColor,
+        text: badgeText,
         padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
-        decoration: BoxDecoration(
-          color: badgeColor,
-          borderRadius: BorderRadius.circular(4),
-        ),
-        child: Text(
-          badgeText,
-          style: TextStyle(
-            fontSize: 9,
-            fontWeight: FontWeight.w700,
-            letterSpacing: 0.3,
-            color: badgeTextColor,
-          ),
-        ),
+        borderRadius: 4.0,
+        fontSize: 9.0,
       ),
       title: supplierName,
       subtitle: Column(
@@ -138,30 +131,14 @@ class SupplierProductRow extends StatelessWidget {
           const SizedBox(height: 8),
 
           // Stock Validations
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-            decoration: BoxDecoration(
-              color: stockBgColor,
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                DynamicMaterialSymbol(
-                  symbolName: uomSymbolName,
-                  size: 14,
-                  color: stockColor,
-                ),
-                const SizedBox(width: 4),
-                Text(
-                  stockText,
-                  style: TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.bold,
-                    color: stockColor,
-                  ),
-                ),
-              ],
+          StatusBadge(
+            backgroundColor: stockBgColor,
+            textColor: stockColor,
+            text: stockText,
+            icon: DynamicMaterialSymbol(
+              symbolName: uomIconName,
+              size: 14,
+              color: stockColor,
             ),
           ),
         ],

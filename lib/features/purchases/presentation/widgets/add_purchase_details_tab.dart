@@ -20,7 +20,7 @@ class _AddPurchaseDetailsTabState extends ConsumerState<AddPurchaseDetailsTab> {
   late final TextEditingController _dateController;
   late final TextEditingController _docNumberController;
 
-  final List<String> _docTypes = ['Factura', 'Nota de entrega'];
+  final List<String> _docTypes = ['invoice', 'delivery_note'];
 
   @override
   void initState() {
@@ -120,6 +120,7 @@ class _AddPurchaseDetailsTabState extends ConsumerState<AddPurchaseDetailsTab> {
                     ref.read(addPurchaseProvider.notifier).setSupplier(
                           result.id,
                           result.legalName ?? result.name,
+                          taxId: result.taxId,
                         );
                   }
                 },
@@ -127,7 +128,7 @@ class _AddPurchaseDetailsTabState extends ConsumerState<AddPurchaseDetailsTab> {
                   if (val != null && val.id != '___ADD___') {
                     ref
                         .read(addPurchaseProvider.notifier)
-                        .setSupplier(val.id, val.legalName ?? val.name);
+                        .setSupplier(val.id, val.legalName ?? val.name, taxId: val.taxId);
                   }
                 },
               );
@@ -143,7 +144,7 @@ class _AddPurchaseDetailsTabState extends ConsumerState<AddPurchaseDetailsTab> {
             label: 'Tipo de documento',
             value: state.documentType,
             items: _docTypes,
-            itemLabelBuilder: (item) => item,
+            itemLabelBuilder: (item) => item == 'invoice' ? 'Factura' : 'Nota de entrega',
             onChanged: (val) {
               if (val != null) {
                 ref.read(addPurchaseProvider.notifier).setDocumentType(val);

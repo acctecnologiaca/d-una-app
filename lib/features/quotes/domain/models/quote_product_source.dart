@@ -9,7 +9,7 @@ class QuoteProductSource {
   final double maxStock;
   final String? tradeType;
   final bool isAccessible;
-  final String? uomSymbolName;
+  final String? uomIconName;
 
   // Mutable UI state for draft selection
   double selectedQuantity;
@@ -23,7 +23,7 @@ class QuoteProductSource {
     required this.maxStock,
     this.tradeType,
     this.isAccessible = true,
-    this.uomSymbolName,
+    this.uomIconName,
     this.selectedQuantity = 0.0,
   });
 
@@ -39,7 +39,7 @@ class QuoteProductSource {
       maxStock: (map['stock'] as num?)?.toDouble() ?? 0.0,
       tradeType: map['trade_type'],
       isAccessible: map['is_accessible'] as bool? ?? false,
-      uomSymbolName: map['uom_symbol_name'],
+      uomIconName: map['uom_icon_name'],
     );
   }
 

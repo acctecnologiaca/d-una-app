@@ -64,7 +64,7 @@ class _AddEditShippingCompanySheetState extends ConsumerState<AddEditShippingCom
 
     if (legalName.isEmpty || taxId.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('La Razón Social y el RIF son obligatorios.')),
+        const SnackBar(behavior: SnackBarBehavior.floating, content: Text('La Razón Social y el RIF son obligatorios.')),
       );
       return;
     }
@@ -94,6 +94,7 @@ class _AddEditShippingCompanySheetState extends ConsumerState<AddEditShippingCom
       navigator.pop();
       scaffoldMessenger.showSnackBar(
         SnackBar(
+          behavior: SnackBarBehavior.floating,
           content: Text(
             isEditing
                 ? 'Empresa actualizada a "$legalName"'
@@ -103,7 +104,7 @@ class _AddEditShippingCompanySheetState extends ConsumerState<AddEditShippingCom
       );
     } catch (e) {
       setState(() => _isLoading = false);
-      scaffoldMessenger.showSnackBar(SnackBar(content: Text('Error: $e')));
+      scaffoldMessenger.showSnackBar(SnackBar(behavior: SnackBarBehavior.floating, content: Text('Error: $e')));
     }
   }
 
@@ -140,10 +141,10 @@ class _AddEditShippingCompanySheetState extends ConsumerState<AddEditShippingCom
       ref.invalidate(shippingCompaniesProvider);
       navigator.pop();
       scaffoldMessenger.showSnackBar(
-        SnackBar(content: Text('Empresa "${widget.company!.displayName}" eliminada')),
+        SnackBar(behavior: SnackBarBehavior.floating, content: Text('Empresa "${widget.company!.displayName}" eliminada')),
       );
     } catch (e) {
-      scaffoldMessenger.showSnackBar(SnackBar(content: Text('Error: $e')));
+      scaffoldMessenger.showSnackBar(SnackBar(behavior: SnackBarBehavior.floating, content: Text('Error: $e')));
     }
   }
 

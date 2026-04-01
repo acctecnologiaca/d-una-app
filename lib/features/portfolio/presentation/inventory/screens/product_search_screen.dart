@@ -21,6 +21,8 @@ class _ProductSearchScreenState extends ConsumerState<ProductSearchScreen> {
   // Filters
   final Set<String> _selectedCategories = {};
   final Set<String> _selectedBrands = {};
+  // SortOption _currentSort = SortOption.lowestPrice; // Assuming SortOption exists
+  String _searchQuery = '';
 
   // Note: Price filter removed as Product model does not support price yet.
 
@@ -46,6 +48,12 @@ class _ProductSearchScreenState extends ConsumerState<ProductSearchScreen> {
         setState(() {
           _selectedCategories.clear();
           _selectedBrands.clear();
+          _searchQuery = '';
+        });
+      },
+      onQueryChanged: (query) {
+        setState(() {
+          _searchQuery = query;
         });
       },
       filters: [
@@ -54,17 +62,21 @@ class _ProductSearchScreenState extends ConsumerState<ProductSearchScreen> {
           isActive: _selectedCategories.isNotEmpty,
           onTap: () {
             productsAsync.whenData((products) {
-              final categories = products
-                  .map((p) => p.category?.name)
-                  .whereType<String>()
-                  .toSet()
-                  .where((s) => s.isNotEmpty)
-                  .toList();
+              final queryNormalized = _searchQuery.normalized;
+              final availableCategories = products.where((p) {
+                // Filter by text search
+                return queryNormalized.isEmpty ||
+                    p.name.normalized.contains(queryNormalized) ||
+                    (p.brand?.name.normalized ?? '').contains(
+                      queryNormalized,
+                    ) ||
+                    (p.model?.normalized ?? '').contains(queryNormalized);
+              }).map((p) => p.category?.name).whereType<String>().toSet().where((s) => s.isNotEmpty).toList();
 
               FilterBottomSheet.showMulti(
                 context: context,
                 title: 'Categoría',
-                options: categories,
+                options: availableCategories,
                 selectedValues: _selectedCategories,
                 onApply: (newSet) {
                   setState(() {
@@ -81,17 +93,21 @@ class _ProductSearchScreenState extends ConsumerState<ProductSearchScreen> {
           isActive: _selectedBrands.isNotEmpty,
           onTap: () {
             productsAsync.whenData((products) {
-              final brands = products
-                  .map((p) => p.brand?.name)
-                  .whereType<String>()
-                  .toSet()
-                  .where((s) => s.isNotEmpty)
-                  .toList();
+              final queryNormalized = _searchQuery.normalized;
+              final availableBrands = products.where((p) {
+                // Filter by text search
+                return queryNormalized.isEmpty ||
+                    p.name.normalized.contains(queryNormalized) ||
+                    (p.brand?.name.normalized ?? '').contains(
+                      queryNormalized,
+                    ) ||
+                    (p.model?.normalized ?? '').contains(queryNormalized);
+              }).map((p) => p.brand?.name).whereType<String>().toSet().where((s) => s.isNotEmpty).toList();
 
               FilterBottomSheet.showMulti(
                 context: context,
                 title: 'Marca',
-                options: brands,
+                options: availableBrands,
                 selectedValues: _selectedBrands,
                 onApply: (newSet) {
                   setState(() {
@@ -138,6 +154,7 @@ class _ProductSearchScreenState extends ConsumerState<ProductSearchScreen> {
               onTap: () {
                 InventoryActionSheet.show(
                   context: context,
+                  ref: ref,
                   product: product,
                   currentPrice: 0.0, // Unavailable in search
                   currentStock: 0, // Unavailable in search

@@ -10,7 +10,7 @@ class QuoteItemProduct {
   final String? brand;
   final String? model;
   final String uom;
-  final String? uomSymbolName;
+  final String? uomIconName;
   final String? description;
   final double? availableStock; // UI helper for tracking total stock available
 
@@ -37,7 +37,7 @@ class QuoteItemProduct {
     this.brand,
     this.model,
     required this.uom,
-    this.uomSymbolName,
+    this.uomIconName,
     this.description,
     this.availableStock,
     required this.quantity,
@@ -62,7 +62,7 @@ class QuoteItemProduct {
       brand: json['brand'] as String?,
       model: json['model'] as String?,
       uom: json['uom'] as String,
-      uomSymbolName: json['uom_symbol_name'] as String?,
+      uomIconName: json['uom_icon_name'] as String?,
       description: json['description'] as String?,
       availableStock: json['available_stock'] != null
           ? (json['available_stock'] as num).toDouble()
@@ -91,7 +91,7 @@ class QuoteItemProduct {
       'brand': brand,
       'model': model,
       'uom': uom,
-      'uom_symbol_name': uomSymbolName,
+      'uom_icon_name': uomIconName,
       'description': description,
       'available_stock': availableStock,
       'quantity': quantity,

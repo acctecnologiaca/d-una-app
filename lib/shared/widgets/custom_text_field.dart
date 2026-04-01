@@ -22,6 +22,7 @@ class CustomTextField extends StatefulWidget {
   final FocusNode? focusNode;
   final String? prefixText;
   final bool autofocus;
+  final String? errorText;
 
   const CustomTextField({
     super.key,
@@ -45,6 +46,7 @@ class CustomTextField extends StatefulWidget {
     this.focusNode,
     this.prefixText,
     this.autofocus = false,
+    this.errorText,
   });
 
   @override
@@ -135,6 +137,7 @@ class _CustomTextFieldState extends State<CustomTextField> {
             labelText: widget.label,
             hintText: widget.hintText,
             helperText: widget.helperText,
+            errorText: widget.errorText,
             helperMaxLines: 2,
             prefixIcon: widget.prefixIcon,
             prefixText: widget.prefixText,

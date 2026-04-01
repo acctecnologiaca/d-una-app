@@ -33,11 +33,14 @@ class _CollaboratorsScreenState extends ConsumerState<CollaboratorsScreen> {
             fit: BoxFit.contain,
           ),
           const SizedBox(height: 16),
-          Text(
-            'Incluye a las personas que trabajan o colaboran contigo y necesitas que hagan parte de una cotización o reporte.',
-            textAlign: TextAlign.left,
-            style: textTheme.bodyMedium?.copyWith(
-              color: colors.onSurfaceVariant,
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16.0),
+            child: Text(
+              'Incluye a las personas que trabajan o colaboran contigo y necesitas que hagan parte de una cotización o reporte.',
+              textAlign: TextAlign.left,
+              style: textTheme.bodyMedium?.copyWith(
+                color: colors.onSurfaceVariant,
+              ),
             ),
           ),
         ],

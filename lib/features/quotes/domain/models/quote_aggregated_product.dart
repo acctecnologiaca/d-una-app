@@ -32,7 +32,7 @@ class QuoteAggregatedProduct {
   final String brand;
   final String model;
   final String uom;
-  final String uomSymbolName;
+  final String uomIconName;
   final double minPrice;
   final double totalQuantity;
   final int supplierCount;
@@ -43,6 +43,7 @@ class QuoteAggregatedProduct {
   final String? firstSupplierTradeType;
   final bool isLocked;
   final List<String> supplierNames;
+  final List<String> supplierIds;
   final List<QuoteAggregatedSource> sources;
 
   const QuoteAggregatedProduct({
@@ -50,7 +51,7 @@ class QuoteAggregatedProduct {
     required this.brand,
     required this.model,
     required this.uom,
-    required this.uomSymbolName,
+    required this.uomIconName,
     required this.minPrice,
     required this.totalQuantity,
     required this.supplierCount,
@@ -61,6 +62,7 @@ class QuoteAggregatedProduct {
     this.firstSupplierTradeType,
     this.isLocked = false,
     this.supplierNames = const [],
+    this.supplierIds = const [],
     this.sources = const [],
   });
 
@@ -70,7 +72,7 @@ class QuoteAggregatedProduct {
       brand: map['brand'] ?? '',
       model: map['model'] ?? '',
       uom: map['uom'] ?? 'ud.',
-      uomSymbolName: map['uom_symbol_name'] ?? 'package_2',
+      uomIconName: map['uom_icon_name'] ?? 'package_2',
       minPrice: (map['min_price'] as num?)?.toDouble() ?? 0.0,
       totalQuantity: (map['total_quantity'] as num?)?.toDouble() ?? 0.0,
       supplierCount: map['supplier_count'] ?? 0,
@@ -83,6 +85,7 @@ class QuoteAggregatedProduct {
       firstSupplierTradeType: map['first_supplier_trade_type'],
       isLocked: map['is_locked'] ?? false,
       supplierNames: List<String>.from(map['supplier_names'] ?? []),
+      supplierIds: List<String>.from(map['supplier_ids'] ?? []),
       sources:
           (map['sources'] as List<dynamic>?)
               ?.map(
@@ -90,75 +93,6 @@ class QuoteAggregatedProduct {
               )
               .toList() ??
           [],
-    );
-  }
-
-  /// Returns a new instance where the aggregated values only reflect the selected suppliers.
-  /// If the set is empty, returns this instance unchanged.
-  QuoteAggregatedProduct filterBySuppliers(Set<String> selectedSuppliers) {
-    if (selectedSuppliers.isEmpty) return this;
-
-    final selectedLower = selectedSuppliers
-        .map((s) => s.toLowerCase().trim())
-        .toSet();
-
-    final filteredSources = sources.where((s) {
-      final sourceNameLower = s.supplierName.toLowerCase().trim();
-      return selectedLower.contains(sourceNameLower);
-    }).toList();
-
-    double newMinPrice = double.infinity;
-    double newTotalQuantity = 0.0;
-    bool newHasOwnInventory = false;
-    final Set<String> uniqueSuppliers = {};
-    bool newIsLocked = true;
-
-    for (final src in filteredSources) {
-      if (src.isAccessible && src.price < newMinPrice && src.price > 0) {
-        newMinPrice = src.price;
-      }
-      if (src.isOwn) {
-        newHasOwnInventory = true;
-      } else {
-        uniqueSuppliers.add(src.supplierName);
-      }
-      newTotalQuantity += src.quantity;
-      if (src.isAccessible) {
-        newIsLocked = false;
-      }
-    }
-
-    // Fallback if no accessible valid price was found
-    if (newMinPrice == double.infinity && filteredSources.isNotEmpty) {
-      for (final src in filteredSources) {
-        if (src.price < newMinPrice && src.price > 0) {
-          newMinPrice = src.price;
-        }
-      }
-    }
-
-    if (newMinPrice == double.infinity) newMinPrice = 0.0;
-
-    final newSupplierCount =
-        uniqueSuppliers.length + (newHasOwnInventory ? 1 : 0);
-
-    return QuoteAggregatedProduct(
-      name: name,
-      brand: brand,
-      model: model,
-      uom: uom,
-      uomSymbolName: uomSymbolName,
-      minPrice: newMinPrice,
-      totalQuantity: newTotalQuantity,
-      supplierCount: newSupplierCount,
-      hasOwnInventory: newHasOwnInventory,
-      frequencyScore: frequencyScore,
-      lastAddedAt: lastAddedAt,
-      category: category,
-      firstSupplierTradeType: firstSupplierTradeType,
-      isLocked: filteredSources.isEmpty ? false : newIsLocked,
-      supplierNames: supplierNames,
-      sources: filteredSources,
     );
   }
 }

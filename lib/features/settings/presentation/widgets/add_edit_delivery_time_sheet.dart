@@ -118,6 +118,7 @@ class _AddEditDeliveryTimeSheetState
       if (minVal == null || maxVal == null) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
+            behavior: SnackBarBehavior.floating,
             content: Text('Debes ingresar valores válidos de tiempo.'),
           ),
         );
@@ -126,6 +127,7 @@ class _AddEditDeliveryTimeSheetState
       if (minVal > maxVal) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
+            behavior: SnackBarBehavior.floating,
             content: Text('El valor mínimo no puede ser mayor al máximo.'),
           ),
         );
@@ -168,6 +170,7 @@ class _AddEditDeliveryTimeSheetState
         Navigator.pop(context);
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
+            behavior: SnackBarBehavior.floating,
             content: Text(
               isEditing ? 'Tiempo actualizado' : 'Tiempo agregado exitosamente',
             ),
@@ -178,6 +181,7 @@ class _AddEditDeliveryTimeSheetState
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
+            behavior: SnackBarBehavior.floating,
             content: Text(
               'Error al guardar: $e',
               style: TextStyle(color: Theme.of(context).colorScheme.error),
@@ -250,11 +254,12 @@ class _AddEditDeliveryTimeSheetState
                           .deleteDeliveryTime(widget.deliveryTime!.id);
                       ref.invalidate(deliveryTimesProvider);
                       scaffoldMessenger.showSnackBar(
-                        const SnackBar(content: Text('Tiempo eliminado')),
+                        const SnackBar(behavior: SnackBarBehavior.floating, content: Text('Tiempo eliminado')),
                       );
                     } catch (e) {
                       scaffoldMessenger.showSnackBar(
                         SnackBar(
+                          behavior: SnackBarBehavior.floating,
                           content: Text(
                             'Error: $e',
                             style: TextStyle(color: errorColor),

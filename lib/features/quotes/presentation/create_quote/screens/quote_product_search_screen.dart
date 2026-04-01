@@ -8,10 +8,11 @@ import '../../../../../shared/widgets/horizontal_filter_bar.dart';
 import '../../../../../shared/widgets/filter_bottom_sheet.dart';
 import '../../../../../shared/widgets/price_filter_sheet.dart';
 import '../../../../../shared/widgets/sort_selector.dart';
-import '../../../../../core/utils/string_extensions.dart';
 import '../../../domain/models/quote_aggregated_product.dart';
 import '../providers/quote_product_selection_provider.dart';
 import '../../../../portfolio/domain/models/product_sort_option.dart';
+import '../../../../portfolio/domain/models/product_search_filters.dart';
+import '../../../../portfolio/presentation/providers/product_search_provider.dart';
 import '../../../../profile/presentation/providers/profile_provider.dart';
 
 class QuoteProductSearchScreen extends ConsumerStatefulWidget {
@@ -30,7 +31,8 @@ class _QuoteProductSearchScreenState
   // Filters State
   Set<String> _selectedBrands = {};
   Set<String> _selectedCategories = {};
-  Set<String> _selectedSuppliers = {};
+  Set<String> _selectedSuppliers = {}; // Storing UUIDs
+  final Map<String, String> _supplierNameCache = {};
   double? _minPrice;
   double? _maxPrice;
 
@@ -66,10 +68,16 @@ class _QuoteProductSearchScreenState
 
   // --- Dynamic Label Helpers ---
 
-  String _getChipLabel(String defaultLabel, Set<String> selected) {
+  String _getChipLabel(String defaultLabel, Set<String> selected, {Map<String, String>? nameMap}) {
     if (selected.isEmpty) return defaultLabel;
-    if (selected.length == 1) return selected.first;
-    return '${selected.first} +${selected.length - 1}';
+    
+    String firstLabel = selected.first;
+    if (nameMap != null && nameMap.containsKey(firstLabel)) {
+        firstLabel = nameMap[firstLabel]!;
+    }
+    
+    if (selected.length == 1) return firstLabel;
+    return '$firstLabel +${selected.length - 1}';
   }
 
   String _getPriceLabel() {
@@ -83,45 +91,94 @@ class _QuoteProductSearchScreenState
     }
   }
 
+  // --- Facet Extraction ---
+  
+  ({Set<String> categories, Set<String> brands, Map<String, String> suppliers}) _getAvailableFacets() {
+    final baseState = ref.read(
+      quoteProductSuggestionsProvider(ProductSearchParams(query: _currentQuery)),
+    );
+
+    final items = baseState.valueOrNull ?? [];
+    final categories = <String>{};
+    final brands = <String>{};
+    final suppliers = <String, String>{};
+
+    // For Brands: filter base items by active categories & suppliers
+    Iterable<QuoteAggregatedProduct> forBrands = items;
+    if (_selectedSuppliers.isNotEmpty) {
+      forBrands = forBrands.where((p) => p.supplierIds.any((id) => _selectedSuppliers.contains(id)));
+    }
+    if (_selectedCategories.isNotEmpty) {
+      forBrands = forBrands.where((p) => _selectedCategories.contains(p.category));
+    }
+    for (final item in forBrands) {
+        if (item.brand.isNotEmpty && item.brand.toLowerCase() != 'genérico') {
+            brands.add(item.brand);
+        }
+    }
+
+    // For Categories: filter base items by active brands & suppliers
+    Iterable<QuoteAggregatedProduct> forCategories = items;
+    if (_selectedSuppliers.isNotEmpty) {
+      forCategories = forCategories.where((p) => p.supplierIds.any((id) => _selectedSuppliers.contains(id)));
+    }
+    if (_selectedBrands.isNotEmpty) {
+      forCategories = forCategories.where((p) => _selectedBrands.contains(p.brand));
+    }
+    for (final item in forCategories) {
+        if (item.category.isNotEmpty) categories.add(item.category);
+    }
+    
+    // For Suppliers: filter base items by active brands & categories
+    Iterable<QuoteAggregatedProduct> forSuppliers = items;
+    if (_selectedBrands.isNotEmpty) {
+      forSuppliers = forSuppliers.where((p) => _selectedBrands.contains(p.brand));
+    }
+    if (_selectedCategories.isNotEmpty) {
+      forSuppliers = forSuppliers.where((p) => _selectedCategories.contains(p.category));
+    }
+    for (final item in forSuppliers) {
+      for (int i = 0; i < item.supplierNames.length; i++) {
+        if (i < item.supplierIds.length && item.supplierNames[i].trim().isNotEmpty) {
+          final id = item.supplierIds[i];
+          final name = item.supplierNames[i];
+          suppliers[id] = name;
+          _supplierNameCache[id] = name; // Update the cache
+        }
+      }
+    }
+
+    return (categories: categories, brands: brands, suppliers: suppliers);
+  }
+
   // --- Filter Logic ---
 
-  void _showSupplierFilter(List<QuoteAggregatedProduct> allProducts) {
-    // Collect all available supplier names dynamically
-    final availableSuppliers =
-        allProducts
-            .expand((p) => p.supplierNames)
-            .where((name) => name.trim().isNotEmpty)
-            .map((name) => name.trim().toTitleCase)
-            .toSet()
-            .toList()
-          ..sort();
+  void _showSupplierFilter() {
+    final facets = _getAvailableFacets();
+    final availableSuppliers = facets.suppliers;
+
+    // Sort by name
+    final options = availableSuppliers.keys.toList()
+      ..sort((a, b) => (availableSuppliers[a] ?? '').compareTo(availableSuppliers[b] ?? ''));
 
     FilterBottomSheet.showMulti(
       context: context,
       title: 'Proveedor',
-      options: availableSuppliers,
+      options: options,
       selectedValues: _selectedSuppliers,
+      labelBuilder: (id) => availableSuppliers[id] ?? id,
       onApply: (selected) {
         setState(() {
-          _selectedSuppliers = selected
-              .map((s) => s.trim().toTitleCase)
-              .toSet();
+          _selectedSuppliers = selected.toSet();
         });
       },
     );
   }
 
-  void _showBrandFilter(List<QuoteAggregatedProduct> allProducts) {
-    // Collect all available brands dynamically
-    final availableBrands =
-        allProducts
-            .where(
-              (p) => p.brand.isNotEmpty && p.brand.toLowerCase() != 'genérico',
-            )
-            .map((p) => p.brand.toTitleCase) // Normalize to Title Case
-            .toSet()
-            .toList()
-          ..sort();
+  void _showBrandFilter() {
+    final facets = _getAvailableFacets();
+    
+    final availableBrands = facets.brands.toList()..sort();
 
     FilterBottomSheet.showMulti(
       context: context,
@@ -136,15 +193,9 @@ class _QuoteProductSearchScreenState
     );
   }
 
-  void _showCategoryFilter(List<QuoteAggregatedProduct> allProducts) {
-    // Collect all available categories dynamically
-    final availableCategories =
-        allProducts
-            .where((p) => p.category.isNotEmpty)
-            .map((p) => p.category)
-            .toSet()
-            .toList()
-          ..sort();
+  void _showCategoryFilter() {
+    final facets = _getAvailableFacets();
+    final availableCategories = facets.categories.toList()..sort();
 
     FilterBottomSheet.showMulti(
       context: context,
@@ -178,67 +229,42 @@ class _QuoteProductSearchScreenState
 
   @override
   Widget build(BuildContext context) {
-    final suggestionsAsync = ref.watch(quoteProductSuggestionsProvider);
     final userProfileAsync = ref.watch(userProfileProvider);
     final userProfile = userProfileAsync.valueOrNull;
     final isVerified = userProfile?.verificationStatus == 'verified';
     final colors = Theme.of(context).colorScheme;
 
-    // Process List client-side
-    final originalItems = suggestionsAsync.valueOrNull ?? [];
+    // 1. Fetch base query for Facets (fast UI)
+    final baseParams = ProductSearchParams(query: _currentQuery);
+    ref.watch(quoteProductSuggestionsProvider(baseParams));
+    
+    // 2. Fetch filtered query for Data
+    final filterParams = ProductSearchParams(
+      query: _currentQuery,
+      filters: ProductSearchFilters(
+        brands: _selectedBrands.toList(),
+        categories: _selectedCategories.toList(),
+        supplierIds: _selectedSuppliers.toList(),
+        minPrice: _minPrice,
+        maxPrice: _maxPrice,
+      ),
+    );
+    
+    final suggestionsAsync = ref.watch(quoteProductSuggestionsProvider(filterParams));
 
-    // Filter Logic
-    var filteredProducts = <QuoteAggregatedProduct>[];
+    var filteredProducts = suggestionsAsync.valueOrNull ?? [];
 
-    for (final p in originalItems) {
-      // 1. Unverified Users Access Rule:
-      if (!isVerified) {
-        // If purely wholesale (or single wholesale supplier) and not own inventory, hide it entirely.
-        if (!p.hasOwnInventory &&
-            p.supplierCount == 1 &&
-            p.firstSupplierTradeType == 'WHOLESALE') {
-          continue;
+    // Local Verification Rules
+    filteredProducts = filteredProducts.where((p) {
+        if (!isVerified) {
+            if (!p.hasOwnInventory &&
+                p.supplierCount == 1 &&
+                p.firstSupplierTradeType == 'WHOLESALE') {
+                return false;
+            }
         }
-      }
-
-      // 2. Query Match
-      if (_currentQuery.isNotEmpty) {
-        final q = _currentQuery.normalized;
-        final matches =
-            p.name.normalized.contains(q) ||
-            p.brand.normalized.contains(q) ||
-            p.model.normalized.contains(q);
-        if (!matches) continue;
-      }
-
-      // 3. User Filters
-      if (_selectedBrands.isNotEmpty) {
-        if (!_selectedBrands.any(
-          (selected) => selected.toLowerCase() == p.brand.toLowerCase(),
-        )) {
-          continue;
-        }
-      }
-
-      if (_selectedCategories.isNotEmpty &&
-          !_selectedCategories.contains(p.category)) {
-        continue;
-      }
-
-      // 4. Apply Dynamic Supplier Filter & Calculate New Aggregates
-      final filteredProduct = p.filterBySuppliers(_selectedSuppliers);
-
-      // If the product has no sources left after filtering by supplier, drop it.
-      if (_selectedSuppliers.isNotEmpty && filteredProduct.sources.isEmpty) {
-        continue;
-      }
-
-      // 5. Apply Price Filters (using the newly computed minPrice)
-      if (_minPrice != null && filteredProduct.minPrice < _minPrice!) continue;
-      if (_maxPrice != null && filteredProduct.minPrice > _maxPrice!) continue;
-
-      filteredProducts.add(filteredProduct);
-    }
+        return true;
+    }).toList();
 
     // Sort Logic
     filteredProducts.sort((a, b) {
@@ -276,19 +302,19 @@ class _QuoteProductSearchScreenState
       // Filter Chips Configuration
       filters: [
         FilterChipData(
-          label: _getChipLabel('Proveedor', _selectedSuppliers),
+          label: _getChipLabel('Proveedor', _selectedSuppliers, nameMap: _supplierNameCache),
           isActive: _selectedSuppliers.isNotEmpty,
-          onTap: () => _showSupplierFilter(originalItems),
+          onTap: _showSupplierFilter,
         ),
         FilterChipData(
           label: _getChipLabel('Categoría', _selectedCategories),
           isActive: _selectedCategories.isNotEmpty,
-          onTap: () => _showCategoryFilter(originalItems),
+          onTap: _showCategoryFilter,
         ),
         FilterChipData(
           label: _getChipLabel('Marca', _selectedBrands),
           isActive: _selectedBrands.isNotEmpty,
-          onTap: () => _showBrandFilter(originalItems),
+          onTap: _showBrandFilter,
         ),
         FilterChipData(
           label: _getPriceLabel(),
@@ -325,24 +351,12 @@ class _QuoteProductSearchScreenState
                 onSortChanged: (val) => setState(() => _currentSort = val),
                 labelBuilder: (option) => option.label,
                 iconBuilder: (option) {
-                  if (option == ProductSortOption.priceAsc) {
-                    return Icons.arrow_upward;
-                  }
-                  if (option == ProductSortOption.priceDesc) {
-                    return Icons.arrow_downward;
-                  }
-                  if (option == ProductSortOption.quantityAsc) {
-                    return Icons.arrow_upward;
-                  }
-                  if (option == ProductSortOption.quantityDesc) {
-                    return Icons.arrow_downward;
-                  }
-                  if (option == ProductSortOption.nameAZ) {
-                    return Icons.arrow_upward;
-                  }
-                  if (option == ProductSortOption.nameZA) {
-                    return Icons.arrow_downward;
-                  }
+                  if (option == ProductSortOption.priceAsc) return Icons.arrow_upward;
+                  if (option == ProductSortOption.priceDesc) return Icons.arrow_downward;
+                  if (option == ProductSortOption.quantityAsc) return Icons.arrow_upward;
+                  if (option == ProductSortOption.quantityDesc) return Icons.arrow_downward;
+                  if (option == ProductSortOption.nameAZ) return Icons.arrow_upward;
+                  if (option == ProductSortOption.nameZA) return Icons.arrow_downward;
                   return null;
                 },
               ),
@@ -351,8 +365,7 @@ class _QuoteProductSearchScreenState
         ),
       ),
 
-      filter: (product, query) => true, // Filtering is done manually above
-
+      filter: (product, query) => true, // Filtering is done entirely on the server
       itemBuilder: (context, product) {
         return Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 4.0),
@@ -364,7 +377,7 @@ class _QuoteProductSearchScreenState
             totalQuantity: product.totalQuantity,
             supplierCount: product.supplierCount,
             uom: product.uom,
-            uomSymbolName: product.uomSymbolName,
+            uomIconName: product.uomIconName,
             showPriceAndStock: true,
             isLocked: product.isLocked,
             onTap: () {

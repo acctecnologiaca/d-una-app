@@ -17,6 +17,9 @@ class Product extends Equatable {
   final String? uom; // Symbol of the UOM
   final Uom? uomModel; // Full UOM object
   final String? imageUrl;
+  final double inventoryQuantity;
+  final double averageCost;
+  final int purchaseCount;
   final DateTime createdAt;
   final DateTime updatedAt;
 
@@ -34,6 +37,9 @@ class Product extends Equatable {
     this.uom,
     this.uomModel,
     this.imageUrl,
+    this.inventoryQuantity = 0.0,
+    this.averageCost = 0.0,
+    this.purchaseCount = 0,
     required this.createdAt,
     required this.updatedAt,
   });
@@ -55,6 +61,9 @@ class Product extends Equatable {
       uom: json['uoms'] != null ? json['uoms']['symbol'] : null,
       uomModel: json['uoms'] != null ? Uom.fromJson(json['uoms']) : null,
       imageUrl: json['image_url'],
+      inventoryQuantity: (json['inventory_quantity'] as num?)?.toDouble() ?? 0.0,
+      averageCost: (json['average_cost'] as num?)?.toDouble() ?? 0.0,
+      purchaseCount: (json['purchase_count'] as num?)?.toInt() ?? 0,
       createdAt: DateTime.parse(json['created_at']),
       updatedAt: DateTime.parse(json['updated_at']),
     );
@@ -92,6 +101,9 @@ class Product extends Equatable {
     String? uom,
     Uom? uomModel,
     String? imageUrl,
+    double? inventoryQuantity,
+    double? averageCost,
+    int? purchaseCount,
     DateTime? createdAt,
     DateTime? updatedAt,
   }) {
@@ -109,6 +121,9 @@ class Product extends Equatable {
       uom: uom ?? this.uom,
       uomModel: uomModel ?? this.uomModel,
       imageUrl: imageUrl ?? this.imageUrl,
+      inventoryQuantity: inventoryQuantity ?? this.inventoryQuantity,
+      averageCost: averageCost ?? this.averageCost,
+      purchaseCount: purchaseCount ?? this.purchaseCount,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
     );
@@ -129,6 +144,9 @@ class Product extends Equatable {
     uom,
     uomModel,
     imageUrl,
+    inventoryQuantity,
+    averageCost,
+    purchaseCount,
     createdAt,
     updatedAt,
   ];

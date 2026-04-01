@@ -4,6 +4,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:material_symbols_icons/symbols.dart';
 import 'package:d_una_app/shared/widgets/info_block.dart';
+import 'package:d_una_app/shared/widgets/dynamic_material_symbol.dart';
+import 'package:d_una_app/shared/utils/currency_formatter.dart';
+import 'package:d_una_app/shared/widgets/uom_status_badge.dart';
 import '../../../providers/products_provider.dart';
 import '../../../../data/models/product_model.dart';
 
@@ -72,7 +75,10 @@ class _ProductDetailsScreenState extends ConsumerState<ProductDetailsScreen> {
                     ),
                     TextButton(
                       onPressed: () => Navigator.pop(context, true),
-                      child: const Text('Eliminar'),
+                      child: Text(
+                        'Eliminar',
+                        style: TextStyle(color: colors.error),
+                      ),
                     ),
                   ],
                 ),
@@ -110,34 +116,6 @@ class _ProductDetailsScreenState extends ConsumerState<ProductDetailsScreen> {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             const SizedBox(height: 24),
-
-            // Top Action Bar (Standardized)
-            /*SingleChildScrollView(
-              scrollDirection: Axis.horizontal,
-              padding: const EdgeInsets.symmetric(horizontal: 16.0),
-              child: Row(
-                children: [
-                  OutlinedButton.icon(
-                    onPressed: () {},
-                    icon: const Icon(Icons.price_check, size: 18),
-                    label: const Text('Estimar'),
-                  ),
-                  const SizedBox(width: 12),
-                  OutlinedButton.icon(
-                    onPressed: () {},
-                    icon: const Icon(Icons.request_quote_outlined, size: 18),
-                    label: const Text('Cotizar'),
-                  ),
-                  const SizedBox(width: 12),
-                  OutlinedButton.icon(
-                    onPressed: () {},
-                    icon: const Icon(Icons.history, size: 18),
-                    label: const Text('Movimientos'),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 32), */
 
             // Main Content Padding
             Padding(
@@ -218,7 +196,7 @@ class _ProductDetailsScreenState extends ConsumerState<ProductDetailsScreen> {
                     ],
                   ),
 
-                  const SizedBox(height: 32),
+                  const SizedBox(height: 24),
 
                   if (currentProduct.category != null)
                     InfoBlock.text(
@@ -239,7 +217,7 @@ class _ProductDetailsScreenState extends ConsumerState<ProductDetailsScreen> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            currentProduct.specs!,
+                            currentProduct.specs ?? '',
                             style: textTheme.bodyLarge?.copyWith(
                               // Match InfoBlock.text value style
                               color: colors.onSurface,
@@ -252,7 +230,7 @@ class _ProductDetailsScreenState extends ConsumerState<ProductDetailsScreen> {
                         ],
                       ),
                     ),
-                  if ((currentProduct.specs!.length) > 100)
+                  if ((currentProduct.specs?.length ?? 0) > 110)
                     Column(
                       children: [
                         Align(
@@ -272,9 +250,32 @@ class _ProductDetailsScreenState extends ConsumerState<ProductDetailsScreen> {
                             ),
                           ),
                         ),
-                        //const SizedBox(height: 16),
                       ],
                     ),
+                  const SizedBox(height: 24),
+
+                  InfoBlock(
+                    iconWidget:
+                        (currentProduct.uomModel?.iconName?.isNotEmpty ?? false)
+                        ? DynamicMaterialSymbol(
+                            symbolName: currentProduct.uomModel!.iconName!,
+                            size: 32,
+                            color: colors.onSurfaceVariant,
+                          )
+                        : null,
+                    icon: (currentProduct.uomModel?.iconName?.isEmpty ?? true)
+                        ? Symbols.package_2
+                        : null,
+                    label: 'Existencia',
+                    content: Text(
+                      '${UomStatusBadge.formatQuantity(currentProduct.inventoryQuantity)} ${currentProduct.uomModel?.name ?? 'Unidades'} (${currentProduct.uom ?? 'ud.'})',
+                      style: textTheme.bodyLarge?.copyWith(
+                        color: colors.onSurface,
+                      ),
+                    ),
+                  ),
+
+                  const SizedBox(height: 24),
 
                   InfoBlock(
                     icon: Icons.attach_money,
@@ -283,7 +284,7 @@ class _ProductDetailsScreenState extends ConsumerState<ProductDetailsScreen> {
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         Text(
-                          '\$101,67', // Static placeholder
+                          CurrencyFormatter.format(currentProduct.averageCost),
                           style: textTheme.headlineSmall?.copyWith(
                             fontWeight: FontWeight.w900,
                             color: colors.onSurface,
@@ -303,28 +304,24 @@ class _ProductDetailsScreenState extends ConsumerState<ProductDetailsScreen> {
                     ),
                   ),
 
-                  const SizedBox(height: 24),
-
-                  InfoBlock.text(
-                    icon: Symbols.package_2,
-                    label: 'Existencia',
-                    value: '15 Unidades', // Static placeholder
-                  ),
-
                   const SizedBox(height: 32),
 
                   // "Mis compras" Button
                   Center(
                     child: TextButton(
-                      onPressed: () {
-                        // No action
-                      },
+                      onPressed: currentProduct.purchaseCount > 0
+                          ? () => context.push(
+                              '/my-purchases?productId=${currentProduct.id}',
+                            )
+                          : null,
                       child: Text(
                         'Mis compras',
                         style: TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.w600,
-                          color: colors.primary,
+                          color: currentProduct.purchaseCount > 0
+                              ? colors.primary
+                              : colors.outline,
                         ),
                       ),
                     ),

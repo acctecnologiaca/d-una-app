@@ -3,6 +3,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../../data/repositories/quote_product_selection_repository.dart';
 import '../../../domain/models/quote_aggregated_product.dart';
 import '../../../domain/models/quote_product_source.dart';
+import '../../../../portfolio/presentation/providers/product_search_provider.dart';
 
 // Repository Provider
 final quoteProductSelectionRepositoryProvider =
@@ -10,12 +11,12 @@ final quoteProductSelectionRepositoryProvider =
       return QuoteProductSelectionRepository(Supabase.instance.client);
     });
 
-// FutureProvider for Suggestions
-final quoteProductSuggestionsProvider =
-    FutureProvider.autoDispose<List<QuoteAggregatedProduct>>((ref) {
-      final repository = ref.watch(quoteProductSelectionRepositoryProvider);
-      return repository.getQuoteProductSuggestions();
-    });
+// Family FutureProvider for Suggestions
+final quoteProductSuggestionsProvider = FutureProvider.autoDispose
+    .family<List<QuoteAggregatedProduct>, ProductSearchParams>((ref, params) {
+  final repository = ref.watch(quoteProductSelectionRepositoryProvider);
+  return repository.getQuoteProductSuggestions(params);
+});
 
 // Family FutureProvider for Sources
 final quoteProductSourcesProvider = FutureProvider.autoDispose

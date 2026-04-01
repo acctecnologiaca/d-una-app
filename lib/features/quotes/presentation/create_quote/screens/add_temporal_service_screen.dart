@@ -1,3 +1,4 @@
+import 'package:d_una_app/core/utils/string_extensions.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -392,7 +393,7 @@ class _AddTemporalServiceScreenState
                           symbol: '',
                         ),
                       );
-                      return '${rate.name} (${rate.symbol})';
+                      return '${rate.name.toTitleCase} (${rate.symbol})';
                     },
                     onChanged: (newValue) {
                       if (newValue != null) {

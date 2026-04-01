@@ -1,4 +1,6 @@
-class PurchaseItemProduct {
+import 'package:equatable/equatable.dart';
+
+class PurchaseItemProduct extends Equatable {
   final String id;
   final String productId;
   final String name;
@@ -12,7 +14,7 @@ class PurchaseItemProduct {
   final String? warrantyUnit; // 'days', 'months', 'years'
   final bool requiresSerials;
 
-  PurchaseItemProduct({
+  const PurchaseItemProduct({
     required this.id,
     required this.productId,
     required this.name,
@@ -28,11 +30,27 @@ class PurchaseItemProduct {
 
   double get subtotal => quantity * unitPrice;
 
+  @override
+  List<Object?> get props => [
+        id,
+        productId,
+        name,
+        brand,
+        model,
+        uom,
+        quantity,
+        unitPrice,
+        warrantyTime,
+        warrantyUnit,
+        requiresSerials,
+      ];
+
   PurchaseItemProduct copyWith({
     double? quantity,
     double? unitPrice,
     int? warrantyTime,
     String? warrantyUnit,
+    bool? requiresSerials,
   }) {
     return PurchaseItemProduct(
       id: id,
@@ -45,7 +63,7 @@ class PurchaseItemProduct {
       unitPrice: unitPrice ?? this.unitPrice,
       warrantyTime: warrantyTime ?? this.warrantyTime,
       warrantyUnit: warrantyUnit ?? this.warrantyUnit,
-      requiresSerials: requiresSerials,
+      requiresSerials: requiresSerials ?? this.requiresSerials,
     );
   }
 }

@@ -9,6 +9,7 @@ class AddProductStep2 extends StatefulWidget {
   final VoidCallback onBack;
   final VoidCallback onCancel;
   final Future<void> Function()? onAiAutofill;
+  final bool isAiAutofillEnabled;
 
   const AddProductStep2({
     super.key,
@@ -18,6 +19,7 @@ class AddProductStep2 extends StatefulWidget {
     required this.onBack,
     required this.onCancel,
     this.onAiAutofill,
+    this.isAiAutofillEnabled = true,
   });
 
   @override
@@ -27,6 +29,31 @@ class AddProductStep2 extends StatefulWidget {
 class _AddProductStep2State extends State<AddProductStep2> {
   final _formKey = GlobalKey<FormState>();
   bool _isConverting = false;
+ 
+  @override
+  void initState() {
+    super.initState();
+    widget.nameController.addListener(_onNameChanged);
+  }
+ 
+  @override
+  void dispose() {
+    widget.nameController.removeListener(_onNameChanged);
+    super.dispose();
+  }
+ 
+  @override
+  void didUpdateWidget(AddProductStep2 oldWidget) {
+    if (oldWidget.nameController != widget.nameController) {
+      oldWidget.nameController.removeListener(_onNameChanged);
+      widget.nameController.addListener(_onNameChanged);
+    }
+    super.didUpdateWidget(oldWidget);
+  }
+ 
+  void _onNameChanged() {
+    setState(() {});
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -65,11 +92,15 @@ class _AddProductStep2State extends State<AddProductStep2> {
                     Align(
                       alignment: Alignment.centerRight,
                       child: TextButton.icon(
-                        onPressed: () async {
-                          setState(() => _isConverting = true);
-                          await widget.onAiAutofill!();
-                          if (mounted) setState(() => _isConverting = false);
-                        },
+                        onPressed: widget.isAiAutofillEnabled
+                            ? () async {
+                                setState(() => _isConverting = true);
+                                await widget.onAiAutofill!();
+                                if (mounted) {
+                                  setState(() => _isConverting = false);
+                                }
+                              }
+                            : null,
                         icon: _isConverting
                             ? const SizedBox(
                                 width: 16,
@@ -126,6 +157,7 @@ class _AddProductStep2State extends State<AddProductStep2> {
           child: WizardButtonBar(
             onCancel: widget.onCancel,
             onBack: widget.onBack,
+            isNextEnabled: widget.nameController.text.trim().isNotEmpty,
             onNext: () {
               if (_formKey.currentState!.validate()) {
                 widget.onNext();

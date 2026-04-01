@@ -2,150 +2,434 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:d_una_app/shared/utils/currency_formatter.dart';
+import 'package:d_una_app/shared/widgets/custom_extended_fab.dart';
 import 'package:d_una_app/features/purchases/presentation/providers/add_purchase_provider.dart';
 
 class AddPurchaseSummaryTab extends ConsumerWidget {
   final Function(int) onNavigateToTab;
 
-  const AddPurchaseSummaryTab({
-    super.key,
-    required this.onNavigateToTab,
-  });
+  const AddPurchaseSummaryTab({super.key, required this.onNavigateToTab});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final state = ref.watch(addPurchaseProvider);
     final colors = Theme.of(context).colorScheme;
 
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(16.0),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          _buildSectionCard(
-            context,
-            title: 'Detalles del documento',
-            onEdit: () => onNavigateToTab(0),
-            child: Column(
-              children: [
-                _buildInfoRow('Proveedor', state.supplierName ?? 'No seleccionado'),
-                _buildInfoRow('Documento', '${state.documentType} ${state.documentNumber ?? ""}'),
-                _buildInfoRow('Fecha', state.date.toString().split(' ')[0]),
-              ],
+    // Empty state
+    if (state.products.isEmpty) {
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              Icons.receipt_long_outlined,
+              size: 64,
+              color: colors.onSurfaceVariant.withValues(alpha: 0.5),
             ),
-          ),
-          const SizedBox(height: 16),
-          _buildSectionCard(
-            context,
-            title: 'Productos (${state.products.length})',
-            onEdit: () => onNavigateToTab(1),
-            child: Column(
-              children: [
-                ...state.products.map((p) => _buildInfoRow(
-                  p.name,
-                  '${p.quantity} x ${CurrencyFormatter.format(p.unitPrice)}',
-                )),
-              ],
+            const SizedBox(height: 16),
+            Text(
+              'Sin datos que mostrar',
+              style: TextStyle(color: colors.onSurfaceVariant, fontSize: 16),
             ),
-          ),
-          const SizedBox(height: 24),
-          Card(
-            elevation: 0,
-            color: colors.primaryContainer.withValues(alpha: 0.3),
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-            child: Padding(
-              padding: const EdgeInsets.all(16.0),
-              child: Column(
-                children: [
-                  _buildTotalRow('Subtotal', state.subtotal, colors.onSurfaceVariant),
-                  _buildTotalRow('I.V.A (0%)', state.tax, colors.onSurfaceVariant),
-                  const Divider(height: 24),
-                  _buildTotalRow('Total', state.total, colors.primary, isBold: true, fontSize: 20),
-                ],
+          ],
+        ),
+      );
+    }
+
+    // Calculations
+    final subtotal = state.subtotal;
+    final taxRateDisplay = state.taxRate > 1
+        ? state.taxRate
+        : state.taxRate * 100;
+    final taxRateDecimal = state.taxRate > 1
+        ? state.taxRate / 100
+        : state.taxRate;
+    final taxAmount = subtotal * taxRateDecimal;
+    final finalTotal = subtotal + taxAmount;
+
+    // Display products (max 3)
+    final displayProducts = state.products.take(3).toList();
+
+    return Scaffold(
+      backgroundColor: Colors.transparent,
+      body: SingleChildScrollView(
+        padding: const EdgeInsets.only(
+          left: 16,
+          right: 16,
+          top: 16,
+          bottom: 100,
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            // 1. Proveedor Section
+            _buildSectionHeader(context, Icons.groups_outlined, 'Proveedor'),
+            _buildSupplierCard(context, state),
+            const SizedBox(height: 16),
+
+            // 2. Factura Section
+            _buildSectionHeader(
+              context,
+              state.documentType == 'invoice'
+                  ? Icons.receipt_long_outlined
+                  : Icons.receipt_outlined,
+              state.documentType == 'invoice' ? 'Factura' : 'Nota de entrega',
+            ),
+            _buildInvoiceCard(
+              context,
+              state,
+              subtotal,
+              taxAmount,
+              taxRateDisplay,
+              finalTotal,
+              displayProducts,
+            ),
+            const SizedBox(height: 16),
+
+            // Footer note
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 8.0),
+              child: Text(
+                'Los montos finales acá reflejados, deben ser iguales a los del documento de compra.',
+                style: TextStyle(
+                  fontSize: 13,
+                  color: colors.onSurfaceVariant.withValues(alpha: 0.6),
+                  fontStyle: FontStyle.italic,
+                ),
+                textAlign: TextAlign.center,
               ),
             ),
-          ),
-          const SizedBox(height: 32),
-          ElevatedButton(
-            onPressed: state.isLoading ? null : () async {
-              final success = await ref.read(addPurchaseProvider.notifier).createPurchase();
-              if (success && context.mounted) {
-                context.pop(); // Close add screen
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Compra registrada exitosamente')),
-                );
-              } else if (state.error != null && context.mounted) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(content: Text('Error: ${state.error}')),
-                );
-              }
-            },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: colors.primary,
-              foregroundColor: colors.onPrimary,
-              padding: const EdgeInsets.symmetric(vertical: 16),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          ],
+        ),
+      ),
+      floatingActionButton: Padding(
+        padding: const EdgeInsets.only(bottom: 40.0),
+        child: CustomExtendedFab(
+          label: 'Guardar',
+          icon: Icons.save_outlined,
+          onPressed: state.isLoading
+              ? null
+              : () async {
+                  final success = await ref
+                      .read(addPurchaseProvider.notifier)
+                      .createPurchase();
+                  if (success && context.mounted) {
+                    context.pop();
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('Compra registrada exitosamente'),
+                      ),
+                    );
+                  } else if (state.error != null && context.mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(content: Text('Error: ${state.error}')),
+                    );
+                  }
+                },
+        ),
+      ),
+    );
+  }
+
+  // ── Section Header ─────────────────────────────────────────
+  Widget _buildSectionHeader(
+    BuildContext context,
+    IconData icon,
+    String title,
+  ) {
+    final colors = Theme.of(context).colorScheme;
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8.0),
+      child: Row(
+        children: [
+          Icon(icon, size: 20, color: colors.onSurfaceVariant),
+          const SizedBox(width: 8),
+          Text(
+            title,
+            style: TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.bold,
+              color: colors.onSurfaceVariant,
             ),
-            child: state.isLoading
-                ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
-                : const Text('Registrar Compra', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
           ),
         ],
       ),
     );
   }
 
-  Widget _buildSectionCard(BuildContext context, {required String title, required Widget child, required VoidCallback onEdit}) {
+  // ── Proveedor Card ─────────────────────────────────────────
+  Widget _buildSupplierCard(BuildContext context, AddPurchaseState state) {
     final colors = Theme.of(context).colorScheme;
     return Card(
       elevation: 0,
-      color: colors.surfaceContainerLow,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(8),
+        side: BorderSide(color: colors.outlineVariant),
+      ),
+      color: colors.surface,
       child: Padding(
         padding: const EdgeInsets.all(16.0),
         child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text(title, style: TextStyle(fontWeight: FontWeight.bold, color: colors.onSurfaceVariant)),
-                IconButton(
-                  icon: const Icon(Icons.edit_outlined, size: 20),
-                  onPressed: onEdit,
-                  visualDensity: VisualDensity.compact,
-                ),
-              ],
+            _buildSummaryRow(
+              context,
+              Icons.domain,
+              'Razón social',
+              state.supplierName ?? 'No seleccionado',
+              isTextValue: true,
             ),
-            const Divider(),
-            child,
+            const SizedBox(height: 12),
+            _buildSummaryRow(
+              context,
+              Icons.badge_outlined,
+              'RIF/NIF/RUT',
+              state.supplierTaxId ?? 'N/A',
+              isTextValue: true,
+            ),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildInfoRow(String label, String value) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 4.0),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Expanded(child: Text(label, style: const TextStyle(color: Colors.black54))),
-          Text(value, style: const TextStyle(fontWeight: FontWeight.w500)),
-        ],
+  // ── Invoice Card ───────────────────────────────────────────
+  Widget _buildInvoiceCard(
+    BuildContext context,
+    AddPurchaseState state,
+    double subtotal,
+    double taxAmount,
+    double taxRateDisplay,
+    double finalTotal,
+    List displayProducts,
+  ) {
+    final colors = Theme.of(context).colorScheme;
+    final textTheme = Theme.of(context).textTheme;
+
+    return Card(
+      elevation: 0,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(8),
+        side: BorderSide(color: colors.outlineVariant),
+      ),
+      color: colors.surface,
+      child: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            // Products header
+            _buildHeaderRow(
+              context,
+              Icons.inventory_2_outlined,
+              'Productos',
+              groupedCount: state.products.length,
+              amount: CurrencyFormatter.format(subtotal),
+            ),
+            const SizedBox(height: 8),
+
+            // Product lines (max 3)
+            ...displayProducts.map((p) {
+              final qty = p.quantity.toInt();
+              final uom = p.uom;
+              return Padding(
+                padding: const EdgeInsets.only(bottom: 4.0, left: 24.0),
+                child: Text.rich(
+                  TextSpan(
+                    children: [
+                      TextSpan(
+                        text: '$qty $uom: ',
+                        style: const TextStyle(fontWeight: FontWeight.bold),
+                      ),
+                      TextSpan(
+                        text: p.name,
+                        style: TextStyle(color: colors.onSurfaceVariant),
+                      ),
+                    ],
+                  ),
+                ),
+              );
+            }),
+
+            // "Ver todos..." only if more than 3
+            if (state.products.length > 3)
+              Align(
+                alignment: Alignment.centerRight,
+                child: TextButton.icon(
+                  onPressed: () => onNavigateToTab(1),
+                  icon: const Icon(Icons.arrow_forward_ios, size: 14),
+                  label: const Text('Ver todos...'),
+                  style: TextButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 4,
+                    ),
+                    minimumSize: Size.zero,
+                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                  ),
+                ),
+              ),
+
+            const Padding(
+              padding: EdgeInsets.symmetric(vertical: 8.0),
+              child: Divider(),
+            ),
+
+            // Sub-Total
+            _buildRowText(
+              'Sub-Total',
+              CurrencyFormatter.format(subtotal),
+              isBold: true,
+              icon: Icons.attach_money,
+            ),
+            const SizedBox(height: 8),
+
+            // IVA
+            _buildRowText(
+              'IVA (${taxRateDisplay.toStringAsFixed(0)}%)',
+              CurrencyFormatter.format(taxAmount),
+              icon: Icons.percent,
+            ),
+
+            const Padding(
+              padding: EdgeInsets.symmetric(vertical: 8.0),
+              child: Divider(),
+            ),
+
+            // Total
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Row(
+                  children: [
+                    Icon(
+                      Icons.monetization_on_outlined,
+                      size: 18,
+                      color: colors.onSurface,
+                    ),
+                    const SizedBox(width: 8),
+                    Text(
+                      'Total',
+                      style: textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ],
+                ),
+                Text(
+                  CurrencyFormatter.format(finalTotal),
+                  style: textTheme.headlineSmall?.copyWith(
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
       ),
     );
   }
 
-  Widget _buildTotalRow(String label, double amount, Color color, {bool isBold = false, double fontSize = 16}) {
+  // ── Summary Row ────────────────────────────────────────────
+  Widget _buildSummaryRow(
+    BuildContext context,
+    IconData icon,
+    String label,
+    String value, {
+    TextStyle? valueStyle,
+    Color? iconColor,
+    bool isTextValue = false,
+  }) {
+    final colors = Theme.of(context).colorScheme;
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Icon(icon, size: 18, color: iconColor ?? colors.onSurfaceVariant),
+        const SizedBox(width: 8),
+        Text(
+          label,
+          style: TextStyle(
+            color: colors.onSurfaceVariant,
+            fontWeight: FontWeight.w500,
+          ),
+        ),
+        const SizedBox(width: 16),
+        Expanded(
+          child: Text(
+            value,
+            textAlign: TextAlign.right,
+            style:
+                valueStyle ??
+                TextStyle(
+                  fontWeight: isTextValue ? FontWeight.normal : FontWeight.w600,
+                  color: isTextValue
+                      ? colors.onSurfaceVariant
+                      : colors.onSurface,
+                  fontSize: isTextValue ? 14 : 16,
+                ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  // ── Header Row ─────────────────────────────────────────────
+  Widget _buildHeaderRow(
+    BuildContext context,
+    IconData icon,
+    String title, {
+    required int groupedCount,
+    required String amount,
+  }) {
+    final colors = Theme.of(context).colorScheme;
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        Text(label, style: TextStyle(fontSize: fontSize, fontWeight: isBold ? FontWeight.bold : FontWeight.normal)),
+        Row(
+          children: [
+            Icon(icon, size: 18, color: colors.onSurface),
+            const SizedBox(width: 8),
+            Text(
+              '$title ($groupedCount)',
+              style: const TextStyle(fontWeight: FontWeight.bold),
+            ),
+          ],
+        ),
+        Text(amount, style: const TextStyle(fontWeight: FontWeight.bold)),
+      ],
+    );
+  }
+
+  // ── Row Text ───────────────────────────────────────────────
+  Widget _buildRowText(
+    String label,
+    String value, {
+    bool isBold = false,
+    IconData? icon,
+  }) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        Row(
+          children: [
+            if (icon != null) ...[
+              Icon(icon, size: 16, color: Colors.grey.shade600),
+              const SizedBox(width: 8),
+            ] else
+              const SizedBox(width: 24),
+            Text(
+              label,
+              style: TextStyle(
+                fontWeight: isBold ? FontWeight.bold : FontWeight.w500,
+                color: Colors.grey.shade700,
+              ),
+            ),
+          ],
+        ),
         Text(
-          CurrencyFormatter.format(amount),
-          style: TextStyle(fontSize: fontSize, fontWeight: isBold ? FontWeight.bold : FontWeight.normal, color: color),
+          value,
+          style: TextStyle(
+            fontWeight: isBold ? FontWeight.bold : FontWeight.w600,
+          ),
         ),
       ],
     );

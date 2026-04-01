@@ -16,6 +16,7 @@ class GenericSearchScreen<T> extends StatefulWidget {
   final VoidCallback? onResetFilters;
   final ValueChanged<String>? onQueryChanged;
   final Widget? bottomFilterWidget;
+  final int Function(T a, T b)? comparator;
 
   const GenericSearchScreen({
     super.key,
@@ -30,6 +31,7 @@ class GenericSearchScreen<T> extends StatefulWidget {
     this.onResetFilters,
     this.onQueryChanged,
     this.bottomFilterWidget,
+    this.comparator,
   });
 
   @override
@@ -264,6 +266,11 @@ class _GenericSearchScreenState<T> extends State<GenericSearchScreen<T>> {
     final filteredItems = items.where((item) {
       return widget.filter(item, _searchQuery);
     }).toList();
+
+    // Sort Items
+    if (widget.comparator != null) {
+      filteredItems.sort(widget.comparator!);
+    }
 
     if (filteredItems.isEmpty) {
       return widget.emptyState ??

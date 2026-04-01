@@ -42,6 +42,7 @@ class PurchaseItem extends Equatable {
 
   Map<String, dynamic> toJson() {
     return {
+      'id': id,
       'purchase_id': purchaseId,
       'product_id': productId,
       'quantity': quantity,

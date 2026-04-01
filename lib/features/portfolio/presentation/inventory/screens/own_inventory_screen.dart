@@ -1,4 +1,3 @@
-import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -105,6 +104,11 @@ class _OwnInventoryScreenState extends ConsumerState<OwnInventoryScreen> {
                 SortSelector(
                   currentSort: _currentSort,
                   onSortChanged: (val) => setState(() => _currentSort = val),
+                  options: const [
+                    SortOption.recent,
+                    SortOption.nameAZ,
+                    SortOption.nameZA,
+                  ],
                 ),
               ],
             ),
@@ -131,7 +135,6 @@ class _OwnInventoryScreenState extends ConsumerState<OwnInventoryScreen> {
                 filteredList.sort((a, b) {
                   switch (_currentSort) {
                     case SortOption.recent:
-                    case SortOption.frequency:
                       return b.createdAt.compareTo(a.createdAt);
                     case SortOption.nameAZ:
                       return a.name.toLowerCase().compareTo(
@@ -163,25 +166,23 @@ class _OwnInventoryScreenState extends ConsumerState<OwnInventoryScreen> {
                       const Divider(height: 1, color: Colors.transparent),
                   itemBuilder: (context, index) {
                     final product = filteredList[index];
-                    // Random price between 30 and 100 for visual testing
-                    final randomPrice = 30 + Random().nextDouble() * 70;
-                    // Random stock between 5 and 30 for visual testing
-                    final randomStock = 5 + Random().nextInt(26);
 
                     return InventoryItemCard(
                       name: product.name,
                       brand: product.brand?.name ?? 'Sin marca',
                       model: product.model ?? 'Sin modelo',
-                      stock: randomStock, // Mock stock to see the color
-                      price: randomPrice,
+                      stock: product.inventoryQuantity,
+                      price: product.averageCost,
+                      unit: product.uom,
+                      uomIconName: product.uomModel?.iconName,
                       imageUrl: product.imageUrl,
                       onTap: () {
                         InventoryActionSheet.show(
                           context: context,
+                          ref: ref,
                           product: product,
-                          currentPrice:
-                              0.0, // Unavailable in filtered list (using mock inside sheet if needed, or pass 0)
-                          currentStock: 0,
+                          currentPrice: product.averageCost,
+                          currentStock: product.inventoryQuantity,
                         );
                       },
                     );

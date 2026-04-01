@@ -332,7 +332,7 @@ class _ProductSuppliersScreenState
                     final price = parseDouble(item['price']);
                     final stock = parseInt(item['stock_quantity']);
                     final uom = item['uom_label'] as String? ?? item['uom'] as String? ?? 'Unidad';
-                    final uomSymbolName = item['uom_symbol_name'] as String?;
+                    final uomIconName = item['uom_icon_name'] as String?;
 
                     // Parse Access Level from Backend
                     final isRestricted = !(item['is_accessible'] as bool? ?? false); // Locked + SnackBar
@@ -348,7 +348,7 @@ class _ProductSuppliersScreenState
                       price: price,
                       stock: stock,
                       uom: uom,
-                      uomSymbolName: uomSymbolName,
+                      uomIconName: uomIconName,
                       isWholesale: tradeType == 'WHOLESALE',
                       isLocked: isRestricted,
                       isPartial: isPartial,

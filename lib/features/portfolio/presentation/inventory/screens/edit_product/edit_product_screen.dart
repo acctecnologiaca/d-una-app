@@ -16,9 +16,11 @@ import '../../../../../../../shared/widgets/form_bottom_bar.dart';
 import '../../../../data/models/product_model.dart';
 import '../../../../data/models/category_model.dart';
 import '../../../../data/models/brand_model.dart';
+import '../../../../data/models/uom_model.dart';
 import '../../../../domain/utils/product_validators.dart';
 import '../../../providers/products_provider.dart';
 import '../../../providers/lookup_providers.dart';
+import '../../../../../settings/presentation/widgets/add_edit_brand_sheet.dart';
 
 class EditProductScreen extends ConsumerStatefulWidget {
   final Product product;
@@ -38,6 +40,7 @@ class _EditProductScreenState extends ConsumerState<EditProductScreen> {
   // Selected Values
   Brand? _selectedBrand;
   Category? _selectedCategory;
+  Uom? _selectedUom;
   File? _newImageFile;
 
   // Initial Values for Dirty Check
@@ -46,6 +49,7 @@ class _EditProductScreenState extends ConsumerState<EditProductScreen> {
   late String _initialSpecs;
   late Brand? _initialBrand;
   late Category? _initialCategory;
+  late Uom? _initialUom;
 
   @override
   void initState() {
@@ -60,6 +64,7 @@ class _EditProductScreenState extends ConsumerState<EditProductScreen> {
 
     _selectedBrand = widget.product.brand;
     _selectedCategory = widget.product.category;
+    _selectedUom = widget.product.uomModel;
 
     // Capture initial state
     _initialName = widget.product.name;
@@ -67,6 +72,7 @@ class _EditProductScreenState extends ConsumerState<EditProductScreen> {
     _initialSpecs = widget.product.specs ?? '';
     _initialBrand = widget.product.brand;
     _initialCategory = widget.product.category;
+    _initialUom = widget.product.uomModel;
 
     // Listeners for dirty check
     _nameController.addListener(_onFormChanged);
@@ -80,6 +86,7 @@ class _EditProductScreenState extends ConsumerState<EditProductScreen> {
         _specsController.text != _initialSpecs ||
         _selectedBrand != _initialBrand ||
         _selectedCategory != _initialCategory ||
+        _selectedUom != _initialUom ||
         _newImageFile != null;
   }
 
@@ -260,12 +267,17 @@ class _EditProductScreenState extends ConsumerState<EditProductScreen> {
 
     final updatedProduct = widget.product.copyWith(
       name: _nameController.text,
-      model: _modelController.text,
+      model: _modelController.text.trim().isEmpty
+          ? 'NO APLICA'
+          : _modelController.text.trim(),
       specs: _specsController.text,
       brandId: _selectedBrand?.id,
       brand: _selectedBrand,
       categoryId: _selectedCategory?.id,
       category: _selectedCategory,
+      uomId: _selectedUom?.id,
+      uom: _selectedUom?.symbol,
+      uomModel: _selectedUom,
       updatedAt: DateTime.now(),
     );
 
@@ -310,6 +322,9 @@ class _EditProductScreenState extends ConsumerState<EditProductScreen> {
 
     final brandsAsync = ref.watch(brandsProvider);
     final brandsList = brandsAsync.valueOrNull ?? [];
+
+    final uomsAsync = ref.watch(uomsProvider);
+    final uomsList = uomsAsync.valueOrNull ?? [];
 
     // Ensure selected category is in the list
     if (_selectedCategory != null &&
@@ -454,47 +469,11 @@ class _EditProductScreenState extends ConsumerState<EditProductScreen> {
               itemLabelBuilder: (item) => item.name,
               showAddOption: true,
               addOptionValue: const Brand(id: 'new', name: '___ADD___'),
-              onAddPressed: () {
-                // Open simple dialog to add brand
-                final textController = TextEditingController();
-                showDialog(
-                  context: context,
-                  builder: (context) => AlertDialog(
-                    title: const Text('Agregar nueva marca'),
-                    content: TextField(
-                      controller: textController,
-                      decoration: const InputDecoration(labelText: 'Nombre'),
-                      textCapitalization: TextCapitalization.words,
-                    ),
-                    actions: [
-                      TextButton(
-                        onPressed: () => Navigator.pop(context),
-                        child: const Text('Cancelar'),
-                      ),
-                      FilledButton(
-                        onPressed: () async {
-                          final name = textController.text.trim();
-                          if (name.isNotEmpty) {
-                            try {
-                              final newBrand = await ref
-                                  .read(lookupRepositoryProvider)
-                                  .addBrand(name);
-                              ref.invalidate(brandsProvider);
-                              setState(() {
-                                _selectedBrand = newBrand;
-                              });
-                              if (!context.mounted) return;
-                              Navigator.pop(context);
-                            } catch (e) {
-                              // verify mounted
-                            }
-                          }
-                        },
-                        child: const Text('Agregar'),
-                      ),
-                    ],
-                  ),
-                );
+              onAddPressed: () async {
+                final newBrand = await AddEditBrandSheet.show(context);
+                if (newBrand != null && mounted) {
+                  setState(() => _selectedBrand = newBrand);
+                }
               },
               addOptionLabel: 'Agregar',
             ),
@@ -512,6 +491,19 @@ class _EditProductScreenState extends ConsumerState<EditProductScreen> {
               maxLines: 6,
               minLines: 4,
               hintText: '- Resolución de 4K...\n- Interfaz Ethernet...',
+            ),
+            const SizedBox(height: 24),
+
+            CustomDropdown<Uom>(
+              label: 'Unidad de medida',
+              value: _selectedUom,
+              items: uomsList,
+              onChanged: (val) {
+                setState(() => _selectedUom = val);
+              },
+              itemLabelBuilder: (item) =>
+                  '${item.name} (${item.symbol})',
+              showAddOption: false, // UOMs are curated for now
             ),
 
             const SizedBox(height: 48),

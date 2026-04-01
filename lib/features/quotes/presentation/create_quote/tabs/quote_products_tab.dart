@@ -122,7 +122,7 @@ class QuoteProductsTab extends ConsumerWidget {
               brand: firstItem.brand ?? '',
               model: firstItem.model ?? '',
               uom: firstItem.uom,
-              uomSymbolName: firstItem.uomSymbolName ?? 'package_2',
+              uomIconName: firstItem.uomIconName ?? 'package_2',
               minPrice: firstItem.costPrice,
               totalQuantity: totalAvailableStock,
               supplierCount: items.length,

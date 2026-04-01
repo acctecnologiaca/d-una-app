@@ -47,9 +47,9 @@ class StandardListItem extends StatelessWidget {
                   if (overline != null) ...[
                     DefaultTextStyle(
                       style: TextStyle(
-                        fontSize: 12,
+                        fontSize: 14,
                         color: colors.onSurfaceVariant,
-                        fontWeight: FontWeight.w500,
+                        fontWeight: FontWeight.w400,
                       ),
                       child: overline!,
                     ),
@@ -80,7 +80,7 @@ class StandardListItem extends StatelessWidget {
                     const SizedBox(height: 2),
                     DefaultTextStyle(
                       style: TextStyle(
-                        fontSize: 13, // Standardized subtitle size
+                        fontSize: 14, // Standardized subtitle size
                         color: colors.onSurfaceVariant,
                         fontWeight: FontWeight.w400,
                       ),

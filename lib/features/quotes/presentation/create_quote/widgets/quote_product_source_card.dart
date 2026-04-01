@@ -2,6 +2,7 @@ import 'dart:ui';
 import 'package:flutter/material.dart';
 import '../../../../../shared/utils/currency_formatter.dart';
 import '../../../../../shared/widgets/dynamic_material_symbol.dart';
+import '../../../../../shared/widgets/editable_quantity_stepper.dart';
 import '../../../domain/models/quote_product_source.dart';
 import '../../../../profile/presentation/screens/verification_screen.dart';
 
@@ -42,7 +43,7 @@ class _QuoteProductSourceCardState extends State<QuoteProductSourceCard> {
   Widget build(BuildContext context) {
     final colors = Theme.of(context).colorScheme;
     final isOwn = widget.source.sourceType == ProductSourceType.own;
-    final maxQty = isOwn ? 99999.0 : widget.source.maxStock;
+    final maxQty = isOwn ? 999999.0 : widget.source.maxStock;
 
     // Access Level Parsing
     final isRestricted = !widget.source.isAccessible; // Locked + SnackBar
@@ -304,7 +305,7 @@ class _QuoteProductSourceCardState extends State<QuoteProductSourceCard> {
                           mainAxisSize: MainAxisSize.min,
                           children: [
                             DynamicMaterialSymbol(
-                              symbolName: widget.source.uomSymbolName,
+                              symbolName: widget.source.uomIconName,
                               size: 14,
                               color: stockColor,
                             ),
@@ -388,7 +389,7 @@ class _QuoteProductSourceCardState extends State<QuoteProductSourceCard> {
                     ),
                   ),
                   const SizedBox(width: 4),
-                  _QuantitySelector(
+                  EditableQuantityStepper(
                     value: widget.selectedQty,
                     min: 0,
                     max: maxQty,
@@ -400,59 +401,6 @@ class _QuoteProductSourceCardState extends State<QuoteProductSourceCard> {
           ],
         ],
       ),
-    );
-  }
-}
-
-class _QuantitySelector extends StatelessWidget {
-  final double value;
-  final double min;
-  final double max;
-  final ValueChanged<double> onChanged;
-
-  const _QuantitySelector({
-    required this.value,
-    required this.min,
-    required this.max,
-    required this.onChanged,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = Theme.of(context).colorScheme;
-
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        IconButton(
-          onPressed: value > min
-              ? () => onChanged((value - 1).clamp(min, max))
-              : null,
-          icon: const Icon(Icons.remove),
-          iconSize: 20,
-          visualDensity: VisualDensity.compact,
-          color: colors.primary,
-        ),
-        Container(
-          width: 50,
-          alignment: Alignment.center,
-          child: Text(
-            value.truncateToDouble() == value
-                ? value.toInt().toString()
-                : value.toStringAsFixed(1),
-            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
-          ),
-        ),
-        IconButton(
-          onPressed: value < max
-              ? () => onChanged((value + 1).clamp(min, max))
-              : null,
-          icon: const Icon(Icons.add),
-          iconSize: 20,
-          visualDensity: VisualDensity.compact,
-          color: colors.primary,
-        ),
-      ],
     );
   }
 }

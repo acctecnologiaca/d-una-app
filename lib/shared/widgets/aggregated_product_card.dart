@@ -2,10 +2,11 @@ import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:material_symbols_icons/symbols.dart';
 // Removed model dependency to make this a truly shared widget
-import 'dynamic_material_symbol.dart';
-import '../../core/utils/string_extensions.dart';
+
 import '../utils/currency_formatter.dart';
 import 'standard_list_item.dart';
+import 'status_badge.dart';
+import 'uom_status_badge.dart';
 
 class AggregatedProductCard extends StatelessWidget {
   final String name;
@@ -15,7 +16,7 @@ class AggregatedProductCard extends StatelessWidget {
   final num totalQuantity;
   final int supplierCount;
   final String uom;
-  final String? uomSymbolName;
+  final String? uomIconName;
   final bool showPriceAndStock;
   final bool isLocked;
 
@@ -30,7 +31,7 @@ class AggregatedProductCard extends StatelessWidget {
     required this.totalQuantity,
     required this.supplierCount,
     required this.uom,
-    this.uomSymbolName,
+    this.uomIconName,
     required this.onTap,
     this.showPriceAndStock = true,
     this.isLocked = false,
@@ -43,9 +44,9 @@ class AggregatedProductCard extends StatelessWidget {
     return StandardListItem(
       padding: const EdgeInsets.symmetric(vertical: 12.0),
       onTap: onTap,
-      overline: Text(brand.toTitleCase),
-      title: name.toTitleCase,
-      subtitle: (model.isNotEmpty) ? Text(model.toUpperCase()) : null,
+      overline: Text(brand),
+      title: name,
+      subtitle: (model.isNotEmpty) ? Text(model) : null,
       trailing: showPriceAndStock
           ? Column(
               crossAxisAlignment: CrossAxisAlignment.end,
@@ -92,63 +93,23 @@ class AggregatedProductCard extends StatelessWidget {
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     // Supplier Count
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 6,
-                        vertical: 2,
-                      ),
-                      decoration: BoxDecoration(
-                        color: colors.tertiaryContainer,
-                        borderRadius: BorderRadius.circular(4),
-                      ),
-                      child: Row(
-                        children: [
-                          Icon(
-                            Symbols.warehouse,
-                            size: 14,
-                            color: colors.onTertiaryContainer,
-                          ),
-                          const SizedBox(width: 4),
-                          Text(
-                            '$supplierCount',
-                            style: TextStyle(
-                              fontSize: 12,
-                              fontWeight: FontWeight.bold,
-                              color: colors.onTertiaryContainer,
-                            ),
-                          ),
-                        ],
+                    StatusBadge(
+                      backgroundColor: colors.tertiaryContainer,
+                      textColor: colors.onTertiaryContainer,
+                      text: '$supplierCount',
+                      borderRadius: 4.0,
+                      icon: Icon(
+                        Symbols.warehouse,
+                        size: 14,
+                        color: colors.onTertiaryContainer,
                       ),
                     ),
                     const SizedBox(width: 8),
                     // Quantity
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 6,
-                        vertical: 2,
-                      ),
-                      decoration: BoxDecoration(
-                        color: colors.secondaryContainer,
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: Row(
-                        children: [
-                          DynamicMaterialSymbol(
-                            symbolName: uomSymbolName,
-                            size: 14,
-                            color: colors.onSecondaryContainer,
-                          ),
-                          const SizedBox(width: 4),
-                          Text(
-                            '${totalQuantity % 1 == 0 ? totalQuantity.toInt() : totalQuantity} $uom',
-                            style: TextStyle(
-                              fontSize: 12,
-                              fontWeight: FontWeight.w600,
-                              color: colors.onSecondaryContainer,
-                            ),
-                          ),
-                        ],
-                      ),
+                    UomStatusBadge(
+                      quantity: totalQuantity.toDouble(),
+                      uomAbbreviation: uom,
+                      uomIconName: uomIconName,
                     ),
                   ],
                 ),

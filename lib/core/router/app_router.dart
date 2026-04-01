@@ -59,9 +59,12 @@ import '../../features/settings/presentation/screens/commercial_conditions_list_
 import '../../features/settings/presentation/screens/observations_list_screen.dart';
 import '../../features/settings/presentation/screens/financial_parameters_screen.dart';
 import '../../features/purchases/presentation/screens/purchases_list_screen.dart';
+import '../../features/purchases/presentation/screens/purchase_details_screen.dart';
 import '../../features/purchases/presentation/screens/add_purchase_screen.dart';
 import '../../features/purchases/presentation/screens/add_purchase_select_product_screen.dart';
 import '../../features/purchases/presentation/screens/add_purchase_product_search_screen.dart';
+import '../../features/purchases/presentation/screens/manage_product_serials_screen.dart';
+import '../../features/purchases/presentation/screens/purchases_search_screen.dart';
 
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../router/router_notifier.dart';
@@ -395,16 +398,41 @@ final appRouter = GoRouter(
       builder: (context, state) => const PurchasesListScreen(),
       routes: [
         GoRoute(
+          path: 'search',
+          builder: (context, state) => const PurchasesSearchScreen(),
+        ),
+        GoRoute(
+          path: 'view/:id',
+          name: 'view_purchase',
+          builder: (context, state) {
+            final id = state.pathParameters['id']!;
+            return PurchaseDetailsScreen(purchaseId: id);
+          },
+        ),
+        GoRoute(
           path: 'add',
           builder: (context, state) => const AddPurchaseScreen(),
           routes: [
             GoRoute(
               path: 'select-product',
-              builder: (context, state) => const AddPurchaseSelectProductScreen(),
+              builder: (context, state) =>
+                  const AddPurchaseSelectProductScreen(),
               routes: [
                 GoRoute(
                   path: 'search',
-                  builder: (context, state) => const AddPurchaseProductSearchScreen(),
+                  builder: (context, state) =>
+                      const AddPurchaseProductSearchScreen(),
+                ),
+                GoRoute(
+                  path: 'manage-serials',
+                  builder: (context, state) {
+                    final extra = state.extra as Map<String, dynamic>;
+                    return ManageProductSerialsScreen(
+                      product: extra['product'] as Product,
+                      quantity: extra['quantity'] as int,
+                      purchaseItemId: extra['purchaseItemId'] as String,
+                    );
+                  },
                 ),
               ],
             ),

@@ -19,6 +19,7 @@ class ClientSearchScreen extends ConsumerStatefulWidget {
 class _ClientSearchScreenState extends ConsumerState<ClientSearchScreen> {
   String? _selectedFilterType; // null = All, 'company', 'person'
   final Set<String> _selectedFilterCities = {};
+  String _searchQuery = '';
 
   String _getHistoryKey() {
     final user = ref.read(authRepositoryProvider).currentUser;
@@ -38,6 +39,12 @@ class _ClientSearchScreenState extends ConsumerState<ClientSearchScreen> {
         setState(() {
           _selectedFilterType = null;
           _selectedFilterCities.clear();
+          _searchQuery = '';
+        });
+      },
+      onQueryChanged: (query) {
+        setState(() {
+          _searchQuery = query;
         });
       },
       filters: [
@@ -84,12 +91,14 @@ class _ClientSearchScreenState extends ConsumerState<ClientSearchScreen> {
           isActive: _selectedFilterCities.isNotEmpty,
           onTap: () {
             clientsAsync.whenData((clients) {
-              final availableCities = clients
-                  .map((c) => c.city)
-                  .whereType<String>()
-                  .where((c) => c.isNotEmpty)
-                  .toSet()
-                  .toList();
+              final queryNormalized = _searchQuery.normalized;
+              final availableCities = clients.where((c) {
+                return queryNormalized.isEmpty ||
+                    c.name.normalized.contains(queryNormalized) ||
+                    (c.taxId?.normalized ?? '').contains(queryNormalized) ||
+                    (c.alias?.normalized ?? '').contains(queryNormalized) ||
+                    (c.email?.normalized ?? '').contains(queryNormalized);
+              }).map((c) => c.city).whereType<String>().where((c) => c.isNotEmpty).toSet().toList();
 
               FilterBottomSheet.showMulti(
                 context: context,

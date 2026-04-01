@@ -71,6 +71,7 @@ class _AddEditUomSheetState extends ConsumerState<AddEditUomSheet> {
       navigator.pop();
       scaffoldMessenger.showSnackBar(
         SnackBar(
+          behavior: SnackBarBehavior.floating,
           content: Text(
             isEditing
                 ? 'Unidad actualizada a "$name"'
@@ -80,7 +81,7 @@ class _AddEditUomSheetState extends ConsumerState<AddEditUomSheet> {
       );
     } catch (e) {
       setState(() => _isLoading = false);
-      scaffoldMessenger.showSnackBar(SnackBar(content: Text('Error: $e')));
+      scaffoldMessenger.showSnackBar(SnackBar(behavior: SnackBarBehavior.floating, content: Text('Error: $e')));
     }
   }
 
@@ -117,10 +118,10 @@ class _AddEditUomSheetState extends ConsumerState<AddEditUomSheet> {
       ref.invalidate(uomsProvider);
       navigator.pop();
       scaffoldMessenger.showSnackBar(
-        SnackBar(content: Text('Unidad "${widget.uom!.name}" eliminada')),
+        SnackBar(behavior: SnackBarBehavior.floating, content: Text('Unidad "${widget.uom!.name}" eliminada')),
       );
     } catch (e) {
-      scaffoldMessenger.showSnackBar(SnackBar(content: Text('Error: $e')));
+      scaffoldMessenger.showSnackBar(SnackBar(behavior: SnackBarBehavior.floating, content: Text('Error: $e')));
     }
   }
 

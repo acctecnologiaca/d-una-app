@@ -24,6 +24,7 @@ class _ServiceSearchScreenState extends ConsumerState<ServiceSearchScreen> {
   final Set<String> _selectedRates = {};
   double? _minPrice;
   double? _maxPrice;
+  String _searchQuery = '';
 
   String _getHistoryKey() {
     return 'service_search_history';
@@ -59,6 +60,12 @@ class _ServiceSearchScreenState extends ConsumerState<ServiceSearchScreen> {
           _selectedRates.clear();
           _minPrice = null;
           _maxPrice = null;
+          _searchQuery = '';
+        });
+      },
+      onQueryChanged: (query) {
+        setState(() {
+          _searchQuery = query;
         });
       },
       filters: [
@@ -68,17 +75,19 @@ class _ServiceSearchScreenState extends ConsumerState<ServiceSearchScreen> {
           isActive: _selectedCategories.isNotEmpty,
           onTap: () {
             servicesAsync.whenData((services) {
-              final categories = services
-                  .map((s) => s.category?.name)
-                  .whereType<String>()
-                  .toSet()
-                  .where((s) => s.isNotEmpty)
-                  .toList();
+              final queryNormalized = _searchQuery.normalized;
+              final availableCategories = services.where((s) {
+                return queryNormalized.isEmpty ||
+                    s.name.normalized.contains(queryNormalized) ||
+                    (s.description?.normalized ?? '').contains(
+                      queryNormalized,
+                    );
+              }).map((s) => s.category?.name).whereType<String>().toSet().where((s) => s.isNotEmpty).toList();
 
               FilterBottomSheet.showMulti(
                 context: context,
                 title: 'Categoría',
-                options: categories,
+                options: availableCategories,
                 selectedValues: _selectedCategories,
                 onApply: (newSet) {
                   setState(() {
@@ -97,19 +106,19 @@ class _ServiceSearchScreenState extends ConsumerState<ServiceSearchScreen> {
           isActive: _selectedRates.isNotEmpty,
           onTap: () {
             servicesAsync.whenData((services) {
-              final rates = services
-                  .map(
-                    (s) => s.serviceRate?.name,
-                  ) // Use rate name (e.g. Unidad, Hora)
-                  .whereType<String>()
-                  .toSet()
-                  .where((s) => s.isNotEmpty)
-                  .toList();
+              final queryNormalized = _searchQuery.normalized;
+              final availableRates = services.where((s) {
+                return queryNormalized.isEmpty ||
+                    s.name.normalized.contains(queryNormalized) ||
+                    (s.description?.normalized ?? '').contains(
+                      queryNormalized,
+                    );
+              }).map((s) => s.serviceRate?.name).whereType<String>().toSet().where((s) => s.isNotEmpty).toList();
 
               FilterBottomSheet.showMulti(
                 context: context,
                 title: 'Tarifa',
-                options: rates,
+                options: availableRates,
                 selectedValues: _selectedRates,
                 onApply: (newSet) {
                   setState(() {

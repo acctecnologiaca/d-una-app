@@ -1,4 +1,5 @@
 import 'package:supabase_flutter/supabase_flutter.dart';
+import '../../../portfolio/presentation/providers/product_search_provider.dart';
 import '../../domain/models/quote_aggregated_product.dart';
 import '../../domain/models/quote_product_source.dart';
 
@@ -7,8 +8,34 @@ class QuoteProductSelectionRepository {
 
   QuoteProductSelectionRepository(this._supabase);
 
-  Future<List<QuoteAggregatedProduct>> getQuoteProductSuggestions() async {
-    final response = await _supabase.rpc('get_quote_product_suggestions');
+  Future<List<QuoteAggregatedProduct>> getQuoteProductSuggestions([
+    ProductSearchParams? params,
+  ]) async {
+    final Map<String, dynamic> rpcParams = {};
+
+    if (params != null) {
+      if (params.query.isNotEmpty) rpcParams['query_text'] = params.query;
+      if (params.filters.brands.isNotEmpty) {
+        rpcParams['brand_filter'] = params.filters.brands.toList();
+      }
+      if (params.filters.categories.isNotEmpty) {
+        rpcParams['category_filter'] = params.filters.categories.toList();
+      }
+      if (params.filters.supplierIds.isNotEmpty) {
+        rpcParams['supplier_filter'] = params.filters.supplierIds.toList();
+      }
+      if (params.filters.minPrice != null) {
+        rpcParams['min_price_filter'] = params.filters.minPrice;
+      }
+      if (params.filters.maxPrice != null) {
+        rpcParams['max_price_filter'] = params.filters.maxPrice;
+      }
+    }
+
+    final response = await _supabase.rpc(
+      'get_quote_product_suggestions',
+      params: rpcParams.isNotEmpty ? rpcParams : null,
+    );
     return (response as List)
         .map((item) => QuoteAggregatedProduct.fromMap(item))
         .toList();

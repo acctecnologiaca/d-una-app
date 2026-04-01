@@ -12,9 +12,19 @@ class SupabaseProductsRepository {
     if (userId == null) throw Exception('User not logged in');
 
     try {
+     // Using computed columns for inventory_quantity and average_cost
+    const selectQuery = '''
+      *,
+      brands (*),
+      categories (*),
+      uoms (*),
+      inventory_quantity,
+      average_cost,
+      purchase_count
+    ''';
       final response = await _supabase
           .from('products')
-          .select('*, categories(*), brands(*), uoms(*)')
+          .select(selectQuery)
           .eq('user_id', userId)
           .order('created_at', ascending: false);
 

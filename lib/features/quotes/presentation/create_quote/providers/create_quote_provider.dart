@@ -108,6 +108,11 @@ class CreateQuoteNotifier extends StateNotifier<QuoteState> {
     loadFinancialParameters();
   }
 
+  void reset() {
+    state = QuoteState();
+    loadFinancialParameters();
+  }
+
   Future<void> loadFinancialParameters() async {
     try {
       state = state.copyWith(isLoading: true);

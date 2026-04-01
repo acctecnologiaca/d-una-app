@@ -5,11 +5,24 @@ import 'package:d_una_app/shared/widgets/custom_text_field.dart';
 import 'package:d_una_app/shared/widgets/custom_button.dart';
 import 'package:d_una_app/features/portfolio/data/models/brand_model.dart';
 import 'package:d_una_app/features/portfolio/presentation/providers/lookup_providers.dart';
+import 'package:d_una_app/shared/utils/string_similarity.dart';
 
 class AddEditBrandSheet extends ConsumerStatefulWidget {
   final Brand? brand;
 
   const AddEditBrandSheet({super.key, this.brand});
+
+  static Future<Brand?> show(BuildContext context, {Brand? brand}) {
+    return showModalBottomSheet<Brand>(
+      context: context,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
+      backgroundColor: Theme.of(context).colorScheme.surfaceContainer,
+      builder: (context) => AddEditBrandSheet(brand: brand),
+    );
+  }
 
   @override
   ConsumerState<AddEditBrandSheet> createState() => _AddEditBrandSheetState();
@@ -19,6 +32,7 @@ class _AddEditBrandSheetState extends ConsumerState<AddEditBrandSheet> {
   late TextEditingController _nameController;
   bool _isLoading = false;
   bool _hasChanged = false;
+  String? _errorText;
 
   bool get isEditing => widget.brand != null;
 
@@ -36,6 +50,10 @@ class _AddEditBrandSheetState extends ConsumerState<AddEditBrandSheet> {
   }
 
   void _updateHasChanged() {
+    // Clear inline error when user types
+    if (_errorText != null) {
+      setState(() => _errorText = null);
+    }
     if (!isEditing) return;
     final isChanged = _nameController.text.trim() != widget.brand!.name;
     if (_hasChanged != isChanged) {
@@ -58,7 +76,7 @@ class _AddEditBrandSheetState extends ConsumerState<AddEditBrandSheet> {
     final name = _nameController.text.trim();
     if (name.isEmpty) return;
 
-    // Check for duplicates
+    // Check for exact duplicates (normalized)
     final existingBrands = ref.read(brandsProvider).valueOrNull ?? [];
     final isDuplicate = existingBrands.any((b) {
       if (isEditing && b.id == widget.brand!.id) return false;
@@ -66,13 +84,44 @@ class _AddEditBrandSheetState extends ConsumerState<AddEditBrandSheet> {
     });
 
     if (isDuplicate) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('La marca "$name" ya existe.'),
-          backgroundColor: Theme.of(context).colorScheme.error,
+      setState(() => _errorText = 'La marca "$name" ya existe.');
+      return;
+    }
+
+    // Check for similar brands (fuzzy match)
+    final similarBrand = StringSimilarity.findSimilar<Brand>(
+      existingBrands,
+      name,
+      (b) => b.name,
+      threshold: 0.70,
+      excludeId: isEditing ? widget.brand!.id : null,
+      idBuilder: (b) => b.id,
+    );
+
+    if (similarBrand != null) {
+      if (!mounted) return;
+      final shouldContinue = await showDialog<bool>(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          title: const Text('Marca similar detectada'),
+          content: Text(
+            'Ya existe una marca similar: "${similarBrand.name}".\n\n'
+            '¿Estás seguro de que deseas agregar "$name"?',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              child: const Text('Corregir'),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.pop(ctx, true),
+              child: const Text('Continuar'),
+            ),
+          ],
         ),
       );
-      return;
+      if (shouldContinue != true) return;
+      if (!mounted) return;
     }
 
     setState(() => _isLoading = true);
@@ -82,16 +131,24 @@ class _AddEditBrandSheetState extends ConsumerState<AddEditBrandSheet> {
 
     try {
       final repo = ref.read(lookupRepositoryProvider);
+      Brand? resultBrand;
       if (isEditing) {
         await repo.updateBrand(widget.brand!.id, name);
+        resultBrand = Brand(
+          id: widget.brand!.id,
+          name: name,
+          userId: widget.brand!.userId,
+          isVerified: widget.brand!.isVerified,
+        );
       } else {
-        await repo.addBrand(name);
+        resultBrand = await repo.addBrand(name);
       }
       // Refresh the provider
       ref.invalidate(brandsProvider);
-      navigator.pop();
+      navigator.pop(resultBrand);
       scaffoldMessenger.showSnackBar(
         SnackBar(
+          behavior: SnackBarBehavior.floating,
           content: Text(
             isEditing
                 ? 'Marca actualizada a "$name"'
@@ -101,7 +158,12 @@ class _AddEditBrandSheetState extends ConsumerState<AddEditBrandSheet> {
       );
     } catch (e) {
       setState(() => _isLoading = false);
-      scaffoldMessenger.showSnackBar(SnackBar(content: Text('Error: $e')));
+      scaffoldMessenger.showSnackBar(
+        SnackBar(
+          behavior: SnackBarBehavior.floating,
+          content: Text('Error: $e'),
+        ),
+      );
     }
   }
 
@@ -138,10 +200,18 @@ class _AddEditBrandSheetState extends ConsumerState<AddEditBrandSheet> {
       ref.invalidate(brandsProvider);
       navigator.pop();
       scaffoldMessenger.showSnackBar(
-        SnackBar(content: Text('Marca "${widget.brand!.name}" eliminada')),
+        SnackBar(
+          behavior: SnackBarBehavior.floating,
+          content: Text('Marca "${widget.brand!.name}" eliminada'),
+        ),
       );
     } catch (e) {
-      scaffoldMessenger.showSnackBar(SnackBar(content: Text('Error: $e')));
+      scaffoldMessenger.showSnackBar(
+        SnackBar(
+          behavior: SnackBarBehavior.floating,
+          content: Text('Error: $e'),
+        ),
+      );
     }
   }
 
@@ -188,6 +258,7 @@ class _AddEditBrandSheetState extends ConsumerState<AddEditBrandSheet> {
         controller: _nameController,
         textCapitalization: TextCapitalization.words,
         autofocus: true,
+        errorText: _errorText,
       ),
     );
   }

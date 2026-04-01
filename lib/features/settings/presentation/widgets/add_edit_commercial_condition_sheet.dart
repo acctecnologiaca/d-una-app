@@ -87,6 +87,7 @@ class _AddEditCommercialConditionSheetState
       navigator.pop();
       scaffoldMessenger.showSnackBar(
         SnackBar(
+          behavior: SnackBarBehavior.floating,
           content: Text(
             isEditing
                 ? 'Condición actualizada'
@@ -96,7 +97,7 @@ class _AddEditCommercialConditionSheetState
       );
     } catch (e) {
       setState(() => _isLoading = false);
-      scaffoldMessenger.showSnackBar(SnackBar(content: Text('Error: $e')));
+      scaffoldMessenger.showSnackBar(SnackBar(behavior: SnackBarBehavior.floating, content: Text('Error: $e')));
     }
   }
 
@@ -138,11 +139,12 @@ class _AddEditCommercialConditionSheetState
       ref.invalidate(commercialConditionsProvider);
       navigator.pop();
       scaffoldMessenger.showSnackBar(
-        const SnackBar(content: Text('Condición eliminada')),
+        const SnackBar(behavior: SnackBarBehavior.floating, content: Text('Condición eliminada')),
       );
     } catch (e) {
       scaffoldMessenger.showSnackBar(
         SnackBar(
+          behavior: SnackBarBehavior.floating,
           content: Text('Error: $e', style: TextStyle(color: errorColor)),
         ),
       );

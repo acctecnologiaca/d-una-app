@@ -20,7 +20,19 @@ final categoriesProvider = FutureProvider<List<Category>>((ref) async {
 });
 
 final brandsProvider = FutureProvider<List<Brand>>((ref) async {
-  return ref.watch(lookupRepositoryProvider).getBrands();
+  final brands = await ref.watch(lookupRepositoryProvider).getBrands();
+  // Ensure "SIN MARCA" is always the first option
+  final sortedBrands = List<Brand>.from(brands);
+  final sinMarcaIndex = sortedBrands.indexWhere(
+    (b) => b.name.toUpperCase() == 'SIN MARCA',
+  );
+
+  if (sinMarcaIndex > -1) {
+    final sinMarca = sortedBrands.removeAt(sinMarcaIndex);
+    sortedBrands.insert(0, sinMarca);
+  }
+
+  return sortedBrands;
 });
 
 final serviceRatesProvider = FutureProvider<List<ServiceRate>>((ref) async {

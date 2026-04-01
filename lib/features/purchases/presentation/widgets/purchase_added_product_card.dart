@@ -2,14 +2,18 @@ import 'package:flutter/material.dart';
 import 'package:material_symbols_icons/symbols.dart';
 import '../../../../core/utils/string_extensions.dart';
 import '../../../../shared/utils/currency_formatter.dart';
-import '../../../../shared/widgets/standard_list_item.dart';
 import 'package:d_una_app/features/purchases/data/models/purchase_item_product.dart';
+import 'package:d_una_app/shared/widgets/expandable_action_card.dart';
+import 'package:d_una_app/shared/widgets/uom_status_badge.dart';
 
-class PurchaseAddedProductCard extends StatefulWidget {
+class PurchaseAddedProductCard extends StatelessWidget {
   final PurchaseItemProduct item;
   final VoidCallback onDelete;
   final VoidCallback onEdit;
   final VoidCallback onAddSerials;
+  final ValueChanged<double> onQuantityChanged;
+  final bool isReadOnly;
+  final bool hasError;
 
   const PurchaseAddedProductCard({
     super.key,
@@ -17,134 +21,101 @@ class PurchaseAddedProductCard extends StatefulWidget {
     required this.onDelete,
     required this.onEdit,
     required this.onAddSerials,
+    required this.onQuantityChanged,
+    this.isReadOnly = false,
+    this.hasError = false,
   });
-
-  @override
-  State<PurchaseAddedProductCard> createState() => _PurchaseAddedProductCardState();
-}
-
-class _PurchaseAddedProductCardState extends State<PurchaseAddedProductCard> {
-  bool _isExpanded = false;
 
   @override
   Widget build(BuildContext context) {
     final colors = Theme.of(context).colorScheme;
 
-    final String quantityText = 
-        '${widget.item.quantity.truncateToDouble() == widget.item.quantity 
-            ? widget.item.quantity.toInt() 
-            : widget.item.quantity} ${widget.item.uom}';
-
-    return Card(
-      elevation: 0,
-      margin: const EdgeInsets.only(bottom: 8),
-      color: colors.surfaceContainerLowest,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      child: Column(
+    return ExpandableActionCard(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      isExpandable: !isReadOnly,
+      backgroundColor: hasError
+          ? colors.errorContainer.withValues(alpha: 0.8)
+          : null,
+      overline: item.brand != null ? Text(item.brand!.toTitleCase) : null,
+      title: item.name.toTitleCase,
+      subtitle: (item.model != null && item.model!.isNotEmpty)
+          ? Text(item.model!.toUpperCase())
+          : null,
+      trailing: Column(
+        crossAxisAlignment: CrossAxisAlignment.end,
         children: [
-          StandardListItem(
-            padding: const EdgeInsets.symmetric(horizontal: 0.0, vertical: 12.0),
-            onTap: () {
-              setState(() {
-                _isExpanded = !_isExpanded;
-              });
-            },
-            overline: widget.item.brand != null
-                ? Text(widget.item.brand!.toTitleCase)
-                : null,
-            title: widget.item.name.toTitleCase,
-            subtitle: (widget.item.model != null && widget.item.model!.isNotEmpty)
-                ? Text(widget.item.model!.toUpperCase())
-                : null,
-            trailing: Column(
-              crossAxisAlignment: CrossAxisAlignment.end,
-              children: [
-                Text(
-                  CurrencyFormatter.format(widget.item.subtotal),
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                    color: colors.onSurface,
-                  ),
-                ),
-                const SizedBox(height: 8),
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                  decoration: BoxDecoration(
-                    color: colors.secondaryContainer,
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(
-                        Symbols.package_2,
-                        size: 14,
-                        color: colors.onSecondaryContainer,
-                      ),
-                      const SizedBox(width: 4),
-                      Text(
-                        quantityText,
-                        style: TextStyle(
-                          fontSize: 12,
-                          fontWeight: FontWeight.bold,
-                          color: colors.onSecondaryContainer,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
+          Text(
+            CurrencyFormatter.format(item.subtotal),
+            style: TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.bold,
+              color: colors.onSurface,
             ),
           ),
-          AnimatedSize(
-            duration: const Duration(milliseconds: 250),
-            curve: Curves.easeInOut,
-            alignment: Alignment.topCenter,
-            child: _isExpanded
-                ? Column(
-                    children: [
-                      const Divider(height: 1),
-                      Padding(
-                        padding: const EdgeInsets.all(12.0),
-                        child: Row(
-                          children: [
-                            IconButton(
-                              icon: const Icon(Symbols.delete),
-                              color: colors.onSurfaceVariant,
-                              onPressed: widget.onDelete,
-                              tooltip: 'Eliminar producto',
-                            ),
-                            IconButton(
-                              icon: const Icon(Symbols.edit),
-                              color: colors.onSurfaceVariant,
-                              onPressed: widget.onEdit,
-                              tooltip: 'Editar detalles',
-                            ),
-                            if (widget.item.requiresSerials)
-                              IconButton(
-                                icon: const Icon(Symbols.barcode),
-                                color: colors.onSurfaceVariant,
-                                onPressed: widget.onAddSerials,
-                                tooltip: 'Gestionar seriales',
-                              ),
-                            const Spacer(),
-                            // Quantity display in expanded mode
-                            Text(
-                              'Garantía: ${widget.item.warrantyTime ?? "N/A"} ${widget.item.warrantyUnit ?? ""}',
-                              style: TextStyle(
-                                fontSize: 13,
-                                color: colors.onSurfaceVariant,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
-                  )
-                : const SizedBox.shrink(),
+          const SizedBox(height: 8),
+          Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              if (hasError) ...[
+                Image.asset(
+                  'assets/icons/no_barcode.png',
+                  width: 20,
+                  height: 20,
+                  color:
+                      colors.onSurfaceVariant, // Mismo estilo que en la lista
+                ),
+                const SizedBox(width: 4),
+              ],
+              UomStatusBadge(
+                quantity: item.quantity,
+                uomAbbreviation: item.uom,
+                backgroundColor: hasError ? Colors.white : null,
+                //textColor: hasError ? colors.error : null,
+              ),
+            ],
           ),
         ],
+      ),
+      actions: [
+        IconButton(
+          icon: const Icon(Symbols.delete, fontWeight: FontWeight.w500),
+          color: colors.onSurfaceVariant,
+          onPressed: onDelete,
+          tooltip: 'Eliminar producto',
+        ),
+        IconButton(
+          icon: Image.asset(
+            'assets/icons/package_edit.png',
+            width: 24,
+            height: 24,
+            color: colors.onSurfaceVariant,
+          ),
+          onPressed: onEdit,
+          tooltip: 'Editar detalles',
+        ),
+        if (item.requiresSerials)
+          IconButton(
+            icon: const Icon(Symbols.barcode),
+            color: colors.onSurfaceVariant,
+            onPressed: onAddSerials,
+            tooltip: 'Gestionar seriales',
+          ),
+      ],
+      expandedTrailing: Builder(
+        builder: (context) {
+          if (item.warrantyTime == null || item.warrantyTime == 0) {
+            return Text(
+              'Sin garantía',
+              style: TextStyle(fontSize: 13, color: colors.onSurfaceVariant),
+            );
+          }
+          final unitMap = {'days': 'días', 'months': 'meses', 'years': 'años'};
+          final unit = unitMap[item.warrantyUnit] ?? item.warrantyUnit ?? '';
+          return Text(
+            'Garantía: ${item.warrantyTime} $unit',
+            style: TextStyle(fontSize: 13, color: colors.onSurfaceVariant),
+          );
+        },
       ),
     );
   }
