@@ -8,7 +8,7 @@ class QuoteProductSelectionRepository {
 
   QuoteProductSelectionRepository(this._supabase);
 
-  Future<List<QuoteAggregatedProduct>> getQuoteProductSuggestions([
+  Future<List<QuoteAggregatedProduct>> getQuoteProducts([
     ProductSearchParams? params,
   ]) async {
     final Map<String, dynamic> rpcParams = {};
@@ -33,7 +33,7 @@ class QuoteProductSelectionRepository {
     }
 
     final response = await _supabase.rpc(
-      'get_quote_product_suggestions',
+      'get_quote_products',
       params: rpcParams.isNotEmpty ? rpcParams : null,
     );
     return (response as List)

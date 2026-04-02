@@ -15,7 +15,7 @@ final quoteProductSelectionRepositoryProvider =
 final quoteProductSuggestionsProvider = FutureProvider.autoDispose
     .family<List<QuoteAggregatedProduct>, ProductSearchParams>((ref, params) {
   final repository = ref.watch(quoteProductSelectionRepositoryProvider);
-  return repository.getQuoteProductSuggestions(params);
+  return repository.getQuoteProducts(params);
 });
 
 // Family FutureProvider for Sources

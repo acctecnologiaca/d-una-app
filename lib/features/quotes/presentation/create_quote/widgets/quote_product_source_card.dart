@@ -47,8 +47,8 @@ class _QuoteProductSourceCardState extends State<QuoteProductSourceCard> {
 
     // Access Level Parsing
     final isRestricted = !widget.source.isAccessible; // Locked + SnackBar
-    final isPartial = false; // Unlocked + Blurred Price
-    final shouldShowSnackBar = isRestricted || isPartial;
+    // final isPartial = false; // Unlocked + Blurred Price
+    final shouldShowSnackBar = isRestricted; // || isPartial;
 
     // Determine the checkbox state
     bool? checkboxState;
@@ -93,8 +93,8 @@ class _QuoteProductSourceCardState extends State<QuoteProductSourceCard> {
 
     final stockText = isOwn
         ? (widget.selectedQty > 0
-              ? '$formattedSelectedQty/∞ ${widget.uom}'
-              : 'Stock Ilimitado')
+              ? '$formattedSelectedQty/$formattedMaxStock ${widget.uom}'
+              : '$formattedMaxStock ${widget.uom}')
         : (hasStock
               ? (widget.selectedQty > 0
                     ? '$formattedSelectedQty/$formattedMaxStock ${widget.uom}'
@@ -277,11 +277,7 @@ class _QuoteProductSourceCardState extends State<QuoteProductSourceCard> {
                                 ? ImageFilter.blur(sigmaX: 4, sigmaY: 4)
                                 : ImageFilter.blur(sigmaX: 0, sigmaY: 0),
                             child: Text(
-                              isOwn
-                                  ? 'Costo Base'
-                                  : CurrencyFormatter.format(
-                                      widget.source.price,
-                                    ),
+                              CurrencyFormatter.format(widget.source.price),
                               style: Theme.of(context).textTheme.titleLarge
                                   ?.copyWith(
                                     fontWeight: FontWeight.w700,

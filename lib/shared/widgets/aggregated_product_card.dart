@@ -17,6 +17,8 @@ class AggregatedProductCard extends StatelessWidget {
   final int supplierCount;
   final String uom;
   final String? uomIconName;
+  final String description;
+  final String? imageUrl;
   final bool showPriceAndStock;
   final bool isLocked;
 
@@ -33,6 +35,8 @@ class AggregatedProductCard extends StatelessWidget {
     required this.uom,
     this.uomIconName,
     required this.onTap,
+    this.description = '',
+    this.imageUrl,
     this.showPriceAndStock = true,
     this.isLocked = false,
   });
@@ -44,6 +48,23 @@ class AggregatedProductCard extends StatelessWidget {
     return StandardListItem(
       padding: const EdgeInsets.symmetric(vertical: 12.0),
       onTap: onTap,
+      leading: (imageUrl != null && imageUrl!.isNotEmpty)
+          ? ClipRRect(
+              borderRadius: BorderRadius.circular(8),
+              child: Image.network(
+                imageUrl!,
+                width: 48,
+                height: 48,
+                fit: BoxFit.cover,
+                errorBuilder: (context, error, stackTrace) => Container(
+                  width: 48,
+                  height: 48,
+                  color: colors.surfaceContainerHighest,
+                  child: Icon(Symbols.image, color: colors.onSurfaceVariant),
+                ),
+              ),
+            )
+          : null,
       overline: Text(brand),
       title: name,
       subtitle: (model.isNotEmpty) ? Text(model) : null,

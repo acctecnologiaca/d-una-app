@@ -211,11 +211,13 @@ class _QuoteProductSourcesScreenState
                   if (item.sourceType == ProductSourceType.own) {
                     if (!widget.product.hasOwnInventory) return false;
                   } else {
-                    final allowedSuppliers = widget.product.supplierNames
-                        .map((s) => s.toLowerCase())
+                    final allowedSuppliers = widget.product.suppliersInfo
+                        .map((info) => info['name']!.toLowerCase())
                         .toSet();
 
-                    if (!allowedSuppliers.contains(item.sourceName.toLowerCase())) {
+                    if (!allowedSuppliers.contains(
+                      item.sourceName.toLowerCase(),
+                    )) {
                       return false;
                     }
                   }

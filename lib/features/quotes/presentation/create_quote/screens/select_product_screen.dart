@@ -168,11 +168,11 @@ class _SelectProductScreenState extends ConsumerState<SelectProductScreen> {
                       model: product.model,
                       minPrice: product.minPrice,
                       totalQuantity: product.totalQuantity,
-                      supplierCount: product.supplierCount +
-                          (product.hasOwnInventory ? 1 : 0),
+                      supplierCount: product.supplierCount,
                       uom: product.uom,
                       uomIconName: product.uomIconName,
                       showPriceAndStock: true,
+                      isLocked: product.isLocked,
                       onTap: () {
                         context
                             .push(

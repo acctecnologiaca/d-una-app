@@ -42,8 +42,10 @@ class QuoteAggregatedProduct {
   final String category;
   final String? firstSupplierTradeType;
   final bool isLocked;
-  final List<String> supplierNames;
-  final List<String> supplierIds;
+  final String description;
+  final String? imageUrl;
+  final List<Map<String, String>> suppliersInfo;
+
   final List<QuoteAggregatedSource> sources;
 
   const QuoteAggregatedProduct({
@@ -61,17 +63,19 @@ class QuoteAggregatedProduct {
     required this.category,
     this.firstSupplierTradeType,
     this.isLocked = false,
-    this.supplierNames = const [],
-    this.supplierIds = const [],
+    this.description = '',
+    this.imageUrl,
+    this.suppliersInfo = const [],
     this.sources = const [],
   });
 
   factory QuoteAggregatedProduct.fromMap(Map<String, dynamic> map) {
     return QuoteAggregatedProduct(
-      name: map['name'] ?? '',
-      brand: map['brand'] ?? '',
-      model: map['model'] ?? '',
-      uom: map['uom'] ?? 'ud.',
+      // Cambiamos las llaves para que coincidan con el nuevo SQL
+      name: map['product_name'] ?? '',
+      brand: map['product_brand'] ?? '',
+      model: map['product_model'] ?? '',
+      uom: map['product_uom'] ?? 'ud.',
       uomIconName: map['uom_icon_name'] ?? 'package_2',
       minPrice: (map['min_price'] as num?)?.toDouble() ?? 0.0,
       totalQuantity: (map['total_quantity'] as num?)?.toDouble() ?? 0.0,
@@ -81,11 +85,23 @@ class QuoteAggregatedProduct {
       lastAddedAt: map['last_added_at'] != null
           ? DateTime.parse(map['last_added_at'])
           : DateTime.now(),
-      category: map['category'] ?? '',
+      category: map['product_category'] ?? '',
       firstSupplierTradeType: map['first_supplier_trade_type'],
       isLocked: map['is_locked'] ?? false,
-      supplierNames: List<String>.from(map['supplier_names'] ?? []),
-      supplierIds: List<String>.from(map['supplier_ids'] ?? []),
+      description: map['product_description'] ?? '',
+      imageUrl: map['product_image_url'], // Actualizado
+
+      suppliersInfo:
+          (map['suppliers_info'] as List<dynamic>?)
+              ?.map(
+                (item) => {
+                  'id': item['id'].toString(),
+                  'name': item['name'].toString(),
+                },
+              )
+              .toList() ??
+          [],
+
       sources:
           (map['sources'] as List<dynamic>?)
               ?.map(
