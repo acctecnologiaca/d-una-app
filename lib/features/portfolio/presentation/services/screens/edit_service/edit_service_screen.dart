@@ -164,6 +164,43 @@ class _EditServiceScreenState extends ConsumerState<EditServiceScreen> {
     }
   }
 
+  Future<bool?> _showDiscardDialog() async {
+    return showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('¿Descartar cambios?'),
+        content: const Text(
+          'Si sales ahora, perderás toda la información que has ingresado.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Continuar editando'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: Text(
+              'Descartar',
+              style: TextStyle(color: Theme.of(context).colorScheme.error),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _onCancelWithConfirmation() async {
+    if (!_isDirty) {
+      context.pop();
+      return;
+    }
+
+    final confirmed = await _showDiscardDialog();
+    if (confirmed == true && mounted) {
+      context.pop();
+    }
+  }
+
   // --- Add/Fetch Helpers Reused from AddServiceScreen ---
   Future<void> _addNewCategory(String name) async {
     try {
@@ -236,185 +273,197 @@ class _EditServiceScreenState extends ConsumerState<EditServiceScreen> {
       ratesList.add(_selectedRateUnit!); // ensure selected is present
     }
 
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Modificar servicio'),
-        centerTitle: false,
-        elevation: 0,
-        backgroundColor: colors.surface,
-        foregroundColor: colors.onSurface,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
-          onPressed: () => context.pop(),
+    return PopScope(
+      canPop: !_isDirty,
+      onPopInvokedWithResult: (didPop, result) async {
+        if (didPop) return;
+        final confirmed = await _showDiscardDialog();
+        if (confirmed == true && context.mounted) {
+          context.pop();
+        }
+      },
+      child: Scaffold(
+        appBar: AppBar(
+          title: const Text('Modificar servicio'),
+          centerTitle: false,
+          elevation: 0,
+          backgroundColor: colors.surface,
+          foregroundColor: colors.onSurface,
+          leading: IconButton(
+            icon: const Icon(Icons.arrow_back),
+            onPressed: _onCancelWithConfirmation,
+          ),
         ),
-      ),
-      body: Column(
-        children: [
-          Expanded(
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.all(16.0),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  // Category
-                  CustomDropdown<Category>(
-                    label: 'Categoría',
-                    value: _selectedCategory,
-                    items: categoriesList,
-                    itemLabelBuilder: (c) => c.name,
-                    onChanged: (val) => setState(() => _selectedCategory = val),
-                    showAddOption: true,
-                    addOptionLabel: 'Agregar',
-                    onAddPressed: _showAddCategoryDialog,
-                  ),
-                  const SizedBox(height: 24),
-
-                  // Name
-                  CustomTextField(
-                    label: 'Nombre del servicio',
-                    controller: _nameController,
-                    textCapitalization: TextCapitalization.sentences,
-                  ),
-                  const SizedBox(height: 24),
-
-                  // Description
-                  CustomTextField(
-                    label: 'Descripción',
-                    controller: _descriptionController,
-                    maxLines: 4,
-                    minLines: 4, // Make it look like a box
-                    textCapitalization: TextCapitalization.sentences,
-                  ),
-                  const SizedBox(height: 24),
-
-                  // Price Type & Price using logic
-                  // Mock: "Tipo de precio*" -> Fijo dropdown
-                  CustomDropdown<bool>(
-                    label: 'Tipo de precio',
-                    value: _isPriceFixed,
-                    items: const [true, false],
-                    itemLabelBuilder: (val) => val ? 'Fijo' : 'Variable',
-                    onChanged: (val) {
-                      if (val != null) setState(() => _isPriceFixed = val);
-                    },
-                  ),
-                  const SizedBox(height: 24),
-
-                  if (_isPriceFixed) ...[
-                    CustomTextField(
-                      label: 'Precio',
-                      controller: _priceController,
-                      prefixText: '\$ ',
-                      hintText: '0.00',
-                      keyboardType: const TextInputType.numberWithOptions(
-                        decimal: true,
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      'Sin impuesto',
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: colors.onSurfaceVariant,
-                      ),
+        body: Column(
+          children: [
+            Expanded(
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.all(16.0),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    // Category
+                    CustomDropdown<Category>(
+                      label: 'Categoría',
+                      value: _selectedCategory,
+                      items: categoriesList,
+                      itemLabelBuilder: (c) => c.name,
+                      onChanged: (val) =>
+                          setState(() => _selectedCategory = val),
+                      showAddOption: true,
+                      addOptionLabel: 'Agregar',
+                      onAddPressed: _showAddCategoryDialog,
                     ),
                     const SizedBox(height: 24),
-                  ],
 
-                  // Rate Unit
-                  CustomDropdown<ServiceRate>(
-                    label: 'Tarifa por',
-                    value: _selectedRateUnit,
-                    items: ratesList,
-                    itemLabelBuilder: (r) => '${r.name} (${r.symbol})',
-                    onChanged: (val) => setState(() => _selectedRateUnit = val),
-                    // Add option if needed, for brevity maybe skip unless requested
-                  ),
-                  const SizedBox(height: 24),
+                    // Name
+                    CustomTextField(
+                      label: 'Nombre del servicio',
+                      controller: _nameController,
+                      textCapitalization: TextCapitalization.sentences,
+                    ),
+                    const SizedBox(height: 24),
 
-                  // Warranty Toggle
-                  // Mock: "No ofrezco garantía para este servicio" [Switch]
-                  // If switch is ON -> HasWarranty = FALSE (?)
-                  // If switch is OFF -> HasWarranty = TRUE (?)
-                  // Wait, usually "Enable" switches are positive.
-                  // If text is "No ofrezco...", then ON means "I DO NOT offer".
-                  // Let's assume standard behavior: Switch OFF = I offer warranty? Or Switch ON = I agree with statement?
-                  // Let's look at the screenshot again if possible. It's greyed out (left).
-                  // And fields "Cantidad" and "Período" ARE VISIBLE.
-                  // This strongly implies:
-                  // Switch OFF (Left) -> Statement "No ofrezco..." is FALSE -> I DO offer warranty -> Fields Shown.
-                  // Switch ON (Right) -> Statement "No ofrezco..." is TRUE -> I DO NOT offer warranty -> Fields Hidden.
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Expanded(
-                        child: Text(
-                          'No ofrezco garantía para este servicio',
-                          style: TextStyle(
-                            fontSize: 14,
-                            fontWeight: FontWeight.bold, // Mock looks bold-ish
-                            color: colors.onSurface,
-                          ),
+                    // Description
+                    CustomTextField(
+                      label: 'Descripción',
+                      controller: _descriptionController,
+                      maxLines: 4,
+                      minLines: 4, // Make it look like a box
+                      textCapitalization: TextCapitalization.sentences,
+                    ),
+                    const SizedBox(height: 24),
+
+                    // Price Type & Price using logic
+                    // Mock: "Tipo de precio*" -> Fijo dropdown
+                    CustomDropdown<bool>(
+                      label: 'Tipo de precio',
+                      value: _isPriceFixed,
+                      items: const [true, false],
+                      itemLabelBuilder: (val) => val ? 'Fijo' : 'Variable',
+                      onChanged: (val) {
+                        if (val != null) setState(() => _isPriceFixed = val);
+                      },
+                    ),
+                    const SizedBox(height: 24),
+
+                    if (_isPriceFixed) ...[
+                      CustomTextField(
+                        label: 'Precio',
+                        controller: _priceController,
+                        prefixText: '\$ ',
+                        hintText: '0.00',
+                        keyboardType: const TextInputType.numberWithOptions(
+                          decimal: true,
                         ),
                       ),
-                      Switch(
-                        value:
-                            !_hasWarranty, // If hasWarranty is true, switch (No offer) is false.
-                        onChanged: (val) {
-                          // val is "No offer".
-                          // If val is true (No offer), hasWarranty = false.
-                          // If val is false (Yes offer), hasWarranty = true.
-                          setState(() => _hasWarranty = !val);
-                        },
+                      const SizedBox(height: 4),
+                      Text(
+                        'Sin impuesto',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: colors.onSurfaceVariant,
+                        ),
                       ),
+                      const SizedBox(height: 24),
                     ],
-                  ),
 
-                  if (_hasWarranty) ...[
-                    const SizedBox(height: 16),
+                    // Rate Unit
+                    CustomDropdown<ServiceRate>(
+                      label: 'Tarifa por',
+                      value: _selectedRateUnit,
+                      items: ratesList,
+                      itemLabelBuilder: (r) => '${r.name} (${r.symbol})',
+                      onChanged: (val) =>
+                          setState(() => _selectedRateUnit = val),
+                      // Add option if needed, for brevity maybe skip unless requested
+                    ),
+                    const SizedBox(height: 24),
+
+                    // Warranty Toggle
+                    // Mock: "No ofrezco garantía para este servicio" [Switch]
+                    // If switch is ON -> HasWarranty = FALSE (?)
+                    // If switch is OFF -> HasWarranty = TRUE (?)
+                    // Wait, usually "Enable" switches are positive.
+                    // If text is "No ofrezco...", then ON means "I DO NOT offer".
+                    // Let's assume standard behavior: Switch OFF = I offer warranty? Or Switch ON = I agree with statement?
+                    // Let's look at the screenshot again if possible. It's greyed out (left).
+                    // And fields "Cantidad" and "Período" ARE VISIBLE.
+                    // This strongly implies:
+                    // Switch OFF (Left) -> Statement "No ofrezco..." is FALSE -> I DO offer warranty -> Fields Shown.
+                    // Switch ON (Right) -> Statement "No ofrezco..." is TRUE -> I DO NOT offer warranty -> Fields Hidden.
                     Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
                         Expanded(
-                          flex: 1,
-                          child: CustomTextField(
-                            label: 'Cantidad*',
-                            controller: _warrantyTimeController,
-                            keyboardType: TextInputType.number,
+                          child: Text(
+                            'No ofrezco garantía para este servicio',
+                            style: TextStyle(
+                              fontSize: 14,
+                              fontWeight:
+                                  FontWeight.bold, // Mock looks bold-ish
+                              color: colors.onSurface,
+                            ),
                           ),
                         ),
-                        const SizedBox(width: 16),
-                        Expanded(
-                          flex: 1,
-                          child: CustomDropdown<String>(
-                            label: 'Período',
-                            value: _selectedWarrantyPeriod,
-                            items: _warrantyPeriods,
-                            itemLabelBuilder: (val) => val,
-                            onChanged: (val) =>
-                                setState(() => _selectedWarrantyPeriod = val),
-                          ),
+                        Switch(
+                          value:
+                              !_hasWarranty, // If hasWarranty is true, switch (No offer) is false.
+                          onChanged: (val) {
+                            // val is "No offer".
+                            // If val is true (No offer), hasWarranty = false.
+                            // If val is false (Yes offer), hasWarranty = true.
+                            setState(() => _hasWarranty = !val);
+                          },
                         ),
                       ],
                     ),
-                  ],
 
-                  const SizedBox(height: 48),
-                  FormBottomBar(
-                    onCancel: () => context.pop(),
-                    onSave: _submitUpdates,
-                    isSaveEnabled:
-                        _isDirty &&
-                        _nameController
-                            .text
-                            .isNotEmpty, // simplified validation
-                    saveLabel: 'Guardar',
-                  ),
-                  const SizedBox(height: 24),
-                ],
+                    if (_hasWarranty) ...[
+                      const SizedBox(height: 16),
+                      Row(
+                        children: [
+                          Expanded(
+                            flex: 1,
+                            child: CustomTextField(
+                              label: 'Cantidad*',
+                              controller: _warrantyTimeController,
+                              keyboardType: TextInputType.number,
+                            ),
+                          ),
+                          const SizedBox(width: 16),
+                          Expanded(
+                            flex: 1,
+                            child: CustomDropdown<String>(
+                              label: 'Período',
+                              value: _selectedWarrantyPeriod,
+                              items: _warrantyPeriods,
+                              itemLabelBuilder: (val) => val,
+                              onChanged: (val) =>
+                                  setState(() => _selectedWarrantyPeriod = val),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+
+                    const SizedBox(height: 48),
+                    FormBottomBar(
+                      onCancel: _onCancelWithConfirmation,
+                      onSave: _submitUpdates,
+                      isSaveEnabled:
+                          _isDirty &&
+                          _nameController
+                              .text
+                              .isNotEmpty, // simplified validation
+                      saveLabel: 'Guardar',
+                    ),
+                    const SizedBox(height: 24),
+                  ],
+                ),
               ),
             ),
-          ),
-          /*
+            /*
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 0, 16, 40),
             child: FormBottomBar(
@@ -427,7 +476,8 @@ class _EditServiceScreenState extends ConsumerState<EditServiceScreen> {
             ),
           ),
           const SizedBox(height: 12),*/
-        ],
+          ],
+        ),
       ),
     );
   }

@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:material_symbols_icons/symbols.dart';
-import '../../../../../core/utils/string_extensions.dart';
 import '../../../../../shared/utils/currency_formatter.dart';
 import '../../../../../shared/widgets/expandable_action_card.dart';
 import '../../../../../shared/widgets/status_badge.dart';
 import '../../../../../shared/widgets/uom_status_badge.dart';
 import '../../../../../shared/widgets/editable_quantity_stepper.dart';
+import '../providers/quote_validation_provider.dart';
 
 class QuoteAddedProductCard extends StatelessWidget {
   final String name;
@@ -23,6 +23,13 @@ class QuoteAddedProductCard extends StatelessWidget {
   final VoidCallback? onEditTemporal;
   final ValueChanged<double> onQuantityChanged;
   final bool isTemporal;
+  final bool isExternalManagement;
+  final bool hasOwnInventory;
+  final bool hasSupplierInventory;
+
+  // Validation
+  final QuoteValidationStatus? validationStatus;
+  final String? validationMessage;
 
   const QuoteAddedProductCard({
     super.key,
@@ -39,17 +46,30 @@ class QuoteAddedProductCard extends StatelessWidget {
     this.onEditTemporal,
     required this.onQuantityChanged,
     this.isTemporal = false,
+    this.isExternalManagement = false,
+    this.hasOwnInventory = false,
+    this.hasSupplierInventory = false,
+    this.validationStatus,
+    this.validationMessage,
   });
 
   @override
   Widget build(BuildContext context) {
     final colors = Theme.of(context).colorScheme;
+    final hasError =
+        validationStatus != null &&
+        validationStatus != QuoteValidationStatus.ok;
 
     return ExpandableActionCard(
-      overline: brand != null ? Text(brand!.toTitleCase) : null,
-      title: name.toTitleCase,
-      subtitle: (model != null && model!.isNotEmpty) ? Text(model!.toUpperCase()) : null,
-      padding: const EdgeInsets.symmetric(horizontal: 0.0, vertical: 12.0),
+      backgroundColor: hasError
+          ? colors.errorContainer.withValues(alpha: 0.8)
+          : null,
+      overline: brand != null ? Text(brand!) : null,
+      title: name,
+      subtitle: (model != null && model!.isNotEmpty)
+          ? Text(model!.toUpperCase())
+          : null,
+      padding: const EdgeInsets.symmetric(horizontal: 0.0, vertical: 8.0),
       trailing: Column(
         crossAxisAlignment: CrossAxisAlignment.end,
         children: [
@@ -68,21 +88,106 @@ class QuoteAddedProductCard extends StatelessWidget {
           Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              // Temp badge
+              // Warning Icon
+              if (hasError) ...[
+                Tooltip(
+                  message: validationMessage ?? 'Problema con este producto',
+                  child: Icon(
+                    Symbols.warning,
+                    size: 20,
+                    color: Colors.amber.shade700,
+                    fill: 1,
+                  ),
+                ),
+                const SizedBox(width: 8),
+              ],
+
+              /* if (hasOwnInventory) ...[
+                Tooltip(
+                  message: 'Inventario propio',
+                  child: Icon(
+                    Symbols.inventory_2, // Icono de caja sólida
+                    size: 20,
+                    color: colors.primary, // Color principal
+                    fill: 1,
+                  ),
+                ),
+                const SizedBox(width: 8),
+              ],*/
               if (isTemporal) ...[
+                Tooltip(
+                  message: validationMessage ?? 'Producto temporal',
+                  child: Icon(
+                    Symbols.chronic,
+                    size: 20,
+                    color: colors.outline,
+                    fill: 1,
+                  ),
+                ),
+                const SizedBox(width: 8),
+              ],
+
+              if (isExternalManagement) ...[
+                Tooltip(
+                  message: validationMessage ?? 'Proveedor externo',
+                  child: Icon(
+                    Symbols.outbound_sharp,
+                    size: 20,
+                    color: colors.onSurfaceVariant,
+                    fill: 1,
+                  ),
+                ),
+                const SizedBox(width: 8),
+              ],
+
+              if (hasOwnInventory) ...[
+                StatusBadge(
+                  backgroundColor: colors.primary,
+                  textColor: colors.onPrimary,
+                  borderRadius: 4.0,
+                  icon: Icon(
+                    Symbols.inventory_2,
+                    size: 15,
+                    color: colors.onPrimary,
+                  ),
+                ),
+                const SizedBox(width: 8),
+              ],
+
+              /*if (hasSupplierInventory) ...[
+                Tooltip(
+                  message: 'Proveedor afiliado',
+                  child: Icon(
+                    Symbols.warehouse, // Icono de almacén
+                    size: 20,
+                    color: colors
+                        .onTertiaryContainer, // Color terciario (que asocio a proveedores)
+                    fill: 0,
+                  ),
+                ),
+                const SizedBox(width: 8),
+              ],*/
+              if (hasSupplierInventory) ...[
                 StatusBadge(
                   backgroundColor: colors.tertiaryContainer,
                   textColor: colors.onTertiaryContainer,
-                  text: 'Temp',
-                  icon: Icon(Symbols.edit_note, size: 14, color: colors.onTertiaryContainer),
+                  borderRadius: 4.0,
+                  icon: Icon(
+                    Symbols.warehouse,
+                    size: 16,
+                    color: colors.onTertiaryContainer,
+                  ),
                 ),
-                const SizedBox(width: 6),
+                const SizedBox(width: 8),
               ],
+
               // Stock Badge
               UomStatusBadge(
                 quantity: totalQuantity,
                 uomAbbreviation: uom,
                 maxStock: totalAvailableStock,
+                backgroundColor: hasError ? Colors.white : null,
+                textColor: hasError ? colors.error : null,
               ),
             ],
           ),
@@ -111,9 +216,7 @@ class QuoteAddedProductCard extends StatelessWidget {
                       Navigator.of(context).pop();
                       onDelete();
                     },
-                    style: TextButton.styleFrom(
-                      foregroundColor: colors.error,
-                    ),
+                    style: TextButton.styleFrom(foregroundColor: colors.error),
                     child: const Text('Eliminar'),
                   ),
                 ],
@@ -151,7 +254,7 @@ class QuoteAddedProductCard extends StatelessWidget {
         label: 'Cantidad:',
         value: totalQuantity,
         min: 1, // Minimum 1, otherwise they should delete it
-        max: totalAvailableStock,
+        max: isTemporal ? 999999 : totalAvailableStock,
         onChanged: onQuantityChanged,
       ),
     );

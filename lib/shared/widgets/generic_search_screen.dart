@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:d_una_app/shared/widgets/friendly_error_widget.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'custom_search_bar.dart';
@@ -159,7 +160,7 @@ class _GenericSearchScreenState<T> extends State<GenericSearchScreen<T>> {
             child: widget.data.when(
               data: (items) => _buildBody(items, colors),
               loading: () => const Center(child: CircularProgressIndicator()),
-              error: (err, stack) => Center(child: Text('Error: $err')),
+              error: (err, stack) => FriendlyErrorWidget(error: err),
             ),
           ),
         ],

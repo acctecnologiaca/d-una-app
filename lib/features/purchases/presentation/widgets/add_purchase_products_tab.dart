@@ -29,10 +29,7 @@ class AddPurchaseProductsTab extends ConsumerWidget {
             const SizedBox(height: 16),
             Text(
               'No hay productos agregados',
-              style: TextStyle(
-                color: colors.onSurfaceVariant,
-                fontSize: 16,
-              ),
+              style: TextStyle(color: colors.onSurfaceVariant, fontSize: 16),
             ),
           ],
         ),
@@ -61,7 +58,8 @@ class AddPurchaseProductsTab extends ConsumerWidget {
           ),
         );
 
-        final hasMissingSerials = item.requiresSerials &&
+        final hasMissingSerials =
+            item.requiresSerials &&
             state.serials.where((s) => s.productId == item.productId).length <
                 item.quantity;
 
@@ -90,8 +88,8 @@ class AddPurchaseProductsTab extends ConsumerWidget {
               final wUnit = wPeriodStr == 'Días'
                   ? 'days'
                   : wPeriodStr == 'Meses'
-                      ? 'months'
-                      : 'years';
+                  ? 'months'
+                  : 'years';
 
               final updatedItem = item.copyWith(
                 quantity: qty,
@@ -101,22 +99,20 @@ class AddPurchaseProductsTab extends ConsumerWidget {
                 requiresSerials: usesSerials,
               );
 
-              ref
-                  .read(addPurchaseProvider.notifier)
-                  .updateProduct(updatedItem);
-                  
+              ref.read(addPurchaseProvider.notifier).updateProduct(updatedItem);
+
               // If user selected "Register Now", navigate to serials
               if (result['register_serials_now'] == true) {
-                 if (context.mounted) {
-                    context.push(
-                      '/my-purchases/add/select-product/manage-serials',
-                      extra: <String, dynamic>{
-                        'product': product,
-                        'quantity': qty.toInt(),
-                        'purchaseItemId': item.id,
-                      },
-                    );
-                 }
+                if (context.mounted) {
+                  context.push(
+                    '/my-purchases/add/select-product/manage-serials',
+                    extra: <String, dynamic>{
+                      'product': product,
+                      'quantity': qty.toInt(),
+                      'purchaseItemId': item.id,
+                    },
+                  );
+                }
               }
             }
           },
@@ -131,9 +127,9 @@ class AddPurchaseProductsTab extends ConsumerWidget {
             );
           },
           onQuantityChanged: (newQty) {
-            ref.read(addPurchaseProvider.notifier).updateProduct(
-                  item.copyWith(quantity: newQty),
-                );
+            ref
+                .read(addPurchaseProvider.notifier)
+                .updateProduct(item.copyWith(quantity: newQty));
           },
         );
       },

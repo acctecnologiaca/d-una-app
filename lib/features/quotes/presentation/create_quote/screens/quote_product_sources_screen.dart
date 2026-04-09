@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:d_una_app/shared/widgets/friendly_error_widget.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:uuid/uuid.dart';
@@ -12,7 +13,6 @@ import '../../../../../shared/widgets/horizontal_filter_bar.dart';
 import '../../../../../shared/widgets/filter_bottom_sheet.dart';
 import '../../../../../shared/widgets/price_filter_sheet.dart';
 import '../../../../../shared/widgets/sort_selector.dart';
-import '../../../../portfolio/domain/models/product_sort_option.dart';
 import '../../../../../shared/widgets/custom_extended_fab.dart';
 import '../widgets/quote_product_sale_details_sheet.dart';
 import '../widgets/quote_product_source_card.dart';
@@ -20,11 +20,13 @@ import '../widgets/quote_product_source_card.dart';
 class QuoteProductSourcesScreen extends ConsumerStatefulWidget {
   final QuoteAggregatedProduct product;
   final Map<String, double>? initialSelections;
+  final double? externalCostPrice;
 
   const QuoteProductSourcesScreen({
     super.key,
     required this.product,
     this.initialSelections,
+    this.externalCostPrice,
   });
 
   @override
@@ -39,11 +41,16 @@ class _QuoteProductSourcesScreenState
   Set<String> _selectedCities = {};
   double? _minPrice;
   double? _maxPrice;
-  ProductSortOption _currentSort = ProductSortOption.priceAsc;
+  SortOption _currentSort = SortOption.lowestPrice;
+
+  // Gestión Externa: cost price entered by user
+  double? _externalCostPrice;
 
   @override
   void initState() {
     super.initState();
+    _externalCostPrice = widget.externalCostPrice;
+
     if (widget.initialSelections != null &&
         widget.initialSelections!.isNotEmpty) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -83,12 +90,27 @@ class _QuoteProductSourcesScreenState
     double totalQuantity = 0;
 
     // We need the data to calculate real totals based on selection
-    final sourceList = sourcesAsync.valueOrNull ?? [];
+    final rawSourceList = sourcesAsync.valueOrNull ?? [];
 
+    // Inject virtual "Gestión Externa" source
+    final externalSource = QuoteProductSource.externalManagement(
+      suggestedPrice: _externalCostPrice ?? widget.product.minPrice,
+    );
+
+    // Build the full source list with dynamic position
+    final sourceList = <QuoteProductSource>[externalSource, ...rawSourceList];
+
+    bool hasConflicts = false;
     for (final source in sourceList) {
       if (selectionState.containsKey(source.id)) {
         final qty = selectionState[source.id]!;
         totalQuantity += qty;
+
+        // Track conflicts: selection > maxStock (skip externalManagement and own)
+        if (source.sourceType == ProductSourceType.supplier &&
+            qty > source.maxStock) {
+          hasConflicts = true;
+        }
       }
     }
 
@@ -165,32 +187,17 @@ class _QuoteProductSourcesScreenState
                 const SizedBox(height: 12),
                 Align(
                   alignment: Alignment.centerLeft,
-                  child: GenericSortSelector<ProductSortOption>(
+                  child: SortSelector(
                     currentSort: _currentSort,
-                    options: ProductSortOption.values,
+                    options: const [
+                      SortOption.nameAZ,
+                      SortOption.nameZA,
+                      SortOption.highestPrice,
+                      SortOption.lowestPrice,
+                      SortOption.quantityDesc,
+                      SortOption.quantityAsc,
+                    ],
                     onSortChanged: (val) => setState(() => _currentSort = val),
-                    labelBuilder: (option) => option.label,
-                    iconBuilder: (option) {
-                      if (option == ProductSortOption.priceAsc) {
-                        return Icons.arrow_upward;
-                      }
-                      if (option == ProductSortOption.priceDesc) {
-                        return Icons.arrow_downward;
-                      }
-                      if (option == ProductSortOption.quantityAsc) {
-                        return Icons.arrow_upward;
-                      }
-                      if (option == ProductSortOption.quantityDesc) {
-                        return Icons.arrow_downward;
-                      }
-                      if (option == ProductSortOption.nameAZ) {
-                        return Icons.arrow_upward;
-                      }
-                      if (option == ProductSortOption.nameZA) {
-                        return Icons.arrow_downward;
-                      }
-                      return null;
-                    },
                   ),
                 ),
               ],
@@ -201,30 +208,36 @@ class _QuoteProductSourcesScreenState
           Expanded(
             child: sourcesAsync.when(
               loading: () => const Center(child: CircularProgressIndicator()),
-              error: (err, stack) => Center(child: Text('Error: $err')),
+              error: (err, stack) => FriendlyErrorWidget(error: err),
               data: (sources) {
                 // Client-side filtering
-                var filteredSources = sources.where((item) {
-                  // 1. Initial Product Sources Filter
-                  // Only show suppliers that were included in the aggregated product
-                  // (which respects any supplier filters chosen on the previous screen).
-                  if (item.sourceType == ProductSourceType.own) {
-                    if (!widget.product.hasOwnInventory) return false;
-                  } else {
-                    final allowedSuppliers = widget.product.suppliersInfo
-                        .map((info) => info['name']!.toLowerCase())
-                        .toSet();
+                // Use the full sourceList (with injected externalManagement) instead of raw sources
+                var filteredSources = sourceList.where((item) {
+                  // Always show External Management card (skip all filters)
+                  if (item.sourceType == ProductSourceType.externalManagement) {
+                    return true;
+                  }
 
-                    if (!allowedSuppliers.contains(
-                      item.sourceName.toLowerCase(),
-                    )) {
-                      return false;
+                  // 1. Initial Product Sources Filter
+                  if (widget.product.suppliersInfo.isNotEmpty) {
+                    if (item.sourceType == ProductSourceType.own) {
+                      if (!widget.product.hasOwnInventory) return false;
+                    } else {
+                      final allowedSuppliers = widget.product.suppliersInfo
+                          .map((info) => info['name']!.toLowerCase())
+                          .toSet();
+
+                      if (!allowedSuppliers.contains(
+                        item.sourceName.toLowerCase(),
+                      )) {
+                        return false;
+                      }
                     }
                   }
 
                   // 2. User-Selected Supplier Filter (Local to this screen)
                   if (_selectedSupplierIds.isNotEmpty &&
-                      !_selectedSupplierIds.contains(item.id) &&
+                      !_selectedSupplierIds.contains(item.sourceName) &&
                       item.sourceType == ProductSourceType.supplier) {
                     return false;
                   }
@@ -242,28 +255,51 @@ class _QuoteProductSourcesScreenState
                   if (_minPrice != null && price < _minPrice!) return false;
                   if (_maxPrice != null && price > _maxPrice!) return false;
 
+                  // Intelligent Stock Filter:
+                  // Hide items with 0 stock UNLESS they were previously selected by the user.
+                  final isInitiallySelected =
+                      widget.initialSelections?.containsKey(item.id) ?? false;
+                  if (item.maxStock <= 0 && !isInitiallySelected) {
+                    return false;
+                  }
+
                   return true;
                 }).toList();
 
-                // Client-side sorting
+                // Client-side sorting con PRIORIDADES FIJAS
                 filteredSources.sort((a, b) {
+                  // 1. Inventario Propio SIEMPRE de primero
+                  if (a.sourceType == ProductSourceType.own) return -1;
+                  if (b.sourceType == ProductSourceType.own) return 1;
+
+                  // 2. Gestión Externa SIEMPRE de segundo
+                  if (a.sourceType == ProductSourceType.externalManagement) {
+                    return 1;
+                  }
+                  if (b.sourceType == ProductSourceType.externalManagement) {
+                    return -1;
+                  }
+
+                  // 3. El resto de proveedores obedecen el selector de orden
                   switch (_currentSort) {
-                    case ProductSortOption.priceAsc:
+                    case SortOption.lowestPrice:
                       return a.price.compareTo(b.price);
-                    case ProductSortOption.priceDesc:
+                    case SortOption.highestPrice:
                       return b.price.compareTo(a.price);
-                    case ProductSortOption.quantityAsc:
+                    case SortOption.quantityAsc:
                       return a.maxStock.compareTo(b.maxStock);
-                    case ProductSortOption.quantityDesc:
+                    case SortOption.quantityDesc:
                       return b.maxStock.compareTo(a.maxStock);
-                    case ProductSortOption.nameAZ:
+                    case SortOption.nameAZ:
                       return a.sourceName.toLowerCase().compareTo(
                         b.sourceName.toLowerCase(),
                       );
-                    case ProductSortOption.nameZA:
+                    case SortOption.nameZA:
                       return b.sourceName.toLowerCase().compareTo(
                         a.sourceName.toLowerCase(),
                       );
+                    default:
+                      return 0;
                   }
                 });
 
@@ -299,14 +335,22 @@ class _QuoteProductSourcesScreenState
                   itemBuilder: (context, index) {
                     final item = filteredSources[index];
                     return QuoteProductSourceCard(
+                      key: ValueKey(item.id),
                       source: item,
                       selectedQty: selectionState[item.id] ?? 0.0,
                       uom: widget.product.uom,
+                      externalCostPrice:
+                          item.sourceType ==
+                              ProductSourceType.externalManagement
+                          ? _externalCostPrice
+                          : null,
                       onSelectAll: () {
-                        final isOwn = item.sourceType == ProductSourceType.own;
-                        final maxQty = isOwn
-                            ? 0.0
-                            : item.maxStock; // 0.0 flags unlimited basically or 1 default
+                        final isExternal =
+                            item.sourceType ==
+                            ProductSourceType.externalManagement;
+                        final maxQty = (isExternal)
+                            ? 1.0 // Default to 1 for own/external
+                            : item.maxStock;
                         selectionController.toggleSelection(item.id, maxQty);
                       },
                       onDeselectAll: () {
@@ -315,6 +359,13 @@ class _QuoteProductSourcesScreenState
                       onQtyChanged: (qty) {
                         selectionController.setSelection(item.id, qty);
                       },
+                      onCostChanged:
+                          item.sourceType ==
+                              ProductSourceType.externalManagement
+                          ? (cost) {
+                              _externalCostPrice = cost;
+                            }
+                          : null,
                     );
                   },
                 );
@@ -343,9 +394,16 @@ class _QuoteProductSourcesScreenState
               if (selectionState.containsKey(source.id)) {
                 final qty = selectionState[source.id]!;
                 if (qty <= 0) continue;
+
+                // For external management, use the user-entered cost
+                final effectivePrice =
+                    source.sourceType == ProductSourceType.externalManagement
+                    ? (_externalCostPrice ?? source.price)
+                    : source.price;
+
                 selectedSources[source] = qty;
                 totalQtySelected += qty;
-                totalCostSum += (source.price * qty);
+                totalCostSum += (effectivePrice * qty);
               }
             }
 
@@ -366,6 +424,7 @@ class _QuoteProductSourcesScreenState
 
             final double sellingPrice = result['sellingPrice'];
             final double profitMargin = result['profitMargin'];
+            final String? deliveryTimeId = result['deliveryTimeId'];
 
             // 1. Remove previously added items for this product to prevent duplication
             createQuoteNotifier.removeProductGroup(widget.product.name);
@@ -374,8 +433,12 @@ class _QuoteProductSourcesScreenState
             for (final entry in selectedSources.entries) {
               final source = entry.key;
               final qty = entry.value;
+              final isExternal =
+                  source.sourceType == ProductSourceType.externalManagement;
 
-              final costPrice = source.price;
+              final costPrice = isExternal
+                  ? (_externalCostPrice ?? source.price)
+                  : source.price;
               final unitPrice = sellingPrice;
               final taxAmount = unitPrice * taxRate;
               final totalPrice = (unitPrice + taxAmount) * qty;
@@ -383,19 +446,23 @@ class _QuoteProductSourcesScreenState
               final quoteItem = QuoteItemProduct(
                 id: uuid.v4(),
                 quoteId: 'draft', // Placeholder until quote is saved
-                productId: source.sourceType == ProductSourceType.own
+                // External Management: use productId for analytics, no supplierProductId
+                productId: (source.sourceType == ProductSourceType.own)
                     ? source.id
                     : null,
                 supplierProductId:
-                    source.sourceType == ProductSourceType.supplier
+                    (source.sourceType == ProductSourceType.supplier)
                     ? source.id
                     : null,
+                deliveryTimeId: deliveryTimeId,
                 name: widget.product.name,
                 brand: widget.product.brand,
                 model: widget.product.model,
                 uom: widget.product.uom,
-                description: null, // Depending on if we have it
-                availableStock: source.maxStock,
+                description: null,
+                availableStock: isExternal
+                    ? -1.0
+                    : source.maxStock, // -1 flags external
                 quantity: qty,
                 costPrice: costPrice,
                 profitMargin: profitMargin,
@@ -414,28 +481,24 @@ class _QuoteProductSourcesScreenState
           icon: Icons.check,
           label:
               'Confirmar (${totalQuantity.toStringAsFixed(totalQuantity.truncateToDouble() == totalQuantity ? 0 : 2)} ${widget.product.uom})',
-          isEnabled: totalQuantity > 0,
+          isEnabled: totalQuantity > 0 && !hasConflicts,
         ),
       ),
     );
   }
 
   Widget _buildFilterBar(List<QuoteProductSource> items) {
-    // Determine if any filters are active
     final bool isAnyFilterActive =
         _selectedSupplierIds.isNotEmpty ||
         _selectedCities.isNotEmpty ||
         _minPrice != null ||
         _maxPrice != null;
-
-    // Extract suppliers map for labels
-    final Map<String, String> suppliers = {};
+    final Set<String> supplierNames = {};
     for (var item in items) {
       if (item.sourceType == ProductSourceType.supplier) {
-        suppliers[item.id] = item.sourceName;
+        supplierNames.add(item.sourceName);
       }
     }
-
     return HorizontalFilterBar(
       onResetFilters: isAnyFilterActive ? _resetFilters : null,
       filters: [
@@ -443,7 +506,6 @@ class _QuoteProductSourcesScreenState
           label: HorizontalFilterBar.formatLabel(
             defaultLabel: 'Proveedor',
             selectedValues: _selectedSupplierIds.toList(),
-            valueToLabelMap: suppliers,
           ),
           isActive: _selectedSupplierIds.isNotEmpty,
           onTap: () => _showSupplierFilter(context, items),
@@ -471,21 +533,20 @@ class _QuoteProductSourcesScreenState
     BuildContext context,
     List<QuoteProductSource> items,
   ) {
-    final Map<String, String> suppliers = {};
+    // Obtenemos nombres únicos y los ordenamos alfabéticamente
+    final Set<String> supplierNames = {};
     for (var item in items) {
       if (item.sourceType == ProductSourceType.supplier) {
-        suppliers[item.id] = item.sourceName;
+        supplierNames.add(item.sourceName);
       }
     }
-
-    final options = suppliers.keys.toList();
-
+    final options = supplierNames.toList()..sort();
     FilterBottomSheet.showMulti(
       context: context,
       title: 'Proveedor',
-      options: options,
+      options: options, // Ahora las opciones son los Nombres
       selectedValues: _selectedSupplierIds,
-      labelBuilder: (id) => suppliers[id] ?? 'Desconocido',
+      labelBuilder: (name) => name, // El label es el mismo nombre
       onApply: (selected) {
         setState(() {
           _selectedSupplierIds = selected;

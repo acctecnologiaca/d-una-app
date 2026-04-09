@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:d_una_app/shared/widgets/friendly_error_widget.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:d_una_app/shared/widgets/custom_search_bar.dart';
 import '../../providers/suppliers_provider.dart';
@@ -58,7 +59,7 @@ class SuppliersDirectoryScreen extends ConsumerWidget {
           Expanded(
             child: suppliersAsync.when(
               loading: () => const Center(child: CircularProgressIndicator()),
-              error: (err, st) => Center(child: Text('Error: $err')),
+              error: (err, stack) => FriendlyErrorWidget(error: err),
               data: (suppliers) {
                 if (suppliers.isEmpty) {
                   return const Center(

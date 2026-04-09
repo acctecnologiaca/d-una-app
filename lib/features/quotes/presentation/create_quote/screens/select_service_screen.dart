@@ -4,11 +4,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../../shared/widgets/standard_app_bar.dart';
 import '../../../../../shared/widgets/custom_search_bar.dart';
 import '../../../../../shared/widgets/sort_selector.dart';
-import '../../../../../shared/widgets/standard_list_item.dart';
-import '../../../../../shared/utils/currency_formatter.dart';
 import '../providers/quote_service_selection_provider.dart';
 import '../providers/create_quote_provider.dart';
 import '../widgets/quote_service_sale_details_sheet.dart';
+import '../../../../../shared/widgets/service_list_item.dart';
 
 class SelectServiceScreen extends ConsumerStatefulWidget {
   const SelectServiceScreen({super.key});
@@ -21,20 +20,11 @@ class SelectServiceScreen extends ConsumerStatefulWidget {
 class _SelectServiceScreenState extends ConsumerState<SelectServiceScreen> {
   SortOption _currentSort = SortOption.recent;
 
-  String _getRateSuffix(String? rateName) {
-    if (rateName == null) return '/ud.';
-    final lower = rateName.toLowerCase();
-    if (lower.contains('hora') || lower.contains('h')) return '/h';
-    if (lower.contains('día') || lower.contains('dia')) return '/dia';
-    if (lower.contains('mes')) return '/mes';
-    if (lower.contains('serv')) return '/serv.';
-    return '/ud.';
-  }
-
   @override
   Widget build(BuildContext context) {
     final colors = Theme.of(context).colorScheme;
     final suggestionsAsync = ref.watch(quoteServiceSuggestionsProvider);
+    final quoteServices = ref.watch(createQuoteProvider).services;
 
     return Scaffold(
       appBar: StandardAppBar(
@@ -120,6 +110,12 @@ class _SelectServiceScreenState extends ConsumerState<SelectServiceScreen> {
               children: [
                 SortSelector(
                   currentSort: _currentSort,
+                  options: const [
+                    SortOption.frequency,
+                    SortOption.recent,
+                    SortOption.nameAZ,
+                    SortOption.nameZA,
+                  ],
                   onSortChanged: (val) => setState(() => _currentSort = val),
                 ),
               ],
@@ -170,8 +166,25 @@ class _SelectServiceScreenState extends ConsumerState<SelectServiceScreen> {
                       const Divider(height: 1, color: Colors.transparent),
                   itemBuilder: (context, index) {
                     final service = sortedServices[index];
-                    return StandardListItem(
+                    final isAlreadyInQuote = quoteServices.any(
+                      (s) => s.serviceId == service.id,
+                    );
+
+                    return ServiceListItem(
+                      service: service,
+                      isAlreadyAdded: isAlreadyInQuote,
                       onTap: () async {
+                        if (isAlreadyInQuote) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text(
+                                'Este servicio ya se encuentra en la cotización',
+                              ),
+                            ),
+                          );
+                          return;
+                        }
+
                         final addedService =
                             await QuoteServiceSaleDetailsSheet.show(
                               context,
@@ -187,15 +200,6 @@ class _SelectServiceScreenState extends ConsumerState<SelectServiceScreen> {
                           }
                         }
                       },
-                      title: service.name,
-                      subtitle: Text(service.category?.name ?? 'Sin categoría'),
-                      trailing: Text(
-                        '${CurrencyFormatter.format(service.price)}${_getRateSuffix(service.serviceRate?.name)}',
-                        style: const TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
                     );
                   },
                 );

@@ -3,20 +3,15 @@ import 'package:go_router/go_router.dart';
 import '../../../../../shared/widgets/bottom_sheet_action_item.dart';
 import '../../../../../shared/widgets/custom_action_sheet.dart';
 import '../../../data/models/service_model.dart';
-import 'service_item_card.dart';
+import '../../../../../shared/widgets/service_list_item.dart';
 
 class ServiceActionSheet {
   static void show(BuildContext context, ServiceModel service) {
     CustomActionSheet.show(
       context: context,
       title: 'Servicio seleccionado',
-      content: ServiceItemCard(
-        name: service.name,
-        category: service.category?.name,
-        price: service.price,
-        priceUnit: service.serviceRate != null
-            ? '${service.serviceRate!.name} (${service.serviceRate!.symbol})'
-            : '',
+      content: ServiceListItem(
+        service: service,
         onTap: () {}, // No action in sheet
       ),
       actions: [

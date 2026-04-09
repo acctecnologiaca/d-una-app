@@ -285,7 +285,12 @@ class CreateQuoteNotifier extends StateNotifier<QuoteState> {
     );
   }
 
-  void updateGroupPrice(String name, double newUnitPrice, double newMargin) {
+  void updateGroupPrice(
+    String name,
+    double newUnitPrice,
+    double newMargin, [
+    String? newDeliveryTimeId,
+  ]) {
     final updatedProducts = state.products.map((item) {
       if (item.name == name) {
         final taxAmount = newUnitPrice * (item.taxRate / 100);
@@ -295,7 +300,7 @@ class CreateQuoteNotifier extends StateNotifier<QuoteState> {
           quoteId: item.quoteId,
           productId: item.productId,
           supplierProductId: item.supplierProductId,
-          deliveryTimeId: item.deliveryTimeId,
+          deliveryTimeId: newDeliveryTimeId ?? item.deliveryTimeId,
           name: item.name,
           brand: item.brand,
           model: item.model,
@@ -504,6 +509,7 @@ class CreateQuoteNotifier extends StateNotifier<QuoteState> {
           totalPrice: newTotalPrice,
           warrantyTime: item.warrantyTime,
           rateSymbol: item.rateSymbol,
+          rateIconName: item.rateIconName,
         );
       }
       return item;

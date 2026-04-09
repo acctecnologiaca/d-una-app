@@ -7,7 +7,8 @@ import '../../../../../shared/widgets/filter_bottom_sheet.dart';
 import '../../../../../shared/widgets/price_filter_sheet.dart';
 import '../../../../../core/utils/string_extensions.dart';
 import '../../providers/services_provider.dart';
-import '../widgets/service_item_card.dart';
+import '../../../../../shared/widgets/service_list_item.dart';
+import '../../../../../shared/widgets/sort_selector.dart';
 import '../widgets/service_action_sheet.dart';
 
 class ServiceSearchScreen extends ConsumerStatefulWidget {
@@ -25,6 +26,7 @@ class _ServiceSearchScreenState extends ConsumerState<ServiceSearchScreen> {
   double? _minPrice;
   double? _maxPrice;
   String _searchQuery = '';
+  SortOption _currentSort = SortOption.nameAZ;
 
   String _getHistoryKey() {
     return 'service_search_history';
@@ -76,13 +78,19 @@ class _ServiceSearchScreenState extends ConsumerState<ServiceSearchScreen> {
           onTap: () {
             servicesAsync.whenData((services) {
               final queryNormalized = _searchQuery.normalized;
-              final availableCategories = services.where((s) {
-                return queryNormalized.isEmpty ||
-                    s.name.normalized.contains(queryNormalized) ||
-                    (s.description?.normalized ?? '').contains(
-                      queryNormalized,
-                    );
-              }).map((s) => s.category?.name).whereType<String>().toSet().where((s) => s.isNotEmpty).toList();
+              final availableCategories = services
+                  .where((s) {
+                    return queryNormalized.isEmpty ||
+                        s.name.normalized.contains(queryNormalized) ||
+                        (s.description?.normalized ?? '').contains(
+                          queryNormalized,
+                        );
+                  })
+                  .map((s) => s.category?.name)
+                  .whereType<String>()
+                  .toSet()
+                  .where((s) => s.isNotEmpty)
+                  .toList();
 
               FilterBottomSheet.showMulti(
                 context: context,
@@ -107,13 +115,19 @@ class _ServiceSearchScreenState extends ConsumerState<ServiceSearchScreen> {
           onTap: () {
             servicesAsync.whenData((services) {
               final queryNormalized = _searchQuery.normalized;
-              final availableRates = services.where((s) {
-                return queryNormalized.isEmpty ||
-                    s.name.normalized.contains(queryNormalized) ||
-                    (s.description?.normalized ?? '').contains(
-                      queryNormalized,
-                    );
-              }).map((s) => s.serviceRate?.name).whereType<String>().toSet().where((s) => s.isNotEmpty).toList();
+              final availableRates = services
+                  .where((s) {
+                    return queryNormalized.isEmpty ||
+                        s.name.normalized.contains(queryNormalized) ||
+                        (s.description?.normalized ?? '').contains(
+                          queryNormalized,
+                        );
+                  })
+                  .map((s) => s.serviceRate?.name)
+                  .whereType<String>()
+                  .toSet()
+                  .where((s) => s.isNotEmpty)
+                  .toList();
 
               FilterBottomSheet.showMulti(
                 context: context,
@@ -138,6 +152,37 @@ class _ServiceSearchScreenState extends ConsumerState<ServiceSearchScreen> {
           onTap: _showPriceFilter,
         ),
       ],
+      bottomFilterWidget: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+        child: SortSelector(
+          currentSort: _currentSort,
+          options: const [
+            SortOption.nameAZ,
+            SortOption.nameZA,
+            SortOption.highestPrice,
+            SortOption.lowestPrice,
+          ],
+          onSortChanged: (val) {
+            setState(() {
+              _currentSort = val;
+            });
+          },
+        ),
+      ),
+      comparator: (a, b) {
+        switch (_currentSort) {
+          case SortOption.nameAZ:
+            return a.name.toLowerCase().compareTo(b.name.toLowerCase());
+          case SortOption.nameZA:
+            return b.name.toLowerCase().compareTo(a.name.toLowerCase());
+          case SortOption.highestPrice:
+            return b.price.compareTo(a.price);
+          case SortOption.lowestPrice:
+            return a.price.compareTo(b.price);
+          default:
+            return 0;
+        }
+      },
       filter: (s, query) {
         final normalizedQuery = query.normalized;
         final matchesQuery =
@@ -167,13 +212,8 @@ class _ServiceSearchScreenState extends ConsumerState<ServiceSearchScreen> {
           padding: const EdgeInsets.symmetric(vertical: 4.0),
           child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16.0),
-            child: ServiceItemCard(
-              name: service.name,
-              category: service.category?.name,
-              price: service.price,
-              priceUnit: service.serviceRate != null
-                  ? '${service.serviceRate!.name} (${service.serviceRate!.symbol})'
-                  : '',
+            child: ServiceListItem(
+              service: service,
               onTap: () {
                 ServiceActionSheet.show(context, service);
               },

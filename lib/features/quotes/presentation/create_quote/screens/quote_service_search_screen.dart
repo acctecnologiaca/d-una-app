@@ -3,17 +3,16 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../../../shared/widgets/generic_search_screen.dart';
-import '../../../../../shared/widgets/standard_list_item.dart';
 import '../../../../../shared/widgets/filter_bottom_sheet.dart';
 import '../../../../../shared/widgets/horizontal_filter_bar.dart';
 import '../../../../../shared/widgets/price_filter_sheet.dart';
 import '../../../../../shared/widgets/sort_selector.dart';
 import '../../../../../core/utils/string_extensions.dart';
-import '../../../../../shared/utils/currency_formatter.dart';
 import '../../../../portfolio/data/models/service_model.dart';
 import '../providers/quote_service_selection_provider.dart';
 import '../providers/create_quote_provider.dart';
 import '../widgets/quote_service_sale_details_sheet.dart';
+import '../../../../../shared/widgets/service_list_item.dart';
 
 class QuoteServiceSearchScreen extends ConsumerStatefulWidget {
   const QuoteServiceSearchScreen({super.key});
@@ -26,7 +25,7 @@ class QuoteServiceSearchScreen extends ConsumerStatefulWidget {
 class _QuoteServiceSearchScreenState
     extends ConsumerState<QuoteServiceSearchScreen> {
   String _currentQuery = '';
-  SortOption _currentSort = SortOption.recent;
+  SortOption _currentSort = SortOption.lowestPrice;
 
   // Filters State
   Set<String> _selectedCategories = {};
@@ -59,7 +58,7 @@ class _QuoteServiceSearchScreenState
       _selectedRates.clear();
       _minPrice = null;
       _maxPrice = null;
-      _currentSort = SortOption.recent;
+      _currentSort = SortOption.lowestPrice;
     });
   }
 
@@ -79,16 +78,6 @@ class _QuoteServiceSearchScreenState
     } else {
       return '< \$${_maxPrice!.toInt()}';
     }
-  }
-
-  String _getRateSuffix(String? rateName) {
-    if (rateName == null) return '/ud.';
-    final lower = rateName.toLowerCase();
-    if (lower.contains('hora') || lower.contains('h')) return '/h';
-    if (lower.contains('día') || lower.contains('dia')) return '/dia';
-    if (lower.contains('mes')) return '/mes';
-    if (lower.contains('serv')) return '/serv.';
-    return '/ud.';
   }
 
   // --- Filter Logic ---
@@ -161,6 +150,7 @@ class _QuoteServiceSearchScreenState
   @override
   Widget build(BuildContext context) {
     final suggestionsAsync = ref.watch(quoteServiceSuggestionsProvider);
+    final quoteServices = ref.watch(createQuoteProvider).services;
     final colors = Theme.of(context).colorScheme;
 
     final originalItems = suggestionsAsync.valueOrNull ?? [];
@@ -202,9 +192,10 @@ class _QuoteServiceSearchScreenState
     // Sort Logic
     filteredServices.sort((a, b) {
       switch (_currentSort) {
-        case SortOption.recent:
-        case SortOption.frequency:
-          return b.createdAt.compareTo(a.createdAt); // Default to recent
+        case SortOption.lowestPrice:
+          return a.price.compareTo(b.price);
+        case SortOption.highestPrice:
+          return b.price.compareTo(a.price);
         case SortOption.nameAZ:
           return a.name.toLowerCase().compareTo(b.name.toLowerCase());
         case SortOption.nameZA:
@@ -272,6 +263,12 @@ class _QuoteServiceSearchScreenState
               alignment: Alignment.centerLeft,
               child: SortSelector(
                 currentSort: _currentSort,
+                options: const [
+                  SortOption.nameAZ,
+                  SortOption.nameZA,
+                  SortOption.highestPrice,
+                  SortOption.lowestPrice,
+                ],
                 onSortChanged: (val) => setState(() => _currentSort = val),
               ),
             ),
@@ -282,12 +279,29 @@ class _QuoteServiceSearchScreenState
       filter: (service, query) => true, // Filtering is done manually above
 
       itemBuilder: (context, service) {
+        final isAlreadyInQuote = quoteServices.any(
+          (s) => s.serviceId == service.id,
+        );
+
         return Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16.0),
           child: Column(
             children: [
-              StandardListItem(
+              ServiceListItem(
+                service: service,
+                isAlreadyAdded: isAlreadyInQuote,
                 onTap: () async {
+                  if (isAlreadyInQuote) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text(
+                          'Este servicio ya se encuentra en la cotización',
+                        ),
+                      ),
+                    );
+                    return;
+                  }
+
                   final addedService = await QuoteServiceSaleDetailsSheet.show(
                     context,
                     service: service,
@@ -303,15 +317,6 @@ class _QuoteServiceSearchScreenState
                     }
                   }
                 },
-                title: service.name,
-                subtitle: Text(service.category?.name ?? 'Sin categoría'),
-                trailing: Text(
-                  '${CurrencyFormatter.format(service.price)}${_getRateSuffix(service.serviceRate?.name)}',
-                  style: const TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
               ),
               const Divider(height: 1, color: Colors.transparent),
             ],

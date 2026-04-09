@@ -5,6 +5,7 @@ import 'package:d_una_app/shared/widgets/custom_text_field.dart';
 import 'package:d_una_app/shared/widgets/custom_button.dart';
 import 'package:d_una_app/features/settings/data/models/observation.dart';
 import 'package:d_una_app/features/portfolio/presentation/providers/lookup_providers.dart';
+import 'package:d_una_app/core/utils/error_handler.dart';
 
 class AddEditObservationSheet extends ConsumerStatefulWidget {
   final Observation? observation;
@@ -61,9 +62,6 @@ class _AddEditObservationSheetState
 
     setState(() => _isLoading = true);
 
-    final scaffoldMessenger = ScaffoldMessenger.of(context);
-    final navigator = Navigator.of(context);
-
     try {
       final repo = ref.read(lookupRepositoryProvider);
       if (isEditing) {
@@ -79,18 +77,23 @@ class _AddEditObservationSheetState
         );
       }
       ref.invalidate(observationsProvider);
-      navigator.pop();
-      scaffoldMessenger.showSnackBar(
-        SnackBar(
-          behavior: SnackBarBehavior.floating,
-          content: Text(
-            isEditing ? 'Observación actualizada' : 'Observación agregada',
+      
+      if (mounted) {
+        Navigator.pop(context);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            behavior: SnackBarBehavior.floating,
+            content: Text(
+              isEditing ? 'Observación actualizada' : 'Observación agregada',
+            ),
           ),
-        ),
-      );
+        );
+      }
     } catch (e) {
-      setState(() => _isLoading = false);
-      scaffoldMessenger.showSnackBar(SnackBar(behavior: SnackBarBehavior.floating, content: Text('Error: $e')));
+      if (mounted) {
+        setState(() => _isLoading = false);
+        ErrorHandler.showErrorSnackBar(context, e);
+      }
     }
   }
 
@@ -121,20 +124,22 @@ class _AddEditObservationSheetState
 
     if (confirm != true || !mounted) return;
 
-    final scaffoldMessenger = ScaffoldMessenger.of(context);
-    final navigator = Navigator.of(context);
-
     try {
       await ref
           .read(lookupRepositoryProvider)
           .deleteObservation(widget.observation!.id);
       ref.invalidate(observationsProvider);
-      navigator.pop();
-      scaffoldMessenger.showSnackBar(
-        const SnackBar(behavior: SnackBarBehavior.floating, content: Text('Observación eliminada')),
-      );
+      
+      if (mounted) {
+        Navigator.pop(context);
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(behavior: SnackBarBehavior.floating, content: Text('Observación eliminada')),
+        );
+      }
     } catch (e) {
-      scaffoldMessenger.showSnackBar(SnackBar(behavior: SnackBarBehavior.floating, content: Text('Error: $e')));
+      if (mounted) {
+        ErrorHandler.showErrorSnackBar(context, e);
+      }
     }
   }
 

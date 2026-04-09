@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:d_una_app/shared/widgets/friendly_error_widget.dart';
 import '../../../../../shared/widgets/custom_button.dart';
 import '../../../../../shared/widgets/custom_text_field.dart';
 import '../../../../../shared/widgets/custom_stepper.dart';
@@ -17,6 +18,7 @@ class QuoteProductSaleDetailsSheet extends ConsumerStatefulWidget {
   final String? model;
   final double? initialPrice;
   final double? initialMargin;
+  final String? initialDeliveryTimeId;
 
   const QuoteProductSaleDetailsSheet({
     super.key,
@@ -26,6 +28,7 @@ class QuoteProductSaleDetailsSheet extends ConsumerStatefulWidget {
     this.model,
     this.initialPrice,
     this.initialMargin,
+    this.initialDeliveryTimeId,
   });
 
   static Future<Map<String, dynamic>?> show(
@@ -36,6 +39,7 @@ class QuoteProductSaleDetailsSheet extends ConsumerStatefulWidget {
     String? model,
     double? initialPrice,
     double? initialMargin,
+    String? initialDeliveryTimeId,
   }) {
     return showModalBottomSheet<Map<String, dynamic>>(
       context: context,
@@ -44,18 +48,14 @@ class QuoteProductSaleDetailsSheet extends ConsumerStatefulWidget {
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
       ),
-      builder: (context) => Padding(
-        padding: EdgeInsets.only(
-          bottom: MediaQuery.of(context).viewInsets.bottom,
-        ),
-        child: QuoteProductSaleDetailsSheet(
-          averageCost: averageCost,
-          productName: productName,
-          brand: brand,
-          model: model,
-          initialPrice: initialPrice,
-          initialMargin: initialMargin,
-        ),
+      builder: (context) => QuoteProductSaleDetailsSheet(
+        averageCost: averageCost,
+        productName: productName,
+        brand: brand,
+        model: model,
+        initialPrice: initialPrice,
+        initialMargin: initialMargin,
+        initialDeliveryTimeId: initialDeliveryTimeId,
       ),
     );
   }
@@ -84,6 +84,7 @@ class _QuoteProductSaleDetailsSheetState
       _currentMargin = widget.initialMargin! * 100;
       _priceController.text = CurrencyFormatter.formatNumber(_currentPrice);
       _marginController.text = CurrencyFormatter.formatNumber(_currentMargin);
+      _selectedDeliveryTimeId = widget.initialDeliveryTimeId;
     } else {
       _currentMargin = ref.read(createQuoteProvider).globalMargin;
       _recalculatePriceFromMargin();
@@ -155,12 +156,20 @@ class _QuoteProductSaleDetailsSheetState
   }
 
   void _onConfirm() {
+    String? deliveryTimeId = _selectedDeliveryTimeId;
+    if (deliveryTimeId == null) {
+      final list = ref.read(deliveryTimesForDeliveryProvider).valueOrNull;
+      if (list != null && list.isNotEmpty) {
+        deliveryTimeId = list.first.id;
+      }
+    }
+
     Navigator.of(context).pop({
       'sellingPrice': _currentPrice,
       'profitMargin': _currentMargin / 100, // as decimal
       'taxRate':
           ref.read(createQuoteProvider).globalTaxRate / 100, // as decimal
-      'deliveryTimeId': _selectedDeliveryTimeId, // Pass the ID now
+      'deliveryTimeId': deliveryTimeId,
     });
   }
 
@@ -174,6 +183,7 @@ class _QuoteProductSaleDetailsSheetState
     return CustomActionSheet(
       title: 'Detalles de venta',
       showDivider: false,
+      isContentScrollable: true,
       actions: [
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16.0),
@@ -357,7 +367,7 @@ class _QuoteProductSaleDetailsSheetState
                     if (_selectedDeliveryTimeId == null &&
                         deliveryTimes.isNotEmpty) {
                       WidgetsBinding.instance.addPostFrameCallback((_) {
-                        if (mounted) {
+                        if (mounted && _selectedDeliveryTimeId == null) {
                           setState(() {
                             _selectedDeliveryTimeId = deliveryTimes.first.id;
                           });
@@ -391,8 +401,7 @@ class _QuoteProductSaleDetailsSheetState
                   },
                   loading: () =>
                       const Center(child: CircularProgressIndicator()),
-                  error: (err, stack) =>
-                      Text('Error al cargar tiempos de entrega: $err'),
+                  error: (err, stack) => FriendlyErrorWidget(error: err),
                 ),
             const SizedBox(height: 32),
           ],

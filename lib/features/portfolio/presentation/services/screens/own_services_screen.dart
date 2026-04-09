@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:d_una_app/shared/widgets/friendly_error_widget.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
@@ -7,7 +8,7 @@ import '../../../../../shared/widgets/sort_selector.dart';
 import '../../../../../shared/widgets/custom_extended_fab.dart';
 import '../../../data/models/service_model.dart';
 import '../../providers/services_provider.dart';
-import '../widgets/service_item_card.dart';
+import '../../../../../shared/widgets/service_list_item.dart';
 import '../widgets/service_action_sheet.dart';
 
 class OwnServicesScreen extends ConsumerStatefulWidget {
@@ -88,6 +89,11 @@ class _OwnServicesScreenState extends ConsumerState<OwnServicesScreen> {
               children: [
                 SortSelector(
                   currentSort: _currentSort,
+                  options: const [
+                    SortOption.recent,
+                    SortOption.nameAZ,
+                    SortOption.nameZA,
+                  ],
                   onSortChanged: (val) => setState(() => _currentSort = val),
                 ),
               ],
@@ -97,7 +103,7 @@ class _OwnServicesScreenState extends ConsumerState<OwnServicesScreen> {
           Expanded(
             child: servicesAsync.when(
               loading: () => const Center(child: CircularProgressIndicator()),
-              error: (err, stack) => Center(child: Text('Error: $err')),
+              error: (err, stack) => FriendlyErrorWidget(error: err),
               data: (services) {
                 if (services.isEmpty) {
                   return Center(
@@ -135,13 +141,8 @@ class _OwnServicesScreenState extends ConsumerState<OwnServicesScreen> {
                       const Divider(height: 1, color: Colors.transparent),
                   itemBuilder: (context, index) {
                     final service = finalServices[index];
-                    return ServiceItemCard(
-                      name: service.name,
-                      category: service.category?.name,
-                      price: service.price,
-                      priceUnit: service.serviceRate != null
-                          ? '${service.serviceRate!.name} (${service.serviceRate!.symbol})'
-                          : '',
+                    return ServiceListItem(
+                      service: service,
                       onTap: () {
                         _showServiceActionSheet(context, service);
                       },

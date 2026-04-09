@@ -5,6 +5,7 @@ import 'package:d_una_app/shared/widgets/custom_text_field.dart';
 import 'package:d_una_app/shared/widgets/custom_button.dart';
 import 'package:d_una_app/features/portfolio/domain/models/unaffiliated_supplier_model.dart';
 import 'package:d_una_app/features/portfolio/presentation/providers/lookup_providers.dart';
+import 'package:d_una_app/core/utils/error_handler.dart';
 
 class AddEditSupplierSheet extends ConsumerStatefulWidget {
   final UnaffiliatedSupplier? supplier;
@@ -81,9 +82,6 @@ class _AddEditSupplierSheetState extends ConsumerState<AddEditSupplierSheet> {
 
     setState(() => _isLoading = true);
 
-    final scaffoldMessenger = ScaffoldMessenger.of(context);
-    final navigator = Navigator.of(context);
-
     try {
       final repo = ref.read(lookupRepositoryProvider);
       UnaffiliatedSupplier? result;
@@ -118,25 +116,26 @@ class _AddEditSupplierSheetState extends ConsumerState<AddEditSupplierSheet> {
       }
       
       ref.invalidate(unaffiliatedSuppliersProvider);
-      ref.invalidate(allSuppliersProvider); // Also invalidate allSuppliersProvider used in Purchases
+      ref.invalidate(allSuppliersProvider);
       
       if (mounted) {
-        navigator.pop(result);
-      }
-
-      scaffoldMessenger.showSnackBar(
-        SnackBar(
-          behavior: SnackBarBehavior.floating,
-          content: Text(
-            isEditing
-                ? 'Proveedor actualizado a "$legalName"'
-                : 'Proveedor "$legalName" agregado',
+        Navigator.pop(context, result);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            behavior: SnackBarBehavior.floating,
+            content: Text(
+              isEditing
+                  ? 'Proveedor actualizado a "$legalName"'
+                  : 'Proveedor "$legalName" agregado',
+            ),
           ),
-        ),
-      );
+        );
+      }
     } catch (e) {
-      setState(() => _isLoading = false);
-      scaffoldMessenger.showSnackBar(SnackBar(behavior: SnackBarBehavior.floating, content: Text('Error: $e')));
+      if (mounted) {
+        setState(() => _isLoading = false);
+        ErrorHandler.showErrorSnackBar(context, e);
+      }
     }
   }
 
@@ -165,18 +164,20 @@ class _AddEditSupplierSheetState extends ConsumerState<AddEditSupplierSheet> {
 
     if (confirm != true || !mounted) return;
 
-    final scaffoldMessenger = ScaffoldMessenger.of(context);
-    final navigator = Navigator.of(context);
-
     try {
       await ref.read(lookupRepositoryProvider).deleteUnaffiliatedSupplier(widget.supplier!.id);
       ref.invalidate(unaffiliatedSuppliersProvider);
-      navigator.pop();
-      scaffoldMessenger.showSnackBar(
-        SnackBar(behavior: SnackBarBehavior.floating, content: Text('Proveedor "${widget.supplier!.legalName ?? widget.supplier!.name}" eliminado')),
-      );
+      
+      if (mounted) {
+        Navigator.pop(context);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(behavior: SnackBarBehavior.floating, content: Text('Proveedor "${widget.supplier!.legalName ?? widget.supplier!.name}" eliminado')),
+        );
+      }
     } catch (e) {
-      scaffoldMessenger.showSnackBar(SnackBar(behavior: SnackBarBehavior.floating, content: Text('Error: $e')));
+      if (mounted) {
+        ErrorHandler.showErrorSnackBar(context, e);
+      }
     }
   }
 

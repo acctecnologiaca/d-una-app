@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:d_una_app/shared/widgets/friendly_error_widget.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'providers/clients_provider.dart';
@@ -8,6 +9,7 @@ import 'package:d_una_app/core/utils/string_extensions.dart';
 import '../../../../shared/widgets/custom_search_bar.dart';
 import '../../../../shared/widgets/sort_selector.dart';
 import '../../../shared/widgets/custom_extended_fab.dart';
+import '../../../shared/widgets/standard_list_item.dart';
 
 class ClientListScreen extends ConsumerStatefulWidget {
   const ClientListScreen({super.key});
@@ -133,6 +135,12 @@ class _ClientListScreenState extends ConsumerState<ClientListScreen> {
                 children: [
                   SortSelector(
                     currentSort: _currentSort,
+                    options: const [
+                      SortOption.recent,
+                      SortOption.nameAZ,
+                      SortOption.nameZA,
+                      SortOption.type,
+                    ],
                     onSortChanged: (val) => setState(() => _currentSort = val),
                   ),
                 ],
@@ -143,7 +151,7 @@ class _ClientListScreenState extends ConsumerState<ClientListScreen> {
             Expanded(
               child: clientsAsync.when(
                 loading: () => const Center(child: CircularProgressIndicator()),
-                error: (err, stack) => Center(child: Text('Error: $err')),
+                error: (err, stack) => FriendlyErrorWidget(error: err),
                 data: (clients) {
                   // Filter Clients
                   var filteredClients = clients.where((client) {
@@ -172,6 +180,15 @@ class _ClientListScreenState extends ConsumerState<ClientListScreen> {
                       case SortOption.nameZA:
                         return b.name.toLowerCase().compareTo(
                           a.name.toLowerCase(),
+                        );
+                      case SortOption.type:
+                        // Sort by type: company first, then person.
+                        // If same type, sort by name A-Z.
+                        if (a.type != b.type) {
+                          return a.type == 'company' ? -1 : 1;
+                        }
+                        return a.name.toLowerCase().compareTo(
+                          b.name.toLowerCase(),
                         );
                       default:
                         return 0;
@@ -210,21 +227,26 @@ class _ClientListScreenState extends ConsumerState<ClientListScreen> {
                     itemBuilder: (context, index) {
                       final client = filteredClients[index];
 
-                      return ListTile(
-                        leading: Icon(
-                          client.type == 'company'
-                              ? Icons.domain_outlined
-                              : Icons.person_outlined,
-                          size: 32,
-                          color: colors.onSurfaceVariant,
+                      return Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                        child: StandardListItem(
+                          leading: Icon(
+                            client.type == 'company'
+                                ? Icons.domain_outlined
+                                : Icons.person_outlined,
+                            size: 32,
+                            color: colors.onSurfaceVariant,
+                          ),
+                          title: client.name,
+                          subtitle: Text(client.taxId ?? 'Sin ID'),
+                          onTap: () {
+                            // Navigate to details using ID
+                            context.push(
+                              '/clients/${client.id}',
+                              extra: client,
+                            );
+                          },
                         ),
-                        visualDensity: VisualDensity.standard,
-                        title: Text(client.name),
-                        subtitle: Text(client.taxId ?? 'Sin ID'),
-                        onTap: () {
-                          // Navigate to details using ID
-                          context.push('/clients/${client.id}', extra: client);
-                        },
                       );
                     },
                   );

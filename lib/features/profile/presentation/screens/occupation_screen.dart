@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:d_una_app/shared/widgets/friendly_error_widget.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../domain/models/user_profile.dart';
@@ -185,7 +186,7 @@ class _OccupationScreenState extends ConsumerState<OccupationScreen> {
       ),
       body: userProfileAsync.when(
         loading: () => const Center(child: CircularProgressIndicator()),
-        error: (e, st) => Center(child: Text('Error: $e')),
+        error: (e, stack) => FriendlyErrorWidget(error: e),
         data: (profile) {
           if (profile == null) {
             return const Center(child: Text('Perfil no encontrado'));
@@ -205,8 +206,7 @@ class _OccupationScreenState extends ConsumerState<OccupationScreen> {
 
           return occupationsAsync.when(
             loading: () => const Center(child: CircularProgressIndicator()),
-            error: (e, stack) =>
-                Center(child: Text('Error al cargar ocupaciones: $e')),
+            error: (e, stack) => FriendlyErrorWidget(error: e),
             data: (occupationsList) {
               return SingleChildScrollView(
                 padding: const EdgeInsets.fromLTRB(16, 24, 16, 40),

@@ -1,4 +1,5 @@
 import 'package:d_una_app/core/utils/string_extensions.dart';
+import 'package:d_una_app/shared/widgets/friendly_error_widget.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -276,8 +277,26 @@ class _AddTemporalProductScreenState
     final brandsAsync = ref.watch(brandsProvider);
     final brands = brandsAsync.valueOrNull ?? [];
     final brandNames = brands.map((b) => b.name).toList();
-    if (!brandNames.any((n) => n.toUpperCase() == 'SIN MARCA')) {
-      brandNames.insert(0, 'SIN MARCA');
+
+    // Buscar si ya existe una marca que signifique "Sin Marca" en la DB (ignora mayúsculas)
+    final existingSinMarca = brandNames.firstWhere(
+      (n) => n.trim().toUpperCase() == 'SIN MARCA',
+      orElse: () => '',
+    );
+
+    if (existingSinMarca.isEmpty) {
+      if (!brandNames.contains('SIN MARCA')) {
+        brandNames.insert(0, 'SIN MARCA');
+      }
+    } else {
+      // Si existe (ej "Sin Marca") y tenemos seleccionado el genérico "SIN MARCA", sincronizamos
+      if (_selectedBrand == 'SIN MARCA') {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted && _selectedBrand != existingSinMarca) {
+            setState(() => _selectedBrand = existingSinMarca);
+          }
+        });
+      }
     }
     final brandItems = brandNames;
     final uomsAsync = ref.watch(uomsProvider);
@@ -323,7 +342,9 @@ class _AddTemporalProductScreenState
             ),
             const SizedBox(height: 24),
             CustomDropdown<String>(
-              value: _selectedBrand,
+              value: brandItems.contains(_selectedBrand)
+                  ? _selectedBrand
+                  : null,
               items: brandItems,
               label: 'Marca',
               itemLabelBuilder: (String value) => value.toTitleCase,
@@ -581,8 +602,7 @@ class _AddTemporalProductScreenState
                   },
                   loading: () =>
                       const Center(child: CircularProgressIndicator()),
-                  error: (err, stack) =>
-                      Text('Error al cargar tiempos de entrega: $err'),
+                  error: (err, stack) => FriendlyErrorWidget(error: err),
                 ),
             const SizedBox(height: 16),
             SwitchListTile(

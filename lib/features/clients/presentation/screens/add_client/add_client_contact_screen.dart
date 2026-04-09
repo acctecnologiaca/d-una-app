@@ -35,7 +35,7 @@ class _AddClientContactScreenState
   final _departmentController = TextEditingController();
 
   String _selectedCode = '0424';
-  final List<String> _codes = ['0414', '0424', '0412', '0416', '0426'];
+  final List<String> _codes = ['0412', '0422', '0414', '0424', '0416', '0426'];
 
   @override
   void dispose() {
@@ -139,6 +139,39 @@ class _AddClientContactScreenState
     }
   }
 
+  Future<void> _onCancelWizard() async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('¿Descartar cambios?'),
+        content: const Text(
+          'Si sales ahora, perderás toda la información que has ingresado.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Continuar editando'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: Text(
+              'Descartar',
+              style: TextStyle(color: Theme.of(context).colorScheme.error),
+            ),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed == true && mounted) {
+      if (_returnTo != null) {
+        context.go(_returnTo!);
+      } else {
+        context.go('/clients');
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final colors = Theme.of(context).colorScheme;
@@ -149,6 +182,10 @@ class _AddClientContactScreenState
         backgroundColor: colors.surface,
         foregroundColor: colors.onSurface,
         elevation: 0,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back),
+          onPressed: _onCancelWizard,
+        ),
         title: Text(
           'Agregar cliente',
           style: textTheme.titleLarge?.copyWith(
@@ -277,13 +314,7 @@ class _AddClientContactScreenState
             Padding(
               padding: const EdgeInsets.only(bottom: 40),
               child: WizardButtonBar(
-                onCancel: () {
-                  if (_returnTo != null) {
-                    context.go(_returnTo!);
-                  } else {
-                    context.go('/clients');
-                  }
-                },
+                onCancel: _onCancelWizard,
                 onBack: () => context.pop(),
                 onNext: _onFinish,
                 isLastStep: true,

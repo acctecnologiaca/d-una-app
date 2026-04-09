@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:d_una_app/shared/widgets/friendly_error_widget.dart';
 import '../../../../../shared/widgets/custom_button.dart';
 import '../../../../../shared/widgets/custom_text_field.dart';
 import '../../../../../shared/widgets/custom_dropdown.dart';
@@ -10,6 +11,7 @@ import '../../../../portfolio/data/models/service_model.dart';
 import '../../../data/models/quote_item_service.dart';
 import '../../../../portfolio/data/models/delivery_time_model.dart';
 import '../../../../portfolio/presentation/providers/lookup_providers.dart';
+import '../../../../../shared/widgets/service_list_item.dart';
 
 class QuoteServiceSaleDetailsSheet extends ConsumerStatefulWidget {
   final ServiceModel service;
@@ -33,14 +35,9 @@ class QuoteServiceSaleDetailsSheet extends ConsumerStatefulWidget {
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
       ),
-      builder: (context) => Padding(
-        padding: EdgeInsets.only(
-          bottom: MediaQuery.of(context).viewInsets.bottom,
-        ),
-        child: QuoteServiceSaleDetailsSheet(
-          service: service,
-          existingItem: existingItem,
-        ),
+      builder: (context) => QuoteServiceSaleDetailsSheet(
+        service: service,
+        existingItem: existingItem,
       ),
     );
   }
@@ -145,17 +142,6 @@ class _QuoteServiceSaleDetailsSheetState
     return 'Ud.';
   }
 
-  String _getRateSuffix() {
-    final name = widget.service.serviceRate?.name.toLowerCase() ?? '';
-    final symbol = widget.service.serviceRate?.symbol.toLowerCase() ?? '';
-
-    if (name.contains('hora') || symbol == 'h' || symbol == 'hr') return '/h';
-    if (name.contains('día') || name.contains('dia')) return '/dia';
-    if (name.contains('mes')) return '/mes';
-    if (name.contains('serv')) return '/serv.';
-    return '/ud.';
-  }
-
   void _onConfirm() {
     final finalCost = _isOutsourced
         ? (CurrencyFormatter.parse(_costPriceController.text) ?? 0.0)
@@ -201,6 +187,7 @@ class _QuoteServiceSaleDetailsSheetState
     return CustomActionSheet(
       title: 'Servicio a agregar',
       showDivider: false,
+      isContentScrollable: true,
       actions: [
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16.0),
@@ -219,39 +206,9 @@ class _QuoteServiceSaleDetailsSheetState
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             // Service Info Header
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        widget.service.name,
-                        style: textTheme.titleMedium?.copyWith(
-                          color: colors.onSurface,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        widget.service.category?.name ?? 'Sin categoría',
-                        style: textTheme.bodyMedium?.copyWith(
-                          color: colors.onSurfaceVariant,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                Text(
-                  '${CurrencyFormatter.format(widget.service.price)}${_getRateSuffix()}',
-                  style: textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.bold,
-                    color: colors.onSurface,
-                  ),
-                ),
-              ],
+            ServiceListItem(
+              service: widget.service,
+              onTap: () {}, // No action in sheet
             ),
             const SizedBox(height: 16),
             Divider(color: colors.outlineVariant, height: 1),
@@ -363,8 +320,7 @@ class _QuoteServiceSaleDetailsSheetState
                     },
                     loading: () =>
                         const Center(child: CircularProgressIndicator()),
-                    error: (err, stack) =>
-                        Text('Error al cargar tiempos de ejecución: $err'),
+                    error: (err, stack) => FriendlyErrorWidget(error: err),
                   ),
             ],
             const SizedBox(height: 24),

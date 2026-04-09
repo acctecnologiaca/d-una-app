@@ -6,6 +6,7 @@ class ServiceRate extends Equatable {
   final String symbol;
   final String? userId;
   final bool isVerified;
+  final String? iconName;
 
   const ServiceRate({
     required this.id,
@@ -13,6 +14,7 @@ class ServiceRate extends Equatable {
     required this.symbol,
     this.userId,
     this.isVerified = false,
+    this.iconName,
   });
 
   factory ServiceRate.fromJson(Map<String, dynamic> json) {
@@ -22,6 +24,7 @@ class ServiceRate extends Equatable {
       symbol: json['symbol'] ?? '',
       userId: json['user_id'],
       isVerified: json['is_verified'] ?? false,
+      iconName: json['icon_name'] as String?,
     );
   }
 
@@ -32,9 +35,10 @@ class ServiceRate extends Equatable {
       'symbol': symbol,
       'user_id': userId,
       'is_verified': isVerified,
+      'icon_name': iconName,
     };
   }
 
   @override
-  List<Object?> get props => [id, name, symbol, userId, isVerified];
+  List<Object?> get props => [id, name, symbol, userId, isVerified, iconName];
 }

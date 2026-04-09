@@ -1,4 +1,5 @@
 import 'package:csc_picker_plus/csc_picker_plus.dart';
+import 'package:d_una_app/shared/widgets/friendly_error_widget.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -10,7 +11,7 @@ import '../../../../shared/widgets/custom_dropdown.dart';
 import '../../../../shared/widgets/form_bottom_bar.dart';
 import '../../../portfolio/presentation/providers/lookup_providers.dart';
 import '../../data/models/shipping_company.dart';
-
+import '../../../../core/utils/error_handler.dart';
 class AddShippingMethodScreen extends ConsumerStatefulWidget {
   final ShippingMethod? shippingMethod;
 
@@ -218,9 +219,7 @@ class _AddShippingMethodScreenState
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('Error: $e')));
+        ErrorHandler.showErrorSnackBar(context, e);
       }
     } finally {
       if (mounted) setState(() => _isLoading = false);
@@ -258,7 +257,7 @@ class _AddShippingMethodScreenState
       ),
       body: userProfileAsync.when(
         loading: () => const Center(child: CircularProgressIndicator()),
-        error: (e, st) => Center(child: Text('Error al cargar perfil: $e')),
+        error: (e, stack) => FriendlyErrorWidget(error: e),
         data: (profile) {
           if (profile == null) {
             return const Center(child: Text('No se encontró el perfil'));
@@ -286,8 +285,7 @@ class _AddShippingMethodScreenState
                         companiesAsync.when(
                           loading: () =>
                               const Center(child: CircularProgressIndicator()),
-                          error: (e, st) =>
-                              Text('Error al cargar las empresas: $e'),
+                          error: (e, stack) => FriendlyErrorWidget(error: e),
                           data: (companies) => CustomDropdown<String>(
                             label: 'Empresa',
                             value: _selectedCompany,

@@ -5,6 +5,7 @@ import 'package:d_una_app/shared/widgets/custom_text_field.dart';
 import 'package:d_una_app/shared/widgets/custom_button.dart';
 import 'package:d_una_app/features/settings/data/models/shipping_company.dart';
 import 'package:d_una_app/features/portfolio/presentation/providers/lookup_providers.dart';
+import 'package:d_una_app/core/utils/error_handler.dart';
 
 class AddEditShippingCompanySheet extends ConsumerStatefulWidget {
   final ShippingCompany? company;
@@ -71,9 +72,6 @@ class _AddEditShippingCompanySheetState extends ConsumerState<AddEditShippingCom
 
     setState(() => _isLoading = true);
 
-    final scaffoldMessenger = ScaffoldMessenger.of(context);
-    final navigator = Navigator.of(context);
-
     try {
       final repo = ref.read(lookupRepositoryProvider);
       if (isEditing) {
@@ -91,20 +89,25 @@ class _AddEditShippingCompanySheetState extends ConsumerState<AddEditShippingCom
         );
       }
       ref.invalidate(shippingCompaniesProvider);
-      navigator.pop();
-      scaffoldMessenger.showSnackBar(
-        SnackBar(
-          behavior: SnackBarBehavior.floating,
-          content: Text(
-            isEditing
-                ? 'Empresa actualizada a "$legalName"'
-                : 'Empresa "$legalName" agregada',
+      
+      if (mounted) {
+        Navigator.pop(context);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            behavior: SnackBarBehavior.floating,
+            content: Text(
+              isEditing
+                  ? 'Empresa actualizada a "$legalName"'
+                  : 'Empresa "$legalName" agregada',
+            ),
           ),
-        ),
-      );
+        );
+      }
     } catch (e) {
-      setState(() => _isLoading = false);
-      scaffoldMessenger.showSnackBar(SnackBar(behavior: SnackBarBehavior.floating, content: Text('Error: $e')));
+      if (mounted) {
+        setState(() => _isLoading = false);
+        ErrorHandler.showErrorSnackBar(context, e);
+      }
     }
   }
 
@@ -133,18 +136,20 @@ class _AddEditShippingCompanySheetState extends ConsumerState<AddEditShippingCom
 
     if (confirm != true || !mounted) return;
 
-    final scaffoldMessenger = ScaffoldMessenger.of(context);
-    final navigator = Navigator.of(context);
-
     try {
       await ref.read(lookupRepositoryProvider).deleteShippingCompany(widget.company!.id);
       ref.invalidate(shippingCompaniesProvider);
-      navigator.pop();
-      scaffoldMessenger.showSnackBar(
-        SnackBar(behavior: SnackBarBehavior.floating, content: Text('Empresa "${widget.company!.displayName}" eliminada')),
-      );
+      
+      if (mounted) {
+        Navigator.pop(context);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(behavior: SnackBarBehavior.floating, content: Text('Empresa "${widget.company!.displayName}" eliminada')),
+        );
+      }
     } catch (e) {
-      scaffoldMessenger.showSnackBar(SnackBar(behavior: SnackBarBehavior.floating, content: Text('Error: $e')));
+      if (mounted) {
+        ErrorHandler.showErrorSnackBar(context, e);
+      }
     }
   }
 

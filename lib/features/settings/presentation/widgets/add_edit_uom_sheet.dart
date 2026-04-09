@@ -5,6 +5,7 @@ import 'package:d_una_app/shared/widgets/custom_text_field.dart';
 import 'package:d_una_app/shared/widgets/custom_button.dart';
 import 'package:d_una_app/features/portfolio/data/models/uom_model.dart';
 import 'package:d_una_app/features/portfolio/presentation/providers/lookup_providers.dart';
+import 'package:d_una_app/core/utils/error_handler.dart';
 
 class AddEditUomSheet extends ConsumerStatefulWidget {
   final Uom? uom;
@@ -81,7 +82,7 @@ class _AddEditUomSheetState extends ConsumerState<AddEditUomSheet> {
       );
     } catch (e) {
       setState(() => _isLoading = false);
-      scaffoldMessenger.showSnackBar(SnackBar(behavior: SnackBarBehavior.floating, content: Text('Error: $e')));
+      ErrorHandler.showErrorSnackBar(context, e);
     }
   }
 
@@ -121,7 +122,7 @@ class _AddEditUomSheetState extends ConsumerState<AddEditUomSheet> {
         SnackBar(behavior: SnackBarBehavior.floating, content: Text('Unidad "${widget.uom!.name}" eliminada')),
       );
     } catch (e) {
-      scaffoldMessenger.showSnackBar(SnackBar(behavior: SnackBarBehavior.floating, content: Text('Error: $e')));
+      ErrorHandler.showErrorSnackBar(context, e);
     }
   }
 

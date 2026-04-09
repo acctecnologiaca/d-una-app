@@ -15,11 +15,10 @@ import 'package:d_una_app/shared/widgets/aggregated_product_card.dart';
 import 'package:d_una_app/features/portfolio/presentation/providers/suppliers_provider.dart';
 import 'package:d_una_app/features/portfolio/presentation/providers/product_search_provider.dart';
 import 'package:d_una_app/features/portfolio/presentation/providers/lookup_providers.dart';
-import 'package:d_una_app/features/portfolio/domain/models/product_search_filters.dart';
 import 'package:d_una_app/features/portfolio/presentation/suppliers_directory/screens/product_suppliers_screen.dart';
 import 'package:d_una_app/features/profile/presentation/providers/profile_provider.dart';
-import '../../../../profile/domain/models/user_profile.dart'; // Ensure model is available if needed
-import '../../../domain/models/product_sort_option.dart';
+import '../../../../profile/domain/models/user_profile.dart';
+import '../../../domain/models/product_search_filters.dart';
 
 class SupplierSearchScreen extends ConsumerStatefulWidget {
   final String? initialSupplierId;
@@ -35,7 +34,7 @@ class _SupplierSearchScreenState extends ConsumerState<SupplierSearchScreen> {
   // Query state maintained by GenericSearchScreen, but we need it for provider params
   String _currentQuery = '';
   late ProductSearchFilters _filters;
-  ProductSortOption _currentSort = ProductSortOption.priceAsc;
+  SortOption _currentSort = SortOption.lowestPrice;
 
   @override
   void initState() {
@@ -76,7 +75,7 @@ class _SupplierSearchScreenState extends ConsumerState<SupplierSearchScreen> {
     setState(() {
       _filters = const ProductSearchFilters();
       _selectedTradeTypes.clear();
-      _currentSort = ProductSortOption.priceAsc;
+      _currentSort = SortOption.lowestPrice;
     });
   }
 
@@ -120,10 +119,13 @@ class _SupplierSearchScreenState extends ConsumerState<SupplierSearchScreen> {
     // Filters:
     // 1. Matched by name (from combinedAsync/suppliersAsync)
     // 2. Associated with products matching the query
-    final availableSuppliers = facets.supplierIds.isEmpty && _currentQuery.isEmpty
+    final availableSuppliers =
+        facets.supplierIds.isEmpty && _currentQuery.isEmpty
         ? allSuppliers
         : allSuppliers.where((s) {
-            final matchesQuery = s.name.normalized.contains(_currentQuery.normalized);
+            final matchesQuery = s.name.normalized.contains(
+              _currentQuery.normalized,
+            );
             final matchesFacet = facets.supplierIds.contains(s.id);
             final isSelected = _filters.supplierIds.contains(s.id);
             return matchesQuery || matchesFacet || isSelected;
@@ -147,11 +149,16 @@ class _SupplierSearchScreenState extends ConsumerState<SupplierSearchScreen> {
   }
 
   // --- Facet Extraction ---
-  
-  ({Set<String> categories, Set<String> brands, Set<String> supplierIds}) _getAvailableFacets() {
+
+  ({Set<String> categories, Set<String> brands, Set<String> supplierIds})
+  _getAvailableFacets() {
     // If no query, return empty sets to indicate "show all"
     if (_currentQuery.trim().isEmpty) {
-      return (categories: <String>{}, brands: <String>{}, supplierIds: <String>{});
+      return (
+        categories: <String>{},
+        brands: <String>{},
+        supplierIds: <String>{},
+      );
     }
 
     // Note: productSearchProvider returns List<AggregatedProduct>
@@ -323,32 +330,17 @@ class _SupplierSearchScreenState extends ConsumerState<SupplierSearchScreen> {
             const SizedBox(height: 8),
             Align(
               alignment: Alignment.centerLeft,
-              child: GenericSortSelector<ProductSortOption>(
+              child: SortSelector(
                 currentSort: _currentSort,
-                options: ProductSortOption.values,
+                options: const [
+                  SortOption.nameAZ,
+                  SortOption.nameZA,
+                  SortOption.highestPrice,
+                  SortOption.lowestPrice,
+                  SortOption.quantityDesc,
+                  SortOption.quantityAsc,
+                ],
                 onSortChanged: (val) => setState(() => _currentSort = val),
-                labelBuilder: (option) => option.label,
-                iconBuilder: (option) {
-                  if (option == ProductSortOption.priceAsc) {
-                    return Icons.arrow_upward;
-                  }
-                  if (option == ProductSortOption.priceDesc) {
-                    return Icons.arrow_downward;
-                  }
-                  if (option == ProductSortOption.quantityAsc) {
-                    return Icons.arrow_upward;
-                  }
-                  if (option == ProductSortOption.quantityDesc) {
-                    return Icons.arrow_downward;
-                  }
-                  if (option == ProductSortOption.nameAZ) {
-                    return Icons.arrow_upward;
-                  }
-                  if (option == ProductSortOption.nameZA) {
-                    return Icons.arrow_downward;
-                  }
-                  return null;
-                },
               ),
             ),
           ],
@@ -556,18 +548,20 @@ class _SupplierSearchScreenState extends ConsumerState<SupplierSearchScreen> {
 
       sortedProducts.sort((a, b) {
         switch (_currentSort) {
-          case ProductSortOption.priceAsc:
+          case SortOption.lowestPrice:
             return a.minPrice.compareTo(b.minPrice);
-          case ProductSortOption.priceDesc:
+          case SortOption.highestPrice:
             return b.minPrice.compareTo(a.minPrice);
-          case ProductSortOption.quantityAsc:
+          case SortOption.quantityAsc:
             return a.totalQuantity.compareTo(b.totalQuantity);
-          case ProductSortOption.quantityDesc:
+          case SortOption.quantityDesc:
             return b.totalQuantity.compareTo(a.totalQuantity);
-          case ProductSortOption.nameAZ:
+          case SortOption.nameAZ:
             return a.name.toLowerCase().compareTo(b.name.toLowerCase());
-          case ProductSortOption.nameZA:
+          case SortOption.nameZA:
             return b.name.toLowerCase().compareTo(a.name.toLowerCase());
+          default:
+            return 0;
         }
       });
 

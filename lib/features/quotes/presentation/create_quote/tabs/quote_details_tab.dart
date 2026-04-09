@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:d_una_app/shared/widgets/friendly_error_widget.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../providers/create_quote_provider.dart';
 import '../../../../../shared/widgets/custom_dropdown.dart';
@@ -160,7 +161,7 @@ class _QuoteDetailsTabState extends ConsumerState<QuoteDetailsTab> {
               },
             ),
             loading: () => const Center(child: CircularProgressIndicator()),
-            error: (e, st) => Text('Error al cargar categorías: $e'),
+            error: (e, stack) => FriendlyErrorWidget(error: e),
           ),
           const SizedBox(height: 16),
           // Asesor responsable
@@ -241,7 +242,7 @@ class _QuoteDetailsTabState extends ConsumerState<QuoteDetailsTab> {
               );
             },
             loading: () => const Center(child: CircularProgressIndicator()),
-            error: (e, st) => Text('Error al cargar asesores: $e'),
+            error: (e, stack) => FriendlyErrorWidget(error: e),
           ),
           const SizedBox(height: 16),
           // Etiqueta

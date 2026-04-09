@@ -58,7 +58,8 @@ class EstimatePriceSheet extends ConsumerStatefulWidget {
 class _EstimatePriceSheetState extends ConsumerState<EstimatePriceSheet> {
   double _profitPercentage = 25.0; // Default will be overwritten in initState
   late final TextEditingController _percentageController;
-  late final String _pricingMethod;
+  late String _pricingMethod;
+  bool _isEdited = false;
 
   @override
   void initState() {
@@ -101,6 +102,7 @@ class _EstimatePriceSheetState extends ConsumerState<EstimatePriceSheet> {
     final val = double.tryParse(sanitized);
     if (val != null) {
       setState(() {
+        _isEdited = true;
         _profitPercentage = val;
       });
     }
@@ -108,6 +110,7 @@ class _EstimatePriceSheetState extends ConsumerState<EstimatePriceSheet> {
 
   void _increment() {
     setState(() {
+      _isEdited = true;
       _profitPercentage += 1.0;
       _percentageController.text = _formatNumber(_profitPercentage);
     });
@@ -116,6 +119,7 @@ class _EstimatePriceSheetState extends ConsumerState<EstimatePriceSheet> {
   void _decrement() {
     setState(() {
       if (_profitPercentage > 0) {
+        _isEdited = true;
         _profitPercentage -= 1.0;
         _percentageController.text = _formatNumber(_profitPercentage);
       }
@@ -130,6 +134,19 @@ class _EstimatePriceSheetState extends ConsumerState<EstimatePriceSheet> {
 
   @override
   Widget build(BuildContext context) {
+    ref.listen<QuoteState>(createQuoteProvider, (previous, next) {
+      // If was loading and finished, or if it was the first load and we have defaults
+      if ((previous == null || previous.isLoading) && !next.isLoading) {
+        if (!_isEdited) {
+          setState(() {
+            _profitPercentage = next.globalMargin;
+            _percentageController.text = _formatNumber(_profitPercentage);
+            _pricingMethod = next.pricingMethod;
+          });
+        }
+      }
+    });
+
     final theme = Theme.of(context);
     final colors = theme.colorScheme;
     final textTheme = theme.textTheme;

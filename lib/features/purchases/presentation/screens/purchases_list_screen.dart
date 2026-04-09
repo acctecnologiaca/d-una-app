@@ -1,4 +1,5 @@
 import 'package:d_una_app/features/purchases/presentation/providers/add_purchase_provider.dart';
+import 'package:d_una_app/shared/widgets/friendly_error_widget.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -45,7 +46,9 @@ class _PurchasesListScreenState extends ConsumerState<PurchasesListScreen> {
   @override
   Widget build(BuildContext context) {
     final colors = Theme.of(context).colorScheme;
-    final productId = GoRouterState.of(context).uri.queryParameters['productId'];
+    final productId = GoRouterState.of(
+      context,
+    ).uri.queryParameters['productId'];
     final purchasesAsync = ref.watch(purchasesProvider(productId));
 
     return Scaffold(
@@ -96,7 +99,7 @@ class _PurchasesListScreenState extends ConsumerState<PurchasesListScreen> {
           Expanded(
             child: purchasesAsync.when(
               loading: () => const Center(child: CircularProgressIndicator()),
-              error: (error, stack) => Center(child: Text('Error: $error')),
+              error: (error, stack) => FriendlyErrorWidget(error: error),
               data: (purchases) {
                 // Filter List
                 var filteredList = purchases.where((purchase) {
@@ -139,10 +142,8 @@ class _PurchasesListScreenState extends ConsumerState<PurchasesListScreen> {
                     bottom: 100,
                   ), // padding bottom for potential FAB in the future
                   itemCount: filteredList.length,
-                  separatorBuilder: (context, index) => Divider(
-                    height: 1,
-                    color: colors.outlineVariant.withValues(alpha: 0.5),
-                  ),
+                  separatorBuilder: (context, index) =>
+                      Divider(height: 1, color: Colors.transparent),
                   itemBuilder: (context, index) {
                     final purchase = filteredList[index];
 

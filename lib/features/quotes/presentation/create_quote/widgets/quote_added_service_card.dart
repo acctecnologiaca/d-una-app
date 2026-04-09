@@ -3,7 +3,6 @@ import 'package:material_symbols_icons/symbols.dart';
 import '../../../../../core/utils/string_extensions.dart';
 import '../../../../../shared/utils/currency_formatter.dart';
 import '../../../../../shared/widgets/expandable_action_card.dart';
-import '../../../../../shared/widgets/status_badge.dart';
 import '../../../../../shared/widgets/uom_status_badge.dart';
 import '../../../../../shared/widgets/editable_quantity_stepper.dart';
 
@@ -13,7 +12,8 @@ class QuoteAddedServiceCard extends StatelessWidget {
   final double subtotal; // This could be the total for this line or unit price
   final double quantity;
   final String rateSuffix;
-  final String? executionTime; // Can be null if time-based rate
+  final String? executionTimeLabel; // Can be null if time-based rate
+  final String? rateIconName;
 
   // Actions
   final VoidCallback onDelete;
@@ -28,11 +28,12 @@ class QuoteAddedServiceCard extends StatelessWidget {
     required this.subtotal,
     required this.quantity,
     required this.rateSuffix,
-    this.executionTime,
+    this.executionTimeLabel,
     required this.onDelete,
     required this.onEditSaleDetails,
     required this.onQuantityChanged,
     this.isTemporal = false,
+    this.rateIconName,
   });
 
   @override
@@ -43,14 +44,27 @@ class QuoteAddedServiceCard extends StatelessWidget {
       overline: category != null
           ? Text(category!.toTitleCase)
           : const Text('Sin categoría'),
-      title: name.toTitleCase,
-      subtitle: executionTime != null
-          ? Text(
-              'Entrega: $executionTime',
-              style: TextStyle(color: colors.onSurfaceVariant),
+      title: name,
+      subtitle: executionTimeLabel != null
+          ? Row(
+              children: [
+                Icon(
+                  Symbols.timer, // Icono de Material Symbols
+                  size: 16,
+                  color: colors.onSurfaceVariant,
+                ),
+                const SizedBox(width: 4),
+                Text(
+                  executionTimeLabel!,
+                  style: TextStyle(
+                    color: colors.onSurfaceVariant,
+                    fontSize: 14,
+                  ),
+                ),
+              ],
             )
           : null,
-      padding: const EdgeInsets.symmetric(horizontal: 0.0, vertical: 12.0),
+      padding: const EdgeInsets.fromLTRB(0, 8, 0, 8),
       trailing: Column(
         crossAxisAlignment: CrossAxisAlignment.end,
         children: [
@@ -71,18 +85,22 @@ class QuoteAddedServiceCard extends StatelessWidget {
             children: [
               // Temp badge
               if (isTemporal) ...[
-                StatusBadge(
-                  backgroundColor: colors.tertiaryContainer,
-                  textColor: colors.onTertiaryContainer,
-                  text: 'Temp',
-                  icon: Icon(Symbols.edit_note, size: 14, color: colors.onTertiaryContainer),
+                Tooltip(
+                  message: 'Servicio temporal',
+                  child: Icon(
+                    Symbols.chronic,
+                    size: 20,
+                    color: colors.outline,
+                    fill: 1,
+                  ),
                 ),
-                const SizedBox(width: 6),
+                const SizedBox(width: 8),
               ],
               // Quantity Badge
               UomStatusBadge(
                 quantity: quantity,
                 uomAbbreviation: rateSuffix.replaceAll('/', ''),
+                uomIconName: rateIconName,
               ),
             ],
           ),
@@ -111,9 +129,7 @@ class QuoteAddedServiceCard extends StatelessWidget {
                       Navigator.of(context).pop();
                       onDelete();
                     },
-                    style: TextButton.styleFrom(
-                      foregroundColor: colors.error,
-                    ),
+                    style: TextButton.styleFrom(foregroundColor: colors.error),
                     child: const Text('Eliminar'),
                   ),
                 ],

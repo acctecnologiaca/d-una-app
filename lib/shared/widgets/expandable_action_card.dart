@@ -38,50 +38,56 @@ class _ExpandableActionCardState extends State<ExpandableActionCard> {
 
     return Card(
       elevation: 0,
-      margin: const EdgeInsets.only(bottom: 8),
+      margin: const EdgeInsets.only(bottom: 16),
       color: widget.backgroundColor ?? colors.surfaceContainerLowest,
       shape: const RoundedRectangleBorder(borderRadius: BorderRadius.zero),
-      child: Column(
-        children: [
-          StandardListItem(
-            padding: widget.padding,
-            onTap: widget.isExpandable
-                ? () {
-                    setState(() {
-                      _isExpanded = !_isExpanded;
-                    });
-                  }
-                : null,
-            overline: widget.overline,
-            title: widget.title,
-            subtitle: widget.subtitle,
-            trailing: widget.trailing,
-          ),
-          AnimatedSize(
-            duration: const Duration(milliseconds: 250),
-            curve: Curves.easeInOut,
-            alignment: Alignment.topCenter,
-            child: _isExpanded
-                ? Column(
-                    children: [
-                      const Divider(height: 1),
-                      Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 4.0),
-                        child: Row(
-                          children: [
-                            ...widget.actions,
-                            if (widget.expandedTrailing != null) ...[
-                              const Spacer(),
-                              widget.expandedTrailing!,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 0.0),
+        child: Column(
+          children: [
+            StandardListItem(
+              padding: widget.padding,
+              onTap: widget.isExpandable
+                  ? () {
+                      setState(() {
+                        _isExpanded = !_isExpanded;
+                      });
+                    }
+                  : null,
+              overline: widget.overline,
+              title: widget.title,
+              subtitle: widget.subtitle,
+              trailing: widget.trailing,
+            ),
+            AnimatedSize(
+              duration: const Duration(milliseconds: 250),
+              curve: Curves.easeInOut,
+              alignment: Alignment.topCenter,
+              child: _isExpanded
+                  ? Column(
+                      children: [
+                        const Divider(height: 1),
+                        Padding(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 0.0,
+                            vertical: 4.0,
+                          ),
+                          child: Row(
+                            children: [
+                              ...widget.actions,
+                              if (widget.expandedTrailing != null) ...[
+                                const Spacer(),
+                                widget.expandedTrailing!,
+                              ],
                             ],
-                          ],
+                          ),
                         ),
-                      ),
-                    ],
-                  )
-                : const SizedBox.shrink(),
-          ),
-        ],
+                      ],
+                    )
+                  : const SizedBox.shrink(),
+            ),
+          ],
+        ),
       ),
     );
   }

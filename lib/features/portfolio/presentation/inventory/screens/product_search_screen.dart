@@ -5,9 +5,10 @@ import '../../../data/models/product_model.dart';
 import '../../../../../shared/widgets/generic_search_screen.dart';
 import '../../../../../shared/widgets/filter_bottom_sheet.dart';
 import '../../../../../core/utils/string_extensions.dart';
-import '../../providers/products_provider.dart';
 import '../widgets/inventory_item_card.dart';
+import '../../../../../shared/widgets/sort_selector.dart';
 import '../widgets/inventory_action_sheet.dart';
+import '../../providers/products_provider.dart';
 
 class ProductSearchScreen extends ConsumerStatefulWidget {
   const ProductSearchScreen({super.key});
@@ -21,8 +22,18 @@ class _ProductSearchScreenState extends ConsumerState<ProductSearchScreen> {
   // Filters
   final Set<String> _selectedCategories = {};
   final Set<String> _selectedBrands = {};
-  // SortOption _currentSort = SortOption.lowestPrice; // Assuming SortOption exists
+  SortOption _currentSort = SortOption.lowestPrice;
   String _searchQuery = '';
+
+  final List<SortOption> _sortOptions = [
+    SortOption.recent,
+    SortOption.nameAZ,
+    SortOption.nameZA,
+    SortOption.highestPrice,
+    SortOption.lowestPrice,
+    SortOption.quantityDesc,
+    SortOption.quantityAsc,
+  ];
 
   // Note: Price filter removed as Product model does not support price yet.
 
@@ -63,15 +74,21 @@ class _ProductSearchScreenState extends ConsumerState<ProductSearchScreen> {
           onTap: () {
             productsAsync.whenData((products) {
               final queryNormalized = _searchQuery.normalized;
-              final availableCategories = products.where((p) {
-                // Filter by text search
-                return queryNormalized.isEmpty ||
-                    p.name.normalized.contains(queryNormalized) ||
-                    (p.brand?.name.normalized ?? '').contains(
-                      queryNormalized,
-                    ) ||
-                    (p.model?.normalized ?? '').contains(queryNormalized);
-              }).map((p) => p.category?.name).whereType<String>().toSet().where((s) => s.isNotEmpty).toList();
+              final availableCategories = products
+                  .where((p) {
+                    // Filter by text search
+                    return queryNormalized.isEmpty ||
+                        p.name.normalized.contains(queryNormalized) ||
+                        (p.brand?.name.normalized ?? '').contains(
+                          queryNormalized,
+                        ) ||
+                        (p.model?.normalized ?? '').contains(queryNormalized);
+                  })
+                  .map((p) => p.category?.name)
+                  .whereType<String>()
+                  .toSet()
+                  .where((s) => s.isNotEmpty)
+                  .toList();
 
               FilterBottomSheet.showMulti(
                 context: context,
@@ -94,15 +111,21 @@ class _ProductSearchScreenState extends ConsumerState<ProductSearchScreen> {
           onTap: () {
             productsAsync.whenData((products) {
               final queryNormalized = _searchQuery.normalized;
-              final availableBrands = products.where((p) {
-                // Filter by text search
-                return queryNormalized.isEmpty ||
-                    p.name.normalized.contains(queryNormalized) ||
-                    (p.brand?.name.normalized ?? '').contains(
-                      queryNormalized,
-                    ) ||
-                    (p.model?.normalized ?? '').contains(queryNormalized);
-              }).map((p) => p.brand?.name).whereType<String>().toSet().where((s) => s.isNotEmpty).toList();
+              final availableBrands = products
+                  .where((p) {
+                    // Filter by text search
+                    return queryNormalized.isEmpty ||
+                        p.name.normalized.contains(queryNormalized) ||
+                        (p.brand?.name.normalized ?? '').contains(
+                          queryNormalized,
+                        ) ||
+                        (p.model?.normalized ?? '').contains(queryNormalized);
+                  })
+                  .map((p) => p.brand?.name)
+                  .whereType<String>()
+                  .toSet()
+                  .where((s) => s.isNotEmpty)
+                  .toList();
 
               FilterBottomSheet.showMulti(
                 context: context,
@@ -120,6 +143,38 @@ class _ProductSearchScreenState extends ConsumerState<ProductSearchScreen> {
           },
         ),
       ],
+      bottomFilterWidget: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+        child: SortSelector(
+          currentSort: _currentSort,
+          options: _sortOptions,
+          onSortChanged: (newSort) {
+            setState(() {
+              _currentSort = newSort;
+            });
+          },
+        ),
+      ),
+      comparator: (a, b) {
+        switch (_currentSort) {
+          case SortOption.recent:
+            return b.createdAt.compareTo(a.createdAt);
+          case SortOption.nameAZ:
+            return a.name.toLowerCase().compareTo(b.name.toLowerCase());
+          case SortOption.nameZA:
+            return b.name.toLowerCase().compareTo(a.name.toLowerCase());
+          case SortOption.highestPrice:
+            return b.averageCost.compareTo(a.averageCost);
+          case SortOption.lowestPrice:
+            return a.averageCost.compareTo(b.averageCost);
+          case SortOption.quantityDesc:
+            return b.inventoryQuantity.compareTo(a.inventoryQuantity);
+          case SortOption.quantityAsc:
+            return a.inventoryQuantity.compareTo(b.inventoryQuantity);
+          default:
+            return 0;
+        }
+      },
       filter: (p, query) {
         final normalizedQuery = query.normalized;
         final matchesQuery =
@@ -148,16 +203,18 @@ class _ProductSearchScreenState extends ConsumerState<ProductSearchScreen> {
               name: product.name,
               brand: product.brand?.name ?? '',
               model: product.model ?? '',
-              stock: 0, // Placeholder
-              price: 0.0, // Placeholder
+              stock: product.inventoryQuantity,
+              price: product.averageCost,
+              unit: product.uom,
+              uomIconName: product.uomModel?.iconName,
               imageUrl: product.imageUrl,
               onTap: () {
                 InventoryActionSheet.show(
                   context: context,
                   ref: ref,
                   product: product,
-                  currentPrice: 0.0, // Unavailable in search
-                  currentStock: 0, // Unavailable in search
+                  currentPrice: product.averageCost,
+                  currentStock: product.inventoryQuantity,
                 );
               },
             ),

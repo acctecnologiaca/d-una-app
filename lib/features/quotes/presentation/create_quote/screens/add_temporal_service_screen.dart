@@ -1,4 +1,5 @@
 import 'package:d_una_app/core/utils/string_extensions.dart';
+import 'package:d_una_app/shared/widgets/friendly_error_widget.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -218,6 +219,13 @@ class _AddTemporalServiceScreenState
             ?.symbol ??
         'ud.';
 
+    final rateIconName = ref
+        .read(serviceRatesProvider)
+        .value
+        ?.where((r) => r.id == _selectedRate)
+        .firstOrNull
+        ?.iconName;
+
     // Check if rate is time based
     final nameLower =
         (ref
@@ -259,6 +267,7 @@ class _AddTemporalServiceScreenState
       warrantyTime: warrantyTime,
       serviceRateId: _selectedRate ?? '',
       rateSymbol: rateSymbol,
+      rateIconName: rateIconName,
       executionTimeId: isTimeBased ? null : _selectedExecutionTimeId,
     );
 
@@ -608,8 +617,7 @@ class _AddTemporalServiceScreenState
                     },
                     loading: () =>
                         const Center(child: CircularProgressIndicator()),
-                    error: (err, stack) =>
-                        Text('Error al cargar tiempos de ejecución: $err'),
+                    error: (err, stack) => FriendlyErrorWidget(error: err),
                   ),
               const SizedBox(height: 16),
             ],

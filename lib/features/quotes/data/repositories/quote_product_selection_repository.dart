@@ -2,6 +2,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../../portfolio/presentation/providers/product_search_provider.dart';
 import '../../domain/models/quote_aggregated_product.dart';
 import '../../domain/models/quote_product_source.dart';
+import '../../domain/models/quote_validation_result.dart';
 
 class QuoteProductSelectionRepository {
   final SupabaseClient _supabase;
@@ -58,6 +59,23 @@ class QuoteProductSelectionRepository {
     );
     return (response as List)
         .map((item) => QuoteProductSource.fromMap(item))
+        .toList();
+  }
+
+  Future<List<QuoteValidationResult>> validateQuoteItems({
+    List<String> supplierProductIds = const [],
+    List<String> productIds = const [],
+  }) async {
+    final response = await _supabase.rpc(
+      'validate_quote_items',
+      params: {
+        'p_supplier_product_ids': supplierProductIds,
+        'p_product_ids': productIds,
+      },
+    );
+
+    return (response as List)
+        .map((item) => QuoteValidationResult.fromMap(item))
         .toList();
   }
 }

@@ -9,6 +9,7 @@ import 'package:d_una_app/shared/data/currencies.dart';
 import 'package:d_una_app/features/quotes/data/models/financial_parameter.dart';
 import 'package:d_una_app/features/quotes/presentation/quotes_list/providers/quotes_provider.dart';
 import 'package:d_una_app/features/quotes/presentation/create_quote/providers/create_quote_provider.dart';
+import 'package:d_una_app/core/utils/error_handler.dart';
 
 class FinancialParametersScreen extends ConsumerStatefulWidget {
   const FinancialParametersScreen({super.key});
@@ -56,28 +57,32 @@ class _FinancialParametersScreenState
     try {
       final repo = ref.read(quotesRepositoryProvider);
       final params = await repo.getFinancialParameters();
-      setState(() {
-        _parameterId = params.id.isEmpty ? null : params.id;
-        _profitMargin = params.profitMargin;
-        _taxRate = params.taxRate;
-        _currencyCode = params.currencyCode;
-        _pricingMethod = params.pricingMethod;
+      if (mounted) {
+        setState(() {
+          _parameterId = params.id.isEmpty ? null : params.id;
+          _profitMargin = params.profitMargin;
+          _taxRate = params.taxRate;
+          _currencyCode = params.currencyCode;
+          _pricingMethod = params.pricingMethod;
 
-        _origMargin = _profitMargin;
-        _origTax = _taxRate;
-        _origCurrency = _currencyCode;
-        _origMethod = _pricingMethod;
+          _origMargin = _profitMargin;
+          _origTax = _taxRate;
+          _origCurrency = _currencyCode;
+          _origMethod = _pricingMethod;
 
-        _marginController.text = _formatNumber(_profitMargin);
-        _taxController.text = _formatNumber(_taxRate);
-        _isLoading = false;
-      });
+          _marginController.text = _formatNumber(_profitMargin);
+          _taxController.text = _formatNumber(_taxRate);
+          _isLoading = false;
+        });
+      }
     } catch (e) {
-      setState(() {
-        _marginController.text = _formatNumber(_profitMargin);
-        _taxController.text = _formatNumber(_taxRate);
-        _isLoading = false;
-      });
+      if (mounted) {
+        setState(() {
+          _marginController.text = _formatNumber(_profitMargin);
+          _taxController.text = _formatNumber(_taxRate);
+          _isLoading = false;
+        });
+      }
     }
   }
 
@@ -113,15 +118,24 @@ class _FinancialParametersScreenState
         updatedAt: DateTime.now(),
       );
       await repo.updateFinancialParameters(params);
+      
       // Refresh global state
       ref.read(createQuoteProvider.notifier).loadFinancialParameters();
-      navigator.pop(true);
-      scaffoldMessenger.showSnackBar(
-        const SnackBar(content: Text('Parámetros financieros actualizados')),
-      );
+      
+      if (mounted) {
+        navigator.pop(true);
+        scaffoldMessenger.showSnackBar(
+          const SnackBar(
+            behavior: SnackBarBehavior.floating,
+            content: Text('Parámetros financieros actualizados'),
+          ),
+        );
+      }
     } catch (e) {
-      setState(() => _isSaving = false);
-      scaffoldMessenger.showSnackBar(SnackBar(content: Text('Error: $e')));
+      if (mounted) {
+        setState(() => _isSaving = false);
+        ErrorHandler.showErrorSnackBar(context, e);
+      }
     }
   }
 
@@ -247,8 +261,8 @@ class _FinancialParametersScreenState
                   .toStringAsFixed(2)
                   .replaceAll('.', ',');
               final text = _pricingMethod == 'markup'
-                  ? 'Ej: Si tu costo es ${symbol}100 y aplicas $pct%, tu precio de venta ser\u00e1 $symbol$priceStr. La ganancia representa el $pct% del costo.'
-                  : 'Ej: Si tu costo es ${symbol}100 y aplicas $pct%, tu precio de venta ser\u00e1 $symbol$priceStr. La ganancia representa el $pct% del precio de venta.';
+                  ? 'Ej: Si tu costo es ${symbol}100 y aplicas $pct%, tu precio de venta será $symbol$priceStr. La ganancia representa el $pct% del costo.'
+                  : 'Ej: Si tu costo es ${symbol}100 y aplicas $pct%, tu precio de venta será $symbol$priceStr. La ganancia representa el $pct% del precio de venta.';
               return Text(
                 text,
                 textAlign: TextAlign.center,

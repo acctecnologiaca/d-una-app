@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'package:d_una_app/shared/widgets/friendly_error_widget.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -283,7 +284,7 @@ class _BasicDataScreenState extends ConsumerState<BasicDataScreen> {
           ? const Center(child: CircularProgressIndicator())
           : profileAsync.when(
               loading: () => const Center(child: CircularProgressIndicator()),
-              error: (error, stack) => Center(child: Text('Error: $error')),
+              error: (error, stack) => FriendlyErrorWidget(error: error),
               data: (profile) {
                 if (profile != null) {
                   _populateData(profile);

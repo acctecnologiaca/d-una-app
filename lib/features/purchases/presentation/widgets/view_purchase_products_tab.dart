@@ -24,14 +24,12 @@ class ViewPurchaseProductsTab extends StatelessWidget {
     return Scaffold(
       backgroundColor: Colors.transparent,
       body: ListView.builder(
-        padding: const EdgeInsets.only(
-          top: 16,
-          bottom: 100,
-        ),
+        padding: const EdgeInsets.only(top: 8, bottom: 100),
         itemCount: data.items.length,
         itemBuilder: (context, index) {
           final item = data.items[index];
-          final hasMissingSerials = item.requiresSerials &&
+          final hasMissingSerials =
+              item.requiresSerials &&
               data.serials.where((s) => s.productId == item.productId).length <
                   item.quantity;
 

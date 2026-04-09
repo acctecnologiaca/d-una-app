@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'package:d_una_app/shared/widgets/friendly_error_widget.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -310,7 +311,7 @@ class _VerificationScreenState extends ConsumerState<VerificationScreen> {
       ),
       body: userProfileAsync.when(
         loading: () => const Center(child: CircularProgressIndicator()),
-        error: (e, st) => Center(child: Text('Error: $e')),
+        error: (e, stack) => FriendlyErrorWidget(error: e),
         data: (profile) {
           if (profile == null) {
             return const Center(child: Text('User not found'));

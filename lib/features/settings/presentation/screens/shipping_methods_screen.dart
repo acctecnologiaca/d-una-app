@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:d_una_app/shared/widgets/friendly_error_widget.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../data/models/shipping_method.dart';
@@ -6,6 +7,7 @@ import '../../../profile/presentation/providers/profile_provider.dart';
 import '../../../../../shared/widgets/generic_list_screen.dart';
 import '../../../../../shared/widgets/standard_list_item.dart';
 import '../../../portfolio/presentation/providers/lookup_providers.dart';
+import '../../../../core/utils/error_handler.dart';
 
 class ShippingMethodsScreen extends ConsumerStatefulWidget {
   const ShippingMethodsScreen({super.key});
@@ -55,9 +57,7 @@ class _ShippingMethodsScreenState extends ConsumerState<ShippingMethodsScreen> {
         }
       } catch (e) {
         if (mounted) {
-          ScaffoldMessenger.of(
-            context,
-          ).showSnackBar(SnackBar(content: Text('Error: $e')));
+          ErrorHandler.showErrorSnackBar(context, e);
         }
       }
     }
@@ -72,7 +72,7 @@ class _ShippingMethodsScreenState extends ConsumerState<ShippingMethodsScreen> {
     return userProfileAsync.when(
       loading: () =>
           const Scaffold(body: Center(child: CircularProgressIndicator())),
-      error: (e, st) => Scaffold(body: Center(child: Text('Error: $e'))),
+      error: (e, stack) => Scaffold(body: FriendlyErrorWidget(error: e)),
       data: (profile) {
         if (profile == null) {
           return const Scaffold(

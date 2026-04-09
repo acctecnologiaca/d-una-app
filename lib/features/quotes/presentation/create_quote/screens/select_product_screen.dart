@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:d_una_app/shared/widgets/friendly_error_widget.dart';
 import 'package:go_router/go_router.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../../shared/widgets/standard_app_bar.dart';
@@ -7,6 +8,7 @@ import '../../../../../shared/widgets/sort_selector.dart';
 import '../../../../../shared/widgets/aggregated_product_card.dart';
 import '../../../../portfolio/presentation/providers/product_search_provider.dart';
 import '../providers/quote_product_selection_provider.dart';
+import '../providers/create_quote_provider.dart';
 
 class SelectProductScreen extends ConsumerStatefulWidget {
   const SelectProductScreen({super.key});
@@ -26,6 +28,8 @@ class _SelectProductScreenState extends ConsumerState<SelectProductScreen> {
     final suggestionsAsync = ref.watch(
       quoteProductSuggestionsProvider(const ProductSearchParams(query: '')),
     );
+
+    final quoteProducts = ref.watch(createQuoteProvider).products;
 
     return Scaffold(
       appBar: StandardAppBar(
@@ -115,6 +119,12 @@ class _SelectProductScreenState extends ConsumerState<SelectProductScreen> {
                 SortSelector(
                   currentSort: _currentSort,
                   onSortChanged: (val) => setState(() => _currentSort = val),
+                  options: const [
+                    SortOption.frequency,
+                    SortOption.recent,
+                    SortOption.nameAZ,
+                    SortOption.nameZA,
+                  ],
                 ),
               ],
             ),
@@ -124,15 +134,18 @@ class _SelectProductScreenState extends ConsumerState<SelectProductScreen> {
           Expanded(
             child: suggestionsAsync.when(
               loading: () => const Center(child: CircularProgressIndicator()),
-              error: (err, stack) => Center(child: Text('Error: $err')),
+              error: (err, stack) => FriendlyErrorWidget(error: err),
               data: (products) {
                 // Determine sort list
                 final sortedProducts = List.of(products);
                 sortedProducts.sort((a, b) {
                   switch (_currentSort) {
-                    case SortOption.recent:
                     case SortOption.frequency:
-                      return 0; // Default RPC order
+                      // De mayor a menor puntuación
+                      return b.frequencyScore.compareTo(a.frequencyScore);
+                    case SortOption.recent:
+                      // De más nueva a más antigua
+                      return b.lastAddedAt.compareTo(a.lastAddedAt);
                     case SortOption.nameAZ:
                       return a.name.toLowerCase().compareTo(
                         b.name.toLowerCase(),
@@ -162,6 +175,16 @@ class _SelectProductScreenState extends ConsumerState<SelectProductScreen> {
                       const Divider(height: 1, color: Colors.transparent),
                   itemBuilder: (context, index) {
                     final product = sortedProducts[index];
+                    final isAlreadyInQuote = quoteProducts.any(
+                      (p) =>
+                          (p.brand ?? '').trim().toUpperCase() ==
+                              product.brand.trim().toUpperCase() &&
+                          (p.model ?? '').trim().toUpperCase() ==
+                              product.model.trim().toUpperCase() &&
+                          (p.uom).trim().toUpperCase() ==
+                              product.uom.trim().toUpperCase(),
+                    );
+
                     return AggregatedProductCard(
                       name: product.name,
                       brand: product.brand,
@@ -173,7 +196,19 @@ class _SelectProductScreenState extends ConsumerState<SelectProductScreen> {
                       uomIconName: product.uomIconName,
                       showPriceAndStock: true,
                       isLocked: product.isLocked,
+                      isAlreadyAdded: isAlreadyInQuote,
                       onTap: () {
+                        if (isAlreadyInQuote) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text(
+                                'Este producto ya se encuentra en la cotización',
+                              ),
+                            ),
+                          );
+                          return;
+                        }
+
                         context
                             .push(
                               '/quotes/create/select-product/product-sources',

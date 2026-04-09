@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:d_una_app/shared/widgets/friendly_error_widget.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'widgets/register_layout.dart';
@@ -81,7 +82,7 @@ class _RegisterOccupationScreenState
       onNext: _onNext,
       content: occupationsAsync.when(
         loading: () => const Center(child: CircularProgressIndicator()),
-        error: (e, stack) => Center(child: Text('Error: $e')),
+        error: (e, stack) => FriendlyErrorWidget(error: e),
         data: (occupationsList) {
           return Form(
             key: _formKey,

@@ -1,3 +1,4 @@
+import 'package:d_una_app/core/utils/error_handler.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -116,21 +117,25 @@ class _AddEditDeliveryTimeSheetState
       final maxVal = int.tryParse(_maxController.text);
 
       if (minVal == null || maxVal == null) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            behavior: SnackBarBehavior.floating,
-            content: Text('Debes ingresar valores válidos de tiempo.'),
-          ),
-        );
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              behavior: SnackBarBehavior.floating,
+              content: Text('Debes ingresar valores válidos de tiempo.'),
+            ),
+          );
+        }
         return;
       }
       if (minVal > maxVal) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            behavior: SnackBarBehavior.floating,
-            content: Text('El valor mínimo no puede ser mayor al máximo.'),
-          ),
-        );
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              behavior: SnackBarBehavior.floating,
+              content: Text('El valor mínimo no puede ser mayor al máximo.'),
+            ),
+          );
+        }
         return;
       }
     }
@@ -179,15 +184,8 @@ class _AddEditDeliveryTimeSheetState
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            behavior: SnackBarBehavior.floating,
-            content: Text(
-              'Error al guardar: $e',
-              style: TextStyle(color: Theme.of(context).colorScheme.error),
-            ),
-          ),
-        );
+        setState(() => _isLoading = false);
+        ErrorHandler.showErrorSnackBar(context, e);
       }
     } finally {
       if (mounted) {
@@ -217,10 +215,6 @@ class _AddEditDeliveryTimeSheetState
                 color: Theme.of(context).colorScheme.onSurfaceVariant,
                 onPressed: () async {
                   final scaffoldMessenger = ScaffoldMessenger.of(context);
-                  final navigator = Navigator.of(context);
-                  final errorColor = Theme.of(context).colorScheme.onError;
-
-                  navigator.pop(); // Close sheet
 
                   final confirm = await showDialog<bool>(
                     context: context,
@@ -236,9 +230,7 @@ class _AddEditDeliveryTimeSheetState
                         ),
                         FilledButton(
                           style: FilledButton.styleFrom(
-                            backgroundColor: Theme.of(
-                              context,
-                            ).colorScheme.error,
+                            backgroundColor: Theme.of(context).colorScheme.error,
                           ),
                           onPressed: () => Navigator.pop(ctx, true),
                           child: const Text('Eliminar'),
@@ -247,25 +239,27 @@ class _AddEditDeliveryTimeSheetState
                     ),
                   );
 
-                  if (confirm == true) {
-                    try {
-                      await ref
-                          .read(lookupRepositoryProvider)
-                          .deleteDeliveryTime(widget.deliveryTime!.id);
+                  if (confirm != true || !mounted) return;
+
+                  try {
+                    await ref
+                        .read(lookupRepositoryProvider)
+                        .deleteDeliveryTime(widget.deliveryTime!.id);
+                    
+                    if (mounted) {
                       ref.invalidate(deliveryTimesProvider);
+                      Navigator.pop(context); // Close sheet ONLY after success
+                      
                       scaffoldMessenger.showSnackBar(
-                        const SnackBar(behavior: SnackBarBehavior.floating, content: Text('Tiempo eliminado')),
-                      );
-                    } catch (e) {
-                      scaffoldMessenger.showSnackBar(
-                        SnackBar(
+                        const SnackBar(
                           behavior: SnackBarBehavior.floating,
-                          content: Text(
-                            'Error: $e',
-                            style: TextStyle(color: errorColor),
-                          ),
+                          content: Text('Tiempo eliminado'),
                         ),
                       );
+                    }
+                  } catch (e) {
+                    if (mounted) {
+                      ErrorHandler.showErrorSnackBar(context, e);
                     }
                   }
                 },

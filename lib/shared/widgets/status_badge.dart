@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 
 class StatusBadge extends StatelessWidget {
   final Widget? icon;
-  final String text;
+  final String? text;
   final Color backgroundColor;
   final Color textColor;
   final EdgeInsetsGeometry padding;
@@ -12,7 +12,7 @@ class StatusBadge extends StatelessWidget {
   const StatusBadge({
     super.key,
     this.icon,
-    required this.text,
+    this.text,
     required this.backgroundColor,
     required this.textColor,
     this.padding = const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
@@ -22,6 +22,9 @@ class StatusBadge extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final icon = this.icon;
+    final text = this.text;
+
     return Container(
       padding: padding,
       decoration: BoxDecoration(
@@ -31,18 +34,18 @@ class StatusBadge extends StatelessWidget {
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          if (icon != null) ...[
-            icon!,
-            const SizedBox(width: 4),
-          ],
-          Text(
-            text,
-            style: TextStyle(
-              fontSize: fontSize,
-              fontWeight: FontWeight.bold,
-              color: textColor,
+          ?icon,
+          if (icon != null && text != null)
+            const SizedBox(width: 4), // Espacio solo si hay ambos
+          if (text != null)
+            Text(
+              text,
+              style: TextStyle(
+                fontSize: fontSize,
+                fontWeight: FontWeight.bold,
+                color: textColor,
+              ),
             ),
-          ),
         ],
       ),
     );

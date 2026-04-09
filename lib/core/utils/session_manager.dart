@@ -1,5 +1,6 @@
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:flutter/foundation.dart';
 
 class SessionManager {
   static const String _lastActiveKey = 'session_last_active_timestamp';
@@ -23,6 +24,7 @@ class SessionManager {
       final difference = DateTime.now().difference(lastActive);
 
       if (difference.inDays >= _daysToExpiration) {
+        debugPrint('Session expired due to inactivity');
         // Session expired due to inactivity
         await Supabase.instance.client.auth.signOut();
         await prefs.remove(_lastActiveKey);
@@ -39,6 +41,7 @@ class SessionManager {
   Future<void> updateLastActive() async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setInt(_lastActiveKey, DateTime.now().millisecondsSinceEpoch);
+    debugPrint('Session last active updated to now');
   }
 
   /// Clear session data (useful on manual logout)

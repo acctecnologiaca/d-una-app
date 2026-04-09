@@ -39,8 +39,14 @@ class _EditClientPersonScreenState
   String? _selectedCountry;
   String? _selectedPhoneCode;
 
-  final List<String> _phoneCodes = ['0412', '0414', '0424', '0416'];
-
+  final List<String> _phoneCodes = [
+    '0412',
+    '0422',
+    '0414',
+    '0424',
+    '0416',
+    '0426',
+  ];
   bool _isSubmitting = false;
   String? _idError;
   bool _hasChanges = false;
@@ -201,225 +207,278 @@ class _EditClientPersonScreenState
     }
   }
 
+  Future<bool?> _showDiscardDialog() async {
+    return showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('¿Descartar cambios?'),
+        content: const Text(
+          'Si sales ahora, perderás toda la información que has ingresado.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Continuar editando'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: Text(
+              'Descartar',
+              style: TextStyle(color: Theme.of(context).colorScheme.error),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _onCancelWithConfirmation() async {
+    if (!_hasChanges) {
+      context.pop();
+      return;
+    }
+
+    final confirmed = await _showDiscardDialog();
+    if (confirmed == true && mounted) {
+      context.pop();
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final colors = Theme.of(context).colorScheme;
     final textTheme = Theme.of(context).textTheme;
 
-    return Scaffold(
-      appBar: AppBar(
-        title: Text(
-          'Modificar cliente',
-          style: textTheme.titleLarge?.copyWith(
-            fontWeight: FontWeight.w500,
-            fontSize: 20,
+    return PopScope(
+      canPop: !_hasChanges || _isSubmitting,
+      onPopInvokedWithResult: (didPop, result) async {
+        if (didPop) return;
+        final confirmed = await _showDiscardDialog();
+        if (confirmed == true && context.mounted) {
+          context.pop();
+        }
+      },
+      child: Scaffold(
+        appBar: AppBar(
+          title: Text(
+            'Modificar cliente',
+            style: textTheme.titleLarge?.copyWith(
+              fontWeight: FontWeight.w500,
+              fontSize: 20,
+            ),
+          ),
+          centerTitle: false,
+          foregroundColor: colors.onSurface,
+          backgroundColor: colors.surface,
+          elevation: 0,
+          leading: IconButton(
+            icon: const Icon(Icons.arrow_back),
+            onPressed: _onCancelWithConfirmation,
           ),
         ),
-        centerTitle: false,
-        foregroundColor: colors.onSurface,
-        backgroundColor: colors.surface,
-        elevation: 0,
-      ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.fromLTRB(16, 24, 16, 40),
-        child: Form(
-          key: _formKey,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Text(
-                'Información fiscal',
-                style: textTheme.titleMedium?.copyWith(
-                  fontWeight: FontWeight.bold,
-                  color: colors.onSurface,
+        body: SingleChildScrollView(
+          padding: const EdgeInsets.fromLTRB(16, 24, 16, 40),
+          child: Form(
+            key: _formKey,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Text(
+                  'Información fiscal',
+                  style: textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.bold,
+                    color: colors.onSurface,
+                  ),
                 ),
-              ),
-              const SizedBox(height: 16),
+                const SizedBox(height: 16),
 
-              CustomTextField(
-                label: 'Nombre y apellido*',
-                controller: _nameController,
-                validator: (val) =>
-                    val == null || val.isEmpty ? 'Requerido' : null,
-              ),
-              const SizedBox(height: 16),
-              CustomTextField(
-                label: 'Cédula/DNI/CC/Pasaporte',
-                controller: _idController,
-                validator: (val) {
-                  if (_idError != null) return _idError;
-                  return null;
-                },
-              ),
-              const SizedBox(height: 16),
-              CustomTextField(
-                label: 'Urbanización/Calle/Edificio*',
-                controller: _addressController,
-                validator: (val) =>
-                    val == null || val.isEmpty ? 'Requerido' : null,
-              ),
-              const SizedBox(height: 16),
+                CustomTextField(
+                  label: 'Nombre y apellido*',
+                  controller: _nameController,
+                  validator: (val) =>
+                      val == null || val.isEmpty ? 'Requerido' : null,
+                ),
+                const SizedBox(height: 16),
+                CustomTextField(
+                  label: 'Cédula/DNI/CC/Pasaporte',
+                  controller: _idController,
+                  validator: (val) {
+                    if (_idError != null) return _idError;
+                    return null;
+                  },
+                ),
+                const SizedBox(height: 16),
+                CustomTextField(
+                  label: 'Urbanización/Calle/Edificio*',
+                  controller: _addressController,
+                  validator: (val) =>
+                      val == null || val.isEmpty ? 'Requerido' : null,
+                ),
+                const SizedBox(height: 16),
 
-              // CSC Picker
-              CSCPickerPlus(
-                layout: Layout.vertical,
-                flagState: CountryFlag.DISABLE,
-                countryStateLanguage: CountryStateLanguage.englishOrNative,
-                cityLanguage: CityLanguage.native,
-                onCountryChanged: (value) {
-                  setState(() {
-                    _selectedCountry = value;
-                    _checkChanges();
-                  });
-                },
-                onStateChanged: (value) {
-                  setState(() {
-                    _selectedState = value;
-                    _checkChanges();
-                  });
-                },
-                onCityChanged: (value) {
-                  setState(() {
-                    _selectedCity = value;
-                    _checkChanges();
-                  });
-                },
-                countryFilter: const [
-                  CscCountry.Argentina,
-                  CscCountry.Bolivia,
-                  CscCountry.Chile,
-                  CscCountry.Colombia,
-                  CscCountry.Costa_Rica,
-                  CscCountry.Cuba,
-                  CscCountry.Dominican_Republic,
-                  CscCountry.Ecuador,
-                  CscCountry.El_Salvador,
-                  CscCountry.Guatemala,
-                  CscCountry.Honduras,
-                  CscCountry.Mexico,
-                  CscCountry.Nicaragua,
-                  CscCountry.Panama,
-                  CscCountry.Paraguay,
-                  CscCountry.Peru,
-                  CscCountry.Puerto_Rico,
-                  CscCountry.Spain,
-                  CscCountry.Uruguay,
-                  CscCountry.Venezuela,
-                ],
-                currentCountry: _selectedCountry,
-                currentState: _selectedState,
-                currentCity: _selectedCity,
-                dropdownDecoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(8),
-                  color: colors.surface,
-                  border: Border.all(color: Colors.grey.shade400, width: 1),
+                // CSC Picker
+                CSCPickerPlus(
+                  layout: Layout.vertical,
+                  flagState: CountryFlag.DISABLE,
+                  countryStateLanguage: CountryStateLanguage.englishOrNative,
+                  cityLanguage: CityLanguage.native,
+                  onCountryChanged: (value) {
+                    setState(() {
+                      _selectedCountry = value;
+                      _checkChanges();
+                    });
+                  },
+                  onStateChanged: (value) {
+                    setState(() {
+                      _selectedState = value;
+                      _checkChanges();
+                    });
+                  },
+                  onCityChanged: (value) {
+                    setState(() {
+                      _selectedCity = value;
+                      _checkChanges();
+                    });
+                  },
+                  countryFilter: const [
+                    CscCountry.Argentina,
+                    CscCountry.Bolivia,
+                    CscCountry.Chile,
+                    CscCountry.Colombia,
+                    CscCountry.Costa_Rica,
+                    CscCountry.Cuba,
+                    CscCountry.Dominican_Republic,
+                    CscCountry.Ecuador,
+                    CscCountry.El_Salvador,
+                    CscCountry.Guatemala,
+                    CscCountry.Honduras,
+                    CscCountry.Mexico,
+                    CscCountry.Nicaragua,
+                    CscCountry.Panama,
+                    CscCountry.Paraguay,
+                    CscCountry.Peru,
+                    CscCountry.Puerto_Rico,
+                    CscCountry.Spain,
+                    CscCountry.Uruguay,
+                    CscCountry.Venezuela,
+                  ],
+                  currentCountry: _selectedCountry,
+                  currentState: _selectedState,
+                  currentCity: _selectedCity,
+                  dropdownDecoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(8),
+                    color: colors.surface,
+                    border: Border.all(color: Colors.grey.shade400, width: 1),
+                  ),
+                  disabledDropdownDecoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(8),
+                    color: Colors.grey.shade100,
+                    border: Border.all(color: Colors.grey.shade400, width: 1),
+                  ),
+                  countrySearchPlaceholder: "País",
+                  stateSearchPlaceholder: "Estado",
+                  citySearchPlaceholder: "Ciudad",
+                  countryDropdownLabel: "País",
+                  stateDropdownLabel: "Estado",
+                  cityDropdownLabel: "Ciudad",
+                  selectedItemStyle: TextStyle(
+                    color: colors.onSurface,
+                    fontSize: 16,
+                    height: 1.9, // Match TextFormFields height
+                  ),
+                  dropdownHeadingStyle: TextStyle(
+                    color: colors.onSurfaceVariant,
+                    fontSize: 17,
+                    fontWeight: FontWeight.bold,
+                  ),
+                  dropdownItemStyle: TextStyle(
+                    color: colors.onSurface,
+                    fontSize: 16,
+                  ),
+                  searchBarRadius: 30.0,
+                  dropdownDialogRadius: 8.0,
                 ),
-                disabledDropdownDecoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(8),
-                  color: Colors.grey.shade100,
-                  border: Border.all(color: Colors.grey.shade400, width: 1),
-                ),
-                countrySearchPlaceholder: "País",
-                stateSearchPlaceholder: "Estado",
-                citySearchPlaceholder: "Ciudad",
-                countryDropdownLabel: "País",
-                stateDropdownLabel: "Estado",
-                cityDropdownLabel: "Ciudad",
-                selectedItemStyle: TextStyle(
-                  color: colors.onSurface,
-                  fontSize: 16,
-                  height: 1.9, // Match TextFormFields height
-                ),
-                dropdownHeadingStyle: TextStyle(
-                  color: colors.onSurfaceVariant,
-                  fontSize: 17,
-                  fontWeight: FontWeight.bold,
-                ),
-                dropdownItemStyle: TextStyle(
-                  color: colors.onSurface,
-                  fontSize: 16,
-                ),
-                searchBarRadius: 30.0,
-                dropdownDialogRadius: 8.0,
-              ),
 
-              const SizedBox(height: 32),
+                const SizedBox(height: 32),
 
-              Text(
-                'Datos de contacto',
-                style: textTheme.titleMedium?.copyWith(
-                  fontWeight: FontWeight.bold,
-                  color: colors.onSurface,
+                Text(
+                  'Datos de contacto',
+                  style: textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.bold,
+                    color: colors.onSurface,
+                  ),
                 ),
-              ),
-              const SizedBox(height: 16),
+                const SizedBox(height: 16),
 
-              // Phone Row
-              Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Padding(
-                    padding: const EdgeInsets.only(top: 0.0),
-                    child: SizedBox(
-                      width: 100,
-                      child: CustomDropdown<String>(
-                        label: 'Código',
-                        value: _selectedPhoneCode,
-                        items: _phoneCodes,
-                        itemLabelBuilder: (item) => item,
-                        onChanged: (val) {
-                          if (val != null) {
-                            setState(() {
-                              _selectedPhoneCode = val;
-                              _checkChanges();
-                            });
-                          }
+                // Phone Row
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Padding(
+                      padding: const EdgeInsets.only(top: 0.0),
+                      child: SizedBox(
+                        width: 100,
+                        child: CustomDropdown<String>(
+                          label: 'Código',
+                          value: _selectedPhoneCode,
+                          items: _phoneCodes,
+                          itemLabelBuilder: (item) => item,
+                          onChanged: (val) {
+                            if (val != null) {
+                              setState(() {
+                                _selectedPhoneCode = val;
+                                _checkChanges();
+                              });
+                            }
+                          },
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: CustomTextField(
+                        label: 'Teléfono*',
+                        controller: _phoneController,
+                        keyboardType: TextInputType.phone,
+                        inputFormatters: [
+                          FilteringTextInputFormatter.digitsOnly,
+                        ],
+                        validator: (val) {
+                          if (val == null || val.isEmpty) return 'Requerido';
+                          if (val.length != 7) return 'Debe tener 7 dígitos';
+                          return null;
                         },
                       ),
                     ),
-                  ),
-                  const SizedBox(width: 16),
-                  Expanded(
-                    child: CustomTextField(
-                      label: 'Teléfono*',
-                      controller: _phoneController,
-                      keyboardType: TextInputType.phone,
-                      inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-                      validator: (val) {
-                        if (val == null || val.isEmpty) return 'Requerido';
-                        if (val.length != 7) return 'Debe tener 7 dígitos';
-                        return null;
-                      },
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 16),
+                  ],
+                ),
+                const SizedBox(height: 16),
 
-              CustomTextField(
-                label: 'Correo electrónico',
-                controller: _emailController,
-                keyboardType: TextInputType.emailAddress,
-                validator: (val) {
-                  if (val == null || val.isEmpty) return null; // Optional
-                  final emailRegex = RegExp(r'^[^@]+@[^@]+\.[^@]+');
-                  if (!emailRegex.hasMatch(val)) {
-                    return 'Correo inválido';
-                  }
-                  return null;
-                },
-              ),
+                CustomTextField(
+                  label: 'Correo electrónico',
+                  controller: _emailController,
+                  keyboardType: TextInputType.emailAddress,
+                  validator: (val) {
+                    if (val == null || val.isEmpty) return null; // Optional
+                    final emailRegex = RegExp(r'^[^@]+@[^@]+\.[^@]+');
+                    if (!emailRegex.hasMatch(val)) {
+                      return 'Correo inválido';
+                    }
+                    return null;
+                  },
+                ),
 
-              const SizedBox(height: 48),
+                const SizedBox(height: 48),
 
-              // Buttons
-              FormBottomBar(
-                onCancel: () => context.pop(),
-                onSave: _onSave,
-                isSaveEnabled: !_isSubmitting && _hasChanges,
-                isLoading: _isSubmitting,
-              ),
-            ],
+                // Buttons
+                FormBottomBar(
+                  onCancel: _onCancelWithConfirmation,
+                  onSave: _onSave,
+                  isSaveEnabled: !_isSubmitting && _hasChanges,
+                  isLoading: _isSubmitting,
+                ),
+              ],
+            ),
           ),
         ),
       ),

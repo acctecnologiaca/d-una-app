@@ -1,4 +1,4 @@
-enum ProductSourceType { own, supplier }
+enum ProductSourceType { own, supplier, externalManagement }
 
 class QuoteProductSource {
   final String id;
@@ -43,16 +43,34 @@ class QuoteProductSource {
     );
   }
 
-  QuoteProductSource copyWith({double? selectedQuantity}) {
+  /// Creates a virtual "External Management" source.
+  /// This source is not backed by any physical inventory or supplier.
+  /// The user can freely set quantity and cost.
+  factory QuoteProductSource.externalManagement({double suggestedPrice = 0.0}) {
+    return QuoteProductSource(
+      id: 'external-management',
+      sourceType: ProductSourceType.externalManagement,
+      sourceName: 'Proveedor Externo',
+      location: null,
+      price: suggestedPrice,
+      maxStock: 999999.0,
+      tradeType: null,
+      isAccessible: true,
+      uomIconName: null,
+    );
+  }
+
+  QuoteProductSource copyWith({double? selectedQuantity, double? price}) {
     return QuoteProductSource(
       id: id,
       sourceType: sourceType,
       sourceName: sourceName,
       location: location,
-      price: price,
+      price: price ?? this.price,
       maxStock: maxStock,
       tradeType: tradeType,
       isAccessible: isAccessible,
+      uomIconName: uomIconName,
       selectedQuantity: selectedQuantity ?? this.selectedQuantity,
     );
   }

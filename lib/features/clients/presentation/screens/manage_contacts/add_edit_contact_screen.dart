@@ -61,7 +61,7 @@ class _AddEditContactScreenState extends ConsumerState<AddEditContactScreen> {
     // Phone parsing logic
     final phoneFull = contact?.phone ?? '';
     final parts = phoneFull.split('-');
-    const phoneCodes = ['0412', '0414', '0424', '0416'];
+    const phoneCodes = ['0412', '0422', '0414', '0424', '0416', '0426'];
 
     if (parts.length > 1) {
       if (phoneCodes.contains(parts[0])) {
@@ -220,70 +220,133 @@ class _AddEditContactScreenState extends ConsumerState<AddEditContactScreen> {
     }
   }
 
+  Future<bool?> _showDiscardDialog() async {
+    return showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('¿Descartar cambios?'),
+        content: const Text(
+          'Si sales ahora, perderás toda la información que has ingresado.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Continuar editando'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: Text(
+              'Descartar',
+              style: TextStyle(color: Theme.of(context).colorScheme.error),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _onCancelWithConfirmation() async {
+    if (!_hasChanges) {
+      if (_returnTo != null) {
+        context.go(Uri.decodeComponent(_returnTo!));
+      } else {
+        context.pop();
+      }
+      return;
+    }
+
+    final confirmed = await _showDiscardDialog();
+    if (confirmed == true && mounted) {
+      if (_returnTo != null) {
+        context.go(Uri.decodeComponent(_returnTo!));
+      } else {
+        context.pop();
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final colors = Theme.of(context).colorScheme;
     final textTheme = Theme.of(context).textTheme;
 
-    return Scaffold(
-      appBar: AppBar(
-        centerTitle: false,
-        title: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(
-              _isEditing ? 'Modificar contacto' : 'Agregar contacto',
-              style: textTheme.titleLarge?.copyWith(
-                fontWeight: FontWeight.w500,
-                fontSize: 20,
-              ),
-            ),
-            if (widget.companyName != null)
+    return PopScope(
+      canPop: !_hasChanges || _isSubmitting,
+      onPopInvokedWithResult: (didPop, result) async {
+        if (didPop) return;
+        final confirmed = await _showDiscardDialog();
+        if (confirmed == true && context.mounted) {
+          if (_returnTo != null) {
+            context.go(Uri.decodeComponent(_returnTo!));
+          } else {
+            context.pop();
+          }
+        }
+      },
+      child: Scaffold(
+        appBar: AppBar(
+          leading: IconButton(
+            icon: const Icon(Icons.arrow_back),
+            onPressed: _onCancelWithConfirmation,
+          ),
+          centerTitle: false,
+          title: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
               Text(
-                widget.companyName!,
-                style: textTheme.bodySmall?.copyWith(
-                  color: colors.onSurfaceVariant,
-                  fontSize: 14,
+                _isEditing ? 'Modificar contacto' : 'Agregar contacto',
+                style: textTheme.titleLarge?.copyWith(
+                  fontWeight: FontWeight.w500,
+                  fontSize: 20,
                 ),
               ),
-          ],
+              if (widget.companyName != null)
+                Text(
+                  widget.companyName!,
+                  style: textTheme.bodySmall?.copyWith(
+                    color: colors.onSurfaceVariant,
+                    fontSize: 14,
+                  ),
+                ),
+            ],
+          ),
+          foregroundColor: colors.onSurface,
+          backgroundColor: colors.surface,
+          elevation: 0,
         ),
-        foregroundColor: colors.onSurface,
-        backgroundColor: colors.surface,
-        elevation: 0,
-      ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.fromLTRB(16, 24, 16, 40),
-        child: ContactForm(
-          formKey: _formKey,
-          nameController: _nameController,
-          phoneController: _phoneController,
-          emailController: _emailController,
-          roleController: _roleController,
-          departmentController: _departmentController,
-          selectedPhoneCode: _selectedPhoneCode,
-          onPhoneCodeChanged: (val) {
-            setState(() {
-              _selectedPhoneCode = val!;
-              _checkChanges();
-            });
-          },
-          isPrimary: _isPrimary,
-          onIsPrimaryChanged: (val) {
-            setState(() {
-              _isPrimary = val;
-              _checkChanges();
-            });
-          },
-          onSave: _onSave,
-          onCancel: () => context.pop(),
-          saveLabel: _isEditing ? 'Guardar' : 'Agregar',
-          isLoading: _isSubmitting,
-          isSaveEnabled: !_isSubmitting && _hasChanges,
-          isPrimaryReadOnly:
-              _isEditing &&
-              (widget.contactCount == 1 || widget.contact!.isPrimary),
+        body: SingleChildScrollView(
+          padding: const EdgeInsets.fromLTRB(16, 24, 16, 40),
+          child: ContactForm(
+            formKey: _formKey,
+            nameController: _nameController,
+            phoneController: _phoneController,
+            emailController: _emailController,
+            roleController: _roleController,
+            departmentController: _departmentController,
+            selectedPhoneCode: _selectedPhoneCode,
+            onPhoneCodeChanged: (val) {
+              setState(() {
+                _selectedPhoneCode = val!;
+                _checkChanges();
+              });
+            },
+            isPrimary: _isPrimary,
+            onIsPrimaryChanged: (val) {
+              setState(() {
+                _isPrimary = val;
+                _checkChanges();
+              });
+            },
+            onSave: _onSave,
+            onCancel: _onCancelWithConfirmation,
+            saveLabel: _isEditing ? 'Guardar' : 'Agregar',
+            isLoading: _isSubmitting,
+            isSaveEnabled: !_isSubmitting && _hasChanges,
+            isPrimaryReadOnly:
+                _isEditing &&
+                (widget.contactCount == 1 || widget.contact!.isPrimary),
+          ),
         ),
       ),
     );

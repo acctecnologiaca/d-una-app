@@ -1,3 +1,4 @@
+import 'package:d_una_app/features/portfolio/presentation/providers/lookup_providers.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -13,9 +14,14 @@ class QuoteServicesTab extends ConsumerStatefulWidget {
   ConsumerState<QuoteServicesTab> createState() => _QuoteServicesTabState();
 }
 
-class _QuoteServicesTabState extends ConsumerState<QuoteServicesTab> {
+class _QuoteServicesTabState extends ConsumerState<QuoteServicesTab>
+    with AutomaticKeepAliveClientMixin {
+  @override
+  bool get wantKeepAlive => true;
+
   @override
   Widget build(BuildContext context) {
+    super.build(context);
     final state = ref.watch(createQuoteProvider);
 
     if (state.services.isEmpty) {
@@ -45,36 +51,33 @@ class _QuoteServicesTabState extends ConsumerState<QuoteServicesTab> {
 
     final suggestionsAsync = ref.watch(quoteServiceSuggestionsProvider);
     final serviceModels = suggestionsAsync.value ?? [];
+    final executionTimes =
+        ref.watch(deliveryTimesForExecutionProvider).valueOrNull ?? [];
 
     return ListView.builder(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       itemCount: state.services.length,
       itemBuilder: (context, index) {
         final serviceItem = state.services[index];
         final serviceModel = serviceModels
             .where((s) => s.id == serviceItem.serviceId)
             .firstOrNull;
-
-        // Try to get category and rate from the model, or fallback
         final categoryName = serviceModel?.category?.name;
+        final executionTimeLabel = executionTimes
+            .where((e) => e.id == serviceItem.executionTimeId)
+            .map((e) => e.name)
+            .firstOrNull;
 
         String rateSuffix;
+        String? rateIconName;
+
         if (serviceModel == null) {
           // Temporal service: use stored symbol directly
           rateSuffix = '/${serviceItem.rateSymbol}';
+          rateIconName = serviceItem.rateIconName;
         } else {
-          final rateName =
-              serviceModel.serviceRate?.name.toLowerCase() ?? 'ud.';
-          rateSuffix = '/ud.';
-          if (rateName.contains('hora') || rateName.contains('h')) {
-            rateSuffix = '/h';
-          } else if (rateName.contains('día') || rateName.contains('dia')) {
-            rateSuffix = '/dia';
-          } else if (rateName.contains('mes')) {
-            rateSuffix = '/mes';
-          } else if (rateName.contains('serv')) {
-            rateSuffix = '/serv.';
-          }
+          rateSuffix = '/${serviceModel.serviceRate?.symbol ?? 'ud.'}';
+          rateIconName =
+              serviceModel.serviceRate?.iconName ?? serviceItem.rateIconName;
         }
 
         return QuoteAddedServiceCard(
@@ -83,7 +86,8 @@ class _QuoteServicesTabState extends ConsumerState<QuoteServicesTab> {
           subtotal: serviceItem.unitPrice,
           quantity: serviceItem.quantity,
           rateSuffix: rateSuffix,
-          executionTime: serviceItem.executionTimeId,
+          rateIconName: rateIconName,
+          executionTimeLabel: executionTimeLabel,
           isTemporal: serviceItem.serviceId == null,
           onDelete: () {
             ref

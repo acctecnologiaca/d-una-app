@@ -31,7 +31,7 @@ class PurchaseAddedProductCard extends StatelessWidget {
     final colors = Theme.of(context).colorScheme;
 
     return ExpandableActionCard(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      padding: const EdgeInsets.symmetric(horizontal: 0, vertical: 8),
       isExpandable: !isReadOnly,
       backgroundColor: hasError
           ? colors.errorContainer.withValues(alpha: 0.8)

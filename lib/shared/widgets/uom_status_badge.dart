@@ -48,12 +48,20 @@ class UomStatusBadge extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colors = Theme.of(context).colorScheme;
-    final bgColor = backgroundColor ?? colors.secondaryContainer;
-    final fgColor = textColor ?? colors.onSecondaryContainer;
 
-    // Build the text: "5 Kg", "5/10 Kg", or just "Kg"
+    // When quantity is zero and we're showing quantity, display "Sin stock"
+    final bool isOutOfStock = showQuantity && quantity <= 0;
+
+    final bgColor = backgroundColor ??
+        (isOutOfStock ? colors.errorContainer : colors.secondaryContainer);
+    final fgColor = textColor ??
+        (isOutOfStock ? colors.onErrorContainer : colors.onSecondaryContainer);
+
+    // Build the text: "Sin stock", "5 Kg", "5/10 Kg", or just "Kg"
     final String badgeText;
-    if (!showQuantity) {
+    if (isOutOfStock) {
+      badgeText = 'Sin stock';
+    } else if (!showQuantity) {
       badgeText = uomAbbreviation;
     } else {
       final qtyText = formatQuantity(quantity);

@@ -5,6 +5,7 @@ import 'package:d_una_app/shared/widgets/custom_text_field.dart';
 import 'package:d_una_app/shared/widgets/custom_button.dart';
 import 'package:d_una_app/features/quotes/data/models/commercial_condition.dart';
 import 'package:d_una_app/features/portfolio/presentation/providers/lookup_providers.dart';
+import 'package:d_una_app/core/utils/error_handler.dart';
 
 class AddEditCommercialConditionSheet extends ConsumerStatefulWidget {
   final CommercialCondition? condition;
@@ -64,9 +65,6 @@ class _AddEditCommercialConditionSheetState
 
     setState(() => _isLoading = true);
 
-    final scaffoldMessenger = ScaffoldMessenger.of(context);
-    final navigator = Navigator.of(context);
-
     try {
       final repo = ref.read(lookupRepositoryProvider);
       if (isEditing) {
@@ -84,20 +82,25 @@ class _AddEditCommercialConditionSheetState
         );
       }
       ref.invalidate(commercialConditionsProvider);
-      navigator.pop();
-      scaffoldMessenger.showSnackBar(
-        SnackBar(
-          behavior: SnackBarBehavior.floating,
-          content: Text(
-            isEditing
-                ? 'Condición actualizada'
-                : 'Condición "$description" agregada',
+      
+      if (mounted) {
+        Navigator.pop(context);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            behavior: SnackBarBehavior.floating,
+            content: Text(
+              isEditing
+                  ? 'Condición actualizada'
+                  : 'Condición "$description" agregada',
+            ),
           ),
-        ),
-      );
+        );
+      }
     } catch (e) {
-      setState(() => _isLoading = false);
-      scaffoldMessenger.showSnackBar(SnackBar(behavior: SnackBarBehavior.floating, content: Text('Error: $e')));
+      if (mounted) {
+        setState(() => _isLoading = false);
+        ErrorHandler.showErrorSnackBar(context, e);
+      }
     }
   }
 
@@ -128,26 +131,22 @@ class _AddEditCommercialConditionSheetState
 
     if (confirm != true || !mounted) return;
 
-    final scaffoldMessenger = ScaffoldMessenger.of(context);
-    final navigator = Navigator.of(context);
-    final errorColor = Theme.of(context).colorScheme.onError;
-
     try {
       await ref
           .read(lookupRepositoryProvider)
           .deleteCommercialCondition(widget.condition!.id);
       ref.invalidate(commercialConditionsProvider);
-      navigator.pop();
-      scaffoldMessenger.showSnackBar(
-        const SnackBar(behavior: SnackBarBehavior.floating, content: Text('Condición eliminada')),
-      );
+      
+      if (mounted) {
+        Navigator.pop(context);
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(behavior: SnackBarBehavior.floating, content: Text('Condición eliminada')),
+        );
+      }
     } catch (e) {
-      scaffoldMessenger.showSnackBar(
-        SnackBar(
-          behavior: SnackBarBehavior.floating,
-          content: Text('Error: $e', style: TextStyle(color: errorColor)),
-        ),
-      );
+      if (mounted) {
+        ErrorHandler.showErrorSnackBar(context, e);
+      }
     }
   }
 

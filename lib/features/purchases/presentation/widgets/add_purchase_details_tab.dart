@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:d_una_app/shared/widgets/friendly_error_widget.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import 'package:d_una_app/shared/widgets/custom_text_field.dart';
@@ -134,7 +135,7 @@ class _AddPurchaseDetailsTabState extends ConsumerState<AddPurchaseDetailsTab> {
               );
             },
             loading: () => const Center(child: CircularProgressIndicator()),
-            error: (e, st) => Text('Error al cargar proveedores: $e'),
+            error: (e, stack) => FriendlyErrorWidget(error: e),
           ),
 
           const SizedBox(height: 24),

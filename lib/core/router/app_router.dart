@@ -268,6 +268,8 @@ final appRouter = GoRouter(
                                 initialSelections:
                                     map['initialSelections']
                                         as Map<String, double>?,
+                                externalCostPrice:
+                                    map['externalCostPrice'] as double?,
                               );
                             }
                             // Fallback

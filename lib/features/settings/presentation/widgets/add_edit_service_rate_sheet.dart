@@ -5,6 +5,7 @@ import 'package:d_una_app/shared/widgets/custom_text_field.dart';
 import 'package:d_una_app/shared/widgets/custom_button.dart';
 import 'package:d_una_app/features/portfolio/data/models/service_rate_model.dart';
 import 'package:d_una_app/features/portfolio/presentation/providers/lookup_providers.dart';
+import 'package:d_una_app/core/utils/error_handler.dart';
 
 class AddEditServiceRateSheet extends ConsumerStatefulWidget {
   final ServiceRate? rate;
@@ -59,9 +60,6 @@ class _AddEditServiceRateSheetState
 
     setState(() => _isLoading = true);
 
-    final scaffoldMessenger = ScaffoldMessenger.of(context);
-    final navigator = Navigator.of(context);
-
     try {
       final repo = ref.read(lookupRepositoryProvider);
       if (isEditing) {
@@ -70,20 +68,25 @@ class _AddEditServiceRateSheetState
         await repo.addServiceRate(name, symbol);
       }
       ref.invalidate(serviceRatesProvider);
-      navigator.pop();
-      scaffoldMessenger.showSnackBar(
-        SnackBar(
-          behavior: SnackBarBehavior.floating,
-          content: Text(
-            isEditing
-                ? 'Tarifa actualizada a "$name"'
-                : 'Tarifa "$name" agregada',
+      
+      if (mounted) {
+        Navigator.pop(context);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            behavior: SnackBarBehavior.floating,
+            content: Text(
+              isEditing
+                  ? 'Tarifa actualizada a "$name"'
+                  : 'Tarifa "$name" agregada',
+            ),
           ),
-        ),
-      );
+        );
+      }
     } catch (e) {
-      setState(() => _isLoading = false);
-      scaffoldMessenger.showSnackBar(SnackBar(behavior: SnackBarBehavior.floating, content: Text('Error: $e')));
+      if (mounted) {
+        setState(() => _isLoading = false);
+        ErrorHandler.showErrorSnackBar(context, e);
+      }
     }
   }
 
@@ -112,20 +115,22 @@ class _AddEditServiceRateSheetState
 
     if (confirm != true || !mounted) return;
 
-    final scaffoldMessenger = ScaffoldMessenger.of(context);
-    final navigator = Navigator.of(context);
-
     try {
       await ref
           .read(lookupRepositoryProvider)
           .deleteServiceRate(widget.rate!.id);
       ref.invalidate(serviceRatesProvider);
-      navigator.pop();
-      scaffoldMessenger.showSnackBar(
-        SnackBar(behavior: SnackBarBehavior.floating, content: Text('Tarifa "${widget.rate!.name}" eliminada')),
-      );
+      
+      if (mounted) {
+        Navigator.pop(context);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(behavior: SnackBarBehavior.floating, content: Text('Tarifa "${widget.rate!.name}" eliminada')),
+        );
+      }
     } catch (e) {
-      scaffoldMessenger.showSnackBar(SnackBar(behavior: SnackBarBehavior.floating, content: Text('Error: $e')));
+      if (mounted) {
+        ErrorHandler.showErrorSnackBar(context, e);
+      }
     }
   }
 

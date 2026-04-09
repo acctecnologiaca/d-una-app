@@ -231,16 +231,19 @@ class _AddProductScreenState extends ConsumerState<AddProductScreen> {
       builder: (context) => AlertDialog(
         title: const Text('¿Descartar cambios?'),
         content: const Text(
-          'Si sales ahora, perderás todo el progreso de este producto.',
+          'Si sales ahora, perderás toda la información que has ingresado.',
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
             child: const Text('Continuar editando'),
           ),
-          FilledButton(
+          TextButton(
             onPressed: () => Navigator.pop(context, true),
-            child: const Text('Descartar'),
+            child: Text(
+              'Descartar',
+              style: TextStyle(color: Theme.of(context).colorScheme.error),
+            ),
           ),
         ],
       ),

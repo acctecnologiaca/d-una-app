@@ -313,6 +313,43 @@ class _EditProductScreenState extends ConsumerState<EditProductScreen> {
     }
   }
 
+  Future<bool?> _showDiscardDialog() async {
+    return showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('¿Descartar cambios?'),
+        content: const Text(
+          'Si sales ahora, perderás toda la información que has ingresado.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Continuar editando'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: Text(
+              'Descartar',
+              style: TextStyle(color: Theme.of(context).colorScheme.error),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _onCancelWithConfirmation() async {
+    if (!_isDirty) {
+      context.pop();
+      return;
+    }
+
+    final confirmed = await _showDiscardDialog();
+    if (confirmed == true && mounted) {
+      context.pop();
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final colors = Theme.of(context).colorScheme;
@@ -341,181 +378,192 @@ class _EditProductScreenState extends ConsumerState<EditProductScreen> {
       brandsList.add(_selectedBrand!);
     }
 
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Modificar producto'),
-        centerTitle: false,
-        backgroundColor: colors.surface,
-        foregroundColor: colors.onSurface,
-        elevation: 0,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
-          onPressed: () => context.pop(),
+    return PopScope(
+      canPop: !_isDirty,
+      onPopInvokedWithResult: (didPop, result) async {
+        if (didPop) return;
+        final confirmed = await _showDiscardDialog();
+        if (confirmed == true && context.mounted) {
+          context.pop();
+        }
+      },
+      child: Scaffold(
+        appBar: AppBar(
+          title: const Text('Modificar producto'),
+          centerTitle: false,
+          backgroundColor: colors.surface,
+          foregroundColor: colors.onSurface,
+          elevation: 0,
+          leading: IconButton(
+            icon: const Icon(Icons.arrow_back),
+            onPressed: _onCancelWithConfirmation,
+          ),
         ),
-      ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            // ... Image Picker ...
-            // Reuse existing code, just skipping for brevity in replacement if allowed,
-            // but ReplaceContent needs exact match or replaced block.
-            // I will replace lower part of build method.
-            Center(
-              child: Stack(
-                children: [
-                  Container(
-                    width: 128,
-                    height: 128,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      color: colors.surfaceContainerHighest,
-                      border: Border.all(
-                        color: colors.outlineVariant.withValues(alpha: 0.2),
+        body: SingleChildScrollView(
+          padding: const EdgeInsets.all(16.0),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              // ... Image Picker ...
+              // Reuse existing code, just skipping for brevity in replacement if allowed,
+              // but ReplaceContent needs exact match or replaced block.
+              // I will replace lower part of build method.
+              Center(
+                child: Stack(
+                  children: [
+                    Container(
+                      width: 128,
+                      height: 128,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: colors.surfaceContainerHighest,
+                        border: Border.all(
+                          color: colors.outlineVariant.withValues(alpha: 0.2),
+                        ),
                       ),
-                    ),
-                    clipBehavior: Clip.antiAlias,
-                    child: _newImageFile != null
-                        ? Image.file(_newImageFile!, fit: BoxFit.cover)
-                        : (widget.product.imageUrl != null &&
-                              widget.product.imageUrl!.isNotEmpty)
-                        ? CachedNetworkImage(
-                            imageUrl: widget.product.imageUrl!,
-                            fit: BoxFit.cover,
-                            placeholder: (context, url) => const Center(
-                              child: CircularProgressIndicator(),
+                      clipBehavior: Clip.antiAlias,
+                      child: _newImageFile != null
+                          ? Image.file(_newImageFile!, fit: BoxFit.cover)
+                          : (widget.product.imageUrl != null &&
+                                widget.product.imageUrl!.isNotEmpty)
+                          ? CachedNetworkImage(
+                              imageUrl: widget.product.imageUrl!,
+                              fit: BoxFit.cover,
+                              placeholder: (context, url) => const Center(
+                                child: CircularProgressIndicator(),
+                              ),
+                              errorWidget: (context, url, error) => const Icon(
+                                Icons.image_not_supported_outlined,
+                              ),
+                            )
+                          : Icon(
+                              Icons.inventory_2_outlined,
+                              size: 50,
+                              color: colors.onSurfaceVariant,
                             ),
-                            errorWidget: (context, url, error) =>
-                                const Icon(Icons.image_not_supported_outlined),
-                          )
-                        : Icon(
-                            Icons.inventory_2_outlined,
-                            size: 50,
-                            color: colors.onSurfaceVariant,
+                    ),
+                    Positioned(
+                      bottom: 0,
+                      right: 0,
+                      child: GestureDetector(
+                        onTap: _pickImage,
+                        child: CircleAvatar(
+                          backgroundColor: colors.surfaceContainerHighest,
+                          radius: 18,
+                          child: Icon(
+                            Icons.edit,
+                            size: 18,
+                            color: colors.onSurface,
                           ),
-                  ),
-                  Positioned(
-                    bottom: 0,
-                    right: 0,
-                    child: GestureDetector(
-                      onTap: _pickImage,
-                      child: CircleAvatar(
-                        backgroundColor: colors.surfaceContainerHighest,
-                        radius: 18,
-                        child: Icon(
-                          Icons.edit,
-                          size: 18,
-                          color: colors.onSurface,
                         ),
                       ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
-            ),
-            const SizedBox(height: 32),
+              const SizedBox(height: 32),
 
-            // Form Fields
-            CustomDropdown<Category>(
-              label: 'Categoría',
-              value: _selectedCategory,
-              items: categoriesList,
-              onChanged: (val) {
-                setState(() => _selectedCategory = val);
-              },
-              itemLabelBuilder: (item) => item.name,
-              showAddOption: true,
-              addOptionLabel: 'Agregar',
-              addOptionValue: const Category(
-                id: 'ADD_NEW',
-                name: 'Agregar',
-                type: 'other',
-              ),
-              onAddPressed: () {
-                _showAddCategoryDialog();
-              },
-            ),
-            const SizedBox(height: 24),
-
-            CustomTextField(
-              label: 'Modelo/Nro. parte',
-              controller: _modelController,
-              suffixIcon: IconButton(
-                icon: const Icon(Symbols.barcode_scanner),
-                tooltip: 'Escanear código',
-                onPressed: () async {
-                  final scannedCode = await Navigator.of(context).push<String>(
-                    MaterialPageRoute(
-                      builder: (context) => const BarcodeScannerScreen(),
-                    ),
-                  );
-                  if (scannedCode != null) {
-                    _modelController.text =
-                        scannedCode; // Will trigger listener
-                  }
+              // Form Fields
+              CustomDropdown<Category>(
+                label: 'Categoría',
+                value: _selectedCategory,
+                items: categoriesList,
+                onChanged: (val) {
+                  setState(() => _selectedCategory = val);
+                },
+                itemLabelBuilder: (item) => item.name,
+                showAddOption: true,
+                addOptionLabel: 'Agregar',
+                addOptionValue: const Category(
+                  id: 'ADD_NEW',
+                  name: 'Agregar',
+                  type: 'other',
+                ),
+                onAddPressed: () {
+                  _showAddCategoryDialog();
                 },
               ),
-            ),
-            const SizedBox(height: 24),
+              const SizedBox(height: 24),
 
-            CustomDropdown<Brand>(
-              label: 'Marca',
-              value: _selectedBrand,
-              items: brandsList,
-              onChanged: (val) {
-                setState(() => _selectedBrand = val);
-              },
-              itemLabelBuilder: (item) => item.name,
-              showAddOption: true,
-              addOptionValue: const Brand(id: 'new', name: '___ADD___'),
-              onAddPressed: () async {
-                final newBrand = await AddEditBrandSheet.show(context);
-                if (newBrand != null && mounted) {
-                  setState(() => _selectedBrand = newBrand);
-                }
-              },
-              addOptionLabel: 'Agregar',
-            ),
-            const SizedBox(height: 24),
+              CustomTextField(
+                label: 'Modelo/Nro. parte',
+                controller: _modelController,
+                suffixIcon: IconButton(
+                  icon: const Icon(Symbols.barcode_scanner),
+                  tooltip: 'Escanear código',
+                  onPressed: () async {
+                    final scannedCode = await Navigator.of(context)
+                        .push<String>(
+                          MaterialPageRoute(
+                            builder: (context) => const BarcodeScannerScreen(),
+                          ),
+                        );
+                    if (scannedCode != null) {
+                      _modelController.text =
+                          scannedCode; // Will trigger listener
+                    }
+                  },
+                ),
+              ),
+              const SizedBox(height: 24),
 
-            CustomTextField(
-              label: 'Nombre del producto*',
-              controller: _nameController,
-            ),
-            const SizedBox(height: 24),
+              CustomDropdown<Brand>(
+                label: 'Marca',
+                value: _selectedBrand,
+                items: brandsList,
+                onChanged: (val) {
+                  setState(() => _selectedBrand = val);
+                },
+                itemLabelBuilder: (item) => item.name,
+                showAddOption: true,
+                addOptionValue: const Brand(id: 'new', name: '___ADD___'),
+                onAddPressed: () async {
+                  final newBrand = await AddEditBrandSheet.show(context);
+                  if (newBrand != null && mounted) {
+                    setState(() => _selectedBrand = newBrand);
+                  }
+                },
+                addOptionLabel: 'Agregar',
+              ),
+              const SizedBox(height: 24),
 
-            CustomTextField(
-              label: 'Características',
-              controller: _specsController,
-              maxLines: 6,
-              minLines: 4,
-              hintText: '- Resolución de 4K...\n- Interfaz Ethernet...',
-            ),
-            const SizedBox(height: 24),
+              CustomTextField(
+                label: 'Nombre del producto*',
+                controller: _nameController,
+              ),
+              const SizedBox(height: 24),
 
-            CustomDropdown<Uom>(
-              label: 'Unidad de medida',
-              value: _selectedUom,
-              items: uomsList,
-              onChanged: (val) {
-                setState(() => _selectedUom = val);
-              },
-              itemLabelBuilder: (item) =>
-                  '${item.name} (${item.symbol})',
-              showAddOption: false, // UOMs are curated for now
-            ),
+              CustomTextField(
+                label: 'Características',
+                controller: _specsController,
+                maxLines: 6,
+                minLines: 4,
+                hintText: '- Resolución de 4K...\n- Interfaz Ethernet...',
+              ),
+              const SizedBox(height: 24),
 
-            const SizedBox(height: 48),
+              CustomDropdown<Uom>(
+                label: 'Unidad de medida',
+                value: _selectedUom,
+                items: uomsList,
+                onChanged: (val) {
+                  setState(() => _selectedUom = val);
+                },
+                itemLabelBuilder: (item) => '${item.name} (${item.symbol})',
+                showAddOption: false, // UOMs are curated for now
+              ),
 
-            // Action Buttons
-            FormBottomBar(
-              onCancel: () => context.pop(),
-              onSave: _validateAndSave,
-              isSaveEnabled: _isDirty,
-            ),
-            const SizedBox(height: 24),
-          ],
+              const SizedBox(height: 48),
+
+              // Action Buttons
+              FormBottomBar(
+                onCancel: _onCancelWithConfirmation,
+                onSave: _validateAndSave,
+                isSaveEnabled: _isDirty,
+              ),
+              const SizedBox(height: 24),
+            ],
+          ),
         ),
       ),
     );

@@ -98,8 +98,41 @@ class _AddServiceScreenState extends ConsumerState<AddServiceScreen> {
         _currentStep--;
       });
     } else {
+      _handleExit();
+    }
+  }
+
+  Future<void> _handleExit() async {
+    final confirmed = await _confirmExit();
+    if (confirmed == true && mounted) {
       context.pop();
     }
+  }
+
+  Future<bool> _confirmExit() async {
+    final result = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('¿Descartar cambios?'),
+        content: const Text(
+          'Si sales ahora, perderás toda la información que has ingresado.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Continuar editando'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: Text(
+              'Descartar',
+              style: TextStyle(color: Theme.of(context).colorScheme.error),
+            ),
+          ),
+        ],
+      ),
+    );
+    return result ?? false;
   }
 
   Future<void> _submitService() async {
@@ -291,119 +324,129 @@ class _AddServiceScreenState extends ConsumerState<AddServiceScreen> {
       }
     }
 
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Agregar servicio'),
-        centerTitle: false,
-        titleTextStyle: TextStyle(
-          color: colors.onSurface,
-          fontSize: 22,
-          fontWeight: FontWeight.w400,
-        ),
-        backgroundColor: colors.surface,
-        elevation: 0,
-        leading: IconButton(
-          icon: Icon(Icons.arrow_back, color: colors.onSurface),
-          onPressed: () => prevStep(),
-        ),
-        bottom: PreferredSize(
-          preferredSize: const Size.fromHeight(4),
-          child: WizardProgressBar(
-            currentStep: _currentStep + 1,
-            totalSteps: _totalSteps,
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, result) async {
+        if (didPop) return;
+        final confirmed = await _confirmExit();
+        if (confirmed == true && context.mounted) {
+          context.pop();
+        }
+      },
+      child: Scaffold(
+        appBar: AppBar(
+          title: const Text('Agregar servicio'),
+          centerTitle: false,
+          titleTextStyle: TextStyle(
+            color: colors.onSurface,
+            fontSize: 22,
+            fontWeight: FontWeight.w400,
           ),
-        ),
-      ),
-      body: IndexedStack(
-        index: _currentStep,
-        children: [
-          // Step 1
-          AddServiceStep1(
-            nameController: _nameController,
-            descriptionController: _descriptionController,
-            onNext: nextStep,
-            onCancel: () => context.pop(),
+          backgroundColor: colors.surface,
+          elevation: 0,
+          leading: IconButton(
+            icon: Icon(Icons.arrow_back, color: colors.onSurface),
+            onPressed: () => prevStep(),
           ),
-
-          // Step 2
-          AddServiceStep2(
-            priceController: _priceController,
-            isPriceFixed: _isPriceFixed,
-            onPriceTypeChanged: (isFixed) {
-              setState(() {
-                _isPriceFixed = isFixed;
-              });
-            },
-            selectedRateUnit: _selectedRateUnit,
-            rateUnits: ratesList,
-            onRateUnitChanged: (ServiceRate? val) {
-              setState(() {
-                _selectedRateUnit = val;
-              });
-            },
-            onAddRateUnit: () => _showAddRateDialog(onAdd: _addNewRateUnit),
-            onNext: nextStep,
-            onBack: prevStep,
-            onCancel: () => context.pop(),
-          ),
-
-          // Step 3
-          AddServiceStep3(
-            selectedCategory: _selectedCategory,
-            categories: categoriesList,
-            onCategoryChanged: (val) {
-              setState(() {
-                _selectedCategory = val;
-              });
-            },
-            onAddCategory: () => _showAddDialog(
-              title: 'Agregar nueva categoría',
-              label: 'Nombre de la categoría',
-              onAdd: _addNewCategory,
+          bottom: PreferredSize(
+            preferredSize: const Size.fromHeight(4),
+            child: WizardProgressBar(
+              currentStep: _currentStep + 1,
+              totalSteps: _totalSteps,
             ),
-            onNext: nextStep,
-            onBack: prevStep,
-            onCancel: () => context.pop(),
           ),
+        ),
+        body: IndexedStack(
+          index: _currentStep,
+          children: [
+            // Step 1
+            AddServiceStep1(
+              nameController: _nameController,
+              descriptionController: _descriptionController,
+              onNext: nextStep,
+              onCancel: _handleExit,
+            ),
 
-          // Step 4
-          AddServiceStep4(
-            hasWarranty: _hasWarranty,
-            onWarrantyChanged: (val) {
-              setState(() {
-                _hasWarranty = val;
-              });
-            },
-            timeController: _warrantyTimeController,
-            selectedPeriod: _selectedWarrantyPeriod,
-            onPeriodChanged: (val) {
-              setState(() {
-                _selectedWarrantyPeriod = val;
-              });
-            },
-            onNext: nextStep,
-            onBack: prevStep,
-            onCancel: () => context.pop(),
-          ),
+            // Step 2
+            AddServiceStep2(
+              priceController: _priceController,
+              isPriceFixed: _isPriceFixed,
+              onPriceTypeChanged: (isFixed) {
+                setState(() {
+                  _isPriceFixed = isFixed;
+                });
+              },
+              selectedRateUnit: _selectedRateUnit,
+              rateUnits: ratesList,
+              onRateUnitChanged: (ServiceRate? val) {
+                setState(() {
+                  _selectedRateUnit = val;
+                });
+              },
+              onAddRateUnit: () => _showAddRateDialog(onAdd: _addNewRateUnit),
+              onNext: nextStep,
+              onBack: prevStep,
+              onCancel: _handleExit,
+            ),
 
-          // Step 5
-          AddServiceStep5(
-            serviceName: _nameController.text,
-            category: _selectedCategory?.name ?? '',
-            hasWarranty: _hasWarranty,
-            warrantyTime: int.tryParse(_warrantyTimeController.text),
-            warrantyUnit: _selectedWarrantyPeriod,
-            description: _descriptionController.text,
-            price: double.tryParse(_priceController.text) ?? 0.0,
-            rateUnit: _selectedRateUnit != null
-                ? '${_selectedRateUnit!.name} (${_selectedRateUnit!.symbol})'
-                : '',
-            isPriceFixed: _isPriceFixed,
-            onBack: prevStep,
-            onCancel: () => context.pop(),
-            onSubmit: _submitService,
-          ),
-        ],
+            // Step 3
+            AddServiceStep3(
+              selectedCategory: _selectedCategory,
+              categories: categoriesList,
+              onCategoryChanged: (val) {
+                setState(() {
+                  _selectedCategory = val;
+                });
+              },
+              onAddCategory: () => _showAddDialog(
+                title: 'Agregar nueva categoría',
+                label: 'Nombre de la categoría',
+                onAdd: _addNewCategory,
+              ),
+              onNext: nextStep,
+              onBack: prevStep,
+              onCancel: _handleExit,
+            ),
+
+            // Step 4
+            AddServiceStep4(
+              hasWarranty: _hasWarranty,
+              onWarrantyChanged: (val) {
+                setState(() {
+                  _hasWarranty = val;
+                });
+              },
+              timeController: _warrantyTimeController,
+              selectedPeriod: _selectedWarrantyPeriod,
+              onPeriodChanged: (val) {
+                setState(() {
+                  _selectedWarrantyPeriod = val;
+                });
+              },
+              onNext: nextStep,
+              onBack: prevStep,
+              onCancel: _handleExit,
+            ),
+
+            // Step 5
+            AddServiceStep5(
+              serviceName: _nameController.text,
+              category: _selectedCategory?.name ?? '',
+              hasWarranty: _hasWarranty,
+              warrantyTime: int.tryParse(_warrantyTimeController.text),
+              warrantyUnit: _selectedWarrantyPeriod,
+              description: _descriptionController.text,
+              price: double.tryParse(_priceController.text) ?? 0.0,
+              rateUnit: _selectedRateUnit != null
+                  ? '${_selectedRateUnit!.name} (${_selectedRateUnit!.symbol})'
+                  : '',
+              isPriceFixed: _isPriceFixed,
+              onBack: prevStep,
+              onCancel: _handleExit,
+              onSubmit: _submitService,
+            ),
+          ],
+        ),
       ),
     );
   }

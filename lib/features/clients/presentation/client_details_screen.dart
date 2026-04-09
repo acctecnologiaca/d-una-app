@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:d_una_app/shared/widgets/friendly_error_widget.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -23,7 +24,7 @@ class ClientDetailsScreen extends ConsumerWidget {
     return clientsAsync.when(
       loading: () =>
           const Scaffold(body: Center(child: CircularProgressIndicator())),
-      error: (err, stack) => Scaffold(body: Center(child: Text('Error: $err'))),
+      error: (err, stack) => Scaffold(body: FriendlyErrorWidget(error: err)),
       data: (clientsList) {
         final client = clientsList.firstWhere(
           (c) => c.id == clientId,

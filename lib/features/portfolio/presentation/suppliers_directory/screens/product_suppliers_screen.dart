@@ -1,10 +1,10 @@
 import 'package:d_una_app/features/portfolio/domain/models/product_search_filters.dart';
+import 'package:d_una_app/shared/widgets/friendly_error_widget.dart';
 import 'package:d_una_app/features/profile/presentation/screens/verification_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../domain/models/aggregated_product.dart';
 import '../../../presentation/providers/suppliers_provider.dart';
-
 import 'package:d_una_app/shared/widgets/aggregated_product_card.dart';
 import '../widgets/supplier_product_row.dart';
 import 'package:go_router/go_router.dart';
@@ -12,7 +12,6 @@ import '../../../../../../shared/widgets/horizontal_filter_bar.dart';
 import '../../../../../../shared/widgets/filter_bottom_sheet.dart';
 import '../../../../../../shared/widgets/price_filter_sheet.dart';
 import '../widgets/product_action_sheet.dart';
-import '../../../domain/models/product_sort_option.dart';
 import '../../../../../../shared/widgets/sort_selector.dart';
 
 // Create a simplified provider for this screen's data
@@ -55,7 +54,7 @@ class _ProductSuppliersScreenState
   Set<String> _selectedCities = {};
   double? _minPrice;
   double? _maxPrice;
-  ProductSortOption _currentSort = ProductSortOption.priceAsc; // Added State
+  SortOption _currentSort = SortOption.lowestPrice; // Added State
 
   @override
   void initState() {
@@ -166,32 +165,17 @@ class _ProductSuppliersScreenState
                 const SizedBox(height: 12),
                 Align(
                   alignment: Alignment.centerLeft,
-                  child: GenericSortSelector<ProductSortOption>(
+                  child: SortSelector(
                     currentSort: _currentSort,
-                    options: ProductSortOption.values,
+                    options: const [
+                      SortOption.nameAZ,
+                      SortOption.nameZA,
+                      SortOption.highestPrice,
+                      SortOption.lowestPrice,
+                      SortOption.quantityDesc,
+                      SortOption.quantityAsc,
+                    ],
                     onSortChanged: (val) => setState(() => _currentSort = val),
-                    labelBuilder: (option) => option.label,
-                    iconBuilder: (option) {
-                      if (option == ProductSortOption.priceAsc) {
-                        return Icons.arrow_upward;
-                      }
-                      if (option == ProductSortOption.priceDesc) {
-                        return Icons.arrow_downward;
-                      }
-                      if (option == ProductSortOption.quantityAsc) {
-                        return Icons.arrow_upward;
-                      }
-                      if (option == ProductSortOption.quantityDesc) {
-                        return Icons.arrow_downward;
-                      }
-                      if (option == ProductSortOption.nameAZ) {
-                        return Icons.arrow_upward;
-                      }
-                      if (option == ProductSortOption.nameZA) {
-                        return Icons.arrow_downward;
-                      }
-                      return null;
-                    },
                   ),
                 ),
               ],
@@ -201,7 +185,7 @@ class _ProductSuppliersScreenState
           Expanded(
             child: suppliersAsync.when(
               loading: () => const Center(child: CircularProgressIndicator()),
-              error: (err, stack) => Center(child: Text('Error: $err')),
+              error: (err, stack) => FriendlyErrorWidget(error: err),
               data: (allItems) {
                 // Client-side filtering
                 var items = allItems.where((item) {
@@ -243,34 +227,36 @@ class _ProductSuppliersScreenState
                   }
 
                   switch (_currentSort) {
-                    case ProductSortOption.priceAsc:
+                    case SortOption.lowestPrice:
                       final priceA = parseDouble(a['price']);
                       final priceB = parseDouble(b['price']);
                       return priceA.compareTo(priceB);
-                    case ProductSortOption.priceDesc:
+                    case SortOption.highestPrice:
                       final priceA = parseDouble(a['price']);
                       final priceB = parseDouble(b['price']);
                       return priceB.compareTo(priceA);
-                    case ProductSortOption.quantityAsc:
+                    case SortOption.quantityAsc:
                       final stockA = parseInt(a['stock_quantity']);
                       final stockB = parseInt(b['stock_quantity']);
                       return stockA.compareTo(stockB);
-                    case ProductSortOption.quantityDesc:
+                    case SortOption.quantityDesc:
                       final stockA = parseInt(a['stock_quantity']);
                       final stockB = parseInt(b['stock_quantity']);
                       return stockB.compareTo(stockA);
-                    case ProductSortOption.nameAZ:
+                    case SortOption.nameAZ:
                       final nameA = (a['supplier_name'] as String)
                           .toLowerCase();
                       final nameB = (b['supplier_name'] as String)
                           .toLowerCase();
                       return nameA.compareTo(nameB);
-                    case ProductSortOption.nameZA:
+                    case SortOption.nameZA:
                       final nameA = (a['supplier_name'] as String)
                           .toLowerCase();
                       final nameB = (b['supplier_name'] as String)
                           .toLowerCase();
                       return nameB.compareTo(nameA);
+                    default:
+                      return 0;
                   }
                 });
 
@@ -331,12 +317,18 @@ class _ProductSuppliersScreenState
                     final branchCity = item['branch_city'] as String? ?? '';
                     final price = parseDouble(item['price']);
                     final stock = parseInt(item['stock_quantity']);
-                    final uom = item['uom_label'] as String? ?? item['uom'] as String? ?? 'Unidad';
+                    final uom =
+                        item['uom_label'] as String? ??
+                        item['uom'] as String? ??
+                        'Unidad';
                     final uomIconName = item['uom_icon_name'] as String?;
 
                     // Parse Access Level from Backend
-                    final isRestricted = !(item['is_accessible'] as bool? ?? false); // Locked + SnackBar
-                    final isPartial = false; // We only have binary access currently
+                    final isRestricted =
+                        !(item['is_accessible'] as bool? ??
+                            false); // Locked + SnackBar
+                    final isPartial =
+                        false; // We only have binary access currently
 
                     // Logic for SnackBar (OnTap)
                     // Restricted OR Partial items block navigation/action and show SnackBar

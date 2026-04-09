@@ -79,6 +79,39 @@ class _AddClientPersonInfoScreenState
     }
   }
 
+  Future<void> _onCancelWizard() async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('¿Descartar cambios?'),
+        content: const Text(
+          'Si sales ahora, perderás toda la información que has ingresado.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Continuar editando'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: Text(
+              'Descartar',
+              style: TextStyle(color: Theme.of(context).colorScheme.error),
+            ),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed == true && mounted) {
+      if (_returnTo != null) {
+        context.go(_returnTo!);
+      } else {
+        context.go('/clients');
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final colors = Theme.of(context).colorScheme;
@@ -89,6 +122,10 @@ class _AddClientPersonInfoScreenState
         backgroundColor: colors.surface,
         foregroundColor: colors.onSurface,
         elevation: 0,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back),
+          onPressed: _onCancelWizard,
+        ),
         title: Text(
           'Agregar cliente',
           style: textTheme.titleLarge?.copyWith(
@@ -153,13 +190,7 @@ class _AddClientPersonInfoScreenState
             Padding(
               padding: const EdgeInsets.only(bottom: 40),
               child: WizardButtonBar(
-                onCancel: () {
-                  if (_returnTo != null) {
-                    context.go(_returnTo!);
-                  } else {
-                    context.go('/clients');
-                  }
-                },
+                onCancel: _onCancelWizard,
                 onBack: () => context.pop(),
                 onNext: _onNext,
                 isLoading: _isLoading,

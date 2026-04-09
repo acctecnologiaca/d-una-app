@@ -5,6 +5,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'core/router/app_router.dart';
 import 'core/theme/app_theme.dart';
 import 'core/utils/session_manager.dart';
+import 'package:d_una_app/features/profile/presentation/providers/profile_provider.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -26,11 +27,55 @@ void main() async {
   runApp(const ProviderScope(child: DUnaApp()));
 }
 
-class DUnaApp extends ConsumerWidget {
+class DUnaApp extends ConsumerStatefulWidget {
   const DUnaApp({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<DUnaApp> createState() => _DUnaAppState();
+}
+
+class _DUnaAppState extends ConsumerState<DUnaApp> with WidgetsBindingObserver {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) async {
+    super.didChangeAppLifecycleState(state);
+    
+    if (state == AppLifecycleState.resumed) {
+      debugPrint('App resumed: validando sesión y refrescando conectividad...');
+      final sessionManager = SessionManager();
+      final isValid = await sessionManager.checkSessionValidity();
+      
+      if (isValid) {
+        try {
+          // Forzar refresco proactivo de la sesión
+          await Supabase.instance.client.auth.refreshSession();
+          debugPrint('Sesión refrescada proactivamente en OnResume.');
+        } catch (e) {
+          debugPrint('Fallo al refrescar sesión proactivamente: $e');
+        }
+        
+        // Invalidar providers realtime para forzar re-suscripción de WebSockets
+        ref.invalidate(userProfileProvider);
+        ref.invalidate(shippingMethodsProvider);
+        ref.invalidate(verificationDocumentsProvider);
+        debugPrint('Providers realtime invalidados para restaurar streams.');
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
     return MaterialApp.router(
       title: 'd·una',
       theme: AppTheme.lightTheme,

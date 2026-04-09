@@ -10,10 +10,10 @@ import '../../../../../shared/widgets/price_filter_sheet.dart';
 import '../../../../../shared/widgets/sort_selector.dart';
 import '../../../domain/models/quote_aggregated_product.dart';
 import '../providers/quote_product_selection_provider.dart';
-import '../../../../portfolio/domain/models/product_sort_option.dart';
 import '../../../../portfolio/domain/models/product_search_filters.dart';
 import '../../../../portfolio/presentation/providers/product_search_provider.dart';
 import '../../../../profile/presentation/providers/profile_provider.dart';
+import '../providers/create_quote_provider.dart';
 
 class QuoteProductSearchScreen extends ConsumerStatefulWidget {
   const QuoteProductSearchScreen({super.key});
@@ -26,7 +26,7 @@ class QuoteProductSearchScreen extends ConsumerStatefulWidget {
 class _QuoteProductSearchScreenState
     extends ConsumerState<QuoteProductSearchScreen> {
   String _currentQuery = '';
-  ProductSortOption _currentSort = ProductSortOption.priceAsc;
+  SortOption _currentSort = SortOption.lowestPrice;
 
   // Filters State
   Set<String> _selectedBrands = {};
@@ -62,7 +62,7 @@ class _QuoteProductSearchScreenState
       _selectedSuppliers.clear();
       _minPrice = null;
       _maxPrice = null;
-      _currentSort = ProductSortOption.priceAsc;
+      _currentSort = SortOption.lowestPrice;
     });
   }
 
@@ -283,6 +283,8 @@ class _QuoteProductSearchScreenState
       quoteProductSuggestionsProvider(filterParams),
     );
 
+    final quoteProducts = ref.watch(createQuoteProvider).products;
+
     var filteredProducts = suggestionsAsync.valueOrNull ?? [];
 
     // Local Verification Rules
@@ -300,18 +302,20 @@ class _QuoteProductSearchScreenState
     // Sort Logic
     filteredProducts.sort((a, b) {
       switch (_currentSort) {
-        case ProductSortOption.priceAsc:
+        case SortOption.lowestPrice:
           return a.minPrice.compareTo(b.minPrice);
-        case ProductSortOption.priceDesc:
+        case SortOption.highestPrice:
           return b.minPrice.compareTo(a.minPrice);
-        case ProductSortOption.quantityAsc:
+        case SortOption.quantityAsc:
           return a.totalQuantity.compareTo(b.totalQuantity);
-        case ProductSortOption.quantityDesc:
+        case SortOption.quantityDesc:
           return b.totalQuantity.compareTo(a.totalQuantity);
-        case ProductSortOption.nameAZ:
+        case SortOption.nameAZ:
           return a.name.toLowerCase().compareTo(b.name.toLowerCase());
-        case ProductSortOption.nameZA:
+        case SortOption.nameZA:
           return b.name.toLowerCase().compareTo(a.name.toLowerCase());
+        default:
+          return 0;
       }
     });
 
@@ -380,32 +384,17 @@ class _QuoteProductSearchScreenState
             const SizedBox(height: 8),
             Align(
               alignment: Alignment.centerLeft,
-              child: GenericSortSelector<ProductSortOption>(
+              child: SortSelector(
                 currentSort: _currentSort,
-                options: ProductSortOption.values,
+                options: const [
+                  SortOption.nameAZ,
+                  SortOption.nameZA,
+                  SortOption.highestPrice,
+                  SortOption.lowestPrice,
+                  SortOption.quantityDesc,
+                  SortOption.quantityAsc,
+                ],
                 onSortChanged: (val) => setState(() => _currentSort = val),
-                labelBuilder: (option) => option.label,
-                iconBuilder: (option) {
-                  if (option == ProductSortOption.priceAsc) {
-                    return Icons.arrow_upward;
-                  }
-                  if (option == ProductSortOption.priceDesc) {
-                    return Icons.arrow_downward;
-                  }
-                  if (option == ProductSortOption.quantityAsc) {
-                    return Icons.arrow_upward;
-                  }
-                  if (option == ProductSortOption.quantityDesc) {
-                    return Icons.arrow_downward;
-                  }
-                  if (option == ProductSortOption.nameAZ) {
-                    return Icons.arrow_upward;
-                  }
-                  if (option == ProductSortOption.nameZA) {
-                    return Icons.arrow_downward;
-                  }
-                  return null;
-                },
               ),
             ),
           ],
@@ -415,6 +404,15 @@ class _QuoteProductSearchScreenState
       filter: (product, query) =>
           true, // Filtering is done entirely on the server
       itemBuilder: (context, product) {
+        final isAlreadyInQuote = quoteProducts.any(
+          (p) =>
+              (p.brand ?? '').trim().toUpperCase() ==
+                  product.brand.trim().toUpperCase() &&
+              (p.model ?? '').trim().toUpperCase() ==
+                  product.model.trim().toUpperCase() &&
+              p.uom.trim().toUpperCase() == product.uom.trim().toUpperCase(),
+        );
+
         return Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 4.0),
           child: AggregatedProductCard(
@@ -429,7 +427,17 @@ class _QuoteProductSearchScreenState
             imageUrl: product.imageUrl,
             showPriceAndStock: true,
             isLocked: product.isLocked,
+            isAlreadyAdded: isAlreadyInQuote,
             onTap: () {
+              if (isAlreadyInQuote) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('Este producto ya se encuentra en la cotización'),
+                  ),
+                );
+                return;
+              }
+
               context
                   .push(
                     '/quotes/create/select-product/product-sources',
