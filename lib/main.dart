@@ -50,12 +50,12 @@ class _DUnaAppState extends ConsumerState<DUnaApp> with WidgetsBindingObserver {
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) async {
     super.didChangeAppLifecycleState(state);
-    
+
     if (state == AppLifecycleState.resumed) {
       debugPrint('App resumed: validando sesión y refrescando conectividad...');
       final sessionManager = SessionManager();
       final isValid = await sessionManager.checkSessionValidity();
-      
+
       if (isValid) {
         try {
           // Forzar refresco proactivo de la sesión
@@ -64,7 +64,7 @@ class _DUnaAppState extends ConsumerState<DUnaApp> with WidgetsBindingObserver {
         } catch (e) {
           debugPrint('Fallo al refrescar sesión proactivamente: $e');
         }
-        
+
         // Invalidar providers realtime para forzar re-suscripción de WebSockets
         ref.invalidate(userProfileProvider);
         ref.invalidate(shippingMethodsProvider);
