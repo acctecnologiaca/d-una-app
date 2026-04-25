@@ -29,19 +29,19 @@ class AddProductStep2 extends StatefulWidget {
 class _AddProductStep2State extends State<AddProductStep2> {
   final _formKey = GlobalKey<FormState>();
   bool _isConverting = false;
- 
+
   @override
   void initState() {
     super.initState();
     widget.nameController.addListener(_onNameChanged);
   }
- 
+
   @override
   void dispose() {
     widget.nameController.removeListener(_onNameChanged);
     super.dispose();
   }
- 
+
   @override
   void didUpdateWidget(AddProductStep2 oldWidget) {
     if (oldWidget.nameController != widget.nameController) {
@@ -50,7 +50,7 @@ class _AddProductStep2State extends State<AddProductStep2> {
     }
     super.didUpdateWidget(oldWidget);
   }
- 
+
   void _onNameChanged() {
     setState(() {});
   }

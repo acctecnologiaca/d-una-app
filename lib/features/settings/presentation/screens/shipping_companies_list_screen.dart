@@ -101,10 +101,15 @@ class ShippingCompaniesListScreen extends ConsumerWidget {
                                 ),
                               ),
                               IconButton(
-                                icon: const Icon(Icons.close, color: Colors.white),
+                                icon: const Icon(
+                                  Icons.close,
+                                  color: Colors.white,
+                                ),
                                 padding: EdgeInsets.zero,
                                 constraints: const BoxConstraints(),
-                                onPressed: () => ScaffoldMessenger.of(context).hideCurrentSnackBar(),
+                                onPressed: () => ScaffoldMessenger.of(
+                                  context,
+                                ).hideCurrentSnackBar(),
                               ),
                             ],
                           ),

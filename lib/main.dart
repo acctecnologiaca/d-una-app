@@ -17,6 +17,7 @@ void main() async {
     authOptions: const FlutterAuthClientOptions(
       authFlowType: AuthFlowType.pkce,
     ),
+
     debug: true, // Enable debug logs to track connection issues
   );
 

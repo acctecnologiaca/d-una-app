@@ -42,12 +42,12 @@ class ProductSerial extends Equatable {
 
   @override
   List<Object?> get props => [
-        id,
-        purchaseItemId,
-        productId,
-        serialNumber,
-        status,
-        createdAt,
-        updatedAt,
-      ];
+    id,
+    purchaseItemId,
+    productId,
+    serialNumber,
+    status,
+    createdAt,
+    updatedAt,
+  ];
 }

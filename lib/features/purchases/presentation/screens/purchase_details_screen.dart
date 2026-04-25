@@ -15,6 +15,7 @@ import '../widgets/add_purchase_details_tab.dart';
 import '../widgets/add_purchase_products_tab.dart';
 import '../widgets/add_purchase_summary_tab.dart';
 import 'package:d_una_app/features/purchases/presentation/widgets/save_changes_dialog.dart';
+import 'package:d_una_app/shared/widgets/custom_dialog.dart';
 import 'package:material_symbols_icons/symbols.dart';
 
 class PurchaseDetailsScreen extends ConsumerStatefulWidget {
@@ -113,101 +114,103 @@ class _PurchaseDetailsScreenState extends ConsumerState<PurchaseDetailsScreen>
             }
           },
           child: Scaffold(
-          backgroundColor: colors.surface,
-          appBar: StandardAppBar(
-            title: 'Compra',
-            subtitle:
-                '${purchase.documentType == 'invoice' ? 'F/.' : 'N/E'} #${purchase.documentNumber} - ${purchase.supplierName ?? 'Proveedor'}',
-            actions: [
-              if (!_isEditing)
-                IconButton(
-                  icon: Icon(Icons.more_vert, color: colors.onSurface),
-                  tooltip: 'Opciones',
-                  onPressed: () => _showPurchaseOptions(context, data),
-                ),
-              if (_isEditing)
-                IconButton(
-                  icon: Icon(Icons.close, color: colors.onSurface),
-                  tooltip: 'Cancelar edición',
-                  onPressed: () async {
-                    if (notifier.hasChanges) {
-                      final shouldClose = await SaveChangesDialog.show<bool>(
-                        context,
-                        onSave: () async {
-                          final success = await notifier.createPurchase();
-                          if (success && context.mounted) {
-                            Navigator.of(context).pop(true);
-                          }
-                        },
-                        onDiscard: () {
-                          notifier.reset();
-                          Navigator.of(context).pop(true);
-                        },
-                        onContinue: () {
-                          Navigator.of(context).pop(false);
-                        },
-                      );
-                      
-                      if (shouldClose == true && mounted) {
-                        setState(() { _isEditing = false; });
-                      }
-                    } else {
-                      setState(() {
-                        _isEditing = false;
-                      });
-                    }
-                  },
-                ),
-            ],
-            bottom: TabBar(
-              controller: _tabController,
-              labelColor: colors.primary,
-              unselectedLabelColor: colors.onSurfaceVariant,
-              indicatorColor: colors.primary,
-              labelStyle: const TextStyle(fontWeight: FontWeight.bold),
-              tabs: [
-                const Tab(text: 'Detalles'),
-                Tab(
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      const Text('Productos'),
-                      if (_isEditing
-                          ? ref.watch(addPurchaseProvider).hasMissingSerials
-                          : data.hasMissingSerials) ...[
-                        const SizedBox(width: 6),
-                        Badge(backgroundColor: colors.error, smallSize: 8),
-                      ],
-                    ],
+            backgroundColor: colors.surface,
+            appBar: StandardAppBar(
+              title: 'Compra',
+              subtitle:
+                  '${purchase.documentType == 'invoice' ? 'F/.' : 'N/E'} #${purchase.documentNumber} - ${purchase.supplierName ?? 'Proveedor'}',
+              actions: [
+                if (!_isEditing)
+                  IconButton(
+                    icon: Icon(Icons.more_vert, color: colors.onSurface),
+                    tooltip: 'Opciones',
+                    onPressed: () => _showPurchaseOptions(context, data),
                   ),
-                ),
-                const Tab(text: 'Resúmen'),
+                if (_isEditing)
+                  IconButton(
+                    icon: Icon(Icons.close, color: colors.onSurface),
+                    tooltip: 'Cancelar edición',
+                    onPressed: () async {
+                      if (notifier.hasChanges) {
+                        final shouldClose = await SaveChangesDialog.show<bool>(
+                          context,
+                          onSave: () async {
+                            final success = await notifier.createPurchase();
+                            if (success && context.mounted) {
+                              Navigator.of(context).pop(true);
+                            }
+                          },
+                          onDiscard: () {
+                            notifier.reset();
+                            Navigator.of(context).pop(true);
+                          },
+                          onContinue: () {
+                            Navigator.of(context).pop(false);
+                          },
+                        );
+
+                        if (shouldClose == true && mounted) {
+                          setState(() {
+                            _isEditing = false;
+                          });
+                        }
+                      } else {
+                        setState(() {
+                          _isEditing = false;
+                        });
+                      }
+                    },
+                  ),
               ],
+              bottom: TabBar(
+                controller: _tabController,
+                labelColor: colors.primary,
+                unselectedLabelColor: colors.onSurfaceVariant,
+                indicatorColor: colors.primary,
+                labelStyle: const TextStyle(fontWeight: FontWeight.bold),
+                tabs: [
+                  const Tab(text: 'Detalles'),
+                  Tab(
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Text('Productos'),
+                        if (_isEditing
+                            ? ref.watch(addPurchaseProvider).hasMissingSerials
+                            : data.hasMissingSerials) ...[
+                          const SizedBox(width: 6),
+                          Badge(backgroundColor: colors.error, smallSize: 8),
+                        ],
+                      ],
+                    ),
+                  ),
+                  const Tab(text: 'Resúmen'),
+                ],
+              ),
             ),
+            body: TabBarView(
+              controller: _tabController,
+              children: _isEditing
+                  ? [
+                      const AddPurchaseDetailsTab(),
+                      const AddPurchaseProductsTab(),
+                      AddPurchaseSummaryTab(
+                        onNavigateToTab: (index) =>
+                            _tabController.animateTo(index),
+                      ),
+                    ]
+                  : [
+                      ViewPurchaseDetailsTab(data: data),
+                      ViewPurchaseProductsTab(data: data),
+                      ViewPurchaseSummaryTab(
+                        data: data,
+                        onNavigateToTab: (index) =>
+                            _tabController.animateTo(index),
+                      ),
+                    ],
+            ),
+            floatingActionButton: _buildFab(data),
           ),
-          body: TabBarView(
-            controller: _tabController,
-            children: _isEditing
-                ? [
-                    const AddPurchaseDetailsTab(),
-                    const AddPurchaseProductsTab(),
-                    AddPurchaseSummaryTab(
-                      onNavigateToTab: (index) =>
-                          _tabController.animateTo(index),
-                    ),
-                  ]
-                : [
-                    ViewPurchaseDetailsTab(data: data),
-                    ViewPurchaseProductsTab(data: data),
-                    ViewPurchaseSummaryTab(
-                      data: data,
-                      onNavigateToTab: (index) =>
-                          _tabController.animateTo(index),
-                    ),
-                  ],
-          ),
-          floatingActionButton: _buildFab(data),
-        ),
         );
       },
     );
@@ -278,21 +281,23 @@ class _PurchaseDetailsScreenState extends ConsumerState<PurchaseDetailsScreen>
 
   Future<void> _confirmDelete(BuildContext context) async {
     final colors = Theme.of(context).colorScheme;
-    final confirmed = await showDialog<bool>(
+    final confirmed = await CustomDialog.show<bool>(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('¿Eliminar compra?'),
-        content: const Text(
-          'Esta acción eliminará permanentemente la compra y sus productos asociados del sistema.',
-        ),
+      dialog: CustomDialog.destructive(
+        title: '¿Eliminar compra?',
+        contentText:
+            'Esta acción eliminará permanentemente la compra y los productos asociados.',
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
             child: const Text('Cancelar'),
           ),
-          TextButton(
+          FilledButton(
             onPressed: () => Navigator.pop(context, true),
-            style: TextButton.styleFrom(foregroundColor: colors.error),
+            style: FilledButton.styleFrom(
+              backgroundColor: colors.error,
+              foregroundColor: colors.onError,
+            ),
             child: const Text('Eliminar'),
           ),
         ],

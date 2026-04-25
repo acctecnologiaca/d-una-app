@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:csc_picker_plus/csc_picker_plus.dart';
+import 'package:d_una_app/shared/widgets/custom_dialog.dart';
 import 'package:d_una_app/shared/widgets/custom_text_field.dart';
 import 'package:d_una_app/shared/widgets/wizard_bottom_bar.dart';
 import 'package:d_una_app/shared/widgets/wizard_progress_bar.dart';
@@ -54,24 +55,24 @@ class _AddClientAddressScreenState
   }
 
   Future<void> _onCancelWizard() async {
-    final confirmed = await showDialog<bool>(
+    final colors = Theme.of(context).colorScheme;
+    final confirmed = await CustomDialog.show<bool>(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('¿Descartar cambios?'),
-        content: const Text(
-          'Si sales ahora, perderás toda la información que has ingresado.',
-        ),
+      dialog: CustomDialog.destructive(
+        title: '¿Descartar cambios?',
+        contentText:
+            'Si sales ahora, perderás toda la información que has ingresado.',
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(context, false),
+            onPressed: () =>
+                Navigator.of(context, rootNavigator: true).pop(false),
             child: const Text('Continuar editando'),
           ),
-          TextButton(
-            onPressed: () => Navigator.pop(context, true),
-            child: Text(
-              'Descartar',
-              style: TextStyle(color: Theme.of(context).colorScheme.error),
-            ),
+          FilledButton(
+            style: FilledButton.styleFrom(backgroundColor: colors.error),
+            onPressed: () =>
+                Navigator.of(context, rootNavigator: true).pop(true),
+            child: const Text('Descartar'),
           ),
         ],
       ),

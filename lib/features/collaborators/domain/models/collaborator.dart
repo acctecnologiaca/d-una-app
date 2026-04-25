@@ -7,6 +7,7 @@ class Collaborator {
   final String? email;
   final String? charge;
   final bool isActive;
+  final bool isUserRecord;
 
   Collaborator({
     required this.id,
@@ -17,6 +18,7 @@ class Collaborator {
     this.email,
     this.charge,
     required this.isActive,
+    this.isUserRecord = false,
   });
 
   factory Collaborator.fromJson(Map<String, dynamic> json) {
@@ -29,6 +31,7 @@ class Collaborator {
       email: json['email'] as String?,
       charge: json['charge'] as String?,
       isActive: json['is_active'] as bool,
+      isUserRecord: json['is_user_record'] as bool? ?? false,
     );
   }
 
@@ -42,6 +45,7 @@ class Collaborator {
       'email': email,
       'charge': charge,
       'is_active': isActive,
+      'is_user_record': isUserRecord,
     };
   }
 }

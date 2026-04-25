@@ -96,10 +96,7 @@ class _AddPurchaseScreenState extends ConsumerState<AddPurchaseScreen>
                     const Text('Productos'),
                     if (state.hasMissingSerials) ...[
                       const SizedBox(width: 6),
-                      Badge(
-                        backgroundColor: colors.error,
-                        smallSize: 8,
-                      ),
+                      Badge(backgroundColor: colors.error, smallSize: 8),
                     ],
                   ],
                 ),

@@ -11,6 +11,8 @@ import 'steps/add_product_step2.dart';
 import 'steps/add_product_step3.dart';
 import 'steps/add_product_step4.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:material_symbols_icons/symbols.dart';
+import 'package:d_una_app/shared/widgets/custom_dialog.dart';
 import '../../../../data/models/product_model.dart';
 import '../../../../data/models/category_model.dart';
 import '../../../../data/models/brand_model.dart';
@@ -19,6 +21,7 @@ import '../../../../domain/utils/product_validators.dart';
 import '../../../providers/products_provider.dart';
 import '../../../providers/lookup_providers.dart';
 import '../../../../../settings/presentation/widgets/add_edit_category_sheet.dart';
+import '../../../../../settings/presentation/widgets/add_edit_uom_sheet.dart';
 
 class AddProductScreen extends ConsumerStatefulWidget {
   const AddProductScreen({super.key});
@@ -30,6 +33,8 @@ class AddProductScreen extends ConsumerStatefulWidget {
 class _AddProductScreenState extends ConsumerState<AddProductScreen> {
   int _currentStep = 0;
   final int _totalSteps = 4;
+  bool _isValidatingModel = false;
+  String? _lastValidatedModel;
 
   // Controllers for steps
   // Step 1
@@ -67,144 +72,182 @@ class _AddProductScreenState extends ConsumerState<AddProductScreen> {
   }
 
   void _onModelFocusChange() {
-    if (!_modelFocusNode.hasFocus) {
+    if (_currentStep == 0 && !_modelFocusNode.hasFocus) {
       _validateModel();
     }
   }
 
-  void _validateModel() {
-    final currentModel = _modelController.text.trim();
-    if (currentModel.isEmpty) return;
+  Future<bool> _validateModel() async {
+    if (_isValidatingModel) return false;
+    _isValidatingModel = true;
 
-    final products = ref.read(productsProvider).value ?? [];
+    try {
+      final currentModel = _modelController.text.trim();
+      if (currentModel.isEmpty) return true;
 
-    // 1. Exact Match: Model ONLY (User request)
-    final exactMatchProduct = ProductValidators.findExactMatch(
-      products,
-      currentModel,
-    );
+      // If this model was already validated/confirmed, don't ask again
+      if (currentModel == _lastValidatedModel) return true;
 
-    if (exactMatchProduct != null) {
-      // Block user
-      showDialog(
-        context: context,
-        builder: (context) => AlertDialog(
-          title: const Text('Producto Duplicado'),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              if (exactMatchProduct.imageUrl != null)
-                Padding(
-                  padding: const EdgeInsets.only(bottom: 16.0),
-                  child: ClipRRect(
-                    borderRadius: BorderRadius.circular(8.0),
-                    child: CachedNetworkImage(
-                      imageUrl: exactMatchProduct.imageUrl!,
-                      height: 100,
-                      width: 100,
-                      fit: BoxFit.cover,
-                      placeholder: (context, url) => Container(
+      final products = ref.read(productsProvider).value ?? [];
+
+      // 1. Exact Match: Model ONLY (User request)
+      final exactMatchProduct = ProductValidators.findExactMatch(
+        products,
+        currentModel,
+      );
+
+      // 2. Fuzzy Match: 80% Similarity on Model
+      final similarProduct = ProductValidators.findSimilarMatch(
+        products,
+        currentModel,
+      );
+
+      bool result = true;
+
+      if (exactMatchProduct != null) {
+        // Block user
+        await CustomDialog.show(
+          context: context,
+          dialog: CustomDialog.confirmation(
+            title: 'Producto Duplicado',
+            icon: Symbols.error,
+            contentWidget: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                if (exactMatchProduct.imageUrl != null)
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 16.0),
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(8.0),
+                      child: CachedNetworkImage(
+                        imageUrl: exactMatchProduct.imageUrl!,
                         height: 100,
                         width: 100,
-                        color: Colors.grey[200],
-                        child: const Center(child: CircularProgressIndicator()),
-                      ),
-                      errorWidget: (context, url, error) => Container(
-                        height: 100,
-                        width: 100,
-                        color: Colors.grey[200],
-                        child: const Icon(Icons.broken_image),
+                        fit: BoxFit.cover,
+                        placeholder: (context, url) => Container(
+                          height: 100,
+                          width: 100,
+                          color: Colors.grey[200],
+                          child: const Center(
+                            child: CircularProgressIndicator(),
+                          ),
+                        ),
+                        errorWidget: (context, url, error) => Container(
+                          height: 100,
+                          width: 100,
+                          color: Colors.grey[200],
+                          child: const Icon(Icons.broken_image),
+                        ),
                       ),
                     ),
                   ),
+                Text(
+                  'Ya existe un equipo con el modelo "$currentModel" en el inventario.\n\n'
+                  'Marca existente: ${exactMatchProduct.brand?.name ?? "Desconocida"}',
                 ),
-              Text(
-                'Ya existe un equipo con el modelo "$currentModel" en el inventario.\n\n'
-                'Marca existente: ${exactMatchProduct.brand?.name ?? "Desconocida"}',
+              ],
+            ),
+            actions: [
+              FilledButton(
+                onPressed: () {
+                  Navigator.of(context, rootNavigator: true).pop();
+                  _modelController.clear(); // Clear to prevent advancing
+                },
+                child: const Text('Entendido'),
               ),
             ],
           ),
-          actions: [
-            TextButton(
-              onPressed: () {
-                context.pop();
-                _modelController.clear(); // Clear to prevent advancing
-              },
-              child: const Text('Entendido'),
-            ),
-          ],
-        ),
-      );
-      return;
-    }
-
-    // 2. Fuzzy Match: 80% Similarity on Model
-    final similarProduct = ProductValidators.findSimilarMatch(
-      products,
-      currentModel,
-    );
-
-    if (similarProduct != null) {
-      showDialog(
-        context: context,
-        builder: (context) => AlertDialog(
-          title: const Text('Modelo Similar Detectado'),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              if (similarProduct.imageUrl != null)
-                Padding(
-                  padding: const EdgeInsets.only(bottom: 16.0),
-                  child: ClipRRect(
-                    borderRadius: BorderRadius.circular(8.0),
-                    child: CachedNetworkImage(
-                      imageUrl: similarProduct.imageUrl!,
-                      height: 100,
-                      width: 100,
-                      fit: BoxFit.cover,
-                      placeholder: (context, url) => Container(
+        );
+        result = false;
+      } else if (similarProduct != null) {
+        final shouldContinue = await CustomDialog.show<bool>(
+          context: context,
+          dialog: CustomDialog.confirmation(
+            title: 'Modelo Similar Detectado',
+            icon: Symbols.info,
+            contentWidget: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                if (similarProduct.imageUrl != null)
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 16.0),
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(8.0),
+                      child: CachedNetworkImage(
+                        imageUrl: similarProduct.imageUrl!,
                         height: 100,
                         width: 100,
-                        color: Colors.grey[200],
-                        child: const Center(child: CircularProgressIndicator()),
-                      ),
-                      errorWidget: (context, url, error) => Container(
-                        height: 100,
-                        width: 100,
-                        color: Colors.grey[200],
-                        child: const Icon(Icons.broken_image),
+                        fit: BoxFit.cover,
+                        placeholder: (context, url) => Container(
+                          height: 100,
+                          width: 100,
+                          color: Colors.grey[200],
+                          child: const Center(
+                            child: CircularProgressIndicator(),
+                          ),
+                        ),
+                        errorWidget: (context, url, error) => Container(
+                          height: 100,
+                          width: 100,
+                          color: Colors.grey[200],
+                          child: const Icon(Icons.broken_image),
+                        ),
                       ),
                     ),
                   ),
+                Text(
+                  'Ya existe un modelo similar en el inventario:\n\n'
+                  'Modelo: ${similarProduct.model}\n'
+                  'Marca: ${similarProduct.brand?.name ?? "Desconocida"}\n\n'
+                  '¿Estás seguro de continuar?',
                 ),
-              Text(
-                'Ya existe un modelo similar en el inventario:\n\n'
-                'Modelo: ${similarProduct.model}\n'
-                'Marca: ${similarProduct.brand?.name ?? "Desconocida"}\n\n'
-                '¿Estás seguro de continuar?',
+              ],
+            ),
+            actions: [
+              TextButton(
+                onPressed: () {
+                  Navigator.of(context, rootNavigator: true).pop(false);
+                  // Focus back to edit
+                  FocusScope.of(context).requestFocus(_modelFocusNode);
+                },
+                child: const Text('Corregir'),
+              ),
+              FilledButton(
+                onPressed: () {
+                  Navigator.of(context, rootNavigator: true).pop(true);
+                  // Allow proceed
+                },
+                child: const Text('Continuar'),
               ),
             ],
           ),
-          actions: [
-            TextButton(
-              onPressed: () {
-                context.pop();
-                // Focus back to edit
-                FocusScope.of(context).requestFocus(_modelFocusNode);
-              },
-              child: const Text('Corregir'),
-            ),
-            TextButton(
-              onPressed: () {
-                context.pop();
-                // Allow proceed
-              },
-              child: const Text('Continuar'),
-            ),
-          ],
-        ),
-      );
+        );
+        result = shouldContinue ?? false;
+      }
+
+      if (result) {
+        _lastValidatedModel = currentModel;
+      }
+      return result;
+    } finally {
+      _isValidatingModel = false;
     }
+  }
+
+  Future<void> _handleStep1Next() async {
+    final isValid = await _validateModel();
+    if (isValid && mounted) {
+      nextStep();
+    }
+  }
+
+  bool get _isDirty {
+    return _modelController.text.isNotEmpty ||
+        _nameController.text.isNotEmpty ||
+        _specsController.text.isNotEmpty ||
+        _selectedCategory != null ||
+        _selectedUom != null ||
+        _productImage != null;
   }
 
   void nextStep() {
@@ -224,39 +267,39 @@ class _AddProductScreenState extends ConsumerState<AddProductScreen> {
       _handleBackNavigation();
     }
   }
- 
+
   Future<bool> _confirmExit() async {
-    final result = await showDialog<bool>(
+    final colors = Theme.of(context).colorScheme;
+    final result = await CustomDialog.show<bool>(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('¿Descartar cambios?'),
-        content: const Text(
-          'Si sales ahora, perderás toda la información que has ingresado.',
-        ),
+      dialog: CustomDialog.destructive(
+        title: '¿Descartar cambios?',
+        contentText:
+            'Si sales ahora, perderás toda la información que has ingresado.',
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(context, false),
+            onPressed: () =>
+                Navigator.of(context, rootNavigator: true).pop(false),
             child: const Text('Continuar editando'),
           ),
-          TextButton(
-            onPressed: () => Navigator.pop(context, true),
-            child: Text(
-              'Descartar',
-              style: TextStyle(color: Theme.of(context).colorScheme.error),
-            ),
+          FilledButton(
+            style: FilledButton.styleFrom(backgroundColor: colors.error),
+            onPressed: () =>
+                Navigator.of(context, rootNavigator: true).pop(true),
+            child: const Text('Descartar'),
           ),
         ],
       ),
     );
     return result ?? false;
   }
- 
+
   Future<void> _handleBackNavigation() async {
-    if (_currentStep == 0) {
+    if (!_isDirty) {
       context.pop();
       return;
     }
- 
+
     final shouldPop = await _confirmExit();
     if (shouldPop && mounted) {
       context.pop();
@@ -371,8 +414,28 @@ class _AddProductScreenState extends ConsumerState<AddProductScreen> {
     final newCategory = await AddEditCategorySheet.show(context);
     if (newCategory != null && mounted) {
       setState(() {
-        _selectedCategory = newCategory; // Auto-select new category
+        _selectedCategory = newCategory;
       });
+      ref.invalidate(categoriesProvider);
+    }
+  }
+
+  void _showAddUomDialog() async {
+    final newUom = await showModalBottomSheet<Uom>(
+      context: context,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
+      backgroundColor: Theme.of(context).colorScheme.surfaceContainer,
+      builder: (context) => const AddEditUomSheet(),
+    );
+
+    if (newUom != null && mounted) {
+      setState(() {
+        _selectedUom = newUom;
+      });
+      ref.invalidate(uomsProvider);
     }
   }
 
@@ -417,7 +480,7 @@ class _AddProductScreenState extends ConsumerState<AddProductScreen> {
     }
 
     return PopScope(
-      canPop: _currentStep == 0,
+      canPop: !_isDirty,
       onPopInvokedWithResult: (didPop, result) async {
         if (didPop) return;
         final shouldPop = await _confirmExit();
@@ -426,110 +489,111 @@ class _AddProductScreenState extends ConsumerState<AddProductScreen> {
         }
       },
       child: Scaffold(
-      appBar: AppBar(
-        title: const Text('Agregar producto'),
-        centerTitle: false,
-        titleTextStyle: TextStyle(
-          color: colors.onSurface,
-          fontSize: 22,
-          fontWeight: FontWeight.w400,
-        ),
-        backgroundColor: colors.surface,
-        elevation: 0,
-        leading: IconButton(
-          icon: Icon(Icons.arrow_back, color: colors.onSurface),
-          onPressed: _handleBackNavigation,
-        ),
-        bottom: PreferredSize(
-          preferredSize: const Size.fromHeight(4),
-          child: WizardProgressBar(
-            currentStep: _currentStep + 1,
-            totalSteps: _totalSteps,
+        appBar: AppBar(
+          title: const Text('Agregar producto'),
+          centerTitle: false,
+          titleTextStyle: TextStyle(
+            color: colors.onSurface,
+            fontSize: 22,
+            fontWeight: FontWeight.w400,
+          ),
+          backgroundColor: colors.surface,
+          elevation: 0,
+          leading: IconButton(
+            icon: Icon(Icons.arrow_back, color: colors.onSurface),
+            onPressed: _handleBackNavigation,
+          ),
+          bottom: PreferredSize(
+            preferredSize: const Size.fromHeight(4),
+            child: WizardProgressBar(
+              currentStep: _currentStep + 1,
+              totalSteps: _totalSteps,
+            ),
           ),
         ),
-      ),
-      body: IndexedStack(
-        index: _currentStep,
-        children: [
-          AddProductStep1(
-            modelController: _modelController,
-            focusNode: _modelFocusNode,
-            selectedBrand: _selectedBrand,
-            brands: brandsList,
-            onBrandChanged: (val) {
-              setState(() {
-                _selectedBrand = val;
-              });
-            },
-            onNext: nextStep,
-            onCancel: _handleBackNavigation,
-            onAddBrand: (name) async {
-              try {
-                final newBrand = await ref
-                    .read(lookupRepositoryProvider)
-                    .addBrand(name);
-                ref.invalidate(brandsProvider);
+        body: IndexedStack(
+          index: _currentStep,
+          children: [
+            AddProductStep1(
+              modelController: _modelController,
+              focusNode: _modelFocusNode,
+              selectedBrand: _selectedBrand,
+              brands: brandsList,
+              onBrandChanged: (val) {
                 setState(() {
-                  _selectedBrand = newBrand;
+                  _selectedBrand = val;
                 });
-              } catch (e) {
-                if (!context.mounted) return;
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(content: Text('Error al agregar marca: $e')),
-                );
-              }
-            },
-          ),
-          AddProductStep2(
-            nameController: _nameController,
-            specsController: _specsController,
-            onNext: nextStep,
-            onBack: prevStep,
-            onCancel: _handleBackNavigation,
-            onAiAutofill: handleAiAutofill,
-            isAiAutofillEnabled: _modelController.text.trim().isNotEmpty,
-          ),
-          AddProductStep3(
-            selectedCategory: _selectedCategory,
-            categories: categoriesList,
-            onCategoryChanged: (val) {
-              setState(() {
-                _selectedCategory = val;
-              });
-            },
-            onAddCategory: _showAddCategoryDialog,
+              },
+              onNext: _handleStep1Next,
+              onCancel: _handleBackNavigation,
+              onAddBrand: (name) async {
+                try {
+                  final newBrand = await ref
+                      .read(lookupRepositoryProvider)
+                      .addBrand(name);
+                  ref.invalidate(brandsProvider);
+                  setState(() {
+                    _selectedBrand = newBrand;
+                  });
+                } catch (e) {
+                  if (!context.mounted) return;
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text('Error al agregar marca: $e')),
+                  );
+                }
+              },
+            ),
+            AddProductStep2(
+              nameController: _nameController,
+              specsController: _specsController,
+              onNext: nextStep,
+              onBack: prevStep,
+              onCancel: _handleBackNavigation,
+              onAiAutofill: handleAiAutofill,
+              isAiAutofillEnabled: _modelController.text.trim().isNotEmpty,
+            ),
+            AddProductStep3(
+              selectedCategory: _selectedCategory,
+              categories: categoriesList,
+              onCategoryChanged: (val) {
+                setState(() {
+                  _selectedCategory = val;
+                });
+              },
+              onAddCategory: _showAddCategoryDialog,
+              onAddUom: _showAddUomDialog,
 
-            selectedUom: _selectedUom,
-            uoms: uomsList,
-            onUomChanged: (val) {
-              setState(() {
-                _selectedUom = val;
-              });
-            },
+              selectedUom: _selectedUom,
+              uoms: uomsList,
+              onUomChanged: (val) {
+                setState(() {
+                  _selectedUom = val;
+                });
+              },
 
-            onNext: nextStep,
-            onBack: prevStep,
-            onCancel: _handleBackNavigation,
-          ),
-          AddProductStep4(
-            brand: _selectedBrand,
-            model: _modelController.text.trim().isEmpty
-                ? 'NO APLICA'
-                : _modelController.text.trim(),
-            name: _nameController.text,
-            specs: _specsController.text,
-            category: _selectedCategory?.name,
-            image: _productImage,
-            onPickImage: (source) => _pickImageFromSource(source),
-            onBack: prevStep,
-            onCancel: _handleBackNavigation,
-            onSave: submitProduct,
-          ),
-        ],
+              onNext: nextStep,
+              onBack: prevStep,
+              onCancel: _handleBackNavigation,
+            ),
+            AddProductStep4(
+              brand: _selectedBrand,
+              model: _modelController.text.trim().isEmpty
+                  ? 'NO APLICA'
+                  : _modelController.text.trim(),
+              name: _nameController.text,
+              specs: _specsController.text,
+              category: _selectedCategory?.name,
+              image: _productImage,
+              onPickImage: (source) => _pickImageFromSource(source),
+              onBack: prevStep,
+              onCancel: _handleBackNavigation,
+              onSave: submitProduct,
+            ),
+          ],
+        ),
       ),
-    ),
-  );
-}
+    );
+  }
 
   Future<void> _pickImageFromSource(ImageSource source) async {
     final theme = Theme.of(context);

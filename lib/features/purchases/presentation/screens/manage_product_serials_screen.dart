@@ -1,3 +1,4 @@
+import 'package:d_una_app/features/purchases/data/models/purchase_item_product.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:d_una_app/features/portfolio/data/models/product_model.dart';
@@ -7,6 +8,7 @@ import 'package:d_una_app/shared/widgets/standard_list_item.dart';
 import 'package:d_una_app/features/purchases/domain/models/models.dart';
 import 'package:d_una_app/features/purchases/presentation/providers/add_purchase_provider.dart';
 import 'package:d_una_app/features/purchases/presentation/widgets/add_product_serial_sheet.dart';
+import 'package:d_una_app/shared/widgets/custom_dialog.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:uuid/uuid.dart';
 
@@ -36,8 +38,22 @@ class _ManageProductSerialsScreenState
   @override
   void initState() {
     super.initState();
-    // Load existing serials for this product if any
-    final existingSerials = ref.read(addPurchaseProvider).serials
+    // Load existing state from provider
+    final purchaseState = ref.read(addPurchaseProvider);
+    final item = purchaseState.products.firstWhere(
+      (p) => p.productId == widget.product.id,
+      orElse: () => PurchaseItemProduct(
+        id: '',
+        productId: widget.product.id,
+        name: widget.product.name,
+        uom: '',
+        quantity: 0,
+        unitPrice: 0,
+      ),
+    );
+    _noSerials = !item.requiresSerials;
+
+    final existingSerials = purchaseState.serials
         .where((s) => s.productId == widget.product.id)
         .map((s) => s.serialNumber)
         .toList();
@@ -52,23 +68,28 @@ class _ManageProductSerialsScreenState
 
   Future<void> _onConfirm() async {
     final notifier = ref.read(addPurchaseProvider.notifier);
-    
-    // Create new serial objects
-    final now = DateTime.now();
-    final newSerials = _serials.map((s) => ProductSerial(
-      id: const Uuid().v4(),
-      purchaseItemId: widget.purchaseItemId,
-      productId: widget.product.id,
-      serialNumber: s,
-      status: 'in_stock',
-      createdAt: now,
-      updatedAt: now,
-    )).toList();
 
-    // Update provider (we need a way to set the entire list or replace)
-    // For now, I'll use a hack or suggest adding a specific method to the notifier
-    // state = state.copyWith(serials: [...otherSerials, ...newSerials]);
-    // Since I can't modify the state directly here, I'll assume I'll add a method to the notifier.
+    // Update the requiresSerials flag in the product item
+    notifier.setProductRequiresSerials(widget.product.id, !_noSerials);
+
+    // Create new serial objects (empty if _noSerials is true)
+    final now = DateTime.now();
+    final newSerials = _noSerials
+        ? <ProductSerial>[]
+        : _serials
+              .map(
+                (s) => ProductSerial(
+                  id: const Uuid().v4(),
+                  purchaseItemId: widget.purchaseItemId,
+                  productId: widget.product.id,
+                  serialNumber: s,
+                  status: 'in_stock',
+                  createdAt: now,
+                  updatedAt: now,
+                ),
+              )
+              .toList();
+
     notifier.updateSerialsForProduct(widget.product.id, newSerials);
 
     if (mounted) {
@@ -78,12 +99,12 @@ class _ManageProductSerialsScreenState
 
   Future<void> _onConfirmWithCheck() async {
     if (!_noSerials && _serials.length < widget.quantity) {
-      final proceed = await showDialog<bool>(
+      final proceed = await CustomDialog.show<bool>(
         context: context,
-        builder: (context) => AlertDialog(
-          title: const Text('Faltan seriales'),
-          content: Text(
-              'Has registrado ${_serials.length} de ${widget.quantity} seriales requeridos.\n\n¿Deseas continuar registrando solo estos seriales por ahora o quieres seguir agregando?'),
+        dialog: CustomDialog.confirmation(
+          title: 'Faltan seriales',
+          contentText:
+              'Has registrado ${_serials.length} de ${widget.quantity} seriales requeridos.\n\n¿Deseas continuar registrando más seriales o deseas hacerlo luego?',
           actions: [
             TextButton(
               onPressed: () => Navigator.of(context).pop(false),
@@ -91,7 +112,7 @@ class _ManageProductSerialsScreenState
             ),
             FilledButton(
               onPressed: () => Navigator.of(context).pop(true),
-              child: const Text('Confirmar lo registrado'),
+              child: const Text('Lo haré más tarde'),
             ),
           ],
         ),
@@ -188,7 +209,9 @@ class _ManageProductSerialsScreenState
                         color: colors.surfaceContainerHighest,
                       ),
                       clipBehavior: Clip.antiAlias,
-                      child: widget.product.imageUrl != null && widget.product.imageUrl!.isNotEmpty
+                      child:
+                          widget.product.imageUrl != null &&
+                              widget.product.imageUrl!.isNotEmpty
                           ? CachedNetworkImage(
                               imageUrl: widget.product.imageUrl!,
                               fit: BoxFit.cover,
@@ -209,23 +232,55 @@ class _ManageProductSerialsScreenState
             // No serials switch
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 24.0),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              child: Column(
                 children: [
-                  Text(
-                    'Este producto no usa seriales',
-                    style: textTheme.titleSmall?.copyWith(
-                      fontWeight: FontWeight.bold,
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        'Este producto no usa seriales',
+                        style: textTheme.titleSmall?.copyWith(
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      Switch(
+                        value: _noSerials,
+                        onChanged: (val) {
+                          setState(() {
+                            _noSerials = val;
+                          });
+                        },
+                      ),
+                    ],
+                  ),
+                  if (_noSerials) ...[
+                    const SizedBox(height: 8),
+                    Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: colors.primaryContainer.withValues(alpha: 0.3),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Row(
+                        children: [
+                          Icon(
+                            Icons.info_outline,
+                            size: 20,
+                            color: colors.primary,
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Text(
+                              'Al activar esta opción, no se registrarán seriales para este producto y podrá guardarse la compra sin ellos.',
+                              style: textTheme.bodySmall?.copyWith(
+                                color: colors.onPrimaryContainer,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
-                  ),
-                  Switch(
-                    value: _noSerials,
-                    onChanged: (val) {
-                      setState(() {
-                        _noSerials = val;
-                      });
-                    },
-                  ),
+                  ],
                 ],
               ),
             ),

@@ -37,6 +37,9 @@ class GenericListScreen<T> extends ConsumerStatefulWidget {
   /// Floating Action Button icon
   final IconData fabIcon;
 
+  /// Whether the Floating Action Button is enabled
+  final bool isFabEnabled;
+
   /// Pre-sort hook if you need to filter the main async list (e.g. by owner id)
   /// before searching and sorting is applied.
   final List<T> Function(List<T> items)? preFilter;
@@ -57,6 +60,7 @@ class GenericListScreen<T> extends ConsumerStatefulWidget {
     required this.emptyListMessage,
     this.fabLabel = 'Agregar',
     this.fabIcon = Icons.add,
+    this.isFabEnabled = true,
     this.preFilter,
   }) : assert(
          (sortOptions == null && initialSort == null && onSort == null) ||
@@ -104,6 +108,7 @@ class _GenericListScreenState<T> extends ConsumerState<GenericListScreen<T>> {
                 onPressed: widget.onAddPressed!,
                 label: widget.fabLabel,
                 icon: widget.fabIcon,
+                isEnabled: widget.isFabEnabled,
                 backgroundColor: colors.tertiaryContainer,
                 foregroundColor: colors.onTertiaryContainer,
               ),

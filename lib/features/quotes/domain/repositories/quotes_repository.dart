@@ -14,8 +14,14 @@ abstract class QuotesRepository {
   Future<void> updateFinancialParameters(FinancialParameter params);
 
   // Quote CRUD
-  Future<List<Quote>> getQuotes({String? status, String? clientId});
+  Future<List<Quote>> getQuotes({
+    String? status,
+    String? clientId,
+    bool includeArchived = false,
+  });
   Future<Quote> getQuoteById(String id);
+  Future<Quote> getQuoteWithDetails(String id);
+  Future<String?> getLastQuoteNumber();
   Future<Quote> createQuote(
     Quote quote, {
     List<QuoteItemProduct>? products,
@@ -23,5 +29,6 @@ abstract class QuotesRepository {
     List<QuoteCondition>? conditions,
   });
   Future<void> updateQuoteStatus(String id, String status);
+  Future<void> archiveQuote(String id, bool isArchived);
   Future<void> deleteQuote(String id);
 }

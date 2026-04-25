@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:d_una_app/shared/widgets/custom_action_sheet.dart';
+import 'package:d_una_app/shared/widgets/custom_dialog.dart';
 import 'package:d_una_app/shared/widgets/custom_text_field.dart';
 import 'package:d_una_app/shared/widgets/custom_button.dart';
 import 'package:d_una_app/features/quotes/data/models/commercial_condition.dart';
@@ -82,7 +83,7 @@ class _AddEditCommercialConditionSheetState
         );
       }
       ref.invalidate(commercialConditionsProvider);
-      
+
       if (mounted) {
         Navigator.pop(context);
         ScaffoldMessenger.of(context).showSnackBar(
@@ -105,28 +106,25 @@ class _AddEditCommercialConditionSheetState
   }
 
   Future<void> _delete() async {
-    final confirm = await showDialog<bool>(
+    final colors = Theme.of(context).colorScheme;
+    final confirm = await CustomDialog.show<bool>(
       context: context,
-      builder: (ctx) {
-        final colors = Theme.of(ctx).colorScheme;
-        return AlertDialog(
-          title: const Text('Eliminar condición'),
-          content: const Text(
+      dialog: CustomDialog.destructive(
+        title: 'Eliminar condición',
+        contentText:
             '¿Estás seguro de que deseas eliminar esta condición comercial?',
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancelar'),
           ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(ctx, false),
-              child: const Text('Cancelar'),
-            ),
-            FilledButton(
-              style: FilledButton.styleFrom(backgroundColor: colors.error),
-              onPressed: () => Navigator.pop(ctx, true),
-              child: const Text('Eliminar'),
-            ),
-          ],
-        );
-      },
+          FilledButton(
+            style: FilledButton.styleFrom(backgroundColor: colors.error),
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Eliminar'),
+          ),
+        ],
+      ),
     );
 
     if (confirm != true || !mounted) return;
@@ -136,11 +134,14 @@ class _AddEditCommercialConditionSheetState
           .read(lookupRepositoryProvider)
           .deleteCommercialCondition(widget.condition!.id);
       ref.invalidate(commercialConditionsProvider);
-      
+
       if (mounted) {
         Navigator.pop(context);
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(behavior: SnackBarBehavior.floating, content: Text('Condición eliminada')),
+          const SnackBar(
+            behavior: SnackBarBehavior.floating,
+            content: Text('Condición eliminada'),
+          ),
         );
       }
     } catch (e) {
@@ -194,13 +195,14 @@ class _AddEditCommercialConditionSheetState
           const SizedBox(height: 16),
           CustomTextField(
             label: 'Condición comercial',
+            helperText: 'Ej: 50% de anticipo y 50% contra entrega.',
             controller: _descriptionController,
             maxLines: 3,
             textCapitalization: TextCapitalization.sentences,
           ),
           const SizedBox(height: 16),
           Text(
-            'Agregar por defecto',
+            'Agregar por defecto en',
             style: Theme.of(context).textTheme.titleSmall?.copyWith(
               color: colors.primary,
               fontWeight: FontWeight.bold,

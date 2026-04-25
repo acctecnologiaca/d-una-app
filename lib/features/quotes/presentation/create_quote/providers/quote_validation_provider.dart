@@ -68,9 +68,9 @@ class QuoteValidationNotifier extends StateNotifier<QuoteValidationState> {
     debugPrint('🚀 Iniciando validación para ${products.length} productos...');
 
     try {
-      final supplierProductIds = products
-          .where((p) => p.supplierProductId != null)
-          .map((p) => p.supplierProductId!)
+      final supplierBranchStockIds = products
+          .where((p) => p.supplierBranchStockId != null)
+          .map((p) => p.supplierBranchStockId!)
           .toList();
 
       final productIds = products
@@ -78,10 +78,12 @@ class QuoteValidationNotifier extends StateNotifier<QuoteValidationState> {
           .map((p) => p.productId!)
           .toList();
 
-      debugPrint('   - Enviando a RPC: ${supplierProductIds.length} proveedores, ${productIds.length} propios');
+      debugPrint(
+        '   - Enviando a RPC: ${supplierBranchStockIds.length} proveedores, ${productIds.length} propios',
+      );
 
       final results = await _repository.validateQuoteItems(
-        supplierProductIds: supplierProductIds,
+        supplierBranchStockIds: supplierBranchStockIds,
         productIds: productIds,
       );
 
@@ -95,9 +97,9 @@ class QuoteValidationNotifier extends StateNotifier<QuoteValidationState> {
           continue;
         }
 
-        final dbId = product.supplierProductId ?? product.productId;
+        final dbId = product.supplierBranchStockId ?? product.productId;
         final result = results.where((r) => r.itemId == dbId).toList();
-        
+
         debugPrint('🔍 Validando: ${product.name} (DB ID: $dbId)');
 
         if (result.isEmpty) {
@@ -121,7 +123,9 @@ class QuoteValidationNotifier extends StateNotifier<QuoteValidationState> {
           status = QuoteValidationStatus.priceIncreased;
         }
 
-        debugPrint('     ✅ Status final: $status (Stock DB: ${firstResult.currentStock})');
+        debugPrint(
+          '     ✅ Status final: $status (Stock DB: ${firstResult.currentStock})',
+        );
 
         newValidationMap[product.id] = QuoteValidationItem(
           status: status,

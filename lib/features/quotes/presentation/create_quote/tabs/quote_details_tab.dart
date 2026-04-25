@@ -9,7 +9,8 @@ import '../../../../portfolio/presentation/providers/lookup_providers.dart';
 import '../../../../collaborators/domain/models/collaborator.dart';
 import '../../../../collaborators/presentation/providers/collaborators_providers.dart';
 import '../../../../../shared/widgets/custom_text_field.dart';
-import '../../../../profile/presentation/providers/profile_provider.dart';
+import '../../../../settings/presentation/widgets/add_edit_category_sheet.dart';
+import 'package:go_router/go_router.dart';
 
 class QuoteDetailsTab extends ConsumerStatefulWidget {
   const QuoteDetailsTab({super.key});
@@ -19,15 +20,20 @@ class QuoteDetailsTab extends ConsumerStatefulWidget {
 }
 
 class _QuoteDetailsTabState extends ConsumerState<QuoteDetailsTab> {
+  late final TextEditingController _dateController;
   late final TextEditingController _validityQuantityController;
   late final TextEditingController _labelController;
   late final TextEditingController _notesController;
   String _validityPeriod = 'Días';
+  final DateFormat _dateFormat = DateFormat('dd/MM/yyyy');
 
   @override
   void initState() {
     super.initState();
     final quoteState = ref.read(createQuoteProvider);
+    _dateController = TextEditingController(
+      text: _dateFormat.format(quoteState.dateIssued),
+    );
     _validityQuantityController = TextEditingController(
       text: quoteState.validityDays.toString(),
     );
@@ -37,6 +43,7 @@ class _QuoteDetailsTabState extends ConsumerState<QuoteDetailsTab> {
 
   @override
   void dispose() {
+    _dateController.dispose();
     _validityQuantityController.dispose();
     _labelController.dispose();
     _notesController.dispose();
@@ -48,7 +55,6 @@ class _QuoteDetailsTabState extends ConsumerState<QuoteDetailsTab> {
     final state = ref.watch(createQuoteProvider);
     final categoriesAsync = ref.watch(categoriesProvider);
     final collaboratorsAsync = ref.watch(collaboratorsProvider);
-    final dateFormat = DateFormat('dd/MM/yyyy');
 
     return SingleChildScrollView(
       padding: const EdgeInsets.all(16),
@@ -57,10 +63,8 @@ class _QuoteDetailsTabState extends ConsumerState<QuoteDetailsTab> {
         children: [
           // Fecha de la cotización
           CustomTextField(
-            label: 'Fecha de la cotización*',
-            controller: TextEditingController(
-              text: dateFormat.format(state.dateIssued),
-            ),
+            label: 'Fecha de emisión*',
+            controller: _dateController,
             readOnly: true,
             onTap: () async {
               final date = await showDatePicker(
@@ -70,6 +74,7 @@ class _QuoteDetailsTabState extends ConsumerState<QuoteDetailsTab> {
                 lastDate: DateTime(2100),
               );
               if (date != null) {
+                _dateController.text = _dateFormat.format(date);
                 ref
                     .read(createQuoteProvider.notifier)
                     .setDetails(dateIssued: date);
@@ -149,8 +154,17 @@ class _QuoteDetailsTabState extends ConsumerState<QuoteDetailsTab> {
                 type: '',
               ),
               itemLabelBuilder: (c) => c.name,
-              onAddPressed: () {
-                // TODO: add category logic
+              onAddPressed: () async {
+                final newCategory = await AddEditCategorySheet.show(context);
+                if (newCategory != null && mounted) {
+                  ref
+                      .read(createQuoteProvider.notifier)
+                      .setDetails(
+                        categoryId: newCategory.id,
+                        categoryName: newCategory.name,
+                      );
+                  ref.invalidate(categoriesProvider);
+                }
               },
               onChanged: (c) {
                 if (c != null && c.id != '___ADD___') {
@@ -167,61 +181,25 @@ class _QuoteDetailsTabState extends ConsumerState<QuoteDetailsTab> {
           // Asesor responsable
           collaboratorsAsync.when(
             data: (fetchedCollaborators) {
-              final userProfile = ref.watch(userProfileProvider).value;
-
-              // Create a list combining the user and the fetched collaborators
-              final List<Collaborator> allCollaborators = [];
-              Collaborator? userCollaborator;
-
-              if (userProfile != null) {
-                final firstName = userProfile.firstName ?? '';
-                final lastName = userProfile.lastName ?? '';
-                final fullName = [
-                  firstName,
-                  lastName,
-                ].where((s) => s.isNotEmpty).join(' ').trim();
-
-                if (fullName.isNotEmpty) {
-                  userCollaborator = Collaborator(
-                    id: userProfile.id,
-                    userId: userProfile.id,
-                    fullName: fullName,
-                    isActive: true,
-                  );
-                  allCollaborators.add(userCollaborator);
-                }
-              }
-
-              allCollaborators.addAll(fetchedCollaborators);
-
               final defaultCollab =
-                  userCollaborator ?? allCollaborators.firstOrNull;
+                  fetchedCollaborators
+                      .where((c) => c.isUserRecord)
+                      .firstOrNull ??
+                  fetchedCollaborators.firstOrNull;
 
-              final selectedCollab = state.advisorId != null
-                  ? allCollaborators
-                        .where((c) => c.id == state.advisorId)
-                        .firstOrNull
-                  : defaultCollab;
-
-              // Preselect default if not set
-              if (state.advisorId == null && selectedCollab != null) {
-                WidgetsBinding.instance.addPostFrameCallback((_) {
-                  ref
-                      .read(createQuoteProvider.notifier)
-                      .setDetails(
-                        advisorId: selectedCollab.id,
-                        advisorName: selectedCollab.fullName,
-                      );
-                });
-              }
+              final selectedCollab =
+                  fetchedCollaborators
+                      .where((c) => c.id == state.advisorId)
+                      .firstOrNull ??
+                  defaultCollab;
 
               return CustomDropdown<Collaborator>(
                 value: selectedCollab,
-                items: allCollaborators,
-                label: 'Asesor responsable',
+                items: fetchedCollaborators,
+                label: 'Asesor responsable (colaborador)',
                 searchable: true,
                 showAddOption: true,
-                addOptionLabel: 'Agregar asesor',
+                addOptionLabel: 'Agregar colaborador',
                 addOptionValue: Collaborator(
                   id: '___ADD___',
                   userId: '',
@@ -229,8 +207,19 @@ class _QuoteDetailsTabState extends ConsumerState<QuoteDetailsTab> {
                   isActive: true,
                 ),
                 itemLabelBuilder: (c) => c.fullName,
-                onAddPressed: () {
-                  // TODO: add collaborator logic
+                onAddPressed: () async {
+                  final newCollab = await context.push<Collaborator?>(
+                    '/collaborators/add',
+                  );
+                  if (newCollab != null && mounted) {
+                    ref
+                        .read(createQuoteProvider.notifier)
+                        .setDetails(
+                          advisorId: newCollab.id,
+                          advisorName: newCollab.fullName,
+                        );
+                    ref.invalidate(collaboratorsProvider);
+                  }
                 },
                 onChanged: (c) {
                   if (c != null && c.id != '___ADD___') {
@@ -249,20 +238,30 @@ class _QuoteDetailsTabState extends ConsumerState<QuoteDetailsTab> {
           CustomTextField(
             label: 'Etiqueta*',
             controller: _labelController,
-            helperText: 'Frase corta que identifique la cotización',
-            onChanged: (val) =>
-                ref.read(createQuoteProvider.notifier).setDetails(label: val),
+            helperText:
+                'Descripción corta que identifique a la cotización (Máx. 35 caracteres).',
+            onChanged: (val) {
+              if (val.length > 35) {
+                _labelController.text = val.substring(0, 35);
+              }
+              ref.read(createQuoteProvider.notifier).setDetails(label: val);
+            },
           ),
           const SizedBox(height: 16),
           // Notas adicionales
           CustomTextField(
             label: 'Notas adicionales',
             controller: _notesController,
-            hintText: 'Quedarán reflejadas en la cotización...',
+            helperText:
+                'Estas notas quedarán reflejadas en el PDF de la cotización (Máx. 250 caracteres).',
             maxLines: 5,
             minLines: 3,
-            onChanged: (val) =>
-                ref.read(createQuoteProvider.notifier).setDetails(notes: val),
+            onChanged: (val) {
+              if (val.length > 250) {
+                _notesController.text = val.substring(0, 250);
+              }
+              ref.read(createQuoteProvider.notifier).setDetails(notes: val);
+            },
           ),
           const SizedBox(height: 32),
         ],

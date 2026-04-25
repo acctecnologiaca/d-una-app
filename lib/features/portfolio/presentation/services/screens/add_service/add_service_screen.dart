@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../../../../../shared/widgets/wizard_progress_bar.dart';
+import 'package:d_una_app/shared/widgets/custom_dialog.dart';
 import '../../../../data/models/service_model.dart';
 import '../../../../data/models/service_rate_model.dart';
 import '../../../../data/models/category_model.dart';
@@ -12,6 +13,8 @@ import 'steps/add_service_step2.dart';
 import 'steps/add_service_step3.dart';
 import 'steps/add_service_step4.dart';
 import 'steps/add_service_step5.dart';
+import '../../../../../settings/presentation/widgets/add_edit_service_rate_sheet.dart';
+import '../../../../../settings/presentation/widgets/add_edit_category_sheet.dart';
 
 class AddServiceScreen extends ConsumerStatefulWidget {
   final ServiceModel? serviceToEdit;
@@ -64,9 +67,9 @@ class _AddServiceScreenState extends ConsumerState<AddServiceScreen> {
     // Step 4 Init
     _hasWarranty = service?.hasWarranty ?? false;
     _warrantyTimeController = TextEditingController(
-      text: service?.warrantyTime?.toString() ?? '',
+      text: service?.warrantyTime?.toString() ?? '7',
     );
-    _selectedWarrantyPeriod = service?.warrantyUnit;
+    _selectedWarrantyPeriod = service?.warrantyUnit ?? 'Días';
   }
 
   @override
@@ -92,6 +95,15 @@ class _AddServiceScreenState extends ConsumerState<AddServiceScreen> {
     }
   }
 
+  bool get _isDirty {
+    return _nameController.text.isNotEmpty ||
+        _descriptionController.text.isNotEmpty ||
+        _priceController.text.isNotEmpty ||
+        _selectedCategory != null ||
+        _selectedRateUnit != null ||
+        _hasWarranty != false;
+  }
+
   void prevStep() {
     if (_currentStep > 0) {
       setState(() {
@@ -103,6 +115,11 @@ class _AddServiceScreenState extends ConsumerState<AddServiceScreen> {
   }
 
   Future<void> _handleExit() async {
+    if (!_isDirty) {
+      context.pop();
+      return;
+    }
+
     final confirmed = await _confirmExit();
     if (confirmed == true && mounted) {
       context.pop();
@@ -110,24 +127,24 @@ class _AddServiceScreenState extends ConsumerState<AddServiceScreen> {
   }
 
   Future<bool> _confirmExit() async {
-    final result = await showDialog<bool>(
+    final colors = Theme.of(context).colorScheme;
+    final result = await CustomDialog.show<bool>(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('¿Descartar cambios?'),
-        content: const Text(
-          'Si sales ahora, perderás toda la información que has ingresado.',
-        ),
+      dialog: CustomDialog.destructive(
+        title: '¿Descartar cambios?',
+        contentText:
+            'Si sales ahora, perderás toda la información que has ingresado.',
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(context, false),
+            onPressed: () =>
+                Navigator.of(context, rootNavigator: true).pop(false),
             child: const Text('Continuar editando'),
           ),
-          TextButton(
-            onPressed: () => Navigator.pop(context, true),
-            child: Text(
-              'Descartar',
-              style: TextStyle(color: Theme.of(context).colorScheme.error),
-            ),
+          FilledButton(
+            style: FilledButton.styleFrom(backgroundColor: colors.error),
+            onPressed: () =>
+                Navigator.of(context, rootNavigator: true).pop(true),
+            child: const Text('Descartar'),
           ),
         ],
       ),
@@ -180,122 +197,37 @@ class _AddServiceScreenState extends ConsumerState<AddServiceScreen> {
     }
   }
 
-  Future<void> _addNewCategory(String name) async {
-    try {
-      final newCategory = await ref
-          .read(lookupRepositoryProvider)
-          .addCategory(name);
-      ref.invalidate(categoriesProvider); // Refresh the list
+  void _showQuickAddRateSheet() async {
+    final newRate = await showModalBottomSheet<ServiceRate>(
+      context: context,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
+      backgroundColor: Theme.of(context).colorScheme.surfaceContainer,
+      builder: (context) => const AddEditServiceRateSheet(),
+    );
+
+    if (newRate != null && mounted) {
       setState(() {
-        _selectedCategory = newCategory; // Auto-select new category
+        _selectedRateUnit = newRate;
       });
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error al agregar categoría: $e')),
-        );
-      }
+      ref.invalidate(serviceRatesProvider);
     }
   }
 
-  Future<void> _addNewRateUnit(String name, String symbol) async {
-    try {
-      final newRate = await ref
-          .read(lookupRepositoryProvider)
-          .addServiceRate(name, symbol);
-      ref.invalidate(serviceRatesProvider); // Refresh the list
+  void _showQuickAddCategorySheet() async {
+    final newCategory = await AddEditCategorySheet.show(context);
+
+    if (newCategory != null && mounted) {
       setState(() {
-        _selectedRateUnit = newRate; // Auto-select new unit
+        _selectedCategory = newCategory;
       });
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('Error al agregar tarifa: $e')));
-      }
+      ref.invalidate(categoriesProvider);
     }
   }
 
-  void _showAddDialog({
-    required String title,
-    required String label,
-    required Function(String) onAdd,
-  }) {
-    final textController = TextEditingController();
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Text(title),
-        content: TextField(
-          controller: textController,
-          decoration: InputDecoration(labelText: label),
-          textCapitalization: TextCapitalization.sentences,
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cancelar'),
-          ),
-          FilledButton(
-            onPressed: () {
-              final val = textController.text.trim();
-              if (val.isNotEmpty) {
-                onAdd(val);
-                Navigator.pop(context);
-              }
-            },
-            child: const Text('Agregar'),
-          ),
-        ],
-      ),
-    );
-  }
-
-  void _showAddRateDialog({
-    required Function(String name, String symbol) onAdd,
-  }) {
-    final nameController = TextEditingController();
-    final symbolController = TextEditingController();
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Agregar nueva tarifa'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            TextField(
-              controller: nameController,
-              decoration: const InputDecoration(labelText: 'Nombre (Ej. Hora)'),
-              textCapitalization: TextCapitalization.sentences,
-            ),
-            const SizedBox(height: 16),
-            TextField(
-              controller: symbolController,
-              decoration: const InputDecoration(labelText: 'Símbolo (Ej. h)'),
-              textCapitalization: TextCapitalization.none,
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cancelar'),
-          ),
-          FilledButton(
-            onPressed: () {
-              final name = nameController.text.trim();
-              final symbol = symbolController.text.trim();
-              if (name.isNotEmpty && symbol.isNotEmpty) {
-                onAdd(name, symbol);
-                Navigator.pop(context);
-              }
-            },
-            child: const Text('Agregar'),
-          ),
-        ],
-      ),
-    );
-  }
+  // --- Fin Helpers ---
 
   @override
   Widget build(BuildContext context) {
@@ -346,7 +278,7 @@ class _AddServiceScreenState extends ConsumerState<AddServiceScreen> {
           elevation: 0,
           leading: IconButton(
             icon: Icon(Icons.arrow_back, color: colors.onSurface),
-            onPressed: () => prevStep(),
+            onPressed: _handleExit,
           ),
           bottom: PreferredSize(
             preferredSize: const Size.fromHeight(4),
@@ -383,7 +315,7 @@ class _AddServiceScreenState extends ConsumerState<AddServiceScreen> {
                   _selectedRateUnit = val;
                 });
               },
-              onAddRateUnit: () => _showAddRateDialog(onAdd: _addNewRateUnit),
+              onAddRateUnit: _showQuickAddRateSheet,
               onNext: nextStep,
               onBack: prevStep,
               onCancel: _handleExit,
@@ -398,11 +330,7 @@ class _AddServiceScreenState extends ConsumerState<AddServiceScreen> {
                   _selectedCategory = val;
                 });
               },
-              onAddCategory: () => _showAddDialog(
-                title: 'Agregar nueva categoría',
-                label: 'Nombre de la categoría',
-                onAdd: _addNewCategory,
-              ),
+              onAddCategory: _showQuickAddCategorySheet,
               onNext: nextStep,
               onBack: prevStep,
               onCancel: _handleExit,

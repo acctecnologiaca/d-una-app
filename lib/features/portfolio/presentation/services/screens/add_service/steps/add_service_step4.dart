@@ -95,7 +95,7 @@ class _AddServiceStep4State extends State<AddServiceStep4> {
                           flex: 2,
                           child: CustomTextField(
                             label: 'Cantidad*',
-                            hintText: '15',
+                            hintText: '7',
                             controller: widget.timeController,
                             keyboardType: TextInputType.number,
                             validator: (val) {

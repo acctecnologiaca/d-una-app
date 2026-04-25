@@ -105,6 +105,7 @@ class InventoryActionSheet {
       context,
       averageCost: costPrice,
       productName: product.name,
+      uom: product.uom ?? 'ud.',
       brand: product.brand?.name,
       model: product.model,
     );

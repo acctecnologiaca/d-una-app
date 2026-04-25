@@ -21,7 +21,7 @@ class _CollaboratorsScreenState extends ConsumerState<CollaboratorsScreen> {
   Widget build(BuildContext context) {
     final colors = Theme.of(context).colorScheme;
     final textTheme = Theme.of(context).textTheme;
-    final collaboratorsAsync = ref.watch(collaboratorsProvider);
+    final collaboratorsAsync = ref.watch(externalCollaboratorsProvider);
 
     return GenericListScreen<Collaborator>(
       title: 'Colaboradores',

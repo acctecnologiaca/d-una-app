@@ -5,6 +5,7 @@ import 'package:d_una_app/features/clients/data/models/client_model.dart';
 import 'package:d_una_app/features/clients/presentation/providers/clients_provider.dart';
 import 'package:d_una_app/shared/widgets/custom_text_field.dart';
 import 'package:d_una_app/shared/widgets/form_bottom_bar.dart';
+import 'package:d_una_app/shared/widgets/custom_dialog.dart';
 import 'package:csc_picker_plus/csc_picker_plus.dart';
 
 class EditClientCompanyScreen extends ConsumerStatefulWidget {
@@ -179,24 +180,24 @@ class _EditClientCompanyScreenState
   }
 
   Future<bool?> _showDiscardDialog() async {
-    return showDialog<bool>(
+    final colors = Theme.of(context).colorScheme;
+    return CustomDialog.show<bool>(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('¿Descartar cambios?'),
-        content: const Text(
-          'Si sales ahora, perderás toda la información que has ingresado.',
-        ),
+      dialog: CustomDialog.destructive(
+        title: '¿Descartar cambios?',
+        contentText:
+            'Si sales ahora, perderás toda la información que has ingresado.',
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(context, false),
+            onPressed: () =>
+                Navigator.of(context, rootNavigator: true).pop(false),
             child: const Text('Continuar editando'),
           ),
-          TextButton(
-            onPressed: () => Navigator.pop(context, true),
-            child: Text(
-              'Descartar',
-              style: TextStyle(color: Theme.of(context).colorScheme.error),
-            ),
+          FilledButton(
+            style: FilledButton.styleFrom(backgroundColor: colors.error),
+            onPressed: () =>
+                Navigator.of(context, rootNavigator: true).pop(true),
+            child: const Text('Descartar'),
           ),
         ],
       ),

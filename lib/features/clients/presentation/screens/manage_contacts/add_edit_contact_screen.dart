@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:d_una_app/features/clients/data/models/client_model.dart';
 import 'package:d_una_app/features/clients/presentation/providers/clients_provider.dart';
+import 'package:d_una_app/shared/widgets/custom_dialog.dart';
 import 'package:d_una_app/features/clients/presentation/widgets/contact_form.dart';
 
 class AddEditContactScreen extends ConsumerStatefulWidget {
@@ -103,9 +104,7 @@ class _AddEditContactScreenState extends ConsumerState<AddEditContactScreen> {
 
     _emailController = TextEditingController(text: contact?.email ?? '');
     _roleController = TextEditingController(text: contact?.role ?? '');
-    _departmentController = TextEditingController(
-      text: contact?.department ?? 'Tecnología de la Información',
-    );
+    _departmentController = TextEditingController(text: contact?.department);
 
     // Primary Logic
     if (_isEditing) {
@@ -221,24 +220,24 @@ class _AddEditContactScreenState extends ConsumerState<AddEditContactScreen> {
   }
 
   Future<bool?> _showDiscardDialog() async {
-    return showDialog<bool>(
+    final colors = Theme.of(context).colorScheme;
+    return CustomDialog.show<bool>(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('¿Descartar cambios?'),
-        content: const Text(
-          'Si sales ahora, perderás toda la información que has ingresado.',
-        ),
+      dialog: CustomDialog.destructive(
+        title: '¿Descartar cambios?',
+        contentText:
+            'Si sales ahora, perderás toda la información que has ingresado.',
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(context, false),
+            onPressed: () =>
+                Navigator.of(context, rootNavigator: true).pop(false),
             child: const Text('Continuar editando'),
           ),
-          TextButton(
-            onPressed: () => Navigator.pop(context, true),
-            child: Text(
-              'Descartar',
-              style: TextStyle(color: Theme.of(context).colorScheme.error),
-            ),
+          FilledButton(
+            style: FilledButton.styleFrom(backgroundColor: colors.error),
+            onPressed: () =>
+                Navigator.of(context, rootNavigator: true).pop(true),
+            child: const Text('Descartar'),
           ),
         ],
       ),

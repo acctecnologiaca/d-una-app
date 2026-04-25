@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:d_una_app/shared/widgets/custom_action_sheet.dart';
+import 'package:d_una_app/shared/widgets/custom_dialog.dart';
 import 'package:d_una_app/shared/widgets/custom_text_field.dart';
 import 'package:d_una_app/shared/widgets/custom_button.dart';
 import 'package:d_una_app/features/portfolio/data/models/brand_model.dart';
@@ -100,21 +101,19 @@ class _AddEditBrandSheetState extends ConsumerState<AddEditBrandSheet> {
 
     if (similarBrand != null) {
       if (!mounted) return;
-      final shouldContinue = await showDialog<bool>(
+      final shouldContinue = await CustomDialog.show<bool>(
         context: context,
-        builder: (ctx) => AlertDialog(
-          title: const Text('Marca similar detectada'),
-          content: Text(
-            'Ya existe una marca similar: "${similarBrand.name}".\n\n'
-            '¿Estás seguro de que deseas agregar "$name"?',
-          ),
+        dialog: CustomDialog.confirmation(
+          title: 'Marca similar detectada',
+          contentText:
+              'Ya existe una marca similar: "${similarBrand.name}".\n\n¿Estás seguro de que deseas agregar "$name"?',
           actions: [
             TextButton(
-              onPressed: () => Navigator.pop(ctx, false),
+              onPressed: () => Navigator.pop(context, false),
               child: const Text('Corregir'),
             ),
             FilledButton(
-              onPressed: () => Navigator.pop(ctx, true),
+              onPressed: () => Navigator.pop(context, true),
               child: const Text('Continuar'),
             ),
           ],
@@ -169,21 +168,20 @@ class _AddEditBrandSheetState extends ConsumerState<AddEditBrandSheet> {
 
   Future<void> _delete() async {
     final colors = Theme.of(context).colorScheme;
-    final confirm = await showDialog<bool>(
+    final confirm = await CustomDialog.show<bool>(
       context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Eliminar marca'),
-        content: Text(
-          '¿Estás seguro de que deseas eliminar la marca "${widget.brand!.name}"?',
-        ),
+      dialog: CustomDialog.destructive(
+        title: 'Eliminar marca',
+        contentText:
+            '¿Estás seguro de que deseas eliminar la marca "${widget.brand!.name}"?',
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(ctx, false),
+            onPressed: () => Navigator.pop(context, false),
             child: const Text('Cancelar'),
           ),
           FilledButton(
             style: FilledButton.styleFrom(backgroundColor: colors.error),
-            onPressed: () => Navigator.pop(ctx, true),
+            onPressed: () => Navigator.pop(context, true),
             child: const Text('Eliminar'),
           ),
         ],

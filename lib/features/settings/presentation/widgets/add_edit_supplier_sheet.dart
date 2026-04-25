@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:d_una_app/shared/widgets/custom_action_sheet.dart';
+import 'package:d_una_app/shared/widgets/custom_dialog.dart';
 import 'package:d_una_app/shared/widgets/custom_text_field.dart';
 import 'package:d_una_app/shared/widgets/custom_button.dart';
 import 'package:d_una_app/features/portfolio/domain/models/unaffiliated_supplier_model.dart';
@@ -13,7 +14,8 @@ class AddEditSupplierSheet extends ConsumerStatefulWidget {
   const AddEditSupplierSheet({super.key, this.supplier});
 
   @override
-  ConsumerState<AddEditSupplierSheet> createState() => _AddEditSupplierSheetState();
+  ConsumerState<AddEditSupplierSheet> createState() =>
+      _AddEditSupplierSheetState();
 }
 
 class _AddEditSupplierSheetState extends ConsumerState<AddEditSupplierSheet> {
@@ -22,7 +24,7 @@ class _AddEditSupplierSheetState extends ConsumerState<AddEditSupplierSheet> {
   late TextEditingController _nameController;
   late TextEditingController _phoneController;
   late TextEditingController _emailController;
-  
+
   bool _isLoading = false;
   bool _hasChanged = false;
 
@@ -31,11 +33,19 @@ class _AddEditSupplierSheetState extends ConsumerState<AddEditSupplierSheet> {
   @override
   void initState() {
     super.initState();
-    _legalNameController = TextEditingController(text: widget.supplier?.legalName ?? '');
-    _taxIdController = TextEditingController(text: widget.supplier?.taxId ?? '');
+    _legalNameController = TextEditingController(
+      text: widget.supplier?.legalName ?? '',
+    );
+    _taxIdController = TextEditingController(
+      text: widget.supplier?.taxId ?? '',
+    );
     _nameController = TextEditingController(text: widget.supplier?.name ?? '');
-    _phoneController = TextEditingController(text: widget.supplier?.phone ?? '');
-    _emailController = TextEditingController(text: widget.supplier?.email ?? '');
+    _phoneController = TextEditingController(
+      text: widget.supplier?.phone ?? '',
+    );
+    _emailController = TextEditingController(
+      text: widget.supplier?.email ?? '',
+    );
 
     _legalNameController.addListener(_updateHasChanged);
     _taxIdController.addListener(_updateHasChanged);
@@ -57,7 +67,8 @@ class _AddEditSupplierSheetState extends ConsumerState<AddEditSupplierSheet> {
   void _updateHasChanged() {
     if (!isEditing) return;
     final supplier = widget.supplier!;
-    final isChanged = _legalNameController.text.trim() != (supplier.legalName ?? '') ||
+    final isChanged =
+        _legalNameController.text.trim() != (supplier.legalName ?? '') ||
         _taxIdController.text.trim() != (supplier.taxId ?? '') ||
         _nameController.text.trim() != supplier.name ||
         _phoneController.text.trim() != (supplier.phone ?? '') ||
@@ -71,11 +82,16 @@ class _AddEditSupplierSheetState extends ConsumerState<AddEditSupplierSheet> {
   Future<void> _save() async {
     final legalName = _legalNameController.text.trim();
     final taxId = _taxIdController.text.trim();
-    final commercialName = _nameController.text.trim().isEmpty ? legalName : _nameController.text.trim();
+    final commercialName = _nameController.text.trim().isEmpty
+        ? legalName
+        : _nameController.text.trim();
 
     if (legalName.isEmpty || taxId.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(behavior: SnackBarBehavior.floating, content: Text('La Razón Social y el RIF son obligatorios.')),
+        const SnackBar(
+          behavior: SnackBarBehavior.floating,
+          content: Text('La Razón Social y el RIF son obligatorios.'),
+        ),
       );
       return;
     }
@@ -91,16 +107,24 @@ class _AddEditSupplierSheetState extends ConsumerState<AddEditSupplierSheet> {
           id: widget.supplier!.id,
           name: commercialName,
           legalName: legalName,
-          phone: _phoneController.text.trim().isEmpty ? null : _phoneController.text.trim(),
-          email: _emailController.text.trim().isEmpty ? null : _emailController.text.trim(),
+          phone: _phoneController.text.trim().isEmpty
+              ? null
+              : _phoneController.text.trim(),
+          email: _emailController.text.trim().isEmpty
+              ? null
+              : _emailController.text.trim(),
           taxId: taxId,
         );
         result = UnaffiliatedSupplier(
           id: widget.supplier!.id,
           name: commercialName,
           legalName: legalName,
-          phone: _phoneController.text.trim().isEmpty ? null : _phoneController.text.trim(),
-          email: _emailController.text.trim().isEmpty ? null : _emailController.text.trim(),
+          phone: _phoneController.text.trim().isEmpty
+              ? null
+              : _phoneController.text.trim(),
+          email: _emailController.text.trim().isEmpty
+              ? null
+              : _emailController.text.trim(),
           taxId: taxId,
           userId: widget.supplier!.userId,
           isVerified: widget.supplier!.isVerified,
@@ -109,15 +133,19 @@ class _AddEditSupplierSheetState extends ConsumerState<AddEditSupplierSheet> {
         result = await repo.addUnaffiliatedSupplier(
           name: commercialName,
           legalName: legalName,
-          phone: _phoneController.text.trim().isEmpty ? null : _phoneController.text.trim(),
-          email: _emailController.text.trim().isEmpty ? null : _emailController.text.trim(),
+          phone: _phoneController.text.trim().isEmpty
+              ? null
+              : _phoneController.text.trim(),
+          email: _emailController.text.trim().isEmpty
+              ? null
+              : _emailController.text.trim(),
           taxId: taxId,
         );
       }
-      
+
       ref.invalidate(unaffiliatedSuppliersProvider);
       ref.invalidate(allSuppliersProvider);
-      
+
       if (mounted) {
         Navigator.pop(context, result);
         ScaffoldMessenger.of(context).showSnackBar(
@@ -141,21 +169,20 @@ class _AddEditSupplierSheetState extends ConsumerState<AddEditSupplierSheet> {
 
   Future<void> _delete() async {
     final colors = Theme.of(context).colorScheme;
-    final confirm = await showDialog<bool>(
+    final confirm = await CustomDialog.show<bool>(
       context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Eliminar proveedor'),
-        content: Text(
-          '¿Estás seguro de que deseas eliminar "${widget.supplier!.legalName ?? widget.supplier!.name}"?',
-        ),
+      dialog: CustomDialog.destructive(
+        title: 'Eliminar proveedor',
+        contentText:
+            '¿Estás seguro de que deseas eliminar "${widget.supplier!.legalName ?? widget.supplier!.name}"?',
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(ctx, false),
+            onPressed: () => Navigator.pop(context, false),
             child: const Text('Cancelar'),
           ),
           FilledButton(
             style: FilledButton.styleFrom(backgroundColor: colors.error),
-            onPressed: () => Navigator.pop(ctx, true),
+            onPressed: () => Navigator.pop(context, true),
             child: const Text('Eliminar'),
           ),
         ],
@@ -165,13 +192,20 @@ class _AddEditSupplierSheetState extends ConsumerState<AddEditSupplierSheet> {
     if (confirm != true || !mounted) return;
 
     try {
-      await ref.read(lookupRepositoryProvider).deleteUnaffiliatedSupplier(widget.supplier!.id);
+      await ref
+          .read(lookupRepositoryProvider)
+          .deleteUnaffiliatedSupplier(widget.supplier!.id);
       ref.invalidate(unaffiliatedSuppliersProvider);
-      
+
       if (mounted) {
         Navigator.pop(context);
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(behavior: SnackBarBehavior.floating, content: Text('Proveedor "${widget.supplier!.legalName ?? widget.supplier!.name}" eliminado')),
+          SnackBar(
+            behavior: SnackBarBehavior.floating,
+            content: Text(
+              'Proveedor "${widget.supplier!.legalName ?? widget.supplier!.name}" eliminado',
+            ),
+          ),
         );
       }
     } catch (e) {
@@ -190,11 +224,16 @@ class _AddEditSupplierSheetState extends ConsumerState<AddEditSupplierSheet> {
       Padding(
         padding: const EdgeInsets.symmetric(horizontal: 16.0),
         child: Row(
-          mainAxisAlignment: isEditing ? MainAxisAlignment.start : MainAxisAlignment.end,
+          mainAxisAlignment: isEditing
+              ? MainAxisAlignment.start
+              : MainAxisAlignment.end,
           children: [
             if (isEditing)
               IconButton(
-                icon: Icon(Icons.delete_outline, color: colors.onSurfaceVariant),
+                icon: Icon(
+                  Icons.delete_outline,
+                  color: colors.onSurfaceVariant,
+                ),
                 onPressed: _delete,
               ),
             if (isEditing) const Spacer(),

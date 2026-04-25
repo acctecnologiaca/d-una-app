@@ -8,6 +8,7 @@ import '../providers/profile_provider.dart';
 import '../../domain/models/user_profile.dart'; // Import user_profile
 import '../../domain/models/verification_document.dart'; // Import verification_document
 import '../../../../shared/widgets/custom_text_field.dart';
+import '../../../../shared/widgets/custom_dialog.dart';
 import '../../../../shared/widgets/form_bottom_bar.dart';
 
 class VerificationScreen extends ConsumerStatefulWidget {
@@ -178,27 +179,31 @@ class _VerificationScreenState extends ConsumerState<VerificationScreen> {
     UserProfile currentProfile,
     List<VerificationDocument> uploadedDocs,
   ) async {
+    final colors = Theme.of(context).colorScheme;
     // Check if verification status is active (verified or pending)
     final isVerifiedOrPending =
         currentProfile.verificationStatus == 'verified' ||
         currentProfile.verificationStatus == 'pending';
 
     if (isVerifiedOrPending) {
-      final confirmed = await showDialog<bool>(
+      final confirmed = await CustomDialog.show<bool>(
         context: context,
-        builder: (context) => AlertDialog(
-          title: const Text('Modificar información'),
-          content: const Text(
-            'Al modificar tus documentos o datos, perderás tu estatus de verificación actual y tu perfil pasará nuevamente a revisión. ¿Deseas continuar?',
-          ),
+        dialog: CustomDialog.destructive(
+          title: 'Modificar información',
+          contentText:
+              'Al modificar tus documentos o datos, perderás tu estatus de verificación actual y tu perfil pasará nuevamente a revisión. ¿Deseas continuar?',
           actions: [
             TextButton(
               onPressed: () => context.pop(false),
               child: const Text('Cancelar'),
             ),
-            TextButton(
+            FilledButton(
               onPressed: () => context.pop(true),
-              child: const Text('Aceptar', style: TextStyle(color: Colors.red)),
+              style: FilledButton.styleFrom(
+                backgroundColor: colors.error,
+                foregroundColor: colors.onError,
+              ),
+              child: const Text('Aceptar'),
             ),
           ],
         ),

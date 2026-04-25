@@ -9,7 +9,8 @@ class QuoteProductSource {
   final double maxStock;
   final String? tradeType;
   final bool isAccessible;
-  final String? uomIconName;
+  final String uomIconName;
+  final String? externalProviderName;
 
   // Mutable UI state for draft selection
   double selectedQuantity;
@@ -23,7 +24,8 @@ class QuoteProductSource {
     required this.maxStock,
     this.tradeType,
     this.isAccessible = true,
-    this.uomIconName,
+    required this.uomIconName,
+    this.externalProviderName,
     this.selectedQuantity = 0.0,
   });
 
@@ -39,7 +41,8 @@ class QuoteProductSource {
       maxStock: (map['stock'] as num?)?.toDouble() ?? 0.0,
       tradeType: map['trade_type'],
       isAccessible: map['is_accessible'] as bool? ?? false,
-      uomIconName: map['uom_icon_name'],
+      uomIconName: map['uom_icon_name'] ?? '',
+      externalProviderName: map['external_provider_name'],
     );
   }
 
@@ -56,11 +59,16 @@ class QuoteProductSource {
       maxStock: 999999.0,
       tradeType: null,
       isAccessible: true,
-      uomIconName: null,
+      uomIconName: '',
     );
   }
 
-  QuoteProductSource copyWith({double? selectedQuantity, double? price}) {
+  QuoteProductSource copyWith({
+    double? selectedQuantity,
+    bool? isAccessible,
+    String? externalProviderName,
+    double? price,
+  }) {
     return QuoteProductSource(
       id: id,
       sourceType: sourceType,
@@ -69,8 +77,9 @@ class QuoteProductSource {
       price: price ?? this.price,
       maxStock: maxStock,
       tradeType: tradeType,
-      isAccessible: isAccessible,
+      isAccessible: isAccessible ?? this.isAccessible,
       uomIconName: uomIconName,
+      externalProviderName: externalProviderName ?? this.externalProviderName,
       selectedQuantity: selectedQuantity ?? this.selectedQuantity,
     );
   }

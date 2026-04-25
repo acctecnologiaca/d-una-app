@@ -70,36 +70,16 @@ class _QuoteClientTabState extends ConsumerState<QuoteClientTab> {
                   (c) => !oldIds.contains(c.id),
                   orElse: () => newClientsResult.last,
                 );
-                ref
-                    .read(createQuoteProvider.notifier)
-                    .setClient(newClient.id, newClient.name);
-
-                // Auto-select the newly created contact if applicable
-                if (newClient.type != 'person' &&
-                    newClient.contacts.isNotEmpty) {
-                  final contactToSelect = newClient.contacts.firstWhere(
-                    (c) => c.isPrimary,
-                    orElse: () => newClient.contacts.first,
-                  );
-                  ref
-                      .read(createQuoteProvider.notifier)
-                      .setContact(contactToSelect.id, contactToSelect.name);
-                }
+                ref.read(createQuoteProvider.notifier).setClient(newClient);
               }
             },
             onChanged: (client) {
               if (client != null) {
                 if (state.clientId != client.id) {
-                  ref
-                      .read(createQuoteProvider.notifier)
-                      .setClient(client.id, client.name);
-
-                  // Limpiar el contacto al cambiar de cliente
-                  ref.read(createQuoteProvider.notifier).setContact('', '');
+                  ref.read(createQuoteProvider.notifier).setClient(client);
                 }
               } else {
-                ref.read(createQuoteProvider.notifier).setClient('', '');
-                ref.read(createQuoteProvider.notifier).setContact('', '');
+                ref.read(createQuoteProvider.notifier).clearClient();
               }
             },
           ),
@@ -109,22 +89,22 @@ class _QuoteClientTabState extends ConsumerState<QuoteClientTab> {
           CustomDropdown<Contact>(
             value: selectedContact,
             items: contacts,
-            label: 'Persona de contacto',
+            label: (selectedClient?.type == 'person')
+                ? 'Persona de contacto (No aplica)'
+                : 'Persona de contacto',
             searchable: true,
             itemLabelBuilder: (c) => c.role != null && c.role!.isNotEmpty
                 ? '${c.name} — ${c.role}'
                 : c.name,
             // Disabled until a company client is selected
-            onChanged:
-                (selectedClient == null || selectedClient.type == 'person')
-                ? null
-                : (contact) {
-                    if (contact != null) {
-                      ref
-                          .read(createQuoteProvider.notifier)
-                          .setContact(contact.id, contact.name);
-                    }
-                  },
+            enabled: selectedClient != null && selectedClient.type != 'person',
+            onChanged: (contact) {
+              if (contact != null) {
+                ref
+                    .read(createQuoteProvider.notifier)
+                    .setContact(contact.id, contact.name);
+              }
+            },
             showAddOption:
                 selectedClient != null && selectedClient.type != 'person',
             addOptionValue: Contact(

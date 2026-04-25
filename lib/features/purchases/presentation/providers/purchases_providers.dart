@@ -7,7 +7,10 @@ final purchasesRepositoryProvider = Provider<PurchasesRepository>((ref) {
   return PurchasesRepository(Supabase.instance.client);
 });
 
-final purchasesProvider = FutureProvider.family<List<Purchase>, String?>((ref, productId) async {
+final purchasesProvider = FutureProvider.family<List<Purchase>, String?>((
+  ref,
+  productId,
+) async {
   final repository = ref.read(purchasesRepositoryProvider);
   return await repository.getPurchases(productId: productId);
 });

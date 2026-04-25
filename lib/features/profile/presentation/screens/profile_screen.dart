@@ -7,29 +7,27 @@ import '../widgets/profile_menu_tile.dart';
 import '../providers/profile_provider.dart';
 import '../providers/occupations_provider.dart';
 import '../../../../core/utils/session_manager.dart';
+import '../../../../shared/widgets/custom_dialog.dart';
 
 class ProfileScreen extends ConsumerWidget {
   const ProfileScreen({super.key});
 
   Future<void> _showLogoutDialog(BuildContext context) async {
     final colors = Theme.of(context).colorScheme;
-    return showDialog(
+    return CustomDialog.show(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Cerrar sesión'),
-        content: const Text('¿Estás seguro de que deseas cerrar sesión?'),
+      dialog: CustomDialog.destructive(
+        title: 'Cerrar sesión',
+        contentText: '¿Estás seguro de que deseas cerrar sesión?',
         actions: [
           TextButton(
             onPressed: () => context.pop(),
-            child: Text(
+            child: const Text(
               'Cancelar',
-              style: TextStyle(
-                color: colors.primary,
-                fontWeight: FontWeight.bold,
-              ),
+              style: TextStyle(fontWeight: FontWeight.bold),
             ),
           ),
-          TextButton(
+          FilledButton(
             onPressed: () async {
               context.pop(); // Close dialog
               try {
@@ -43,12 +41,13 @@ class ProfileScreen extends ConsumerWidget {
                 }
               }
             },
-            child: Text(
+            style: FilledButton.styleFrom(
+              backgroundColor: colors.error,
+              foregroundColor: colors.onError,
+            ),
+            child: const Text(
               'Cerrar sesión',
-              style: TextStyle(
-                color: colors.error,
-                fontWeight: FontWeight.bold,
-              ),
+              style: TextStyle(fontWeight: FontWeight.bold),
             ),
           ),
         ],

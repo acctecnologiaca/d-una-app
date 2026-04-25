@@ -73,16 +73,18 @@ class _ProductSearchScreenState extends ConsumerState<ProductSearchScreen> {
           isActive: _selectedCategories.isNotEmpty,
           onTap: () {
             productsAsync.whenData((products) {
-              final queryNormalized = _searchQuery.normalized;
+              final queryNormalized = _searchQuery.normalizeFingerprint;
               final availableCategories = products
                   .where((p) {
                     // Filter by text search
                     return queryNormalized.isEmpty ||
-                        p.name.normalized.contains(queryNormalized) ||
-                        (p.brand?.name.normalized ?? '').contains(
+                        p.name.normalizeFingerprint.contains(queryNormalized) ||
+                        (p.brand?.name.normalizeFingerprint ?? '').contains(
                           queryNormalized,
                         ) ||
-                        (p.model?.normalized ?? '').contains(queryNormalized);
+                        (p.model?.normalizeFingerprint ?? '').contains(
+                          queryNormalized,
+                        );
                   })
                   .map((p) => p.category?.name)
                   .whereType<String>()
@@ -110,16 +112,18 @@ class _ProductSearchScreenState extends ConsumerState<ProductSearchScreen> {
           isActive: _selectedBrands.isNotEmpty,
           onTap: () {
             productsAsync.whenData((products) {
-              final queryNormalized = _searchQuery.normalized;
+              final queryNormalized = _searchQuery.normalizeFingerprint;
               final availableBrands = products
                   .where((p) {
                     // Filter by text search
                     return queryNormalized.isEmpty ||
-                        p.name.normalized.contains(queryNormalized) ||
-                        (p.brand?.name.normalized ?? '').contains(
+                        p.name.normalizeFingerprint.contains(queryNormalized) ||
+                        (p.brand?.name.normalizeFingerprint ?? '').contains(
                           queryNormalized,
                         ) ||
-                        (p.model?.normalized ?? '').contains(queryNormalized);
+                        (p.model?.normalizeFingerprint ?? '').contains(
+                          queryNormalized,
+                        );
                   })
                   .map((p) => p.brand?.name)
                   .whereType<String>()
@@ -176,12 +180,14 @@ class _ProductSearchScreenState extends ConsumerState<ProductSearchScreen> {
         }
       },
       filter: (p, query) {
-        final normalizedQuery = query.normalized;
+        final normalizedQuery = query.normalizeFingerprint;
         final matchesQuery =
             normalizedQuery.isEmpty ||
-            p.name.normalized.contains(normalizedQuery) ||
-            (p.brand?.name.normalized ?? '').contains(normalizedQuery) ||
-            (p.model?.normalized ?? '').contains(normalizedQuery);
+            p.name.normalizeFingerprint.contains(normalizedQuery) ||
+            (p.brand?.name.normalizeFingerprint ?? '').contains(
+              normalizedQuery,
+            ) ||
+            (p.model?.normalizeFingerprint ?? '').contains(normalizedQuery);
 
         final matchesCategory =
             _selectedCategories.isEmpty ||

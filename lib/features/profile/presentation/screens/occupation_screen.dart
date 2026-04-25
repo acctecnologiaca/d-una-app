@@ -6,6 +6,7 @@ import '../../domain/models/user_profile.dart';
 import '../providers/profile_provider.dart';
 import '../providers/occupations_provider.dart'; // Import Provider
 import '../../../../shared/widgets/custom_dropdown.dart';
+import '../../../../shared/widgets/custom_dialog.dart';
 import '../../../../shared/widgets/form_bottom_bar.dart';
 
 class OccupationScreen extends ConsumerStatefulWidget {
@@ -65,6 +66,7 @@ class _OccupationScreenState extends ConsumerState<OccupationScreen> {
   }
 
   Future<void> _save(UserProfile currentProfile) async {
+    final colors = Theme.of(context).colorScheme;
     if (!_formKey.currentState!.validate()) return;
 
     // Check if verification status is active (verified or pending)
@@ -84,21 +86,24 @@ class _OccupationScreenState extends ConsumerState<OccupationScreen> {
         !initialSet.containsAll(currentSet);
 
     if (isSubstantiveChange && isVerifiedOrPending) {
-      final confirmed = await showDialog<bool>(
+      final confirmed = await CustomDialog.show<bool>(
         context: context,
-        builder: (context) => AlertDialog(
-          title: const Text('Cambio de ocupación'),
-          content: const Text(
-            'Al cambiar tu ocupación (principal o secundaria), perderás tu estado de verificación actual y pasarás a "No verificado". ¿Deseas continuar?',
-          ),
+        dialog: CustomDialog.destructive(
+          title: 'Cambio de ocupación',
+          contentText:
+              'Al cambiar tu ocupación (principal o secundaria), perderás tu estado de verificación actual y pasarás a "No verificado". ¿Deseas continuar?',
           actions: [
             TextButton(
               onPressed: () => context.pop(false),
               child: const Text('Cancelar'),
             ),
-            TextButton(
+            FilledButton(
               onPressed: () => context.pop(true),
-              child: const Text('Aceptar', style: TextStyle(color: Colors.red)),
+              style: FilledButton.styleFrom(
+                backgroundColor: colors.error,
+                foregroundColor: colors.onError,
+              ),
+              child: const Text('Aceptar'),
             ),
           ],
         ),
@@ -356,12 +361,12 @@ class _OccupationScreenState extends ConsumerState<OccupationScreen> {
                             ),
                             if (_isSecondaryExpanded)
                               Container(
-                                height: 200, // Fixed height scrollable area
+                                height: 300, // Fixed height scrollable area
                                 decoration: BoxDecoration(
                                   border: const Border(
                                     top: BorderSide(color: Colors.grey),
                                   ),
-                                  color: Colors.grey.shade100,
+                                  // color: Colors.grey.shade100,
                                 ),
                                 child: ListView.builder(
                                   itemCount: occupationsList.length,

@@ -40,7 +40,8 @@ class _DynamicMaterialSymbolState extends State<DynamicMaterialSymbol> {
   @override
   void didUpdateWidget(DynamicMaterialSymbol oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (oldWidget.symbolName != widget.symbolName || oldWidget.style != widget.style) {
+    if (oldWidget.symbolName != widget.symbolName ||
+        oldWidget.style != widget.style) {
       _loadIcon();
     }
   }
@@ -60,10 +61,12 @@ class _DynamicMaterialSymbolState extends State<DynamicMaterialSymbol> {
     }
 
     setState(() => _isLoading = true);
-    
+
     try {
       final cacheDir = await getTemporaryDirectory();
-      final iconDir = Directory(p.join(cacheDir.path, 'material_symbols_cache'));
+      final iconDir = Directory(
+        p.join(cacheDir.path, 'material_symbols_cache'),
+      );
       if (!await iconDir.exists()) {
         await iconDir.create(recursive: true);
       }
@@ -121,7 +124,9 @@ class _DynamicMaterialSymbolState extends State<DynamicMaterialSymbol> {
           padding: EdgeInsets.all(widget.size * 0.2),
           child: CircularProgressIndicator(
             strokeWidth: 2,
-            color: widget.color?.withValues(alpha: 0.5) ?? Theme.of(context).primaryColor.withValues(alpha: 0.5),
+            color:
+                widget.color?.withValues(alpha: 0.5) ??
+                Theme.of(context).primaryColor.withValues(alpha: 0.5),
           ),
         ),
       );
@@ -140,11 +145,7 @@ class _DynamicMaterialSymbolState extends State<DynamicMaterialSymbol> {
 
     // Fallback logic
     if (widget.showFallback) {
-      return Icon(
-        Symbols.package_2,
-        size: widget.size,
-        color: widget.color,
-      );
+      return Icon(Symbols.package_2, size: widget.size, color: widget.color);
     }
 
     return const SizedBox.shrink();

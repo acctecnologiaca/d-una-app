@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:material_symbols_icons/symbols.dart';
+import '../../../../../shared/widgets/custom_dialog.dart';
 import '../../../../../shared/utils/currency_formatter.dart';
 import '../../../../../shared/widgets/expandable_action_card.dart';
 import '../../../../../shared/widgets/status_badge.dart';
@@ -30,6 +31,7 @@ class QuoteAddedProductCard extends StatelessWidget {
   // Validation
   final QuoteValidationStatus? validationStatus;
   final String? validationMessage;
+  final bool isReadOnly;
 
   const QuoteAddedProductCard({
     super.key,
@@ -51,6 +53,7 @@ class QuoteAddedProductCard extends StatelessWidget {
     this.hasSupplierInventory = false,
     this.validationStatus,
     this.validationMessage,
+    this.isReadOnly = false,
   });
 
   @override
@@ -193,30 +196,32 @@ class QuoteAddedProductCard extends StatelessWidget {
           ),
         ],
       ),
-      actions: [
+      actions: isReadOnly ? [] : [
         IconButton(
           icon: const Icon(Symbols.delete),
           color: colors.onSurfaceVariant,
           visualDensity: VisualDensity.compact,
           onPressed: () {
-            showDialog(
+            CustomDialog.show(
               context: context,
-              builder: (context) => AlertDialog(
-                title: const Text('Eliminar producto'),
-                content: const Text(
-                  '¿Estás seguro de que deseas eliminar este producto de la cotización?',
-                ),
+              dialog: CustomDialog.destructive(
+                title: 'Eliminar producto',
+                contentText:
+                    '¿Estás seguro de que deseas eliminar este producto de la cotización?',
                 actions: [
                   TextButton(
-                    onPressed: () => Navigator.of(context).pop(),
+                    onPressed: () => Navigator.pop(context),
                     child: const Text('Cancelar'),
                   ),
-                  TextButton(
+                  FilledButton(
                     onPressed: () {
-                      Navigator.of(context).pop();
+                      Navigator.pop(context);
                       onDelete();
                     },
-                    style: TextButton.styleFrom(foregroundColor: colors.error),
+                    style: FilledButton.styleFrom(
+                      backgroundColor: colors.error,
+                      foregroundColor: colors.onError,
+                    ),
                     child: const Text('Eliminar'),
                   ),
                 ],
@@ -250,13 +255,15 @@ class QuoteAddedProductCard extends StatelessWidget {
           ),
         ],
       ],
-      expandedTrailing: EditableQuantityStepper(
-        label: 'Cantidad:',
-        value: totalQuantity,
-        min: 1, // Minimum 1, otherwise they should delete it
-        max: isTemporal ? 999999 : totalAvailableStock,
-        onChanged: onQuantityChanged,
-      ),
+      expandedTrailing: isReadOnly
+          ? null
+          : EditableQuantityStepper(
+              label: 'Cantidad:',
+              value: totalQuantity,
+              min: 1, // Minimum 1, otherwise they should delete it
+              max: totalAvailableStock,
+              onChanged: onQuantityChanged,
+            ),
     );
   }
 }

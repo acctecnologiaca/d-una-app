@@ -19,41 +19,66 @@ class QuoteCard extends StatelessWidget {
     // Formatters
     final dateFormat = DateFormat('dd/MM/yyyy');
 
-    return StandardListItem(
-      padding: const EdgeInsets.symmetric(vertical: 12.0),
-      onTap: onTap,
-      overline: Text(dateFormat.format(quote.date)),
-      title: quote.clientName,
-      subtitle: Text(quote.quoteNumber),
-      trailing: Column(
-        crossAxisAlignment: CrossAxisAlignment.end,
-        children: [
-          Text(
-            CurrencyFormatter.format(quote.amount),
-            style: textTheme.titleMedium?.copyWith(
-              fontWeight: FontWeight.bold,
-              color: colors.onSurface,
-            ),
-          ),
-          const SizedBox(height: 8),
-          Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              if (quote.isArchived)
-                _buildStatusIcon(
-                  'assets/icons/status_archived.png',
-                  'Archivada',
-                )
-              else
-                _buildStatusIcon(
-                  quote.stockStatus.iconPath,
-                  quote.stockStatus.label,
+    return Container(
+      decoration: BoxDecoration(
+        color: quote.stockStatus != StockStatus.available
+            ? colors.errorContainer.withValues(alpha: 0.8)
+            : null,
+      ),
+      child: StandardListItem(
+        padding: const EdgeInsets.symmetric(vertical: 12.0, horizontal: 16.0),
+        onTap: onTap,
+        overline: Text(
+          '${dateFormat.format(quote.date)} (#${quote.quoteNumber})',
+        ),
+        title: quote.clientName,
+        /*titleTrailing: quote.quoteTag != null
+            ? Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                decoration: BoxDecoration(
+                  color: colors.primaryContainer,
+                  borderRadius: BorderRadius.circular(4),
                 ),
-              const SizedBox(width: 4),
-              _buildStatusIcon(quote.status.iconPath, quote.status.label),
-            ],
-          ),
-        ],
+                child: Text(
+                  quote.quoteTag!,
+                  style: textTheme.labelSmall?.copyWith(
+                    color: colors.onPrimaryContainer,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              )
+            : null,*/
+        subtitle: quote.quoteTag != null ? Text(quote.quoteTag!) : null,
+        trailing: Column(
+          crossAxisAlignment: CrossAxisAlignment.end,
+          children: [
+            Text(
+              CurrencyFormatter.format(quote.amount),
+              style: textTheme.titleMedium?.copyWith(
+                fontWeight: FontWeight.bold,
+                color: colors.onSurface,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                if (quote.isArchived)
+                  _buildStatusIcon(
+                    'assets/icons/status_archived.png',
+                    'Archivada',
+                  )
+                else if (quote.stockStatus != StockStatus.available)
+                  _buildStatusIcon(
+                    quote.stockStatus.iconPath,
+                    quote.stockStatus.label,
+                  ),
+                const SizedBox(width: 4),
+                _buildStatusIcon(quote.status.iconPath, quote.status.label),
+              ],
+            ),
+          ],
+        ),
       ),
     );
   }

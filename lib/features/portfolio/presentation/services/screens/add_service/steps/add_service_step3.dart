@@ -67,6 +67,7 @@ class _AddServiceStep3State extends State<AddServiceStep3> {
                   CustomDropdown<Category>(
                     label: 'Categoría',
                     value: widget.selectedCategory,
+                    searchable: true,
                     items: widget.categories,
                     onChanged: widget.onCategoryChanged,
                     itemLabelBuilder: (item) => item.name,
@@ -74,7 +75,7 @@ class _AddServiceStep3State extends State<AddServiceStep3> {
                         ? 'Requerido'
                         : null,
                     showAddOption: true,
-                    addOptionLabel: 'Agregar',
+                    addOptionLabel: 'Agregar categoría',
                     addOptionValue: const Category(
                       id: 'ADD_NEW',
                       name: 'Agregar',

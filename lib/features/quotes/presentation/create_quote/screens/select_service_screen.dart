@@ -24,12 +24,16 @@ class _SelectServiceScreenState extends ConsumerState<SelectServiceScreen> {
   Widget build(BuildContext context) {
     final colors = Theme.of(context).colorScheme;
     final suggestionsAsync = ref.watch(quoteServiceSuggestionsProvider);
-    final quoteServices = ref.watch(createQuoteProvider).services;
+
+    final quoteState = ref.watch(createQuoteProvider);
+    final quoteNumber =
+        quoteState.quote?.quoteNumber ?? quoteState.currentQuoteNumber ?? '';
+    final quoteServices = quoteState.services;
 
     return Scaffold(
       appBar: StandardAppBar(
         title: 'Agregar servicio',
-        subtitle: 'Cotización #C-00000011', // Should be dynamic
+        subtitle: 'Cotización #$quoteNumber',
       ),
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -126,7 +130,7 @@ class _SelectServiceScreenState extends ConsumerState<SelectServiceScreen> {
           Expanded(
             child: suggestionsAsync.when(
               loading: () => const Center(child: CircularProgressIndicator()),
-              error: (err, stack) => Center(child: Text('Error: \$err')),
+              error: (err, stack) => Center(child: Text('Error: $err')),
               data: (services) {
                 // Determine sort list
                 final sortedServices = List.of(services);

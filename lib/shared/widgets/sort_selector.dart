@@ -13,7 +13,8 @@ enum SortOption {
   highestPrice,
   lowestPrice,
   quantityAsc,
-  quantityDesc;
+  quantityDesc,
+  dateIssued;
 
   String get label {
     switch (this) {
@@ -41,6 +42,8 @@ enum SortOption {
         return 'Menor cantidad';
       case SortOption.quantityDesc:
         return 'Mayor cantidad';
+      case SortOption.dateIssued:
+        return 'Fecha de emisión';
     }
   }
 }
@@ -212,19 +215,21 @@ class SortSelector extends StatelessWidget {
       onSortChanged: onSortChanged,
       labelBuilder: (option) => option.label,
       iconBuilder: (option) {
-        if (option == SortOption.frequency) return Icons.trending_up;
-        if (option == SortOption.recent) return Icons.arrow_downward;
-        if (option == SortOption.nameAZ) return Icons.arrow_upward;
-        if (option == SortOption.nameZA) return Icons.arrow_downward;
-        if (option == SortOption.durationAsc) return Icons.timer_outlined;
-        if (option == SortOption.durationDesc) return Icons.timer;
-        if (option == SortOption.type) return Icons.category_outlined;
-        if (option == SortOption.oldest) return Icons.history;
-        if (option == SortOption.highestPrice) return Icons.arrow_upward;
-        if (option == SortOption.lowestPrice) return Icons.arrow_downward;
-        if (option == SortOption.quantityAsc) return Icons.arrow_downward;
-        if (option == SortOption.quantityDesc) return Icons.arrow_upward;
-        return Icons.sort;
+        return switch (option) {
+          SortOption.frequency => Icons.trending_up,
+          SortOption.recent => Icons.arrow_downward,
+          SortOption.nameAZ => Icons.arrow_upward,
+          SortOption.nameZA => Icons.arrow_downward,
+          SortOption.durationAsc => Icons.timer_outlined,
+          SortOption.durationDesc => Icons.timer,
+          SortOption.type => Icons.category_outlined,
+          SortOption.oldest => Icons.history,
+          SortOption.highestPrice => Icons.arrow_upward,
+          SortOption.lowestPrice => Icons.arrow_downward,
+          SortOption.quantityAsc => Icons.arrow_downward,
+          SortOption.quantityDesc => Icons.arrow_upward,
+          SortOption.dateIssued => Icons.calendar_today_outlined,
+        };
       },
     );
   }

@@ -43,12 +43,5 @@ class ShippingCompany extends Equatable {
   String get displayName => name?.isNotEmpty == true ? name! : legalName;
 
   @override
-  List<Object?> get props => [
-    id,
-    legalName,
-    taxId,
-    name,
-    isVerified,
-    userId,
-  ];
+  List<Object?> get props => [id, legalName, taxId, name, isVerified, userId];
 }

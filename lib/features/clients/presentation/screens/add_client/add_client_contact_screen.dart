@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:d_una_app/shared/widgets/custom_dropdown.dart';
 import 'package:d_una_app/shared/widgets/custom_text_field.dart';
+import 'package:d_una_app/shared/widgets/custom_dialog.dart';
 import 'package:d_una_app/shared/widgets/wizard_bottom_bar.dart';
 import 'package:d_una_app/shared/widgets/wizard_progress_bar.dart';
 import '../../providers/add_client_provider.dart';
@@ -105,22 +106,8 @@ class _AddClientContactScreenState
             );
 
             // Auto-select client
-            ref
-                .read(createQuoteProvider.notifier)
-                .setClient(newClient.id, newClient.name);
-
-            // Auto-select contact
-            if (newClient.type != 'person' && newClient.contacts.isNotEmpty) {
-              final contactToSelect = newClient.contacts.firstWhere(
-                (c) => c.isPrimary,
-                orElse: () => newClient.contacts.first,
-              );
-              ref
-                  .read(createQuoteProvider.notifier)
-                  .setContact(contactToSelect.id, contactToSelect.name);
-            } else if (newClient.type == 'person') {
-              ref.read(createQuoteProvider.notifier).setContact('', '');
-            }
+            // Auto-select client (this also handles primary contact auto-selection in the notifier)
+            ref.read(createQuoteProvider.notifier).setClient(newClient);
           }
 
           if (_returnTo != null) {
@@ -140,24 +127,24 @@ class _AddClientContactScreenState
   }
 
   Future<void> _onCancelWizard() async {
-    final confirmed = await showDialog<bool>(
+    final colors = Theme.of(context).colorScheme;
+    final confirmed = await CustomDialog.show<bool>(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('¿Descartar cambios?'),
-        content: const Text(
-          'Si sales ahora, perderás toda la información que has ingresado.',
-        ),
+      dialog: CustomDialog.destructive(
+        title: '¿Descartar cambios?',
+        contentText:
+            'Si sales ahora, perderás toda la información que has ingresado.',
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(context, false),
+            onPressed: () =>
+                Navigator.of(context, rootNavigator: true).pop(false),
             child: const Text('Continuar editando'),
           ),
-          TextButton(
-            onPressed: () => Navigator.pop(context, true),
-            child: Text(
-              'Descartar',
-              style: TextStyle(color: Theme.of(context).colorScheme.error),
-            ),
+          FilledButton(
+            style: FilledButton.styleFrom(backgroundColor: colors.error),
+            onPressed: () =>
+                Navigator.of(context, rootNavigator: true).pop(true),
+            child: const Text('Descartar'),
           ),
         ],
       ),
@@ -236,9 +223,9 @@ class _AddClientContactScreenState
                           Padding(
                             padding: const EdgeInsets.only(top: 0.0),
                             child: SizedBox(
-                              width: 100,
+                              width: 110,
                               child: CustomDropdown<String>(
-                                label: 'Cod.',
+                                label: 'Código',
                                 value: _selectedCode,
                                 items: _codes,
                                 itemLabelBuilder: (item) => item,

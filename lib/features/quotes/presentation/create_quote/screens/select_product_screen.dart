@@ -29,12 +29,15 @@ class _SelectProductScreenState extends ConsumerState<SelectProductScreen> {
       quoteProductSuggestionsProvider(const ProductSearchParams(query: '')),
     );
 
-    final quoteProducts = ref.watch(createQuoteProvider).products;
+    final quoteState = ref.watch(createQuoteProvider);
+    final quoteNumber =
+        quoteState.quote?.quoteNumber ?? quoteState.currentQuoteNumber ?? '';
+    final quoteProducts = quoteState.products;
 
     return Scaffold(
       appBar: StandardAppBar(
         title: 'Agregar producto',
-        subtitle: 'Cotización #C-00000011', // Should be dynamic
+        subtitle: 'Cotización #$quoteNumber',
       ),
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,

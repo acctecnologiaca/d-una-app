@@ -48,10 +48,11 @@ final unaffiliatedSuppliersProvider =
       return ref.watch(lookupRepositoryProvider).getUnaffiliatedSuppliers();
     });
 
-final allSuppliersProvider =
-    FutureProvider<List<UnaffiliatedSupplier>>((ref) async {
-      return ref.watch(lookupRepositoryProvider).getAllSuppliers();
-    });
+final allSuppliersProvider = FutureProvider<List<UnaffiliatedSupplier>>((
+  ref,
+) async {
+  return ref.watch(lookupRepositoryProvider).getAllSuppliers();
+});
 
 final commercialConditionsProvider = FutureProvider<List<CommercialCondition>>((
   ref,

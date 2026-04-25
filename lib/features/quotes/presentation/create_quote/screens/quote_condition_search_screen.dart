@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import '../../../../../shared/widgets/generic_search_screen.dart';
 import '../../../data/models/commercial_condition.dart';
 import '../../../../portfolio/presentation/providers/lookup_providers.dart';
+import '../../../../../core/utils/search_utils.dart';
 
 class QuoteConditionSearchScreen extends ConsumerWidget {
   const QuoteConditionSearchScreen({super.key});
@@ -18,12 +19,8 @@ class QuoteConditionSearchScreen extends ConsumerWidget {
       hintText: 'Buscar condición...',
       historyKey: 'quote_condition_search_history',
       data: conditionsAsync,
-      filter: (condition, query) {
-        if (query.isEmpty) return true;
-        return condition.description.toLowerCase().contains(
-          query.toLowerCase(),
-        );
-      },
+      filter: (condition, query) =>
+          SearchUtils.matchesCombo(query, [condition.description]),
       itemBuilder: (context, condition) {
         return Column(
           children: [

@@ -1,4 +1,5 @@
 import 'package:csc_picker_plus/csc_picker_plus.dart';
+import 'package:d_una_app/features/settings/presentation/widgets/add_edit_shipping_company_sheet.dart';
 import 'package:d_una_app/shared/widgets/friendly_error_widget.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -12,6 +13,7 @@ import '../../../../shared/widgets/form_bottom_bar.dart';
 import '../../../portfolio/presentation/providers/lookup_providers.dart';
 import '../../data/models/shipping_company.dart';
 import '../../../../core/utils/error_handler.dart';
+
 class AddShippingMethodScreen extends ConsumerStatefulWidget {
   final ShippingMethod? shippingMethod;
 
@@ -286,23 +288,52 @@ class _AddShippingMethodScreenState
                           loading: () =>
                               const Center(child: CircularProgressIndicator()),
                           error: (e, stack) => FriendlyErrorWidget(error: e),
-                          data: (companies) => CustomDropdown<String>(
-                            label: 'Empresa',
-                            value: _selectedCompany,
-                            items: companies.map((c) => c.id).toList(),
-                            itemLabelBuilder: (id) => companies
-                                .firstWhere(
-                                  (c) => c.id == id,
-                                  orElse: () => ShippingCompany(
-                                    id: id,
-                                    legalName: 'Desconocido',
-                                    taxId: '',
-                                  ),
-                                )
-                                .displayName,
-                            onChanged: (val) =>
-                                setState(() => _selectedCompany = val),
-                          ),
+                          data: (companies) {
+                            final selectedCompany = companies
+                                .where((c) => c.id == _selectedCompany)
+                                .firstOrNull;
+
+                            return CustomDropdown<ShippingCompany>(
+                              label: 'Empresa',
+                              value: selectedCompany,
+                              showAddOption: true,
+                              addOptionValue: ShippingCompany(
+                                id: '___ADD___',
+                                legalName: '___ADD___',
+                                taxId: '',
+                              ),
+                              addOptionLabel: 'Agregar empresa',
+                              searchable: true,
+                              items: companies,
+                              itemLabelBuilder: (c) => c.displayName,
+                              onChanged: (val) {
+                                if (val != null && val.id != '___ADD___') {
+                                  setState(() => _selectedCompany = val.id);
+                                }
+                              },
+                              onAddPressed: () async {
+                                final result =
+                                    await showModalBottomSheet<ShippingCompany>(
+                                      context: context,
+                                      isScrollControlled: true,
+                                      shape: const RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.vertical(
+                                          top: Radius.circular(16),
+                                        ),
+                                      ),
+                                      backgroundColor: Theme.of(
+                                        context,
+                                      ).colorScheme.surfaceContainer,
+                                      builder: (context) =>
+                                          const AddEditShippingCompanySheet(),
+                                    );
+
+                                if (result != null && mounted) {
+                                  setState(() => _selectedCompany = result.id);
+                                }
+                              },
+                            );
+                          },
                         ),
                         const SizedBox(height: 16),
 

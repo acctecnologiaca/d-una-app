@@ -32,7 +32,14 @@ class _AddCollaboratorScreenState extends ConsumerState<AddCollaboratorScreen> {
 
   // State
   String _selectedCode = '0412';
-  final List<String> _phoneCodes = ['0412', '0414', '0424', '0416', '0426'];
+  final List<String> _phoneCodes = [
+    '0412',
+    '0422',
+    '0414',
+    '0424',
+    '0416',
+    '0426',
+  ];
   bool _hasChanges = false;
 
   @override
@@ -224,9 +231,9 @@ class _AddCollaboratorScreenState extends ConsumerState<AddCollaboratorScreen> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         SizedBox(
-                          width: 100,
+                          width: 110,
                           child: CustomDropdown<String>(
-                            label: 'Código*',
+                            label: 'Código',
                             value: _selectedCode,
                             items: _phoneCodes,
                             itemLabelBuilder: (item) => item,

@@ -31,10 +31,16 @@ class ProductImageAvatar extends StatelessWidget {
           ? CachedNetworkImage(
               imageUrl: imageUrl!,
               fit: BoxFit.cover,
-              placeholder: (context, url) =>
-                  Icon(Icons.image, size: size * 0.5, color: colors.onSurfaceVariant),
-              errorWidget: (context, url, error) =>
-                  Icon(Icons.broken_image, size: size * 0.5, color: colors.onSurfaceVariant),
+              placeholder: (context, url) => Icon(
+                Icons.image,
+                size: size * 0.5,
+                color: colors.onSurfaceVariant,
+              ),
+              errorWidget: (context, url, error) => Icon(
+                Icons.broken_image,
+                size: size * 0.5,
+                color: colors.onSurfaceVariant,
+              ),
             )
           : Icon(
               placeholderIcon,

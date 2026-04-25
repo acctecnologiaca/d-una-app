@@ -7,20 +7,22 @@ typedef PurchaseDetailsData = ({
   Purchase purchase,
   List<PurchaseItemProduct> items,
   List<ProductSerial> serials,
-  String? supplierTaxId
+  String? supplierTaxId,
 });
 
-final purchaseDetailsProvider = FutureProvider.family<PurchaseDetailsData, String>((ref, purchaseId) async {
-  final repository = ref.read(purchasesRepositoryProvider);
-  return repository.getPurchaseDetails(purchaseId);
-});
+final purchaseDetailsProvider =
+    FutureProvider.family<PurchaseDetailsData, String>((ref, purchaseId) async {
+      final repository = ref.read(purchasesRepositoryProvider);
+      return repository.getPurchaseDetails(purchaseId);
+    });
 
 extension PurchaseDetailsDataX on PurchaseDetailsData {
   bool get hasMissingSerials {
     for (var product in items) {
       if (product.requiresSerials) {
-        final count =
-            serials.where((s) => s.productId == product.productId).length;
+        final count = serials
+            .where((s) => s.productId == product.productId)
+            .length;
         if (count < product.quantity) return true;
       }
     }

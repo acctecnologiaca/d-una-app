@@ -61,7 +61,8 @@ class Product extends Equatable {
       uom: json['uoms'] != null ? json['uoms']['symbol'] : null,
       uomModel: json['uoms'] != null ? Uom.fromJson(json['uoms']) : null,
       imageUrl: json['image_url'],
-      inventoryQuantity: (json['inventory_quantity'] as num?)?.toDouble() ?? 0.0,
+      inventoryQuantity:
+          (json['inventory_quantity'] as num?)?.toDouble() ?? 0.0,
       averageCost: (json['average_cost'] as num?)?.toDouble() ?? 0.0,
       purchaseCount: (json['purchase_count'] as num?)?.toInt() ?? 0,
       createdAt: DateTime.parse(json['created_at']),

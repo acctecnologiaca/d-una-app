@@ -123,10 +123,11 @@ class _OwnInventoryScreenState extends ConsumerState<OwnInventoryScreen> {
               data: (products) {
                 // Filter List
                 var filteredList = products.where((product) {
-                  final normalizedQuery = _searchQuery.normalized;
-                  final name = product.name.normalized;
-                  final brand = (product.brand?.name ?? '').normalized;
-                  final model = (product.model ?? '').normalized;
+                  final normalizedQuery = _searchQuery.normalizeFingerprint;
+                  final name = product.name.normalizeFingerprint;
+                  final brand =
+                      (product.brand?.name ?? '').normalizeFingerprint;
+                  final model = (product.model ?? '').normalizeFingerprint;
                   return name.contains(normalizedQuery) ||
                       brand.contains(normalizedQuery) ||
                       model.contains(normalizedQuery);
@@ -160,7 +161,7 @@ class _OwnInventoryScreenState extends ConsumerState<OwnInventoryScreen> {
                 }
 
                 return ListView.separated(
-                  padding: const EdgeInsets.fromLTRB(16, 16, 16, 100),
+                  padding: const EdgeInsets.fromLTRB(16, 16, 16, 120),
                   itemCount: filteredList.length,
                   separatorBuilder: (context, index) =>
                       //const SizedBox(height: 12),

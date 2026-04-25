@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:d_una_app/shared/widgets/custom_action_sheet.dart';
+import 'package:d_una_app/shared/widgets/custom_dialog.dart';
 import 'package:d_una_app/shared/widgets/custom_text_field.dart';
 import 'package:d_una_app/shared/widgets/custom_button.dart';
 import 'package:d_una_app/features/portfolio/data/models/uom_model.dart';
@@ -63,46 +64,58 @@ class _AddEditUomSheetState extends ConsumerState<AddEditUomSheet> {
 
     try {
       final repo = ref.read(lookupRepositoryProvider);
+      Uom? result;
       if (isEditing) {
         await repo.updateUom(widget.uom!.id, name, symbol);
+        result = Uom(
+          id: widget.uom!.id,
+          name: name,
+          symbol: symbol,
+          userId: widget.uom!.userId,
+          isVerified: widget.uom!.isVerified,
+        );
       } else {
-        await repo.addUom(name, symbol);
+        result = await repo.addUom(name, symbol);
       }
       ref.invalidate(uomsProvider);
-      navigator.pop();
-      scaffoldMessenger.showSnackBar(
-        SnackBar(
-          behavior: SnackBarBehavior.floating,
-          content: Text(
-            isEditing
-                ? 'Unidad actualizada a "$name"'
-                : 'Unidad "$name" agregada',
+
+      if (mounted) {
+        navigator.pop(result);
+        scaffoldMessenger.showSnackBar(
+          SnackBar(
+            behavior: SnackBarBehavior.floating,
+            content: Text(
+              isEditing
+                  ? 'Unidad actualizada a "$name"'
+                  : 'Unidad "$name" agregada',
+            ),
           ),
-        ),
-      );
+        );
+      }
     } catch (e) {
-      setState(() => _isLoading = false);
-      ErrorHandler.showErrorSnackBar(context, e);
+      if (mounted) {
+        setState(() => _isLoading = false);
+        ErrorHandler.showErrorSnackBar(context, e);
+      }
     }
   }
 
   Future<void> _delete() async {
     final colors = Theme.of(context).colorScheme;
-    final confirm = await showDialog<bool>(
+    final confirm = await CustomDialog.show<bool>(
       context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Eliminar unidad de medida'),
-        content: Text(
-          '¿Estás seguro de que deseas eliminar la unidad "${widget.uom!.name}"?',
-        ),
+      dialog: CustomDialog.destructive(
+        title: 'Eliminar unidad de medida',
+        contentText:
+            '¿Estás seguro de que deseas eliminar la unidad "${widget.uom!.name}"?',
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(ctx, false),
+            onPressed: () => Navigator.pop(context, false),
             child: const Text('Cancelar'),
           ),
           FilledButton(
             style: FilledButton.styleFrom(backgroundColor: colors.error),
-            onPressed: () => Navigator.pop(ctx, true),
+            onPressed: () => Navigator.pop(context, true),
             child: const Text('Eliminar'),
           ),
         ],
@@ -117,12 +130,20 @@ class _AddEditUomSheetState extends ConsumerState<AddEditUomSheet> {
     try {
       await ref.read(lookupRepositoryProvider).deleteUom(widget.uom!.id);
       ref.invalidate(uomsProvider);
-      navigator.pop();
-      scaffoldMessenger.showSnackBar(
-        SnackBar(behavior: SnackBarBehavior.floating, content: Text('Unidad "${widget.uom!.name}" eliminada')),
-      );
+
+      if (mounted) {
+        navigator.pop();
+        scaffoldMessenger.showSnackBar(
+          SnackBar(
+            behavior: SnackBarBehavior.floating,
+            content: Text('Unidad "${widget.uom!.name}" eliminada'),
+          ),
+        );
+      }
     } catch (e) {
-      ErrorHandler.showErrorSnackBar(context, e);
+      if (mounted) {
+        ErrorHandler.showErrorSnackBar(context, e);
+      }
     }
   }
 

@@ -33,7 +33,14 @@ class _ContactDataScreenState extends ConsumerState<ContactDataScreen> {
   bool _isLoading = false;
   bool _initialDataLoaded = false;
 
-  final List<String> _phoneCodes = ['0412', '0414', '0424', '0416', '0426'];
+  final List<String> _phoneCodes = [
+    '0412',
+    '0422',
+    '0414',
+    '0424',
+    '0416',
+    '0426',
+  ];
 
   // Initial State for change detection
   String _initialPrimaryPhone = '';
@@ -264,7 +271,7 @@ class _ContactDataScreenState extends ConsumerState<ContactDataScreen> {
                           children: [
                             // Code Dropdown
                             SizedBox(
-                              width: 100,
+                              width: 110,
                               child: CustomDropdown<String>(
                                 label: 'Código',
                                 value: _selectedPrimaryCode,
@@ -370,7 +377,7 @@ class _ContactDataScreenState extends ConsumerState<ContactDataScreen> {
                           children: [
                             // Code Dropdown
                             SizedBox(
-                              width: 100,
+                              width: 110,
                               child: CustomDropdown<String>(
                                 label: 'Código',
                                 value: _selectedAltCode,

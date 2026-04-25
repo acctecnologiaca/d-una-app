@@ -29,6 +29,7 @@ import '../../features/quotes/presentation/create_quote/screens/select_service_s
 import '../../features/quotes/presentation/create_quote/screens/quote_service_search_screen.dart';
 import '../../features/quotes/presentation/create_quote/screens/add_temporal_product_screen.dart';
 import '../../features/quotes/presentation/create_quote/screens/add_temporal_service_screen.dart';
+import '../../features/quotes/presentation/view_quote/screens/view_quote_screen.dart';
 import '../../features/collaborators/presentation/screens/collaborators_screen.dart';
 import '../../features/collaborators/presentation/screens/add_collaborator_screen.dart';
 import '../../features/collaborators/domain/models/collaborator.dart';
@@ -237,6 +238,22 @@ final appRouter = GoRouter(
                   builder: (context, state) => const QuotesSearchScreen(),
                 ),
                 GoRoute(
+                  path: 'view/:id',
+                  parentNavigatorKey: rootNavigatorKey,
+                  builder: (context, state) {
+                    final id = state.pathParameters['id']!;
+                    return ViewQuoteScreen(quoteId: id);
+                  },
+                ),
+                GoRoute(
+                  path: 'edit/:id',
+                  parentNavigatorKey: rootNavigatorKey,
+                  builder: (context, state) {
+                    final id = state.pathParameters['id']!;
+                    return CreateQuoteScreen(quoteId: id);
+                  },
+                ),
+                GoRoute(
                   path: 'create',
                   parentNavigatorKey: rootNavigatorKey,
                   builder: (context, state) => const CreateQuoteScreen(),
@@ -249,8 +266,12 @@ final appRouter = GoRouter(
                         GoRoute(
                           path: 'search',
                           parentNavigatorKey: rootNavigatorKey,
-                          builder: (context, state) =>
-                              const QuoteProductSearchScreen(),
+                          builder: (context, state) {
+                            final initialQuery = state.extra as String?;
+                            return QuoteProductSearchScreen(
+                              initialQuery: initialQuery,
+                            );
+                          },
                         ),
                         GoRoute(
                           path: 'product-sources',
@@ -270,6 +291,8 @@ final appRouter = GoRouter(
                                         as Map<String, double>?,
                                 externalCostPrice:
                                     map['externalCostPrice'] as double?,
+                                externalProviderName:
+                                    map['externalProviderName'] as String?,
                               );
                             }
                             // Fallback

@@ -18,6 +18,7 @@ class GenericSearchScreen<T> extends StatefulWidget {
   final ValueChanged<String>? onQueryChanged;
   final Widget? bottomFilterWidget;
   final int Function(T a, T b)? comparator;
+  final String? initialQuery;
 
   const GenericSearchScreen({
     super.key,
@@ -33,6 +34,7 @@ class GenericSearchScreen<T> extends StatefulWidget {
     this.onQueryChanged,
     this.bottomFilterWidget,
     this.comparator,
+    this.initialQuery,
   });
 
   @override
@@ -55,6 +57,10 @@ class _GenericSearchScreenState<T> extends State<GenericSearchScreen<T>> {
       });
       widget.onQueryChanged?.call(_searchController.text);
     });
+    // Pre-fill search if initialQuery is provided
+    if (widget.initialQuery != null && widget.initialQuery!.isNotEmpty) {
+      _searchController.text = widget.initialQuery!;
+    }
     // Request focus after build
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _focusNode.requestFocus();

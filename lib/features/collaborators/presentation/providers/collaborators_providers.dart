@@ -12,3 +12,11 @@ final collaboratorsRepositoryProvider = Provider<CollaboratorsRepository>((
 final collaboratorsProvider = FutureProvider<List<Collaborator>>((ref) async {
   return ref.watch(collaboratorsRepositoryProvider).getCollaborators();
 });
+
+final externalCollaboratorsProvider = Provider<AsyncValue<List<Collaborator>>>((
+  ref,
+) {
+  return ref
+      .watch(collaboratorsProvider)
+      .whenData((list) => list.where((c) => !c.isUserRecord).toList());
+});

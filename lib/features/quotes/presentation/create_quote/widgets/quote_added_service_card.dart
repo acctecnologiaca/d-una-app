@@ -5,6 +5,7 @@ import '../../../../../shared/utils/currency_formatter.dart';
 import '../../../../../shared/widgets/expandable_action_card.dart';
 import '../../../../../shared/widgets/uom_status_badge.dart';
 import '../../../../../shared/widgets/editable_quantity_stepper.dart';
+import '../../../../../shared/widgets/custom_dialog.dart';
 
 class QuoteAddedServiceCard extends StatelessWidget {
   final String name;
@@ -20,6 +21,7 @@ class QuoteAddedServiceCard extends StatelessWidget {
   final VoidCallback onEditSaleDetails;
   final ValueChanged<double> onQuantityChanged;
   final bool isTemporal;
+  final bool isReadOnly;
 
   const QuoteAddedServiceCard({
     super.key,
@@ -34,6 +36,7 @@ class QuoteAddedServiceCard extends StatelessWidget {
     required this.onQuantityChanged,
     this.isTemporal = false,
     this.rateIconName,
+    this.isReadOnly = false,
   });
 
   @override
@@ -106,30 +109,33 @@ class QuoteAddedServiceCard extends StatelessWidget {
           ),
         ],
       ),
-      actions: [
+      actions: isReadOnly ? [] : [
         IconButton(
           icon: const Icon(Symbols.delete),
           color: colors.onSurfaceVariant,
           visualDensity: VisualDensity.compact,
           onPressed: () {
-            showDialog(
+            CustomDialog.show(
               context: context,
-              builder: (context) => AlertDialog(
-                title: const Text('Eliminar servicio'),
-                content: const Text(
-                  '¿Estás seguro de que deseas eliminar este servicio de la cotización?',
-                ),
+              dialog: CustomDialog.destructive(
+                title: 'Eliminar servicio',
+                contentText:
+                    '¿Estás seguro de que deseas eliminar este servicio de la cotización?',
                 actions: [
                   TextButton(
-                    onPressed: () => Navigator.of(context).pop(),
+                    onPressed: () =>
+                        Navigator.of(context, rootNavigator: true).pop(),
                     child: const Text('Cancelar'),
                   ),
-                  TextButton(
+                  FilledButton(
                     onPressed: () {
-                      Navigator.of(context).pop();
+                      Navigator.of(context, rootNavigator: true).pop();
                       onDelete();
                     },
-                    style: TextButton.styleFrom(foregroundColor: colors.error),
+                    style: FilledButton.styleFrom(
+                      backgroundColor: colors.error,
+                      foregroundColor: colors.onError,
+                    ),
                     child: const Text('Eliminar'),
                   ),
                 ],
@@ -146,13 +152,15 @@ class QuoteAddedServiceCard extends StatelessWidget {
           tooltip: 'Ajustar detalles del servicio',
         ),
       ],
-      expandedTrailing: EditableQuantityStepper(
-        label: 'Cantidad:',
-        value: quantity,
-        min: 1, // Minimum 1, otherwise they should delete it
-        max: 99999, // Practically unlimited for services
-        onChanged: onQuantityChanged,
-      ),
+      expandedTrailing: isReadOnly
+          ? null
+          : EditableQuantityStepper(
+              label: 'Cantidad:',
+              value: quantity,
+              min: 1, // Minimum 1, otherwise they should delete it
+              max: 99999, // Practically unlimited for services
+              onChanged: onQuantityChanged,
+            ),
     );
   }
 }

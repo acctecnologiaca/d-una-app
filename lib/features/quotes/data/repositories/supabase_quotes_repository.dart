@@ -86,14 +86,34 @@ class SupabaseQuotesRepository implements QuotesRepository {
   }
 
   @override
-  Future<List<Quote>> getQuotes({String? status, String? clientId}) async {
-    var query = _client.from('quotes').select(); // Simple select for list
+  Future<List<Quote>> getQuotes({
+    String? status,
+    String? clientId,
+    bool includeArchived = false,
+  }) async {
+    final userId = _client.auth.currentUser?.id;
+    if (userId == null) throw Exception('Usuario no autenticado');
+
+    var query = _client
+        .from('quotes')
+        .select('''
+          *,
+          clients(name),
+          category:categories(name),
+          quote_items_products(*)
+        ''')
+        .eq('user_id', userId);
 
     if (status != null) {
       query = query.eq('status', status);
     }
     if (clientId != null) {
       query = query.eq('client_id', clientId);
+    }
+
+    // Filter by archive status
+    if (!includeArchived) {
+      query = query.eq('is_archived', false);
     }
 
     // Order by date issued descending
@@ -107,12 +127,41 @@ class SupabaseQuotesRepository implements QuotesRepository {
     final response = await _client
         .from('quotes')
         .select(
-          '*, quote_items_products(*), quote_items_services(*), quote_conditions(*)',
+          '*, clients(name), category:categories(name), quote_items_products(*), quote_items_services(*), quote_conditions(*)',
         )
         .eq('id', id)
         .single();
 
     return Quote.fromJson(response);
+  }
+
+  @override
+  Future<Quote> getQuoteWithDetails(String id) async {
+    final response = await _client
+        .from('quotes')
+        .select(
+          '*, clients(*), contacts(name), advisor:collaborators!advisor_id(full_name), category:categories(name), quote_items_products(*), quote_items_services(*), quote_conditions(*)',
+        )
+        .eq('id', id)
+        .single();
+
+    return Quote.fromJson(response);
+  }
+
+  @override
+  Future<String?> getLastQuoteNumber() async {
+    final userId = _client.auth.currentUser?.id;
+    if (userId == null) return null;
+
+    final response = await _client
+        .from('quotes')
+        .select('quote_number')
+        .eq('user_id', userId)
+        .order('created_at', ascending: false)
+        .limit(1)
+        .maybeSingle();
+
+    return response?['quote_number'] as String?;
   }
 
   @override
@@ -123,19 +172,22 @@ class SupabaseQuotesRepository implements QuotesRepository {
     List<QuoteCondition>? conditions,
   }) async {
     // 1. Insert Header
+    final userId = _client.auth.currentUser?.id;
+    if (userId == null) throw Exception('Usuario no autenticado');
+
     final headerResponse = await _client
         .from('quotes')
         .insert({
+          'user_id': userId,
+          'quote_number': quote.quoteNumber,
           'client_id': quote.clientId,
           'contact_id': quote.contactId,
           'advisor_id': quote.advisorId,
           'category_id': quote.categoryId,
           'validity_days': quote.validityDays,
           'notes': quote.notes,
-          'status': 'draft', // Always draft initially
-          // Subtotal/Total/Tax are calculated via trigger or app logic?
-          // For MVP, letting App logic send them or defaulting to 0 and updating later.
-          // Sending calculated totals:
+          'quote_tag': quote.quoteTag,
+          'status': 'draft',
           'subtotal': quote.subtotal,
           'tax_amount': quote.taxAmount,
           'total': quote.total,
@@ -152,7 +204,7 @@ class SupabaseQuotesRepository implements QuotesRepository {
             (e) => {
               'quote_id': newQuoteId,
               'product_id': e.productId,
-              'supplier_product_id': e.supplierProductId,
+              'supplier_branch_stock_id': e.supplierBranchStockId,
               'delivery_time_id': e.deliveryTimeId,
               'name': e.name,
               'brand': e.brand,
@@ -167,6 +219,7 @@ class SupabaseQuotesRepository implements QuotesRepository {
               'tax_amount': e.taxAmount,
               'total_price': e.totalPrice,
               'warranty_time': e.warrantyTime,
+              'external_provider_name': e.externalProviderName,
             },
           )
           .toList();
@@ -189,6 +242,7 @@ class SupabaseQuotesRepository implements QuotesRepository {
               'profit_margin': e.profitMargin,
               'unit_price': e.unitPrice,
               'tax_rate': e.taxRate,
+              'tax_amount': e.taxAmount,
               'total_price': e.totalPrice,
               'warranty_time': e.warrantyTime,
             },
@@ -219,6 +273,14 @@ class SupabaseQuotesRepository implements QuotesRepository {
   @override
   Future<void> updateQuoteStatus(String id, String status) async {
     await _client.from('quotes').update({'status': status}).eq('id', id);
+  }
+
+  @override
+  Future<void> archiveQuote(String id, bool isArchived) async {
+    await _client
+        .from('quotes')
+        .update({'is_archived': isArchived})
+        .eq('id', id);
   }
 
   @override

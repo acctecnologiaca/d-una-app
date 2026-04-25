@@ -76,6 +76,14 @@ class AggregatedProductCard extends StatelessWidget {
             ? Column(
                 crossAxisAlignment: CrossAxisAlignment.end,
                 children: [
+                  /* Text(
+                    'MPD',
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                      color: colors.onSurface,
+                    ),
+                  ),*/
                   // Price
                   Row(
                     mainAxisSize: MainAxisSize.min,
@@ -91,28 +99,52 @@ class AggregatedProductCard extends StatelessWidget {
                       if (isLocked)
                         ImageFiltered(
                           imageFilter: ImageFilter.blur(sigmaX: 4, sigmaY: 4),
-                          child: Text(
-                            CurrencyFormatter.format(minPrice),
-                            style: TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.bold,
-                              color: colors.onSurface,
-                            ),
+                          child: Row(
+                            children: [
+                              Text(
+                                'MPD: ',
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  fontStyle: FontStyle.italic,
+                                  color: colors.onSurface,
+                                ),
+                              ),
+                              Text(
+                                CurrencyFormatter.format(minPrice),
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.bold,
+                                  color: colors.onSurface,
+                                ),
+                              ),
+                            ],
                           ),
                         )
                       else
-                        Text(
-                          CurrencyFormatter.format(minPrice),
-                          style: TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.bold,
-                            color: colors.onSurface,
-                          ),
+                        Row(
+                          children: [
+                            Text(
+                              'MPD: ',
+                              style: TextStyle(
+                                fontSize: 14,
+                                fontStyle: FontStyle.italic,
+                                color: colors.onSurface,
+                              ),
+                            ),
+                            Text(
+                              CurrencyFormatter.format(minPrice),
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
+                                color: colors.onSurface,
+                              ),
+                            ),
+                          ],
                         ),
                     ],
                   ),
                   const SizedBox(height: 8),
-  
+
                   // Stats Row
                   Row(
                     mainAxisSize: MainAxisSize.min,

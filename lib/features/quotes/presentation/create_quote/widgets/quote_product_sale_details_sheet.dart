@@ -10,10 +10,12 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../providers/create_quote_provider.dart';
 import '../../../../portfolio/data/models/delivery_time_model.dart';
 import '../../../../portfolio/presentation/providers/lookup_providers.dart';
+import '../../../../../features/settings/presentation/widgets/add_edit_delivery_time_sheet.dart';
 
 class QuoteProductSaleDetailsSheet extends ConsumerStatefulWidget {
   final double averageCost;
   final String productName;
+  final String uom;
   final String? brand;
   final String? model;
   final double? initialPrice;
@@ -24,6 +26,7 @@ class QuoteProductSaleDetailsSheet extends ConsumerStatefulWidget {
     super.key,
     required this.averageCost,
     required this.productName,
+    required this.uom,
     this.brand,
     this.model,
     this.initialPrice,
@@ -35,6 +38,7 @@ class QuoteProductSaleDetailsSheet extends ConsumerStatefulWidget {
     BuildContext context, {
     required double averageCost,
     required String productName,
+    required String uom,
     String? brand,
     String? model,
     double? initialPrice,
@@ -51,6 +55,7 @@ class QuoteProductSaleDetailsSheet extends ConsumerStatefulWidget {
       builder: (context) => QuoteProductSaleDetailsSheet(
         averageCost: averageCost,
         productName: productName,
+        uom: uom,
         brand: brand,
         model: model,
         initialPrice: initialPrice,
@@ -153,6 +158,25 @@ class _QuoteProductSaleDetailsSheetState
     var price = double.tryParse(cleanValue) ?? 0;
     _currentPrice = price;
     _recalculateMarginFromPrice();
+  }
+
+  Future<void> _showAddDeliveryTimeSheet() async {
+    final newTime = await showModalBottomSheet<DeliveryTime>(
+      context: context,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
+      backgroundColor: Theme.of(context).colorScheme.surfaceContainer,
+      builder: (context) => const AddEditDeliveryTimeSheet(),
+    );
+
+    if (newTime != null && mounted) {
+      setState(() {
+        _selectedDeliveryTimeId = newTime.id;
+      });
+      ref.invalidate(deliveryTimesProvider);
+    }
   }
 
   void _onConfirm() {
@@ -327,7 +351,7 @@ class _QuoteProductSaleDetailsSheetState
                     ),
                   ),
                   Text(
-                    '${CurrencyFormatter.format(profitAmount)}/ud.',
+                    '${CurrencyFormatter.format(profitAmount)}/${widget.uom}',
                     style: textTheme.bodyLarge?.copyWith(
                       color: Colors.green[700],
                       fontWeight: FontWeight.bold,
@@ -375,28 +399,36 @@ class _QuoteProductSaleDetailsSheetState
                       });
                     }
 
-                    return CustomDropdown<String>(
-                      value: _selectedDeliveryTimeId,
-                      items: deliveryTimes.map((e) => e.id).toList(),
+                    return CustomDropdown<DeliveryTime>(
+                      value:
+                          deliveryTimes.any(
+                            (e) => e.id == _selectedDeliveryTimeId,
+                          )
+                          ? deliveryTimes.firstWhere(
+                              (e) => e.id == _selectedDeliveryTimeId,
+                            )
+                          : (deliveryTimes.isNotEmpty
+                                ? deliveryTimes.first
+                                : null),
+                      items: deliveryTimes,
                       label: 'Tiempo de entrega',
-                      itemLabelBuilder: (id) {
-                        final dt = deliveryTimes.firstWhere(
-                          (e) => e.id == id,
-                          orElse: () => DeliveryTime(
-                            id: '',
-                            name: 'Desconocido',
-                            unit: 'days',
-                            type: 'delivery',
-                            orderIdx: 0,
-                          ),
-                        );
-                        return dt.name;
-                      },
+                      searchable: true,
+                      itemLabelBuilder: (dt) => dt.name,
                       onChanged: (val) {
-                        if (val != null) {
-                          setState(() => _selectedDeliveryTimeId = val);
+                        if (val != null && val.id != '___ADD___') {
+                          setState(() => _selectedDeliveryTimeId = val.id);
                         }
                       },
+                      showAddOption: true,
+                      addOptionLabel: 'Agregar tiempo de entrega',
+                      addOptionValue: DeliveryTime(
+                        id: '___ADD___',
+                        name: '___ADD___',
+                        unit: '',
+                        type: '',
+                        orderIdx: 0,
+                      ),
+                      onAddPressed: _showAddDeliveryTimeSheet,
                     );
                   },
                   loading: () =>

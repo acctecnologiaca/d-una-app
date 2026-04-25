@@ -13,7 +13,7 @@ class Purchase extends Equatable {
   final bool hasMissingSerials;
   final DateTime createdAt;
   final DateTime updatedAt;
-  
+
   // Derived field for UI
   final String? supplierName;
 
@@ -67,18 +67,18 @@ class Purchase extends Equatable {
 
   @override
   List<Object?> get props => [
-        id,
-        userId,
-        supplierId,
-        documentType,
-        documentNumber,
-        date,
-        subtotal,
-        tax,
-        total,
-        hasMissingSerials,
-        createdAt,
-        updatedAt,
-        supplierName,
-      ];
+    id,
+    userId,
+    supplierId,
+    documentType,
+    documentNumber,
+    date,
+    subtotal,
+    tax,
+    total,
+    hasMissingSerials,
+    createdAt,
+    updatedAt,
+    supplierName,
+  ];
 }

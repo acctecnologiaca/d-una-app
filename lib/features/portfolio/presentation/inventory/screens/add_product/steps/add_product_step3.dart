@@ -13,6 +13,7 @@ class AddProductStep3 extends StatefulWidget {
   final Uom? selectedUom;
   final ValueChanged<Uom?> onUomChanged;
   final List<Uom> uoms;
+  final VoidCallback onAddUom;
 
   final VoidCallback onNext;
   final VoidCallback onBack;
@@ -27,6 +28,7 @@ class AddProductStep3 extends StatefulWidget {
     required this.selectedUom,
     required this.onUomChanged,
     required this.uoms,
+    required this.onAddUom,
     required this.onNext,
     required this.onBack,
     required this.onCancel,
@@ -80,6 +82,7 @@ class _AddProductStep3State extends State<AddProductStep3> {
                     label: 'Categoría',
                     value: widget.selectedCategory,
                     items: widget.categories,
+                    searchable: true,
                     onChanged: widget.onCategoryChanged,
                     itemLabelBuilder: (item) => item.name,
                     showAddOption: true,
@@ -88,7 +91,7 @@ class _AddProductStep3State extends State<AddProductStep3> {
                       name: 'Agregar',
                       type: 'other',
                     ),
-                    addOptionLabel: 'Agregar',
+                    addOptionLabel: 'Agregar categoría',
                     onAddPressed: widget.onAddCategory,
                     validator: (val) {
                       if (val == null || val.id == 'ADD_NEW') {
@@ -103,12 +106,24 @@ class _AddProductStep3State extends State<AddProductStep3> {
                   CustomDropdown<Uom>(
                     label: 'Unidad de Medida',
                     value: widget.selectedUom,
+                    searchable: true,
                     items: widget.uoms,
-                    onChanged: widget.onUomChanged,
+                    onChanged: (val) {
+                      if (val != null && val.id != 'ADD_NEW') {
+                        widget.onUomChanged(val);
+                      }
+                    },
                     itemLabelBuilder: (item) => '${item.name} (${item.symbol})',
-                    showAddOption: false,
+                    showAddOption: true,
+                    addOptionValue: const Uom(
+                      id: 'ADD_NEW',
+                      name: 'Agregar',
+                      symbol: '',
+                    ),
+                    addOptionLabel: 'Agregar unidad de medida',
+                    onAddPressed: widget.onAddUom,
                     validator: (val) {
-                      if (val == null) {
+                      if (val == null || val.id == 'ADD_NEW') {
                         return 'Requerido';
                       }
                       return null;

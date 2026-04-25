@@ -12,6 +12,8 @@ import '../../../data/models/quote_item_service.dart';
 import '../../../../portfolio/data/models/delivery_time_model.dart';
 import '../../../../portfolio/presentation/providers/lookup_providers.dart';
 import '../../../../../shared/widgets/service_list_item.dart';
+import '../providers/create_quote_provider.dart';
+import '../../../../../features/settings/presentation/widgets/add_edit_delivery_time_sheet.dart';
 
 class QuoteServiceSaleDetailsSheet extends ConsumerStatefulWidget {
   final ServiceModel service;
@@ -142,6 +144,25 @@ class _QuoteServiceSaleDetailsSheetState
     return 'Ud.';
   }
 
+  Future<void> _showAddExecutionTimeSheet() async {
+    final newTime = await showModalBottomSheet<DeliveryTime>(
+      context: context,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
+      backgroundColor: Theme.of(context).colorScheme.surfaceContainer,
+      builder: (context) => const AddEditDeliveryTimeSheet(),
+    );
+
+    if (newTime != null && mounted) {
+      setState(() {
+        _selectedExecutionTimeId = newTime.id;
+      });
+      ref.invalidate(deliveryTimesProvider);
+    }
+  }
+
   void _onConfirm() {
     final finalCost = _isOutsourced
         ? (CurrencyFormatter.parse(_costPriceController.text) ?? 0.0)
@@ -156,6 +177,11 @@ class _QuoteServiceSaleDetailsSheetState
               widget.service.price)
         : widget.service.price;
 
+    final globalTaxRate = ref.read(createQuoteProvider).globalTaxRate;
+    final taxRate = globalTaxRate / 100;
+    final taxAmount = finalUnitPrice * taxRate;
+    final unitPriceIncludingTax = finalUnitPrice + taxAmount;
+
     final item = QuoteItemService(
       id: widget.existingItem?.id ?? '', // Preserved if modifying
       quoteId: widget.existingItem?.quoteId ?? '', // Preserved if modifying
@@ -168,8 +194,9 @@ class _QuoteServiceSaleDetailsSheetState
       costPrice: finalCost,
       profitMargin: 0.0, // Assuming 0% for now
       unitPrice: finalUnitPrice,
-      taxRate: 0.0, // Replace with proper tax rate if needed
-      totalPrice: finalUnitPrice * _quantity,
+      taxRate: globalTaxRate,
+      taxAmount: taxAmount,
+      totalPrice: unitPriceIncludingTax * _quantity,
       warrantyTime: widget.service.warrantyTime?.toString(),
     );
 
@@ -294,28 +321,36 @@ class _QuoteServiceSaleDetailsSheetState
                         });
                       }
 
-                      return CustomDropdown<String>(
-                        value: _selectedExecutionTimeId,
-                        items: executionTimes.map((e) => e.id).toList(),
+                      return CustomDropdown<DeliveryTime>(
+                        value:
+                            executionTimes.any(
+                              (e) => e.id == _selectedExecutionTimeId,
+                            )
+                            ? executionTimes.firstWhere(
+                                (e) => e.id == _selectedExecutionTimeId,
+                              )
+                            : (executionTimes.isNotEmpty
+                                  ? executionTimes.first
+                                  : null),
+                        items: executionTimes,
                         label: 'Seleccionar tiempo',
-                        itemLabelBuilder: (id) {
-                          final dt = executionTimes.firstWhere(
-                            (e) => e.id == id,
-                            orElse: () => DeliveryTime(
-                              id: '',
-                              name: 'Desconocido',
-                              unit: 'days',
-                              type: 'delivery',
-                              orderIdx: 0,
-                            ),
-                          );
-                          return dt.name;
-                        },
+                        searchable: true,
+                        itemLabelBuilder: (dt) => dt.name,
                         onChanged: (val) {
-                          if (val != null) {
-                            setState(() => _selectedExecutionTimeId = val);
+                          if (val != null && val.id != '___ADD___') {
+                            setState(() => _selectedExecutionTimeId = val.id);
                           }
                         },
+                        showAddOption: true,
+                        addOptionLabel: 'Agregar tiempo de ejecución',
+                        addOptionValue: DeliveryTime(
+                          id: '___ADD___',
+                          name: '___ADD___',
+                          unit: '',
+                          type: '',
+                          orderIdx: 0,
+                        ),
+                        onAddPressed: _showAddExecutionTimeSheet,
                       );
                     },
                     loading: () =>

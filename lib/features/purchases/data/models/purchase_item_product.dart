@@ -7,7 +7,7 @@ class PurchaseItemProduct extends Equatable {
   final String? brand;
   final String? model;
   final String uom;
-  
+
   final double quantity;
   final double unitPrice;
   final int? warrantyTime;
@@ -32,18 +32,18 @@ class PurchaseItemProduct extends Equatable {
 
   @override
   List<Object?> get props => [
-        id,
-        productId,
-        name,
-        brand,
-        model,
-        uom,
-        quantity,
-        unitPrice,
-        warrantyTime,
-        warrantyUnit,
-        requiresSerials,
-      ];
+    id,
+    productId,
+    name,
+    brand,
+    model,
+    uom,
+    quantity,
+    unitPrice,
+    warrantyTime,
+    warrantyUnit,
+    requiresSerials,
+  ];
 
   PurchaseItemProduct copyWith({
     double? quantity,

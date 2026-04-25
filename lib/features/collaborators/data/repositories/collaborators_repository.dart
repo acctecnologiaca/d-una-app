@@ -67,4 +67,19 @@ class CollaboratorsRepository {
         .single();
     return Collaborator.fromJson(response);
   }
+
+  Future<Collaborator?> getSelfCollaborator() async {
+    final userId = _client.auth.currentUser?.id;
+    if (userId == null) return null;
+
+    final response = await _client
+        .from('collaborators')
+        .select()
+        .eq('user_id', userId)
+        .eq('is_user_record', true)
+        .maybeSingle();
+
+    if (response == null) return null;
+    return Collaborator.fromJson(response);
+  }
 }

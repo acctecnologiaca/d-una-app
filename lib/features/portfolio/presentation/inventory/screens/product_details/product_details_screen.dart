@@ -2,6 +2,7 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:d_una_app/shared/widgets/custom_dialog.dart';
 import 'package:material_symbols_icons/symbols.dart';
 import 'package:d_una_app/shared/widgets/info_block.dart';
 import 'package:d_una_app/shared/widgets/dynamic_material_symbol.dart';
@@ -61,24 +62,25 @@ class _ProductDetailsScreenState extends ConsumerState<ProductDetailsScreen> {
           IconButton(
             icon: const Icon(Icons.delete_outline),
             onPressed: () async {
-              final confirm = await showDialog<bool>(
+              final confirm = await CustomDialog.show<bool>(
                 context: context,
-                builder: (context) => AlertDialog(
-                  title: const Text('Eliminar Producto'),
-                  content: const Text(
-                    '¿Estás seguro de que deseas eliminar este producto?',
-                  ),
+                dialog: CustomDialog.destructive(
+                  title: 'Eliminar Producto',
+                  contentText:
+                      '¿Estás seguro de que deseas eliminar este producto?',
                   actions: [
                     TextButton(
-                      onPressed: () => Navigator.pop(context, false),
+                      onPressed: () =>
+                          Navigator.of(context, rootNavigator: true).pop(false),
                       child: const Text('Cancelar'),
                     ),
-                    TextButton(
-                      onPressed: () => Navigator.pop(context, true),
-                      child: Text(
-                        'Eliminar',
-                        style: TextStyle(color: colors.error),
+                    FilledButton(
+                      style: FilledButton.styleFrom(
+                        backgroundColor: colors.error,
                       ),
+                      onPressed: () =>
+                          Navigator.of(context, rootNavigator: true).pop(true),
+                      child: const Text('Eliminar'),
                     ),
                   ],
                 ),

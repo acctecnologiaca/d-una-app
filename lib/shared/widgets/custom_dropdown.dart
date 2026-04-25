@@ -12,8 +12,8 @@ class CustomDropdown<T extends Object> extends StatefulWidget {
   final String addOptionLabel;
   final String? Function(T?)? validator;
 
-  /// When true, renders an Autocomplete field that lets the user type to filter.
   final bool searchable;
+  final bool enabled;
 
   const CustomDropdown({
     super.key,
@@ -28,6 +28,7 @@ class CustomDropdown<T extends Object> extends StatefulWidget {
     this.addOptionLabel = 'Agregar',
     this.validator,
     this.searchable = false,
+    this.enabled = true,
   });
 
   @override
@@ -58,13 +59,21 @@ class _CustomDropdownState<T extends Object> extends State<CustomDropdown<T>> {
           : '';
       // Only sync if the external value actually changed.
       if (_textController.text != newText) {
-        _textController.text = newText;
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted) {
+            _textController.text = newText;
+          }
+        });
       }
     }
   }
 
   void _onTextChanged() {
-    setState(() {}); // Rebuild to toggle clear button visibility
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        setState(() {}); // Rebuild to toggle clear button visibility
+      }
+    });
   }
 
   @override
@@ -100,6 +109,7 @@ class _CustomDropdownState<T extends Object> extends State<CustomDropdown<T>> {
                 style: TextStyle(
                   color: colors.primary,
                   fontWeight: FontWeight.w600,
+                  fontSize: 16,
                 ),
               ),
             ],
@@ -125,7 +135,10 @@ class _CustomDropdownState<T extends Object> extends State<CustomDropdown<T>> {
       initialValue: widget.value,
       isExpanded: true,
       itemHeight: null,
-      decoration: _decoration(),
+      decoration: _decoration().copyWith(
+        filled: !widget.enabled,
+        fillColor: widget.enabled ? null : colors.surfaceContainerHighest,
+      ),
       icon: const Icon(Icons.arrow_drop_down),
       selectedItemBuilder: (BuildContext context) {
         return dropdownItems.map<Widget>((DropdownMenuItem<T> item) {
@@ -141,13 +154,15 @@ class _CustomDropdownState<T extends Object> extends State<CustomDropdown<T>> {
       },
       items: dropdownItems,
       validator: widget.validator,
-      onChanged: (T? newValue) {
-        if (newValue == widget.addOptionValue && widget.showAddOption) {
-          widget.onAddPressed?.call();
-        } else {
-          widget.onChanged?.call(newValue);
-        }
-      },
+      onChanged: widget.enabled
+          ? (T? newValue) {
+              if (newValue == widget.addOptionValue && widget.showAddOption) {
+                widget.onAddPressed?.call();
+              } else {
+                widget.onChanged?.call(newValue);
+              }
+            }
+          : null,
     );
   }
 
@@ -166,7 +181,7 @@ class _CustomDropdownState<T extends Object> extends State<CustomDropdown<T>> {
               initialSelection: widget.value,
               controller: _textController,
               label: Text('${widget.label}*'),
-              enabled: widget.onChanged != null,
+              enabled: widget.enabled && widget.onChanged != null,
               errorText: state.errorText,
               enableFilter: true,
               enableSearch:
@@ -215,8 +230,8 @@ class _CustomDropdownState<T extends Object> extends State<CustomDropdown<T>> {
                           child: Text(
                             widget.addOptionLabel,
                             style: TextStyle(
-                              fontWeight: FontWeight.w500,
-                              color: colors.onSurface,
+                              fontWeight: FontWeight.w600,
+                              color: colors.primary,
                               fontSize: 16,
                             ),
                           ),
@@ -271,12 +286,15 @@ class _CustomDropdownState<T extends Object> extends State<CustomDropdown<T>> {
                   borderRadius: BorderRadius.circular(8.0),
                   borderSide: BorderSide(color: Colors.grey.shade300),
                 ),
+
                 contentPadding: const EdgeInsets.symmetric(
                   horizontal: 16,
                   vertical: 16,
                 ),
-                filled: false,
-                fillColor: Colors.transparent,
+                filled: !widget.enabled,
+                fillColor: widget.enabled
+                    ? Colors.transparent
+                    : colors.surfaceContainerHighest,
               ),
             );
           },
@@ -327,6 +345,7 @@ class _CustomDropdownState<T extends Object> extends State<CustomDropdown<T>> {
   }
 
   InputDecoration _decoration() {
+    final colors = Theme.of(context).colorScheme;
     return InputDecoration(
       labelText: '${widget.label}*',
       floatingLabelBehavior: FloatingLabelBehavior.auto,
@@ -340,8 +359,10 @@ class _CustomDropdownState<T extends Object> extends State<CustomDropdown<T>> {
         borderSide: BorderSide(color: Colors.grey.shade300),
       ),
       contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
-      filled: false,
-      fillColor: Colors.transparent,
+      filled: !widget.enabled,
+      fillColor: widget.enabled
+          ? Colors.transparent
+          : colors.surfaceContainerHighest,
     );
   }
 }

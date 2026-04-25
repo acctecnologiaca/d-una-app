@@ -13,6 +13,7 @@ import 'package:d_una_app/features/purchases/data/models/purchase_item_product.d
 import 'package:d_una_app/features/purchases/presentation/providers/add_purchase_provider.dart';
 import 'package:d_una_app/features/purchases/presentation/widgets/add_purchase_product_details_sheet.dart';
 import 'package:d_una_app/core/utils/string_extensions.dart';
+import 'package:d_una_app/core/utils/search_utils.dart';
 import 'package:uuid/uuid.dart';
 
 class AddPurchaseProductSearchScreen extends ConsumerStatefulWidget {
@@ -38,10 +39,10 @@ class _AddPurchaseProductSearchScreenState
     final queryMatchedProducts = q.isEmpty
         ? products
         : products.where((p) {
-          return p.name.normalized.contains(q) ||
-              (p.brand?.name.normalized ?? '').contains(q) ||
-              (p.model?.normalized ?? '').contains(q);
-        }).toList();
+            return p.name.normalized.contains(q) ||
+                (p.brand?.name.normalized ?? '').contains(q) ||
+                (p.model?.normalized ?? '').contains(q);
+          }).toList();
 
     // Derive available categories from search results
     final categoryMap = queryMatchedProducts
@@ -125,13 +126,12 @@ class _AddPurchaseProductSearchScreenState
         });
       },
       filter: (product, query) {
-        final q = query.normalized;
-        final name = product.name.normalized;
-        final brand = (product.brand?.name ?? '').normalized;
-        final model = (product.model ?? '').normalized;
-
-        final matchesQuery =
-            name.contains(q) || brand.contains(q) || model.contains(q);
+        final matchesQuery = SearchUtils.matchesCombo(query, [
+          product.name,
+          product.brand?.name,
+          product.model,
+          product.category?.name,
+        ]);
 
         final matchesCategory =
             _selectedCategoryIds.isEmpty ||

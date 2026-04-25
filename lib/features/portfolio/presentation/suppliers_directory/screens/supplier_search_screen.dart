@@ -7,6 +7,7 @@ import 'package:d_una_app/shared/widgets/filter_bottom_sheet.dart';
 import 'package:d_una_app/shared/widgets/price_filter_sheet.dart';
 import 'package:d_una_app/shared/widgets/sort_selector.dart';
 import 'package:d_una_app/core/utils/string_extensions.dart';
+import 'package:d_una_app/core/utils/search_utils.dart';
 import 'package:d_una_app/features/portfolio/domain/models/supplier_model.dart';
 import 'package:d_una_app/features/portfolio/domain/models/aggregated_product.dart';
 import 'package:d_una_app/features/portfolio/domain/models/search_result_item.dart';
@@ -123,9 +124,10 @@ class _SupplierSearchScreenState extends ConsumerState<SupplierSearchScreen> {
         facets.supplierIds.isEmpty && _currentQuery.isEmpty
         ? allSuppliers
         : allSuppliers.where((s) {
-            final matchesQuery = s.name.normalized.contains(
-              _currentQuery.normalized,
-            );
+            final matchesQuery = SearchUtils.matchesCombo(_currentQuery, [
+              s.name,
+              s.tradeType == 'WHOLESALE' ? 'Mayorista' : 'Minorista',
+            ]);
             final matchesFacet = facets.supplierIds.contains(s.id);
             final isSelected = _filters.supplierIds.contains(s.id);
             return matchesQuery || matchesFacet || isSelected;
@@ -490,8 +492,10 @@ class _SupplierSearchScreenState extends ConsumerState<SupplierSearchScreen> {
     // Filter suppliers by query & types locally (matches previous logic)
     // We removed the visibility filter here so Unverified users can see Wholesale suppliers (locked).
     final matchedSuppliers = suppliers.where((s) {
-      final matchesName = s.name.normalized.contains(_currentQuery.normalized);
-      return matchesName;
+      return SearchUtils.matchesCombo(_currentQuery, [
+        s.name,
+        s.tradeType == 'WHOLESALE' ? 'Mayorista' : 'Minorista',
+      ]);
     }).toList();
 
     List<SearchResultItem> items = [];

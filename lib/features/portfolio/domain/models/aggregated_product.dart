@@ -60,7 +60,8 @@ class AggregatedProduct extends Equatable {
       firstSupplierId: json['first_supplier_id'] as String?,
       firstSupplierName: json['first_supplier_name'] as String?,
       firstSupplierTradeType: json['first_supplier_trade_type'] as String?,
-      supplierIds: (json['supplier_ids'] as List<dynamic>?)
+      supplierIds:
+          (json['supplier_ids'] as List<dynamic>?)
               ?.map((e) => e.toString())
               .toList() ??
           [],

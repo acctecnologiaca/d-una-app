@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:d_una_app/shared/widgets/custom_action_sheet.dart';
+import 'package:d_una_app/shared/widgets/custom_dialog.dart';
 import 'package:d_una_app/shared/widgets/custom_text_field.dart';
 import 'package:d_una_app/shared/widgets/custom_button.dart';
 import 'package:d_una_app/features/settings/data/models/observation.dart';
@@ -77,7 +78,7 @@ class _AddEditObservationSheetState
         );
       }
       ref.invalidate(observationsProvider);
-      
+
       if (mounted) {
         Navigator.pop(context);
         ScaffoldMessenger.of(context).showSnackBar(
@@ -98,28 +99,24 @@ class _AddEditObservationSheetState
   }
 
   Future<void> _delete() async {
-    final confirm = await showDialog<bool>(
+    final colors = Theme.of(context).colorScheme;
+    final confirm = await CustomDialog.show<bool>(
       context: context,
-      builder: (ctx) {
-        final colors = Theme.of(ctx).colorScheme;
-        return AlertDialog(
-          title: const Text('Eliminar observación'),
-          content: const Text(
-            '¿Estás seguro de que deseas eliminar esta observación?',
+      dialog: CustomDialog.destructive(
+        title: 'Eliminar observación',
+        contentText: '¿Estás seguro de que deseas eliminar esta observación?',
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancelar'),
           ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(ctx, false),
-              child: const Text('Cancelar'),
-            ),
-            FilledButton(
-              style: FilledButton.styleFrom(backgroundColor: colors.error),
-              onPressed: () => Navigator.pop(ctx, true),
-              child: const Text('Eliminar'),
-            ),
-          ],
-        );
-      },
+          FilledButton(
+            style: FilledButton.styleFrom(backgroundColor: colors.error),
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Eliminar'),
+          ),
+        ],
+      ),
     );
 
     if (confirm != true || !mounted) return;
@@ -129,11 +126,14 @@ class _AddEditObservationSheetState
           .read(lookupRepositoryProvider)
           .deleteObservation(widget.observation!.id);
       ref.invalidate(observationsProvider);
-      
+
       if (mounted) {
         Navigator.pop(context);
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(behavior: SnackBarBehavior.floating, content: Text('Observación eliminada')),
+          const SnackBar(
+            behavior: SnackBarBehavior.floating,
+            content: Text('Observación eliminada'),
+          ),
         );
       }
     } catch (e) {

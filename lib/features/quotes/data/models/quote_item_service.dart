@@ -15,6 +15,7 @@ class QuoteItemService {
   final double profitMargin;
   final double unitPrice;
   final double taxRate;
+  final double taxAmount;
   final double totalPrice;
   final String? warrantyTime;
 
@@ -35,6 +36,7 @@ class QuoteItemService {
     required this.profitMargin,
     required this.unitPrice,
     required this.taxRate,
+    this.taxAmount = 0,
     required this.totalPrice,
     this.warrantyTime,
     this.rateSymbol = 'ud.',
@@ -57,6 +59,9 @@ class QuoteItemService {
       profitMargin: (json['profit_margin'] as num).toDouble(),
       unitPrice: (json['unit_price'] as num).toDouble(),
       taxRate: (json['tax_rate'] as num).toDouble(),
+      taxAmount: json['tax_amount'] != null
+          ? (json['tax_amount'] as num).toDouble()
+          : 0,
       totalPrice: (json['total_price'] as num).toDouble(),
 
       warrantyTime: json['warranty_time'] as String?,
@@ -77,6 +82,7 @@ class QuoteItemService {
       'profit_margin': profitMargin,
       'unit_price': unitPrice,
       'tax_rate': taxRate,
+      'tax_amount': taxAmount,
       'total_price': totalPrice,
       'warranty_time': warrantyTime,
     };

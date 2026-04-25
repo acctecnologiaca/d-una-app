@@ -143,7 +143,7 @@ class _PurchasesListScreenState extends ConsumerState<PurchasesListScreen> {
                   ), // padding bottom for potential FAB in the future
                   itemCount: filteredList.length,
                   separatorBuilder: (context, index) =>
-                      Divider(height: 1, color: Colors.transparent),
+                      Divider(height: 0, color: Colors.transparent),
                   itemBuilder: (context, index) {
                     final purchase = filteredList[index];
 

@@ -4,6 +4,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:d_una_app/features/clients/presentation/widgets/contact_list_tile.dart';
+import 'package:d_una_app/shared/widgets/custom_dialog.dart';
 import 'package:d_una_app/shared/widgets/info_block.dart';
 import 'package:d_una_app/features/clients/presentation/providers/clients_provider.dart';
 import 'package:d_una_app/features/clients/data/models/client_model.dart';
@@ -74,20 +75,28 @@ class ClientDetailsScreen extends ConsumerWidget {
               IconButton(
                 icon: const Icon(Icons.delete_outline),
                 onPressed: () async {
-                  final confirm = await showDialog<bool>(
+                  final confirm = await CustomDialog.show<bool>(
                     context: context,
-                    builder: (context) => AlertDialog(
-                      title: const Text('Eliminar Cliente'),
-                      content: const Text(
-                        '¿Estás seguro de que deseas eliminar este cliente?',
-                      ),
+                    dialog: CustomDialog.destructive(
+                      title: 'Eliminar Cliente',
+                      contentText:
+                          '¿Estás seguro de que deseas eliminar este cliente?',
                       actions: [
                         TextButton(
-                          onPressed: () => Navigator.pop(context, false),
+                          onPressed: () => Navigator.of(
+                            context,
+                            rootNavigator: true,
+                          ).pop(false),
                           child: const Text('Cancelar'),
                         ),
-                        TextButton(
-                          onPressed: () => Navigator.pop(context, true),
+                        FilledButton(
+                          style: FilledButton.styleFrom(
+                            backgroundColor: colors.error,
+                          ),
+                          onPressed: () => Navigator.of(
+                            context,
+                            rootNavigator: true,
+                          ).pop(true),
                           child: const Text('Eliminar'),
                         ),
                       ],

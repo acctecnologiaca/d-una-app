@@ -10,6 +10,18 @@ extension StringExtensions on String {
         .replaceAll(RegExp(r'[úùüû]'), 'u');
   }
 
+  /// Normalizes the string for product matching (only alphanumeric, lowercase, accent-agnostic).
+  String get normalizeFingerprint {
+    return toLowerCase()
+        .replaceAll(RegExp(r'[áàäâ]'), 'a')
+        .replaceAll(RegExp(r'[éèëê]'), 'e')
+        .replaceAll(RegExp(r'[íìïî]'), 'i')
+        .replaceAll(RegExp(r'[óòöô]'), 'o')
+        .replaceAll(RegExp(r'[úùüû]'), 'u')
+        .replaceAll(RegExp(r'[ñ]'), 'n')
+        .replaceAll(RegExp(r'[^a-z0-9]'), '');
+  }
+
   /// Converts the string to Title Case (e.g. "hello world" -> "Hello World").
   /// Keeps common Spanish prepositions/conjunctions lowercase unless they are the first word.
   String get toTitleCase {

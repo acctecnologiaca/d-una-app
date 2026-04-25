@@ -1,10 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import '../providers/create_quote_provider.dart';
 import '../../../../../shared/widgets/custom_extended_fab.dart';
 import '../../../../../shared/utils/currency_formatter.dart';
 import '../../../data/models/quote_item_product.dart';
 import '../../../data/models/quote_item_service.dart';
+import '../../../../../shared/widgets/custom_action_sheet.dart';
+import '../../../../../shared/widgets/bottom_sheet_action_item.dart';
 
 class QuoteSummaryTab extends ConsumerWidget {
   final Function(int) onNavigateToTab;
@@ -86,7 +89,7 @@ class QuoteSummaryTab extends ConsumerWidget {
           left: 16,
           right: 16,
           top: 16,
-          bottom: 100,
+          bottom: 120,
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -97,16 +100,12 @@ class QuoteSummaryTab extends ConsumerWidget {
             const SizedBox(height: 16),
 
             // 2. Cliente Section
-            _buildSectionHeader(
-              context,
-              Icons.business_center_outlined,
-              'Cliente',
-            ),
+            _buildSectionHeader(context, Icons.people, 'Cliente'),
             _buildClientCard(context, state),
             const SizedBox(height: 16),
 
             // 3. Cotización Section
-            _buildSectionHeader(context, Icons.receipt_outlined, 'Cotización'),
+            _buildSectionHeader(context, Icons.calculate, 'Cotización'),
             _buildQuoteCard(
               context,
               state,
@@ -125,13 +124,71 @@ class QuoteSummaryTab extends ConsumerWidget {
       floatingActionButton: Padding(
         padding: const EdgeInsets.only(bottom: 40.0),
         child: CustomExtendedFab(
-          label: 'Enviar',
-          icon: Icons.send_outlined,
-          onPressed: () {
-            // TODO: Implement send functionality
+          label: state.isLoading ? 'Guardando...' : 'Finalizar',
+          icon: state.isLoading ? Icons.hourglass_empty : Icons.check_outlined,
+          isEnabled: state.isReadyToFinalize && !state.isLoading,
+          onPressed: () async {
+            final success = await ref
+                .read(createQuoteProvider.notifier)
+                .createQuote(status: 'pending');
+
+            if (context.mounted) {
+              if (success) {
+                final savedQuoteNumber =
+                    ref.read(createQuoteProvider).quote?.quoteNumber ?? '';
+                // Instead of immediate pop, show distribution options
+                _showPostSaveOptions(context, ref, savedQuoteNumber);
+              } else {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text(
+                      ref.read(createQuoteProvider).error ?? 'Error al guardar',
+                    ),
+                    backgroundColor: Colors.red,
+                  ),
+                );
+              }
+            }
           },
         ),
       ),
+    );
+  }
+
+  void _showPostSaveOptions(
+    BuildContext context,
+    WidgetRef ref,
+    String quoteNumber,
+  ) {
+    CustomActionSheet.show(
+      context: context,
+      title: 'Cotización $quoteNumber guardada',
+      actions: [
+        BottomSheetActionItem(
+          icon: Icons.send_outlined,
+          label: 'Enviar ahora',
+          onTap: () {
+            context.pop(); // Close sheet
+            // TODO: Navigate to sharing flow or PDF generation
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('Funcionalidad de envío próximamente disponible'),
+              ),
+            );
+            ref.read(createQuoteProvider.notifier).reset();
+            context.pop(); // Back to list
+          },
+        ),
+        BottomSheetActionItem(
+          icon: Icons.history_outlined,
+          label: 'Enviar más tarde',
+          onTap: () {
+            context.pop(); // Close sheet
+            ref.read(createQuoteProvider.notifier).reset();
+            context.pop(); // Back to list
+          },
+        ),
+      ],
     );
   }
 
@@ -187,7 +244,7 @@ class QuoteSummaryTab extends ConsumerWidget {
             const SizedBox(height: 12),
             _buildSummaryRow(
               context,
-              Icons.money_off_outlined,
+              Icons.payments_outlined,
               'Costos',
               CurrencyFormatter.format(costs),
             ),

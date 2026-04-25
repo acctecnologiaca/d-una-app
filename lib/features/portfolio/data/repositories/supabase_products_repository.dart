@@ -12,8 +12,8 @@ class SupabaseProductsRepository {
     if (userId == null) throw Exception('User not logged in');
 
     try {
-     // Using computed columns for inventory_quantity and average_cost
-    const selectQuery = '''
+      // Using computed columns for inventory_quantity and average_cost
+      const selectQuery = '''
       *,
       brands (*),
       categories (*),

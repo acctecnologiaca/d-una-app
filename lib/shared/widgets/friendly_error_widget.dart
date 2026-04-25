@@ -5,11 +5,7 @@ class FriendlyErrorWidget extends StatelessWidget {
   final dynamic error;
   final VoidCallback? onRetry;
 
-  const FriendlyErrorWidget({
-    super.key,
-    required this.error,
-    this.onRetry,
-  });
+  const FriendlyErrorWidget({super.key, required this.error, this.onRetry});
 
   @override
   Widget build(BuildContext context) {
@@ -43,7 +39,7 @@ class FriendlyErrorWidget extends StatelessWidget {
                 icon: const Icon(Icons.refresh),
                 label: const Text('Reintentar'),
               ),
-            ]
+            ],
           ],
         ),
       ),

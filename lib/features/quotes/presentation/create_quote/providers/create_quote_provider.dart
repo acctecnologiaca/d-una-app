@@ -1,7 +1,12 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../data/models/models.dart';
 import '../../../domain/repositories/quotes_repository.dart';
+import '../../../../clients/data/models/client_model.dart';
 import '../../quotes_list/providers/quotes_provider.dart';
+import '../../../../collaborators/data/repositories/collaborators_repository.dart';
+import '../../../../collaborators/presentation/providers/collaborators_providers.dart';
+import '../../../../portfolio/data/repositories/lookup_repository.dart';
+import '../../../../portfolio/presentation/providers/lookup_providers.dart';
 
 class QuoteState {
   final Quote? quote; // The final object being built
@@ -20,6 +25,10 @@ class QuoteState {
   final String? notes;
   final String? label;
   final DateTime dateIssued;
+  final String? currentQuoteNumber;
+  final String? clientType; // 'company' or 'person'
+  final String? advisorPhone;
+  final String? advisorEmail;
   final bool isLoading;
   final String? error;
 
@@ -27,6 +36,7 @@ class QuoteState {
   final double globalMargin;
   final double globalTaxRate;
   final String pricingMethod; // 'markup' or 'margin'
+  final bool isReadOnly;
 
   QuoteState({
     this.quote,
@@ -45,11 +55,16 @@ class QuoteState {
     this.notes,
     this.label,
     DateTime? dateIssued,
+    this.currentQuoteNumber,
+    this.clientType,
+    this.advisorPhone,
+    this.advisorEmail,
     this.isLoading = false,
     this.error,
-    this.globalMargin = 30.0,
-    this.globalTaxRate = 16.0,
+    this.globalMargin = 0.0,
+    this.globalTaxRate = 0.0,
     this.pricingMethod = 'margin',
+    this.isReadOnly = false,
   }) : dateIssued = dateIssued ?? DateTime.now();
 
   QuoteState copyWith({
@@ -69,11 +84,16 @@ class QuoteState {
     String? notes,
     String? label,
     DateTime? dateIssued,
+    String? currentQuoteNumber,
+    String? clientType,
+    String? advisorPhone,
+    String? advisorEmail,
     bool? isLoading,
     String? error,
     double? globalMargin,
     double? globalTaxRate,
     String? pricingMethod,
+    bool? isReadOnly,
   }) {
     return QuoteState(
       quote: quote ?? this.quote,
@@ -92,25 +112,122 @@ class QuoteState {
       notes: notes ?? this.notes,
       label: label ?? this.label,
       dateIssued: dateIssued ?? this.dateIssued,
+      currentQuoteNumber: currentQuoteNumber ?? this.currentQuoteNumber,
+      clientType: clientType ?? this.clientType,
+      advisorPhone: advisorPhone ?? this.advisorPhone,
+      advisorEmail: advisorEmail ?? this.advisorEmail,
       isLoading: isLoading ?? this.isLoading,
       error: error,
       globalMargin: globalMargin ?? this.globalMargin,
       globalTaxRate: globalTaxRate ?? this.globalTaxRate,
       pricingMethod: pricingMethod ?? this.pricingMethod,
+      isReadOnly: isReadOnly ?? this.isReadOnly,
     );
+  }
+
+  // --- Getters for validation ---
+  bool get isReadyToSaveDraft {
+    final hasItems = products.isNotEmpty || services.isNotEmpty;
+    return clientId != null && hasItems;
+  }
+
+  bool get isReadyToFinalize {
+    final hasItems = products.isNotEmpty || services.isNotEmpty;
+    final hasConditions = conditions.isNotEmpty;
+    final baseFields =
+        clientId != null && categoryId != null && advisorId != null;
+
+    // For 'company', contact is mandatory
+    bool contactValid = true;
+    if (clientType == 'company') {
+      contactValid = contactId != null;
+    }
+
+    return hasItems && hasConditions && baseFields && contactValid;
+  }
+
+  bool get hasChanges {
+    return !isReadOnly &&
+        (products.isNotEmpty || services.isNotEmpty || clientId != null);
   }
 }
 
 class CreateQuoteNotifier extends StateNotifier<QuoteState> {
   final QuotesRepository _repository;
+  final CollaboratorsRepository? _collaboratorsRepository;
+  final LookupRepository? _lookupRepository;
+  final Ref _ref;
 
-  CreateQuoteNotifier(this._repository) : super(QuoteState()) {
-    loadFinancialParameters();
+  CreateQuoteNotifier(
+    this._repository,
+    this._ref, {
+    CollaboratorsRepository? collaboratorsRepository,
+    LookupRepository? lookupRepository,
+  }) : _collaboratorsRepository = collaboratorsRepository,
+       _lookupRepository = lookupRepository,
+       super(QuoteState()) {
+    initQuote();
   }
 
   void reset() {
     state = QuoteState();
-    loadFinancialParameters();
+    initQuote();
+  }
+
+  Future<void> loadQuote(String id) async {
+    state = state.copyWith(isLoading: true, error: null);
+    try {
+      final quote = await _repository.getQuoteWithDetails(id);
+
+      state = state.copyWith(
+        quote: quote,
+        products: quote.products ?? [],
+        services: quote.services ?? [],
+        conditions: quote.conditions ?? [],
+        clientId: quote.clientId,
+        clientName: quote.clientName,
+        contactId: quote.contactId,
+        contactName: quote.contactName,
+        validityDays: quote.validityDays,
+        categoryId: quote.categoryId,
+        categoryName: quote.categoryName,
+        advisorId: quote.advisorId,
+        advisorName: quote.advisorName,
+        notes: quote.notes,
+        label: quote.quoteTag,
+        dateIssued: quote.dateIssued,
+        currentQuoteNumber: quote.quoteNumber,
+        clientType: quote.clientType,
+        isLoading: false,
+      );
+    } catch (e) {
+      state = state.copyWith(isLoading: false, error: e.toString());
+    }
+  }
+
+  Future<void> initQuote() async {
+    await loadFinancialParameters();
+    await fetchNextQuoteNumber();
+    await loadDefaultAdvisor();
+    await loadDefaultConditions();
+  }
+
+  Future<void> loadDefaultAdvisor() async {
+    final repo = _collaboratorsRepository;
+    if (repo == null) return;
+    try {
+      final advisor = await repo.getSelfCollaborator();
+      if (advisor != null) {
+        state = state.copyWith(
+          advisorId: advisor.id,
+          advisorName: advisor.fullName,
+          advisorPhone: advisor.phone,
+          advisorEmail: advisor.email,
+        );
+      }
+    } catch (e) {
+      state = state.copyWith(error: "Error al cargar asesor: $e");
+    }
   }
 
   Future<void> loadFinancialParameters() async {
@@ -124,14 +241,96 @@ class CreateQuoteNotifier extends StateNotifier<QuoteState> {
         isLoading: false,
       );
     } catch (e) {
-      // Fallback to defaults in constructor if fetch fails
+      state = state.copyWith(isLoading: false, error: e.toString());
+    }
+  }
+
+  Future<void> fetchNextQuoteNumber() async {
+    try {
+      final lastNumber = await _repository.getLastQuoteNumber();
+      final nextNumber = _generateNextQuoteNumber(lastNumber);
+      state = state.copyWith(currentQuoteNumber: nextNumber);
+    } catch (e) {
+      state = state.copyWith(error: "Error al generar número: $e");
+    }
+  }
+
+  String _generateNextQuoteNumber(String? lastNumber) {
+    if (lastNumber == null) return 'COT-000001';
+
+    final digitsMatch = RegExp(r'\d+').firstMatch(lastNumber);
+    if (digitsMatch == null) return 'COT-000001';
+
+    final numericPart = digitsMatch.group(0)!;
+    final nextInt = int.parse(numericPart) + 1;
+
+    return 'COT-${nextInt.toString().padLeft(6, '0')}';
+  }
+
+  Future<void> loadDefaultConditions() async {
+    final repo = _lookupRepository;
+    if (repo == null) return;
+    try {
+      final allConditions = await repo.getCommercialConditions();
+      final defaultConditions = allConditions
+          .where((c) => c.isDefaultQuote)
+          .toList();
+      if (defaultConditions.isNotEmpty) {
+        addConditions(defaultConditions);
+      }
+    } catch (e) {
+      state = state.copyWith(
+        error: "Error al cargar condiciones por defecto: $e",
+      );
+    }
+  }
+
+  Future<void> loadExistingQuote(String quoteId) async {
+    try {
+      state = state.copyWith(isLoading: true, error: null, isReadOnly: true);
+
+      final fullQuote = await _repository.getQuoteWithDetails(quoteId);
+
+      state = state.copyWith(
+        quote: fullQuote,
+        products: fullQuote.products ?? [],
+        services: fullQuote.services ?? [],
+        conditions: fullQuote.conditions ?? [],
+        clientId: fullQuote.clientId,
+        clientName: fullQuote.clientName,
+        contactId: fullQuote.contactId,
+        contactName: fullQuote.contactName,
+        validityDays: fullQuote.validityDays,
+        categoryId: fullQuote.categoryId,
+        categoryName: fullQuote.categoryName,
+        advisorId: fullQuote.advisorId,
+        advisorName: fullQuote.advisorName,
+        notes: fullQuote.notes,
+        label: fullQuote.quoteTag,
+        dateIssued: fullQuote.dateIssued,
+        currentQuoteNumber: fullQuote.quoteNumber,
+        isLoading: false,
+      );
+    } catch (e) {
       state = state.copyWith(isLoading: false, error: e.toString());
     }
   }
 
   // --- Client Management ---
-  void setClient(String id, String name) {
-    // Rebuild state directly so contact fields are truly cleared (copyWith uses ?? so null won't clear)
+  void setClient(Client client) {
+    // Determine primary contact if company
+    String? contactId;
+    String? contactName;
+
+    if (client.type == 'company' && client.contacts.isNotEmpty) {
+      final primaryContact = client.contacts.firstWhere(
+        (c) => c.isPrimary,
+        orElse: () => client.contacts.first,
+      );
+      contactId = primaryContact.id;
+      contactName = primaryContact.name;
+    }
+
     state = QuoteState(
       quote: state.quote,
       products: state.products,
@@ -140,8 +339,37 @@ class CreateQuoteNotifier extends StateNotifier<QuoteState> {
       globalMargin: state.globalMargin,
       globalTaxRate: state.globalTaxRate,
       pricingMethod: state.pricingMethod,
-      clientId: id,
-      clientName: name,
+      clientId: client.id,
+      clientName: client.name,
+      clientType: client.type,
+      contactId: contactId,
+      contactName: contactName,
+      validityDays: state.validityDays,
+      categoryId: state.categoryId,
+      categoryName: state.categoryName,
+      advisorId: state.advisorId,
+      advisorName: state.advisorName,
+      advisorPhone: state.advisorPhone,
+      advisorEmail: state.advisorEmail,
+      notes: state.notes,
+      label: state.label,
+      dateIssued: state.dateIssued,
+      currentQuoteNumber: state.currentQuoteNumber,
+    );
+  }
+
+  void clearClient() {
+    state = QuoteState(
+      quote: state.quote,
+      products: state.products,
+      services: state.services,
+      conditions: state.conditions,
+      globalMargin: state.globalMargin,
+      globalTaxRate: state.globalTaxRate,
+      pricingMethod: state.pricingMethod,
+      clientId: null,
+      clientName: null,
+      clientType: null,
       contactId: null,
       contactName: null,
       validityDays: state.validityDays,
@@ -149,9 +377,12 @@ class CreateQuoteNotifier extends StateNotifier<QuoteState> {
       categoryName: state.categoryName,
       advisorId: state.advisorId,
       advisorName: state.advisorName,
+      advisorPhone: state.advisorPhone,
+      advisorEmail: state.advisorEmail,
       notes: state.notes,
       label: state.label,
       dateIssued: state.dateIssued,
+      currentQuoteNumber: state.currentQuoteNumber,
     );
   }
 
@@ -299,14 +530,14 @@ class CreateQuoteNotifier extends StateNotifier<QuoteState> {
           id: item.id,
           quoteId: item.quoteId,
           productId: item.productId,
-          supplierProductId: item.supplierProductId,
+          supplierBranchStockId: item.supplierBranchStockId,
           deliveryTimeId: newDeliveryTimeId ?? item.deliveryTimeId,
           name: item.name,
           brand: item.brand,
           model: item.model,
           uom: item.uom,
           description: item.description,
-          availableStock: item.availableStock,
+          availableStock: item.isTemporal ? item.quantity : item.availableStock,
           quantity: item.quantity,
           costPrice: item.costPrice,
           profitMargin: newMargin,
@@ -315,7 +546,10 @@ class CreateQuoteNotifier extends StateNotifier<QuoteState> {
           taxAmount: taxAmount,
           totalPrice: totalPrice,
           warrantyTime: item.warrantyTime,
+          externalProviderName: item.externalProviderName,
           isTemporal: item.isTemporal,
+
+          // Sincronizar stock si es temporal
         );
       }
       return item;
@@ -420,14 +654,14 @@ class CreateQuoteNotifier extends StateNotifier<QuoteState> {
       id: item.id,
       quoteId: item.quoteId,
       productId: item.productId,
-      supplierProductId: item.supplierProductId,
+      supplierBranchStockId: item.supplierBranchStockId,
       deliveryTimeId: item.deliveryTimeId,
       name: item.name,
       brand: item.brand,
       model: item.model,
       uom: item.uom,
       description: item.description,
-      availableStock: item.availableStock,
+      availableStock: item.isTemporal ? newQty : item.availableStock,
       quantity: newQty,
       costPrice: item.costPrice,
       profitMargin: item.profitMargin,
@@ -436,6 +670,8 @@ class CreateQuoteNotifier extends StateNotifier<QuoteState> {
       taxAmount: item.taxAmount,
       totalPrice: totalPrice,
       warrantyTime: item.warrantyTime,
+      externalProviderName: item.externalProviderName,
+      isTemporal: item.isTemporal,
     );
   }
 
@@ -449,14 +685,14 @@ class CreateQuoteNotifier extends StateNotifier<QuoteState> {
       id: item.id,
       quoteId: item.quoteId,
       productId: item.productId,
-      supplierProductId: item.supplierProductId,
+      supplierBranchStockId: item.supplierBranchStockId,
       deliveryTimeId: item.deliveryTimeId,
       name: item.name,
       brand: item.brand,
       model: item.model,
       uom: item.uom,
       description: item.description,
-      availableStock: item.availableStock,
+      availableStock: item.isTemporal ? item.quantity : item.availableStock,
       quantity: item.quantity,
       costPrice: item.costPrice,
       profitMargin: item.profitMargin,
@@ -465,6 +701,8 @@ class CreateQuoteNotifier extends StateNotifier<QuoteState> {
       taxAmount: newTaxAmount,
       totalPrice: newTotalPrice,
       warrantyTime: item.warrantyTime,
+      externalProviderName: item.externalProviderName,
+      isTemporal: item.isTemporal,
     );
   }
 
@@ -491,8 +729,8 @@ class CreateQuoteNotifier extends StateNotifier<QuoteState> {
     final updatedServices = state.services.map((item) {
       if (item.id == id || (item.serviceId != null && item.serviceId == id)) {
         // Fallback if id is not fully generated yet
-        final newTotalPrice =
-            (item.unitPrice * (1 + (item.taxRate / 100))) * newQty;
+        final taxAmount = item.unitPrice * (item.taxRate / 100);
+        final newTotalPrice = (item.unitPrice + taxAmount) * newQty;
         return QuoteItemService(
           id: item.id,
           quoteId: item.quoteId,
@@ -506,6 +744,7 @@ class CreateQuoteNotifier extends StateNotifier<QuoteState> {
           profitMargin: item.profitMargin,
           unitPrice: item.unitPrice,
           taxRate: item.taxRate,
+          taxAmount: taxAmount,
           totalPrice: newTotalPrice,
           warrantyTime: item.warrantyTime,
           rateSymbol: item.rateSymbol,
@@ -531,21 +770,99 @@ class CreateQuoteNotifier extends StateNotifier<QuoteState> {
 
   // Removed selectClient (redundant with setClient)
 
-  // --- Final Creation ---
-  Future<bool> createQuote() async {
-    if (state.clientId == null) {
-      state = state.copyWith(error: "Selecciona un cliente");
+  // --- Save / Finalize ---
+  Future<bool> saveAsDraft() async {
+    return createQuote(status: 'draft');
+  }
+
+  Future<bool> createQuote({String status = 'draft'}) async {
+    if (status == 'pending' && !state.isReadyToFinalize) {
+      state = state.copyWith(error: "Faltan datos obligatorios para finalizar");
       return false;
     }
 
-    // Logic to assemble Quote object and call repository
-    // ...
-    return true;
+    if (state.clientId == null) {
+      state = state.copyWith(error: "Debes seleccionar un cliente");
+      return false;
+    }
+
+    try {
+      state = state.copyWith(isLoading: true, error: null);
+
+      // 1. Recalculate quote number right before saving to avoid duplicates (user request)
+      final lastNumber = await _repository.getLastQuoteNumber();
+      final finalQuoteNumber = _generateNextQuoteNumber(lastNumber);
+      state = state.copyWith(currentQuoteNumber: finalQuoteNumber);
+
+      // 2. Calculate Totals
+      double subtotal = 0;
+      double taxAmount = 0;
+
+      for (var p in state.products) {
+        subtotal += p.unitPrice * p.quantity;
+        taxAmount += (p.unitPrice * (p.taxRate / 100)) * p.quantity;
+      }
+      for (var s in state.services) {
+        subtotal += s.unitPrice * s.quantity;
+        taxAmount += (s.unitPrice * (s.taxRate / 100)) * s.quantity;
+      }
+
+      final total = subtotal + taxAmount;
+
+      // 3. Assemble Quote Object
+      final newQuote = Quote(
+        id: '', // Will be generated by DB
+        userId: '', // Will be filled by repository from auth.uid()
+        quoteNumber: finalQuoteNumber,
+        clientId: state.clientId!,
+        contactId: state.contactId,
+        advisorId: state.advisorId,
+        categoryId: state.categoryId,
+        status: status,
+        dateIssued: state.dateIssued,
+        validityDays: state.validityDays,
+        subtotal: subtotal,
+        taxAmount: taxAmount,
+        total: total,
+        notes: state.notes,
+        quoteTag: state.label,
+        createdAt: DateTime.now(),
+        updatedAt: DateTime.now(),
+      );
+
+      // 4. Save to Repository
+      final savedQuote = await _repository.createQuote(
+        newQuote,
+        products: state.products,
+        services: state.services,
+        conditions: state.conditions,
+      );
+
+      state = state.copyWith(quote: savedQuote, isLoading: false);
+
+      // Auto-refresh the list
+      _ref.invalidate(quotesListProvider);
+
+      return true;
+    } catch (e) {
+      state = state.copyWith(isLoading: false, error: e.toString());
+      return false;
+    }
   }
 }
 
 final createQuoteProvider =
     StateNotifierProvider<CreateQuoteNotifier, QuoteState>((ref) {
       final repository = ref.watch(quotesRepositoryProvider);
-      return CreateQuoteNotifier(repository);
+      final collaboratorsRepository = ref.watch(
+        collaboratorsRepositoryProvider,
+      );
+      final lookupRepository = ref.watch(lookupRepositoryProvider);
+
+      return CreateQuoteNotifier(
+        repository,
+        ref,
+        collaboratorsRepository: collaboratorsRepository,
+        lookupRepository: lookupRepository,
+      );
     });

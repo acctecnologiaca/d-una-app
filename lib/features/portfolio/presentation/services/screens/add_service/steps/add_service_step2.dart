@@ -139,15 +139,20 @@ class _AddServiceStep2State extends State<AddServiceStep2> {
                     label: 'Tarifa por',
                     value: widget.selectedRateUnit,
                     items: widget.rateUnits,
-                    onChanged: widget.onRateUnitChanged,
+                    searchable: true,
+                    onChanged: (val) {
+                      if (val != null && val.id != '___ADD___') {
+                        widget.onRateUnitChanged(val);
+                      }
+                    },
                     itemLabelBuilder: (item) => '${item.name} (${item.symbol})',
                     validator: (val) => val == null ? 'Requerido' : null,
                     showAddOption: true,
-                    addOptionLabel: 'Agregar',
+                    addOptionLabel: 'Agregar tarifa',
                     addOptionValue: const ServiceRate(
-                      id: '__add_new__',
-                      name: 'Agregar',
-                      symbol: '+',
+                      id: '___ADD___',
+                      name: '___ADD___',
+                      symbol: '',
                     ),
                     onAddPressed: widget.onAddRateUnit,
                   ),

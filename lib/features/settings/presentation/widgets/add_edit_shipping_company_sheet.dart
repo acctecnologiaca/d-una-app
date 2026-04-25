@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:d_una_app/shared/widgets/custom_action_sheet.dart';
+import 'package:d_una_app/shared/widgets/custom_dialog.dart';
 import 'package:d_una_app/shared/widgets/custom_text_field.dart';
 import 'package:d_una_app/shared/widgets/custom_button.dart';
 import 'package:d_una_app/features/settings/data/models/shipping_company.dart';
@@ -13,14 +14,16 @@ class AddEditShippingCompanySheet extends ConsumerStatefulWidget {
   const AddEditShippingCompanySheet({super.key, this.company});
 
   @override
-  ConsumerState<AddEditShippingCompanySheet> createState() => _AddEditShippingCompanySheetState();
+  ConsumerState<AddEditShippingCompanySheet> createState() =>
+      _AddEditShippingCompanySheetState();
 }
 
-class _AddEditShippingCompanySheetState extends ConsumerState<AddEditShippingCompanySheet> {
+class _AddEditShippingCompanySheetState
+    extends ConsumerState<AddEditShippingCompanySheet> {
   late TextEditingController _legalNameController;
   late TextEditingController _taxIdController;
   late TextEditingController _nameController;
-  
+
   bool _isLoading = false;
   bool _hasChanged = false;
 
@@ -29,7 +32,9 @@ class _AddEditShippingCompanySheetState extends ConsumerState<AddEditShippingCom
   @override
   void initState() {
     super.initState();
-    _legalNameController = TextEditingController(text: widget.company?.legalName ?? '');
+    _legalNameController = TextEditingController(
+      text: widget.company?.legalName ?? '',
+    );
     _taxIdController = TextEditingController(text: widget.company?.taxId ?? '');
     _nameController = TextEditingController(text: widget.company?.name ?? '');
 
@@ -49,7 +54,8 @@ class _AddEditShippingCompanySheetState extends ConsumerState<AddEditShippingCom
   void _updateHasChanged() {
     if (!isEditing) return;
     final company = widget.company!;
-    final isChanged = _legalNameController.text.trim() != company.legalName ||
+    final isChanged =
+        _legalNameController.text.trim() != company.legalName ||
         _taxIdController.text.trim() != company.taxId ||
         _nameController.text.trim() != (company.name ?? '');
 
@@ -61,11 +67,16 @@ class _AddEditShippingCompanySheetState extends ConsumerState<AddEditShippingCom
   Future<void> _save() async {
     final legalName = _legalNameController.text.trim();
     final taxId = _taxIdController.text.trim();
-    final commercialName = _nameController.text.trim().isEmpty ? legalName : _nameController.text.trim();
+    final commercialName = _nameController.text.trim().isEmpty
+        ? legalName
+        : _nameController.text.trim();
 
     if (legalName.isEmpty || taxId.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(behavior: SnackBarBehavior.floating, content: Text('La Razón Social y el RIF son obligatorios.')),
+        const SnackBar(
+          behavior: SnackBarBehavior.floating,
+          content: Text('La Razón Social y el RIF son obligatorios.'),
+        ),
       );
       return;
     }
@@ -74,6 +85,7 @@ class _AddEditShippingCompanySheetState extends ConsumerState<AddEditShippingCom
 
     try {
       final repo = ref.read(lookupRepositoryProvider);
+      ShippingCompany? result;
       if (isEditing) {
         await repo.updateShippingCompany(
           id: widget.company!.id,
@@ -81,17 +93,25 @@ class _AddEditShippingCompanySheetState extends ConsumerState<AddEditShippingCom
           taxId: taxId,
           name: commercialName,
         );
+        result = ShippingCompany(
+          id: widget.company!.id,
+          legalName: legalName,
+          taxId: taxId,
+          name: commercialName,
+          userId: widget.company!.userId,
+          isVerified: widget.company!.isVerified,
+        );
       } else {
-        await repo.addShippingCompany(
+        result = await repo.addShippingCompany(
           legalName: legalName,
           taxId: taxId,
           name: commercialName,
         );
       }
       ref.invalidate(shippingCompaniesProvider);
-      
+
       if (mounted) {
-        Navigator.pop(context);
+        Navigator.pop(context, result);
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             behavior: SnackBarBehavior.floating,
@@ -113,21 +133,20 @@ class _AddEditShippingCompanySheetState extends ConsumerState<AddEditShippingCom
 
   Future<void> _delete() async {
     final colors = Theme.of(context).colorScheme;
-    final confirm = await showDialog<bool>(
+    final confirm = await CustomDialog.show<bool>(
       context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Eliminar empresa'),
-        content: Text(
-          '¿Estás seguro de que deseas eliminar "${widget.company!.displayName}"?',
-        ),
+      dialog: CustomDialog.destructive(
+        title: 'Eliminar empresa',
+        contentText:
+            '¿Estás seguro de que deseas eliminar "${widget.company!.displayName}"?',
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(ctx, false),
+            onPressed: () => Navigator.pop(context, false),
             child: const Text('Cancelar'),
           ),
           FilledButton(
             style: FilledButton.styleFrom(backgroundColor: colors.error),
-            onPressed: () => Navigator.pop(ctx, true),
+            onPressed: () => Navigator.pop(context, true),
             child: const Text('Eliminar'),
           ),
         ],
@@ -137,13 +156,18 @@ class _AddEditShippingCompanySheetState extends ConsumerState<AddEditShippingCom
     if (confirm != true || !mounted) return;
 
     try {
-      await ref.read(lookupRepositoryProvider).deleteShippingCompany(widget.company!.id);
+      await ref
+          .read(lookupRepositoryProvider)
+          .deleteShippingCompany(widget.company!.id);
       ref.invalidate(shippingCompaniesProvider);
-      
+
       if (mounted) {
         Navigator.pop(context);
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(behavior: SnackBarBehavior.floating, content: Text('Empresa "${widget.company!.displayName}" eliminada')),
+          SnackBar(
+            behavior: SnackBarBehavior.floating,
+            content: Text('Empresa "${widget.company!.displayName}" eliminada'),
+          ),
         );
       }
     } catch (e) {
@@ -162,11 +186,16 @@ class _AddEditShippingCompanySheetState extends ConsumerState<AddEditShippingCom
       Padding(
         padding: const EdgeInsets.symmetric(horizontal: 16.0),
         child: Row(
-          mainAxisAlignment: isEditing ? MainAxisAlignment.start : MainAxisAlignment.end,
+          mainAxisAlignment: isEditing
+              ? MainAxisAlignment.start
+              : MainAxisAlignment.end,
           children: [
             if (isEditing)
               IconButton(
-                icon: Icon(Icons.delete_outline, color: colors.onSurfaceVariant),
+                icon: Icon(
+                  Icons.delete_outline,
+                  color: colors.onSurfaceVariant,
+                ),
                 onPressed: _delete,
               ),
             if (isEditing) const Spacer(),

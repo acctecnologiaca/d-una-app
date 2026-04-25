@@ -39,11 +39,9 @@ class _AddProductSerialSheetState extends ConsumerState<AddProductSerialSheet> {
 
   Future<void> _scanBarcode() async {
     final scannedCode = await Navigator.of(context).push<String>(
-      MaterialPageRoute(
-        builder: (context) => const BarcodeScannerScreen(),
-      ),
+      MaterialPageRoute(builder: (context) => const BarcodeScannerScreen()),
     );
-    
+
     if (scannedCode != null && mounted) {
       setState(() {
         _serialController.text = scannedCode;
@@ -63,7 +61,9 @@ class _AddProductSerialSheetState extends ConsumerState<AddProductSerialSheet> {
             CustomButton(
               text: 'Confirmar',
               isFullWidth: false,
-              onPressed: _serialController.text.trim().isNotEmpty ? _confirm : null,
+              onPressed: _serialController.text.trim().isNotEmpty
+                  ? _confirm
+                  : null,
             ),
           ],
         ),

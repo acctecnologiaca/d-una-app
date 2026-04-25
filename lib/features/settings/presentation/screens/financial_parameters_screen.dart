@@ -118,10 +118,10 @@ class _FinancialParametersScreenState
         updatedAt: DateTime.now(),
       );
       await repo.updateFinancialParameters(params);
-      
+
       // Refresh global state
       ref.read(createQuoteProvider.notifier).loadFinancialParameters();
-      
+
       if (mounted) {
         navigator.pop(true);
         scaffoldMessenger.showSnackBar(
@@ -331,6 +331,7 @@ class _FinancialParametersScreenState
           CustomDropdown<String>(
             value: _currencyCode,
             searchable: true,
+            enabled: false,
             items: availableCurrencies.map((c) => c.code).toList(),
             label: 'Tipo de moneda',
             itemLabelBuilder: (code) {

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:d_una_app/shared/widgets/custom_dialog.dart';
 import '../../../../../../../shared/widgets/custom_dropdown.dart';
 import '../../../../../../../shared/widgets/custom_text_field.dart';
 import '../../../../../../../shared/widgets/form_bottom_bar.dart';
@@ -9,6 +10,8 @@ import '../../../../data/models/service_rate_model.dart';
 import '../../../../data/models/category_model.dart';
 import '../../../providers/lookup_providers.dart';
 import '../../../providers/services_provider.dart';
+import '../../../../../settings/presentation/widgets/add_edit_service_rate_sheet.dart';
+import '../../../../../settings/presentation/widgets/add_edit_category_sheet.dart';
 
 class EditServiceScreen extends ConsumerStatefulWidget {
   final ServiceModel service;
@@ -165,24 +168,24 @@ class _EditServiceScreenState extends ConsumerState<EditServiceScreen> {
   }
 
   Future<bool?> _showDiscardDialog() async {
-    return showDialog<bool>(
+    final colors = Theme.of(context).colorScheme;
+    return CustomDialog.show<bool>(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('¿Descartar cambios?'),
-        content: const Text(
-          'Si sales ahora, perderás toda la información que has ingresado.',
-        ),
+      dialog: CustomDialog.destructive(
+        title: '¿Descartar cambios?',
+        contentText:
+            'Si sales ahora, perderás toda la información que has ingresado.',
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(context, false),
+            onPressed: () =>
+                Navigator.of(context, rootNavigator: true).pop(false),
             child: const Text('Continuar editando'),
           ),
-          TextButton(
-            onPressed: () => Navigator.pop(context, true),
-            child: Text(
-              'Descartar',
-              style: TextStyle(color: Theme.of(context).colorScheme.error),
-            ),
+          FilledButton(
+            style: FilledButton.styleFrom(backgroundColor: colors.error),
+            onPressed: () =>
+                Navigator.of(context, rootNavigator: true).pop(true),
+            child: const Text('Descartar'),
           ),
         ],
       ),
@@ -201,59 +204,24 @@ class _EditServiceScreenState extends ConsumerState<EditServiceScreen> {
     }
   }
 
-  // --- Add/Fetch Helpers Reused from AddServiceScreen ---
-  Future<void> _addNewCategory(String name) async {
-    try {
-      final newCategory = await ref
-          .read(lookupRepositoryProvider)
-          .addCategory(name);
-      ref.invalidate(categoriesProvider);
+  Future<void> _showAddRateDialog() async {
+    final newRate = await showModalBottomSheet<ServiceRate>(
+      context: context,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
+      backgroundColor: Theme.of(context).colorScheme.surfaceContainer,
+      builder: (context) => const AddEditServiceRateSheet(),
+    );
+
+    if (newRate != null && mounted) {
       setState(() {
-        _selectedCategory = newCategory;
+        _selectedRateUnit = newRate;
       });
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('Error: $e')));
-      }
+      ref.invalidate(serviceRatesProvider);
     }
   }
-
-  void _showAddCategoryDialog() {
-    final textController = TextEditingController();
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Agregar nueva categoría'),
-        content: TextField(
-          controller: textController,
-          decoration: const InputDecoration(
-            labelText: 'Nombre de la categoría',
-          ),
-          textCapitalization: TextCapitalization.sentences,
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cancelar'),
-          ),
-          FilledButton(
-            onPressed: () {
-              if (textController.text.isNotEmpty) {
-                _addNewCategory(textController.text.trim());
-                Navigator.pop(context);
-              }
-            },
-            child: const Text('Agregar'),
-          ),
-        ],
-      ),
-    );
-  }
-
-  // Same for Rate?
-  // ...
 
   @override
   Widget build(BuildContext context) {
@@ -307,12 +275,26 @@ class _EditServiceScreenState extends ConsumerState<EditServiceScreen> {
                       label: 'Categoría',
                       value: _selectedCategory,
                       items: categoriesList,
+                      searchable: true,
                       itemLabelBuilder: (c) => c.name,
                       onChanged: (val) =>
                           setState(() => _selectedCategory = val),
                       showAddOption: true,
-                      addOptionLabel: 'Agregar',
-                      onAddPressed: _showAddCategoryDialog,
+                      addOptionLabel: 'Agregar categoría',
+                      addOptionValue: const Category(
+                        id: 'ADD_NEW',
+                        name: 'Agregar',
+                        type: 'other',
+                      ),
+                      onAddPressed: () async {
+                        final newCategory = await AddEditCategorySheet.show(
+                          context,
+                        );
+                        if (newCategory != null && mounted) {
+                          setState(() => _selectedCategory = newCategory);
+                          ref.invalidate(categoriesProvider);
+                        }
+                      },
                     ),
                     const SizedBox(height: 24),
 
@@ -373,10 +355,21 @@ class _EditServiceScreenState extends ConsumerState<EditServiceScreen> {
                       label: 'Tarifa por',
                       value: _selectedRateUnit,
                       items: ratesList,
+                      searchable: true,
                       itemLabelBuilder: (r) => '${r.name} (${r.symbol})',
-                      onChanged: (val) =>
-                          setState(() => _selectedRateUnit = val),
-                      // Add option if needed, for brevity maybe skip unless requested
+                      onChanged: (val) {
+                        if (val != null && val.id != '___ADD___') {
+                          setState(() => _selectedRateUnit = val);
+                        }
+                      },
+                      showAddOption: true,
+                      addOptionLabel: 'Agregar tarifa',
+                      addOptionValue: const ServiceRate(
+                        id: '___ADD___',
+                        name: '___ADD___',
+                        symbol: '',
+                      ),
+                      onAddPressed: _showAddRateDialog,
                     ),
                     const SizedBox(height: 24),
 

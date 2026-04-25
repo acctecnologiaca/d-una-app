@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:d_una_app/shared/widgets/custom_action_sheet.dart';
+import 'package:d_una_app/shared/widgets/custom_dialog.dart';
 import 'package:d_una_app/shared/widgets/custom_text_field.dart';
 import 'package:d_una_app/shared/widgets/custom_dropdown.dart';
 import 'package:d_una_app/shared/widgets/custom_button.dart';
@@ -149,6 +150,7 @@ class _AddEditDeliveryTimeSheetState
       final minV = _isIndefinite ? null : int.parse(_minController.text);
       final maxV = _isIndefinite ? null : int.parse(_maxController.text);
 
+      DeliveryTime? result;
       if (isEditing) {
         await repo.updateDeliveryTime(
           id: widget.deliveryTime!.id,
@@ -158,8 +160,18 @@ class _AddEditDeliveryTimeSheetState
           minValue: minV,
           maxValue: maxV,
         );
+        result = DeliveryTime(
+          id: widget.deliveryTime!.id,
+          name: _nameController.text.trim(),
+          type: _selectedType,
+          unit: _isIndefinite ? 'days' : _selectedUnit,
+          minValue: minV,
+          maxValue: maxV,
+          orderIdx: widget.deliveryTime!.orderIdx,
+          userId: widget.deliveryTime!.userId,
+        );
       } else {
-        await repo.addDeliveryTime(
+        result = await repo.addDeliveryTime(
           name: _nameController.text.trim(),
           type: _selectedType,
           unit: _isIndefinite ? 'days' : _selectedUnit,
@@ -172,7 +184,7 @@ class _AddEditDeliveryTimeSheetState
       ref.invalidate(deliveryTimesProvider);
 
       if (mounted) {
-        Navigator.pop(context);
+        Navigator.pop(context, result);
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             behavior: SnackBarBehavior.floating,
@@ -216,40 +228,41 @@ class _AddEditDeliveryTimeSheetState
                 onPressed: () async {
                   final scaffoldMessenger = ScaffoldMessenger.of(context);
 
-                  final confirm = await showDialog<bool>(
+                  final confirm = await CustomDialog.show<bool>(
                     context: context,
-                    builder: (ctx) => AlertDialog(
-                      title: const Text('Eliminar tiempo'),
-                      content: Text(
-                        '¿Estás seguro de que deseas eliminar el tiempo "${widget.deliveryTime!.name}"?',
-                      ),
+                    dialog: CustomDialog.destructive(
+                      title: 'Eliminar tiempo',
+                      contentText:
+                          '¿Estás seguro de que deseas eliminar el tiempo "${widget.deliveryTime!.name}"?',
                       actions: [
                         TextButton(
-                          onPressed: () => Navigator.pop(ctx, false),
+                          onPressed: () => Navigator.pop(context, false),
                           child: const Text('Cancelar'),
                         ),
                         FilledButton(
                           style: FilledButton.styleFrom(
-                            backgroundColor: Theme.of(context).colorScheme.error,
+                            backgroundColor: Theme.of(
+                              context,
+                            ).colorScheme.error,
                           ),
-                          onPressed: () => Navigator.pop(ctx, true),
+                          onPressed: () => Navigator.pop(context, true),
                           child: const Text('Eliminar'),
                         ),
                       ],
                     ),
                   );
 
-                  if (confirm != true || !mounted) return;
+                  if (confirm != true || !context.mounted) return;
 
                   try {
                     await ref
                         .read(lookupRepositoryProvider)
                         .deleteDeliveryTime(widget.deliveryTime!.id);
-                    
-                    if (mounted) {
+
+                    if (context.mounted) {
                       ref.invalidate(deliveryTimesProvider);
                       Navigator.pop(context); // Close sheet ONLY after success
-                      
+
                       scaffoldMessenger.showSnackBar(
                         const SnackBar(
                           behavior: SnackBarBehavior.floating,
@@ -258,7 +271,7 @@ class _AddEditDeliveryTimeSheetState
                       );
                     }
                   } catch (e) {
-                    if (mounted) {
+                    if (context.mounted) {
                       ErrorHandler.showErrorSnackBar(context, e);
                     }
                   }

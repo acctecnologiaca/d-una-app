@@ -34,24 +34,24 @@ class ErrorHandler {
         return 'Ocurrió un problema de comunicación con el servidor de la nube. Intenta de nuevo más tarde.';
       }
     }
-    
+
     if (error is RealtimeSubscribeException) {
-         return 'Problemas conectando con los datos en vivo. Intenta de nuevo más tarde.';
+      return 'Problemas conectando con los datos en vivo. Intenta de nuevo más tarde.';
     }
 
     // 4. Fallback (Error no manejado, se esconde la info técnica)
     // Descomentar la siguiente línea para debug en desarrollo en paralelo
-    // debugPrint('Unhandled Raw Error: $error'); 
+    // debugPrint('Unhandled Raw Error: $error');
     return 'Ha ocurrido un error inesperado al procesar tu solicitud.';
   }
 
   /// Despliega universalmente en la UI un SnackBar con estilo y prevención para Stack_overflows o UI desconfigurado debido a errores largos.
   static void showErrorSnackBar(BuildContext context, dynamic error) {
     final friendlyMessage = getFriendlyMessage(error);
-    
+
     // Removemos cualquier snackbar actual para no encimar los mensajes
     ScaffoldMessenger.of(context).hideCurrentSnackBar();
-    
+
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Row(
@@ -63,9 +63,7 @@ class ErrorHandler {
         ),
         backgroundColor: Colors.red.shade800,
         behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(10),
-        ),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
         duration: const Duration(seconds: 4),
       ),
     );

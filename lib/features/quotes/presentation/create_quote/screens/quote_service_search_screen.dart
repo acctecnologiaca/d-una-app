@@ -7,7 +7,7 @@ import '../../../../../shared/widgets/filter_bottom_sheet.dart';
 import '../../../../../shared/widgets/horizontal_filter_bar.dart';
 import '../../../../../shared/widgets/price_filter_sheet.dart';
 import '../../../../../shared/widgets/sort_selector.dart';
-import '../../../../../core/utils/string_extensions.dart';
+import '../../../../../core/utils/search_utils.dart';
 import '../../../../portfolio/data/models/service_model.dart';
 import '../providers/quote_service_selection_provider.dart';
 import '../providers/create_quote_provider.dart';
@@ -159,11 +159,11 @@ class _QuoteServiceSearchScreenState
     for (final s in originalItems) {
       // 1. Query Match
       if (_currentQuery.isNotEmpty) {
-        final q = _currentQuery.normalized;
-        final matches =
-            s.name.normalized.contains(q) ||
-            (s.category?.name.normalized.contains(q) ?? false) ||
-            (s.description?.normalized.contains(q) ?? false);
+        final matches = SearchUtils.matchesCombo(_currentQuery, [
+          s.name,
+          s.category?.name,
+          s.description,
+        ]);
         if (!matches) continue;
       }
 
@@ -214,7 +214,7 @@ class _QuoteServiceSearchScreenState
 
     return GenericSearchScreen<ServiceModel>(
       title: 'Buscar Servicio',
-      hintText: 'Buscar servicios...',
+      hintText: 'Buscar servicio, categoría...',
       historyKey: 'quote_service_search_history',
       data: processedAsyncValue,
       onQueryChanged: _onQueryChanged,

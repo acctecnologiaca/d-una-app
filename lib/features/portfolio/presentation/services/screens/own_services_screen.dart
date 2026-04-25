@@ -135,7 +135,7 @@ class _OwnServicesScreenState extends ConsumerState<OwnServicesScreen> {
                 });
 
                 return ListView.separated(
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  padding: const EdgeInsets.fromLTRB(16, 16, 16, 120),
                   itemCount: finalServices.length,
                   separatorBuilder: (context, index) =>
                       const Divider(height: 1, color: Colors.transparent),

@@ -1,10 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:d_una_app/shared/widgets/friendly_error_widget.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import '../../../../../shared/widgets/standard_app_bar.dart';
-import '../../../../../shared/widgets/custom_extended_fab.dart';
-import '../../../../../shared/widgets/custom_search_bar.dart';
+import '../../../../../shared/widgets/generic_list_screen.dart';
+import '../../../../settings/presentation/widgets/add_edit_commercial_condition_sheet.dart';
 import '../../../data/models/commercial_condition.dart';
 import '../../../../portfolio/presentation/providers/lookup_providers.dart';
 import '../providers/create_quote_provider.dart';
@@ -57,140 +55,87 @@ class _SelectConditionScreenState extends ConsumerState<SelectConditionScreen> {
   Widget build(BuildContext context) {
     final colors = Theme.of(context).colorScheme;
     final conditionsAsync = ref.watch(commercialConditionsProvider);
+    final quoteState = ref.watch(createQuoteProvider);
     final quoteNumber =
-        ref.watch(createQuoteProvider).quote?.quoteNumber ?? '#C-00000011';
+        quoteState.quote?.quoteNumber ?? quoteState.currentQuoteNumber ?? '';
 
-    return Scaffold(
-      backgroundColor: colors.surface,
-      appBar: StandardAppBar(
-        title: 'Agregar condiciones',
-        subtitle: 'Cotización $quoteNumber',
-      ),
-      body: Column(
-        children: [
-          Padding(
-            padding: const EdgeInsets.all(16.0),
-            child: GestureDetector(
-              onTap: () async {
-                final uri = Uri.parse(GoRouterState.of(context).uri.toString());
-                final returnTo = uri.queryParameters['returnTo'];
-                final quoteId = widget.quoteId;
-
-                String searchPath;
-                if (quoteId != null) {
-                  searchPath = '/quotes/$quoteId/conditions/search';
-                } else {
-                  searchPath = '/quotes/create/conditions/search';
-                }
-
-                if (returnTo != null) {
-                  searchPath = '$searchPath?returnTo=$returnTo';
-                }
-
-                final selected = await context.push<CommercialCondition>(
-                  searchPath,
-                );
-                if (selected != null) {
-                  _toggleSelection(selected);
-                }
-              },
-              child: const CustomSearchBar(
-                hintText: 'Buscar condición...',
-                readOnly: true,
-                onTap: null,
-              ),
+    return GenericListScreen<CommercialCondition>(
+      title: 'Agregar condiciones',
+      subtitle: 'Cotización #$quoteNumber',
+      itemsAsync: conditionsAsync,
+      emptyListMessage: 'No hay condiciones predefinidas.',
+      onSearch: (condition, query) =>
+          condition.description.toLowerCase().contains(query.toLowerCase()),
+      preFilter: (items) {
+        final existingIds = ref
+            .read(createQuoteProvider)
+            .conditions
+            .where((c) => c.conditionId != null)
+            .map((c) => c.conditionId!)
+            .toSet();
+        return items.where((c) => !existingIds.contains(c.id)).toList();
+      },
+      headerWidget: Padding(
+        padding: const EdgeInsets.fromLTRB(16.0, 16.0, 16.0, 8.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Text(
+              'Agrega las condiciones que creas necesarias para que tu cliente las tenga en cuenta al momento de evaluar tu cotización',
+              style: TextStyle(color: colors.onSurfaceVariant, fontSize: 14),
             ),
-          ),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16.0),
-            child: OutlinedButton(
+            const SizedBox(height: 16),
+            OutlinedButton(
               onPressed: () {
-                // Add custom condition action
+                showModalBottomSheet(
+                  context: context,
+                  isScrollControlled: true,
+                  builder: (context) => const AddEditCommercialConditionSheet(),
+                );
               },
               style: OutlinedButton.styleFrom(
+                padding: const EdgeInsets.symmetric(vertical: 12),
+                side: BorderSide(color: colors.outlineVariant),
                 minimumSize: const Size.fromHeight(48),
                 shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(24.0),
+                  borderRadius: BorderRadius.circular(24),
                 ),
+                foregroundColor: colors.onSurface,
               ),
-              child: const Text('Agregar nueva condición comercial'),
+              child: const Text(
+                'Agregar nueva condición comercial',
+                style: TextStyle(fontWeight: FontWeight.w600),
+              ),
             ),
-          ),
-          const SizedBox(height: 16),
-          Expanded(
-            child: conditionsAsync.when(
-              data: (conditions) {
-                if (conditions.isEmpty) {
-                  return const Center(
-                    child: Text('No hay condiciones predefinidas.'),
-                  );
-                }
-
-                // Exclude conditions already in the quote
-                final existingIds = ref
-                    .read(createQuoteProvider)
-                    .conditions
-                    .where((c) => c.conditionId != null)
-                    .map((c) => c.conditionId!)
-                    .toSet();
-
-                final availableConditions = conditions
-                    .where((c) => !existingIds.contains(c.id))
-                    .toList();
-
-                if (availableConditions.isEmpty) {
-                  return const Center(
-                    child: Text('Todas las condiciones ya han sido agregadas.'),
-                  );
-                }
-
-                return ListView.separated(
-                  itemCount: availableConditions.length,
-                  padding: const EdgeInsets.only(bottom: 80), // Fab space
-                  separatorBuilder: (context, index) =>
-                      const Divider(height: 1, color: Colors.transparent),
-                  itemBuilder: (context, index) {
-                    final condition = availableConditions[index];
-                    final isSelected = _selectedConditions.contains(condition);
-
-                    return CheckboxListTile(
-                      value: isSelected,
-                      onChanged: (val) => _toggleSelection(condition),
-                      title: Text(
-                        condition.description,
-                        style: TextStyle(color: colors.onSurface, fontSize: 16),
-                      ),
-                      controlAffinity: ListTileControlAffinity.trailing,
-                      activeColor: colors.primary,
-                      checkboxShape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(4),
-                      ),
-                      contentPadding: const EdgeInsets.symmetric(
-                        horizontal: 16,
-                        vertical: 4,
-                      ),
-                    );
-                  },
-                );
-              },
-              loading: () => const Center(child: CircularProgressIndicator()),
-              error: (err, stack) => FriendlyErrorWidget(error: err),
-            ),
-          ),
-        ],
-      ),
-      floatingActionButton: Padding(
-        padding: const EdgeInsets.only(bottom: 40.0),
-        child: CustomExtendedFab(
-          onPressed: _selectedConditions.isNotEmpty ? _confirmSelection : null,
-          icon: Icons.check,
-          label: _selectedConditions.isNotEmpty
-              ? 'Confirmar (${_selectedConditions.length})'
-              : 'Confirmar',
-          isEnabled: _selectedConditions.isNotEmpty,
+          ],
         ),
       ),
-      floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
+      itemBuilder: (context, condition) {
+        final isSelected = _selectedConditions.contains(condition);
+        return CheckboxListTile(
+          value: isSelected,
+          onChanged: (val) => _toggleSelection(condition),
+          title: Text(
+            condition.description,
+            style: TextStyle(color: colors.onSurface, fontSize: 16),
+          ),
+          controlAffinity: ListTileControlAffinity.trailing,
+          activeColor: colors.primary,
+          checkboxShape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(4),
+          ),
+          contentPadding: const EdgeInsets.symmetric(
+            horizontal: 16,
+            vertical: 4,
+          ),
+        );
+      },
+      onAddPressed: _confirmSelection,
+      fabLabel: _selectedConditions.isNotEmpty
+          ? 'Confirmar (${_selectedConditions.length})'
+          : 'Confirmar',
+      fabIcon: Icons.check,
+      isFabEnabled: _selectedConditions.isNotEmpty,
     );
   }
 }

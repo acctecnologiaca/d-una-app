@@ -93,8 +93,13 @@ class _CustomTextFieldState extends State<CustomTextField> {
     final shouldShow =
         _controller.text.isNotEmpty && !widget.readOnly && widget.enabled;
     if (mounted && _showClearButton != shouldShow) {
-      setState(() {
-        _showClearButton = shouldShow;
+      // Prevents setState during build if the controller is manipulated synchronously
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) {
+          setState(() {
+            _showClearButton = shouldShow;
+          });
+        }
       });
     }
   }

@@ -8,6 +8,7 @@ import '../../../../../shared/widgets/horizontal_filter_bar.dart';
 import '../../../../../shared/widgets/filter_bottom_sheet.dart';
 import '../../../../../shared/widgets/price_filter_sheet.dart';
 import '../../../../../shared/widgets/sort_selector.dart';
+import '../../../../../core/utils/search_utils.dart';
 import '../../../domain/models/quote_aggregated_product.dart';
 import '../providers/quote_product_selection_provider.dart';
 import '../../../../portfolio/domain/models/product_search_filters.dart';
@@ -16,7 +17,9 @@ import '../../../../profile/presentation/providers/profile_provider.dart';
 import '../providers/create_quote_provider.dart';
 
 class QuoteProductSearchScreen extends ConsumerStatefulWidget {
-  const QuoteProductSearchScreen({super.key});
+  final String? initialQuery;
+
+  const QuoteProductSearchScreen({super.key, this.initialQuery});
 
   @override
   ConsumerState<QuoteProductSearchScreen> createState() =>
@@ -25,7 +28,7 @@ class QuoteProductSearchScreen extends ConsumerStatefulWidget {
 
 class _QuoteProductSearchScreenState
     extends ConsumerState<QuoteProductSearchScreen> {
-  String _currentQuery = '';
+  late String _currentQuery = widget.initialQuery ?? '';
   SortOption _currentSort = SortOption.lowestPrice;
 
   // Filters State
@@ -333,6 +336,7 @@ class _QuoteProductSearchScreenState
       data: processedAsyncValue,
       onQueryChanged: _onQueryChanged,
       onResetFilters: _resetFilters,
+      initialQuery: widget.initialQuery,
 
       // Filter Chips Configuration
       filters: [
@@ -401,8 +405,12 @@ class _QuoteProductSearchScreenState
         ),
       ),
 
-      filter: (product, query) =>
-          true, // Filtering is done entirely on the server
+      filter: (product, query) => SearchUtils.matchesCombo(query, [
+        product.name,
+        product.brand,
+        product.model,
+        product.category,
+      ]),
       itemBuilder: (context, product) {
         final isAlreadyInQuote = quoteProducts.any(
           (p) =>
@@ -432,7 +440,9 @@ class _QuoteProductSearchScreenState
               if (isAlreadyInQuote) {
                 ScaffoldMessenger.of(context).showSnackBar(
                   const SnackBar(
-                    content: Text('Este producto ya se encuentra en la cotización'),
+                    content: Text(
+                      'Este producto ya se encuentra en la cotización',
+                    ),
                   ),
                 );
                 return;

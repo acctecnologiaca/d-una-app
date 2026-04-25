@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:d_una_app/shared/widgets/custom_dialog.dart';
 import '../../../../../../shared/widgets/info_block.dart';
 import '../../../../data/models/service_model.dart';
 import '../../../providers/services_provider.dart';
@@ -58,24 +59,25 @@ class ServiceDetailsScreen extends ConsumerWidget {
           IconButton(
             icon: const Icon(Icons.delete_outline),
             onPressed: () async {
-              final confirm = await showDialog<bool>(
+              final confirm = await CustomDialog.show<bool>(
                 context: context,
-                builder: (context) => AlertDialog(
-                  title: const Text('Eliminar servicio'),
-                  content: const Text(
-                    '¿Estás seguro de que deseas eliminar este servicio?',
-                  ),
+                dialog: CustomDialog.destructive(
+                  title: 'Eliminar servicio',
+                  contentText:
+                      '¿Estás seguro de que deseas eliminar este servicio?',
                   actions: [
                     TextButton(
                       child: const Text('Cancelar'),
-                      onPressed: () => Navigator.pop(context, false),
+                      onPressed: () =>
+                          Navigator.of(context, rootNavigator: true).pop(false),
                     ),
-                    TextButton(
-                      child: const Text(
-                        'Eliminar',
-                        style: TextStyle(color: Colors.red),
+                    FilledButton(
+                      style: FilledButton.styleFrom(
+                        backgroundColor: colors.error,
                       ),
-                      onPressed: () => Navigator.pop(context, true),
+                      onPressed: () =>
+                          Navigator.of(context, rootNavigator: true).pop(true),
+                      child: const Text('Eliminar'),
                     ),
                   ],
                 ),

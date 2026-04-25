@@ -1,14 +1,17 @@
 import 'dart:ui';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:material_symbols_icons/symbols.dart';
+import '../../../../portfolio/presentation/providers/lookup_providers.dart';
 import '../../../../../shared/utils/currency_formatter.dart';
 import '../../../../../shared/widgets/dynamic_material_symbol.dart';
 import '../../../../../shared/widgets/editable_quantity_stepper.dart';
 import '../../../domain/models/quote_product_source.dart';
 import '../../../../profile/presentation/screens/verification_screen.dart';
 
-class QuoteProductSourceCard extends StatefulWidget {
+class QuoteProductSourceCard extends ConsumerStatefulWidget {
   final QuoteProductSource source;
   final double selectedQty;
   final String uom;
@@ -16,7 +19,9 @@ class QuoteProductSourceCard extends StatefulWidget {
   final VoidCallback onDeselectAll;
   final ValueChanged<double> onQtyChanged;
   final ValueChanged<double>? onCostChanged;
+  final ValueChanged<String>? onProviderNameChanged;
   final double? externalCostPrice;
+  final String? externalProviderName;
 
   const QuoteProductSourceCard({
     super.key,
@@ -27,16 +32,21 @@ class QuoteProductSourceCard extends StatefulWidget {
     required this.onDeselectAll,
     required this.onQtyChanged,
     this.onCostChanged,
+    this.onProviderNameChanged,
     this.externalCostPrice,
+    this.externalProviderName,
   });
 
   @override
-  State<QuoteProductSourceCard> createState() => _QuoteProductSourceCardState();
+  ConsumerState<QuoteProductSourceCard> createState() =>
+      _QuoteProductSourceCardState();
 }
 
-class _QuoteProductSourceCardState extends State<QuoteProductSourceCard> {
+class _QuoteProductSourceCardState
+    extends ConsumerState<QuoteProductSourceCard> {
   bool? _isExpandedManual;
   late final TextEditingController _costController;
+  late final TextEditingController _providerNameController;
 
   @override
   void initState() {
@@ -46,11 +56,15 @@ class _QuoteProductSourceCardState extends State<QuoteProductSourceCard> {
           ? CurrencyFormatter.formatNumber(widget.externalCostPrice!)
           : '',
     );
+    _providerNameController = TextEditingController(
+      text: widget.externalProviderName ?? '',
+    );
   }
 
   @override
   void dispose() {
     _costController.dispose();
+    _providerNameController.dispose();
     super.dispose();
   }
 
@@ -146,12 +160,7 @@ class _QuoteProductSourceCardState extends State<QuoteProductSourceCard> {
           : (hasError
                 ? colors.errorContainer.withValues(alpha: 0.8)
                 : colors.surfaceContainerLowest),
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(0),
-        side: hasError
-            ? BorderSide(color: colors.error, width: 1)
-            : BorderSide.none,
-      ),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(0)),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
@@ -391,8 +400,169 @@ class _QuoteProductSourceCardState extends State<QuoteProductSourceCard> {
               padding: EdgeInsets.symmetric(horizontal: 16),
               child: Divider(height: 1),
             ),
-            // External Management: Cost input ABOVE quantity stepper
+            // External Management: Provider and Cost inputs ABOVE quantity stepper
             if (isExternal) ...[
+              // Provider Name Input
+              Padding(
+                padding: const EdgeInsets.only(left: 16, right: 16, top: 12),
+                child: Row(
+                  children: [
+                    Text(
+                      'Proveedor:',
+                      style: TextStyle(
+                        fontSize: 13,
+                        color: colors.onSurfaceVariant,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: SizedBox(
+                        height: 36,
+                        child: RawAutocomplete<String>(
+                          textEditingController: _providerNameController,
+                          focusNode: FocusNode(),
+                          optionsBuilder: (TextEditingValue textEditingValue) {
+                            if (textEditingValue.text.isEmpty) {
+                              return const Iterable<String>.empty();
+                            }
+                            final suppliers =
+                                ref.read(unaffiliatedSuppliersProvider).value ??
+                                [];
+                            final lowercaseQuery = textEditingValue.text
+                                .toLowerCase();
+
+                            final matches = suppliers
+                                .where((supplier) {
+                                  final nameMatch = supplier.name
+                                      .toLowerCase()
+                                      .contains(lowercaseQuery);
+                                  final legalNameMatch =
+                                      supplier.legalName
+                                          ?.toLowerCase()
+                                          .contains(lowercaseQuery) ??
+                                      false;
+                                  return nameMatch || legalNameMatch;
+                                })
+                                .map((s) {
+                                  // Decide which name to show based on the match
+                                  final namePart = s.name.toLowerCase();
+                                  final legalPart =
+                                      s.legalName?.toLowerCase() ?? '';
+
+                                  if (legalPart.contains(lowercaseQuery) &&
+                                      !namePart.contains(lowercaseQuery)) {
+                                    return s.legalName!;
+                                  }
+                                  return s.name;
+                                });
+
+                            return matches;
+                          },
+                          onSelected: (String selection) {
+                            _providerNameController.text = selection;
+                            if (widget.onProviderNameChanged != null) {
+                              widget.onProviderNameChanged!(selection);
+                            }
+                          },
+                          fieldViewBuilder:
+                              (
+                                context,
+                                controller,
+                                focusNode,
+                                onFieldSubmitted,
+                              ) {
+                                return TextField(
+                                  controller: controller,
+                                  focusNode: focusNode,
+                                  onSubmitted: (value) => onFieldSubmitted(),
+                                  style: const TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 14,
+                                  ),
+                                  decoration: InputDecoration(
+                                    hintText: 'Nombre del proveedor (opcional)',
+                                    hintStyle: TextStyle(
+                                      color: colors.onSurfaceVariant.withValues(
+                                        alpha: 0.5,
+                                      ),
+                                      fontSize: 13,
+                                      fontWeight: FontWeight.normal,
+                                    ),
+                                    isDense: true,
+                                    contentPadding: const EdgeInsets.symmetric(
+                                      horizontal: 12,
+                                      vertical: 8,
+                                    ),
+                                    border: OutlineInputBorder(
+                                      borderRadius: BorderRadius.circular(8),
+                                      borderSide: BorderSide(
+                                        color: colors.outline,
+                                      ),
+                                    ),
+                                    focusedBorder: OutlineInputBorder(
+                                      borderRadius: BorderRadius.circular(8),
+                                      borderSide: BorderSide(
+                                        color: colors.primary,
+                                        width: 2,
+                                      ),
+                                    ),
+                                  ),
+                                  onChanged: (value) {
+                                    if (widget.onProviderNameChanged != null) {
+                                      widget.onProviderNameChanged!(value);
+                                    }
+                                  },
+                                );
+                              },
+                          optionsViewBuilder: (context, onSelected, options) {
+                            return Align(
+                              alignment: Alignment.topLeft,
+                              child: Material(
+                                elevation: 4.0,
+                                borderRadius: BorderRadius.circular(8),
+                                color: colors.surfaceContainerHighest,
+                                child: ConstrainedBox(
+                                  constraints: BoxConstraints(
+                                    maxHeight: 200,
+                                    minWidth:
+                                        MediaQuery.of(context).size.width * 0.6,
+                                  ),
+                                  child: ListView.builder(
+                                    padding: EdgeInsets.zero,
+                                    shrinkWrap: true,
+                                    itemCount: options.length,
+                                    itemBuilder:
+                                        (BuildContext context, int index) {
+                                          final String option = options
+                                              .elementAt(index);
+                                          return InkWell(
+                                            onTap: () => onSelected(option),
+                                            child: Padding(
+                                              padding: const EdgeInsets.all(
+                                                12.0,
+                                              ),
+                                              child: Text(
+                                                option,
+                                                style: const TextStyle(
+                                                  fontSize: 14,
+                                                ),
+                                              ),
+                                            ),
+                                          );
+                                        },
+                                  ),
+                                ),
+                              ),
+                            );
+                          },
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              // Cost Input
               Padding(
                 padding: const EdgeInsets.only(left: 16, right: 16, top: 12),
                 child: Row(
@@ -499,7 +669,9 @@ class _QuoteProductSourceCardState extends State<QuoteProductSourceCard> {
                                       : colors.primary,
                                   width: 2,
                                 ),
-                                onChanged: shouldShowSnackBar
+                                onChanged:
+                                    (shouldShowSnackBar ||
+                                        (!hasStock && checkboxState == false))
                                     ? null
                                     : (bool? newValue) {
                                         if (checkboxState == false) {
@@ -515,7 +687,13 @@ class _QuoteProductSourceCardState extends State<QuoteProductSourceCard> {
                               checkboxState == null ? 'Parcial' : 'Todos',
                               style: TextStyle(
                                 fontSize: 14,
-                                color: colors.onSurfaceVariant,
+                                color:
+                                    (shouldShowSnackBar ||
+                                        (!hasStock && checkboxState == false))
+                                    ? colors.onSurfaceVariant.withValues(
+                                        alpha: 0.38,
+                                      )
+                                    : colors.onSurfaceVariant,
                                 fontWeight: FontWeight.w500,
                               ),
                             ),

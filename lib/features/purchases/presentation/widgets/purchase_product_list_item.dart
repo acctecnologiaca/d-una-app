@@ -42,16 +42,19 @@ class PurchaseProductListItem extends StatelessWidget {
         title: name,
         subtitle: Text(model),
         trailing: StatusBadge(
-          backgroundColor:
-              enabled ? colors.secondaryContainer : colors.outlineVariant,
-          textColor:
-              enabled ? colors.onSecondaryContainer : colors.onSurfaceVariant,
+          backgroundColor: enabled
+              ? colors.secondaryContainer
+              : colors.outlineVariant,
+          textColor: enabled
+              ? colors.onSecondaryContainer
+              : colors.onSurfaceVariant,
           text: uom?.symbol ?? 'ud.',
           icon: DynamicMaterialSymbol(
             symbolName: uom?.iconName,
             size: 16,
-            color:
-                enabled ? colors.onSecondaryContainer : colors.onSurfaceVariant,
+            color: enabled
+                ? colors.onSecondaryContainer
+                : colors.onSurfaceVariant,
           ),
         ),
       ),

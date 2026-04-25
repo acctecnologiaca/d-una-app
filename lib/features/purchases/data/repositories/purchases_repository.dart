@@ -11,13 +11,11 @@ class PurchasesRepository {
     final currentUserId = _supabase.auth.currentUser?.id;
     if (currentUserId == null) throw Exception('User not authenticated');
 
-    var query = _supabase
-        .from('purchases')
-        .select('''
+    var query = _supabase.from('purchases').select('''
           *,
           suppliers(name, legal_name)${productId != null ? ', purchase_items!inner(product_id)' : ''}
         ''');
-    
+
     query = query.eq('user_id', currentUserId);
 
     if (productId != null) {
@@ -32,27 +30,30 @@ class PurchasesRepository {
       String? supplierName;
       if (json['suppliers'] != null) {
         final supplier = json['suppliers'] as Map<String, dynamic>;
-        supplierName = (supplier['legal_name'] as String?) ?? (supplier['name'] as String?);
+        supplierName =
+            (supplier['legal_name'] as String?) ??
+            (supplier['name'] as String?);
       }
-      
+
       json['supplier_name'] = supplierName ?? 'Desconocido';
       return Purchase.fromJson(json as Map<String, dynamic>);
     }).toList();
   }
 
   Future<void> createPurchase(
-     Purchase purchase,
-     List<PurchaseItem> items,
-     List<ProductSerial> serials,
+    Purchase purchase,
+    List<PurchaseItem> items,
+    List<ProductSerial> serials,
   ) async {
     final currentUserId = _supabase.auth.currentUser?.id;
     if (currentUserId == null) throw Exception('User not authenticated');
 
     // 1. Insert Purchase Header
-    final headerResponse = await _supabase.from('purchases').insert({
-       ...purchase.toJson(),
-       'user_id': currentUserId,
-    }).select('id').single();
+    final headerResponse = await _supabase
+        .from('purchases')
+        .insert({...purchase.toJson(), 'user_id': currentUserId})
+        .select('id')
+        .single();
 
     final purchaseId = headerResponse['id'] as String;
 
@@ -75,9 +76,9 @@ class PurchasesRepository {
   }
 
   Future<void> updatePurchase(
-     Purchase purchase,
-     List<PurchaseItem> items,
-     List<ProductSerial> serials,
+    Purchase purchase,
+    List<PurchaseItem> items,
+    List<ProductSerial> serials,
   ) async {
     final currentUserId = _supabase.auth.currentUser?.id;
     if (currentUserId == null) throw Exception('User not authenticated');
@@ -86,12 +87,15 @@ class PurchasesRepository {
     final headerJson = purchase.toJson();
     headerJson.remove('id'); // Don't try to update the ID
     headerJson.remove('user_id'); // Don't try to update the user_id
-    
+
     await _supabase.from('purchases').update(headerJson).eq('id', purchase.id);
 
     // 2. Delete existing items and serials to replace them cleanly
     // Deleting items should cascade to serials in a proper DB schema, but let's be explicit just in case.
-    await _supabase.from('purchase_items').delete().eq('purchase_id', purchase.id);
+    await _supabase
+        .from('purchase_items')
+        .delete()
+        .eq('purchase_id', purchase.id);
 
     // 3. Insert new items and serials
     if (items.isNotEmpty) {
@@ -111,7 +115,15 @@ class PurchasesRepository {
     }
   }
 
-  Future<({Purchase purchase, List<PurchaseItemProduct> items, List<ProductSerial> serials, String? supplierTaxId})> getPurchaseDetails(String purchaseId) async {
+  Future<
+    ({
+      Purchase purchase,
+      List<PurchaseItemProduct> items,
+      List<ProductSerial> serials,
+      String? supplierTaxId,
+    })
+  >
+  getPurchaseDetails(String purchaseId) async {
     final currentUserId = _supabase.auth.currentUser?.id;
     if (currentUserId == null) throw Exception('User not authenticated');
 
@@ -125,15 +137,16 @@ class PurchasesRepository {
         .eq('id', purchaseId)
         .eq('user_id', currentUserId)
         .single();
-    
+
     String? supplierName;
     String? supplierTaxId;
     if (headerResponse['suppliers'] != null) {
       final supplier = headerResponse['suppliers'] as Map<String, dynamic>;
-      supplierName = (supplier['legal_name'] as String?) ?? (supplier['name'] as String?);
+      supplierName =
+          (supplier['legal_name'] as String?) ?? (supplier['name'] as String?);
       supplierTaxId = supplier['tax_id'] as String?;
     }
-    
+
     final purchaseMap = Map<String, dynamic>.from(headerResponse);
     purchaseMap['supplier_name'] = supplierName ?? 'Desconocido';
     final purchase = Purchase.fromJson(purchaseMap);
@@ -152,7 +165,7 @@ class PurchasesRepository {
       final productMap = itemMap['products'] as Map<String, dynamic>?;
       final brandMap = productMap?['brands'] as Map<String, dynamic>?;
       final uomMap = productMap?['uoms'] as Map<String, dynamic>?;
-      
+
       return PurchaseItemProduct(
         id: itemMap['id'] as String,
         productId: itemMap['product_id'] as String,
@@ -176,7 +189,7 @@ class PurchasesRepository {
           .from('product_serials')
           .select()
           .inFilter('purchase_item_id', itemIds);
-      
+
       serials = (serialsResponse as List<dynamic>)
           .map((json) => ProductSerial.fromJson(json as Map<String, dynamic>))
           .toList();

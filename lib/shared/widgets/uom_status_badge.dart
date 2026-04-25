@@ -52,9 +52,11 @@ class UomStatusBadge extends StatelessWidget {
     // When quantity is zero and we're showing quantity, display "Sin stock"
     final bool isOutOfStock = showQuantity && quantity <= 0;
 
-    final bgColor = backgroundColor ??
+    final bgColor =
+        backgroundColor ??
         (isOutOfStock ? colors.errorContainer : colors.secondaryContainer);
-    final fgColor = textColor ??
+    final fgColor =
+        textColor ??
         (isOutOfStock ? colors.onErrorContainer : colors.onSecondaryContainer);
 
     // Build the text: "Sin stock", "5 Kg", "5/10 Kg", or just "Kg"
@@ -74,14 +76,13 @@ class UomStatusBadge extends StatelessWidget {
     }
 
     // Resolve the icon (fallback to package_2)
-    final Widget iconWidget =
-        (uomIconName != null && uomIconName!.isNotEmpty)
-            ? DynamicMaterialSymbol(
-                symbolName: uomIconName!,
-                size: 14,
-                color: fgColor,
-              )
-            : Icon(Symbols.package_2, size: 14, color: fgColor);
+    final Widget iconWidget = (uomIconName != null && uomIconName!.isNotEmpty)
+        ? DynamicMaterialSymbol(
+            symbolName: uomIconName!,
+            size: 14,
+            color: fgColor,
+          )
+        : Icon(Symbols.package_2, size: 14, color: fgColor);
 
     return StatusBadge(
       backgroundColor: bgColor,

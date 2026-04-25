@@ -21,12 +21,14 @@ class QuoteProductSourcesScreen extends ConsumerStatefulWidget {
   final QuoteAggregatedProduct product;
   final Map<String, double>? initialSelections;
   final double? externalCostPrice;
+  final String? externalProviderName;
 
   const QuoteProductSourcesScreen({
     super.key,
     required this.product,
     this.initialSelections,
     this.externalCostPrice,
+    this.externalProviderName,
   });
 
   @override
@@ -45,11 +47,13 @@ class _QuoteProductSourcesScreenState
 
   // Gestión Externa: cost price entered by user
   double? _externalCostPrice;
+  String? _externalProviderName;
 
   @override
   void initState() {
     super.initState();
     _externalCostPrice = widget.externalCostPrice;
+    _externalProviderName = widget.externalProviderName;
 
     if (widget.initialSelections != null &&
         widget.initialSelections!.isNotEmpty) {
@@ -344,6 +348,11 @@ class _QuoteProductSourcesScreenState
                               ProductSourceType.externalManagement
                           ? _externalCostPrice
                           : null,
+                      externalProviderName:
+                          item.sourceType ==
+                              ProductSourceType.externalManagement
+                          ? _externalProviderName
+                          : null,
                       onSelectAll: () {
                         final isExternal =
                             item.sourceType ==
@@ -359,6 +368,13 @@ class _QuoteProductSourcesScreenState
                       onQtyChanged: (qty) {
                         selectionController.setSelection(item.id, qty);
                       },
+                      onProviderNameChanged:
+                          item.sourceType ==
+                              ProductSourceType.externalManagement
+                          ? (name) {
+                              _externalProviderName = name;
+                            }
+                          : null,
                       onCostChanged:
                           item.sourceType ==
                               ProductSourceType.externalManagement
@@ -416,6 +432,7 @@ class _QuoteProductSourcesScreenState
               context,
               averageCost: averageCost,
               productName: widget.product.name,
+              uom: widget.product.uom,
               brand: widget.product.brand,
               model: widget.product.model,
             );
@@ -440,17 +457,17 @@ class _QuoteProductSourcesScreenState
                   ? (_externalCostPrice ?? source.price)
                   : source.price;
               final unitPrice = sellingPrice;
-              final taxAmount = unitPrice * taxRate;
+              final taxAmount = unitPrice * (taxRate / 100);
               final totalPrice = (unitPrice + taxAmount) * qty;
 
               final quoteItem = QuoteItemProduct(
                 id: uuid.v4(),
                 quoteId: 'draft', // Placeholder until quote is saved
-                // External Management: use productId for analytics, no supplierProductId
+                // External Management: use productId for analytics, no supplierBranchStockId
                 productId: (source.sourceType == ProductSourceType.own)
                     ? source.id
                     : null,
-                supplierProductId:
+                supplierBranchStockId:
                     (source.sourceType == ProductSourceType.supplier)
                     ? source.id
                     : null,
@@ -470,6 +487,7 @@ class _QuoteProductSourcesScreenState
                 taxRate: taxRate,
                 taxAmount: taxAmount,
                 totalPrice: totalPrice,
+                externalProviderName: isExternal ? _externalProviderName : null,
               );
 
               createQuoteNotifier.addProduct(quoteItem);

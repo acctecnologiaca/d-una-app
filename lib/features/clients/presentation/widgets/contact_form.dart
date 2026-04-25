@@ -45,7 +45,7 @@ class ContactForm extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final textTheme = Theme.of(context).textTheme;
-    final phoneCodes = ['0412', '0414', '0424', '0416'];
+    final phoneCodes = ['0412', '0422', '0414', '0424', '0416', '0426'];
 
     return Form(
       key: formKey,
@@ -63,10 +63,10 @@ class ContactForm extends StatelessWidget {
           Row(
             children: [
               SizedBox(
-                width: 100,
+                width: 110,
                 child: CustomDropdown<String>(
                   value: selectedPhoneCode,
-                  label: 'Cod.',
+                  label: 'Código',
                   items: phoneCodes,
                   itemLabelBuilder: (item) => item,
                   onChanged: onPhoneCodeChanged,

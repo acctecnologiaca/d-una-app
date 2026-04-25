@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:d_una_app/shared/widgets/custom_action_sheet.dart';
+import 'package:d_una_app/shared/widgets/custom_dialog.dart';
 import 'package:d_una_app/shared/widgets/custom_text_field.dart';
 import 'package:d_una_app/shared/widgets/custom_button.dart';
 import 'package:d_una_app/features/portfolio/data/models/service_rate_model.dart';
@@ -62,15 +63,23 @@ class _AddEditServiceRateSheetState
 
     try {
       final repo = ref.read(lookupRepositoryProvider);
+      ServiceRate? result;
       if (isEditing) {
         await repo.updateServiceRate(widget.rate!.id, name, symbol);
+        result = ServiceRate(
+          id: widget.rate!.id,
+          name: name,
+          symbol: symbol,
+          userId: widget.rate!.userId,
+          isVerified: widget.rate!.isVerified,
+        );
       } else {
-        await repo.addServiceRate(name, symbol);
+        result = await repo.addServiceRate(name, symbol);
       }
       ref.invalidate(serviceRatesProvider);
-      
+
       if (mounted) {
-        Navigator.pop(context);
+        Navigator.pop(context, result);
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             behavior: SnackBarBehavior.floating,
@@ -92,21 +101,20 @@ class _AddEditServiceRateSheetState
 
   Future<void> _delete() async {
     final colors = Theme.of(context).colorScheme;
-    final confirm = await showDialog<bool>(
+    final confirm = await CustomDialog.show<bool>(
       context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Eliminar tarifa'),
-        content: Text(
-          '¿Estás seguro de que deseas eliminar la tarifa "${widget.rate!.name}"?',
-        ),
+      dialog: CustomDialog.destructive(
+        title: 'Eliminar tarifa',
+        contentText:
+            '¿Estás seguro de que deseas eliminar la tarifa "${widget.rate!.name}"?',
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(ctx, false),
+            onPressed: () => Navigator.pop(context, false),
             child: const Text('Cancelar'),
           ),
           FilledButton(
             style: FilledButton.styleFrom(backgroundColor: colors.error),
-            onPressed: () => Navigator.pop(ctx, true),
+            onPressed: () => Navigator.pop(context, true),
             child: const Text('Eliminar'),
           ),
         ],
@@ -120,11 +128,14 @@ class _AddEditServiceRateSheetState
           .read(lookupRepositoryProvider)
           .deleteServiceRate(widget.rate!.id);
       ref.invalidate(serviceRatesProvider);
-      
+
       if (mounted) {
         Navigator.pop(context);
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(behavior: SnackBarBehavior.floating, content: Text('Tarifa "${widget.rate!.name}" eliminada')),
+          SnackBar(
+            behavior: SnackBarBehavior.floating,
+            content: Text('Tarifa "${widget.rate!.name}" eliminada'),
+          ),
         );
       }
     } catch (e) {
@@ -175,14 +186,14 @@ class _AddEditServiceRateSheetState
       content: Column(
         children: [
           CustomTextField(
-            label: 'Nombre (ej: Por hora)',
+            label: 'Nombre (ej: Hora)',
             controller: _nameController,
             textCapitalization: TextCapitalization.words,
             autofocus: true,
           ),
           const SizedBox(height: 12),
           CustomTextField(
-            label: 'Símbolo (ej: /hr)',
+            label: 'Símbolo (ej: h)',
             controller: _symbolController,
           ),
         ],

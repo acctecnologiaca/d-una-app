@@ -98,6 +98,7 @@ class _AddProductStep1State extends State<AddProductStep1> {
 
                 CustomDropdown<Brand>(
                   label: 'Marca',
+                  searchable: true,
                   value: widget.selectedBrand,
                   items: widget.brands,
                   onChanged: widget.onBrandChanged,
@@ -110,7 +111,7 @@ class _AddProductStep1State extends State<AddProductStep1> {
                   onAddPressed: () {
                     _showAddBrandDialog();
                   },
-                  addOptionLabel: 'Agregar',
+                  addOptionLabel: 'Agregar marca',
                 ),
               ],
             ),

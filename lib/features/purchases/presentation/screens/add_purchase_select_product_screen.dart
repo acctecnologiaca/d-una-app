@@ -137,22 +137,24 @@ class _AddPurchaseSelectProductScreenState
                       onTap: () async {
                         final result =
                             await AddPurchaseProductDetailsSheet.show(
-                                context,
-                                product: product,
+                              context,
+                              product: product,
                             );
                         if (result != null) {
                           final qty = (result['quantity'] as num).toDouble();
                           final cost = (result['cost_price'] as num).toDouble();
-                          final wTime = (result['warranty_duration'] as num).toInt();
-                          final wPeriodStr = result['warranty_period'] as String;
+                          final wTime = (result['warranty_duration'] as num)
+                              .toInt();
+                          final wPeriodStr =
+                              result['warranty_period'] as String;
                           final usesSerials = result['uses_serials'] == true;
 
                           // Map period to DB value
                           final wUnit = wPeriodStr == 'Días'
                               ? 'days'
                               : wPeriodStr == 'Meses'
-                                  ? 'months'
-                                  : 'years';
+                              ? 'months'
+                              : 'years';
 
                           final item = PurchaseItemProduct(
                             id: const Uuid().v4(),
@@ -198,7 +200,8 @@ class _AddPurchaseSelectProductScreenState
                                 },
                               );
                               if (confirmed == true && context.mounted) {
-                                context.pop(); // Pop back to Add Purchase screen
+                                context
+                                    .pop(); // Pop back to Add Purchase screen
                               }
                             }
                           } else {

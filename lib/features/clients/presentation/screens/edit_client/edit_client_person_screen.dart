@@ -7,6 +7,7 @@ import 'package:d_una_app/features/clients/presentation/providers/clients_provid
 import 'package:d_una_app/shared/widgets/form_bottom_bar.dart';
 import 'package:d_una_app/shared/widgets/custom_dropdown.dart';
 import 'package:d_una_app/shared/widgets/custom_text_field.dart';
+import 'package:d_una_app/shared/widgets/custom_dialog.dart';
 import 'package:csc_picker_plus/csc_picker_plus.dart';
 
 class EditClientPersonScreen extends ConsumerStatefulWidget {
@@ -208,24 +209,24 @@ class _EditClientPersonScreenState
   }
 
   Future<bool?> _showDiscardDialog() async {
-    return showDialog<bool>(
+    final colors = Theme.of(context).colorScheme;
+    return CustomDialog.show<bool>(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('¿Descartar cambios?'),
-        content: const Text(
-          'Si sales ahora, perderás toda la información que has ingresado.',
-        ),
+      dialog: CustomDialog.destructive(
+        title: '¿Descartar cambios?',
+        contentText:
+            'Si sales ahora, perderás toda la información que has ingresado.',
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(context, false),
+            onPressed: () =>
+                Navigator.of(context, rootNavigator: true).pop(false),
             child: const Text('Continuar editando'),
           ),
-          TextButton(
-            onPressed: () => Navigator.pop(context, true),
-            child: Text(
-              'Descartar',
-              style: TextStyle(color: Theme.of(context).colorScheme.error),
-            ),
+          FilledButton(
+            style: FilledButton.styleFrom(backgroundColor: colors.error),
+            onPressed: () =>
+                Navigator.of(context, rootNavigator: true).pop(true),
+            child: const Text('Descartar'),
           ),
         ],
       ),
@@ -417,7 +418,7 @@ class _EditClientPersonScreenState
                     Padding(
                       padding: const EdgeInsets.only(top: 0.0),
                       child: SizedBox(
-                        width: 100,
+                        width: 110,
                         child: CustomDropdown<String>(
                           label: 'Código',
                           value: _selectedPhoneCode,

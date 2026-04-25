@@ -41,6 +41,8 @@ class Services extends _$Services {
     required String serviceRateId,
     required String? categoryId,
     required bool hasWarranty,
+    int? warrantyTime,
+    String? warrantyUnit,
   }) async {
     final repository = ref.read(servicesRepositoryProvider);
     final service = ServiceModel(
@@ -51,6 +53,8 @@ class Services extends _$Services {
       serviceRateId: serviceRateId,
       categoryId: categoryId,
       hasWarranty: hasWarranty,
+      warrantyTime: warrantyTime,
+      warrantyUnit: warrantyUnit,
       userId: '', // handled by repo
       createdAt: DateTime.now(),
       updatedAt: DateTime.now(),

@@ -105,20 +105,25 @@ class _AddPurchaseDetailsTabState extends ConsumerState<AddPurchaseDetailsTab> {
                 itemLabelBuilder: (UnaffiliatedSupplier item) =>
                     item.legalName ?? item.name,
                 onAddPressed: () async {
-                  final result = await showModalBottomSheet<UnaffiliatedSupplier>(
-                    context: context,
-                    isScrollControlled: true,
-                    shape: const RoundedRectangleBorder(
-                      borderRadius:
-                          BorderRadius.vertical(top: Radius.circular(16)),
-                    ),
-                    backgroundColor:
-                        Theme.of(context).colorScheme.surfaceContainer,
-                    builder: (context) => const AddEditSupplierSheet(),
-                  );
+                  final result =
+                      await showModalBottomSheet<UnaffiliatedSupplier>(
+                        context: context,
+                        isScrollControlled: true,
+                        shape: const RoundedRectangleBorder(
+                          borderRadius: BorderRadius.vertical(
+                            top: Radius.circular(16),
+                          ),
+                        ),
+                        backgroundColor: Theme.of(
+                          context,
+                        ).colorScheme.surfaceContainer,
+                        builder: (context) => const AddEditSupplierSheet(),
+                      );
 
                   if (result != null) {
-                    ref.read(addPurchaseProvider.notifier).setSupplier(
+                    ref
+                        .read(addPurchaseProvider.notifier)
+                        .setSupplier(
                           result.id,
                           result.legalName ?? result.name,
                           taxId: result.taxId,
@@ -129,7 +134,11 @@ class _AddPurchaseDetailsTabState extends ConsumerState<AddPurchaseDetailsTab> {
                   if (val != null && val.id != '___ADD___') {
                     ref
                         .read(addPurchaseProvider.notifier)
-                        .setSupplier(val.id, val.legalName ?? val.name, taxId: val.taxId);
+                        .setSupplier(
+                          val.id,
+                          val.legalName ?? val.name,
+                          taxId: val.taxId,
+                        );
                   }
                 },
               );
@@ -145,7 +154,8 @@ class _AddPurchaseDetailsTabState extends ConsumerState<AddPurchaseDetailsTab> {
             label: 'Tipo de documento',
             value: state.documentType,
             items: _docTypes,
-            itemLabelBuilder: (item) => item == 'invoice' ? 'Factura' : 'Nota de entrega',
+            itemLabelBuilder: (item) =>
+                item == 'invoice' ? 'Factura' : 'Nota de entrega',
             onChanged: (val) {
               if (val != null) {
                 ref.read(addPurchaseProvider.notifier).setDocumentType(val);

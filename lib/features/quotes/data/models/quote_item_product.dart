@@ -2,8 +2,9 @@ class QuoteItemProduct {
   final String id;
   final String quoteId;
   final String? productId; // Own
-  final String? supplierProductId; // Supplier
+  final String? supplierBranchStockId; // From supplier_branch_stock(id)
   final String? deliveryTimeId;
+  final String? externalProviderName;
 
   // Snapshot
   final String name;
@@ -31,7 +32,7 @@ class QuoteItemProduct {
     required this.id,
     required this.quoteId,
     this.productId,
-    this.supplierProductId,
+    this.supplierBranchStockId,
     this.deliveryTimeId,
     required this.name,
     this.brand,
@@ -48,6 +49,7 @@ class QuoteItemProduct {
     required this.taxAmount,
     required this.totalPrice,
     this.warrantyTime,
+    this.externalProviderName,
     this.isTemporal = false,
   });
 
@@ -56,7 +58,7 @@ class QuoteItemProduct {
       id: json['id'] as String,
       quoteId: json['quote_id'] as String,
       productId: json['product_id'] as String?,
-      supplierProductId: json['supplier_product_id'] as String?,
+      supplierBranchStockId: json['supplier_branch_stock_id'] as String?,
       deliveryTimeId: json['delivery_time_id'] as String?,
       name: json['name'] as String,
       brand: json['brand'] as String?,
@@ -77,6 +79,7 @@ class QuoteItemProduct {
       totalPrice: (json['total_price'] as num).toDouble(),
 
       warrantyTime: json['warranty_time'] as String?,
+      externalProviderName: json['external_provider_name'] as String?,
     );
   }
 
@@ -85,7 +88,7 @@ class QuoteItemProduct {
       'id': id,
       'quote_id': quoteId,
       'product_id': productId,
-      'supplier_product_id': supplierProductId,
+      'supplier_branch_stock_id': supplierBranchStockId,
       'delivery_time_id': deliveryTimeId,
       'name': name,
       'brand': brand,
@@ -102,6 +105,7 @@ class QuoteItemProduct {
       'tax_amount': taxAmount,
       'total_price': totalPrice,
       'warranty_time': warrantyTime,
+      'external_provider_name': externalProviderName,
     };
   }
 }

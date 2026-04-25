@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:d_una_app/shared/widgets/friendly_error_widget.dart';
+import 'package:d_una_app/shared/widgets/custom_dialog.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../data/models/shipping_method.dart';
@@ -20,23 +21,21 @@ class ShippingMethodsScreen extends ConsumerStatefulWidget {
 class _ShippingMethodsScreenState extends ConsumerState<ShippingMethodsScreen> {
   Future<void> _removeMethod(ShippingMethod method) async {
     // ... existing remove logic ...
-    final confirmed = await showDialog<bool>(
+    final colors = Theme.of(context).colorScheme;
+    final confirmed = await CustomDialog.show<bool>(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Eliminar método de envío'),
-        content: const Text(
-          '¿Estás seguro de que deseas eliminar este método de envío?',
-        ),
+      dialog: CustomDialog.destructive(
+        title: 'Eliminar método de envío',
+        contentText:
+            '¿Estás seguro de que deseas eliminar este método de envío?',
         actions: [
           TextButton(
             onPressed: () => context.pop(false),
             child: const Text('Cancelar'),
           ),
-          TextButton(
+          FilledButton(
+            style: FilledButton.styleFrom(backgroundColor: colors.error),
             onPressed: () => context.pop(true),
-            style: TextButton.styleFrom(
-              foregroundColor: Theme.of(context).colorScheme.error,
-            ),
             child: const Text('Eliminar'),
           ),
         ],

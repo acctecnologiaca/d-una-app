@@ -5,8 +5,8 @@ import 'package:intl/intl.dart';
 import 'package:d_una_app/shared/widgets/generic_search_screen.dart';
 import 'package:d_una_app/shared/widgets/filter_bottom_sheet.dart';
 import 'package:d_una_app/shared/widgets/horizontal_filter_bar.dart';
-import 'package:d_una_app/core/utils/string_extensions.dart';
 import 'package:d_una_app/features/purchases/presentation/providers/purchases_providers.dart';
+import 'package:d_una_app/core/utils/search_utils.dart';
 import '../widgets/purchase_list_item.dart';
 import '../../domain/models/purchase_model.dart';
 
@@ -14,7 +14,8 @@ class PurchasesSearchScreen extends ConsumerStatefulWidget {
   const PurchasesSearchScreen({super.key});
 
   @override
-  ConsumerState<PurchasesSearchScreen> createState() => _PurchasesSearchScreenState();
+  ConsumerState<PurchasesSearchScreen> createState() =>
+      _PurchasesSearchScreenState();
 }
 
 class _PurchasesSearchScreenState extends ConsumerState<PurchasesSearchScreen> {
@@ -36,12 +37,13 @@ class _PurchasesSearchScreenState extends ConsumerState<PurchasesSearchScreen> {
   }
 
   void _showSupplierFilter(List<Purchase> purchases) {
-    final options = purchases
-        .map((e) => e.supplierName)
-        .whereType<String>()
-        .toSet()
-        .toList()
-      ..sort();
+    final options =
+        purchases
+            .map((e) => e.supplierName)
+            .whereType<String>()
+            .toSet()
+            .toList()
+          ..sort();
 
     FilterBottomSheet.showMulti(
       context: context,
@@ -58,10 +60,7 @@ class _PurchasesSearchScreenState extends ConsumerState<PurchasesSearchScreen> {
   }
 
   void _showTypeFilter() {
-    final options = {
-      'invoice': 'Factura',
-      'delivery_note': 'Nota de Entrega',
-    };
+    final options = {'invoice': 'Factura', 'delivery_note': 'Nota de Entrega'};
 
     FilterBottomSheet.showMulti(
       context: context,
@@ -90,11 +89,11 @@ class _PurchasesSearchScreenState extends ConsumerState<PurchasesSearchScreen> {
         return Theme(
           data: Theme.of(context).copyWith(
             colorScheme: Theme.of(context).colorScheme.copyWith(
-                  primary: Theme.of(context).colorScheme.primary,
-                  onPrimary: Theme.of(context).colorScheme.onPrimary,
-                  surface: Theme.of(context).colorScheme.surface,
-                  onSurface: Theme.of(context).colorScheme.onSurface,
-                ),
+              primary: Theme.of(context).colorScheme.primary,
+              onPrimary: Theme.of(context).colorScheme.onPrimary,
+              surface: Theme.of(context).colorScheme.surface,
+              onSurface: Theme.of(context).colorScheme.onSurface,
+            ),
           ),
           child: child!,
         );
@@ -139,7 +138,9 @@ class _PurchasesSearchScreenState extends ConsumerState<PurchasesSearchScreen> {
           label: _getChipLabel(_selectedSupplierNames, 'Proveedor'),
           isActive: _selectedSupplierNames.isNotEmpty,
           onTap: () {
-            purchasesAsync.whenData((purchases) => _showSupplierFilter(purchases));
+            purchasesAsync.whenData(
+              (purchases) => _showSupplierFilter(purchases),
+            );
           },
         ),
         FilterChipData(
@@ -157,29 +158,41 @@ class _PurchasesSearchScreenState extends ConsumerState<PurchasesSearchScreen> {
         FilterChipData(
           label: 'Sin seriales',
           isActive: _missingSerialsOnly,
-          onTap: () => setState(() => _missingSerialsOnly = !_missingSerialsOnly),
+          onTap: () =>
+              setState(() => _missingSerialsOnly = !_missingSerialsOnly),
         ),
       ],
       filter: (purchase, query) {
-        final q = query.normalized;
+        final matchesText = SearchUtils.matchesCombo(query, [
+          purchase.supplierName,
+          purchase.documentNumber,
+        ]);
 
-        final matchesText =
-            (purchase.supplierName ?? '').normalized.contains(q) ||
-            purchase.documentNumber.normalized.contains(q);
-
-        final matchesSupplier = _selectedSupplierNames.isEmpty ||
+        final matchesSupplier =
+            _selectedSupplierNames.isEmpty ||
             _selectedSupplierNames.contains(purchase.supplierName);
 
-        final matchesType = _selectedTypes.isEmpty ||
+        final matchesType =
+            _selectedTypes.isEmpty ||
             _selectedTypes.contains(purchase.documentType);
 
-        final matchesDate = _dateRange == null ||
-            (purchase.date.isAfter(_dateRange!.start.subtract(const Duration(seconds: 1))) &&
-             purchase.date.isBefore(_dateRange!.end.add(const Duration(days: 1))));
+        final matchesDate =
+            _dateRange == null ||
+            (purchase.date.isAfter(
+                  _dateRange!.start.subtract(const Duration(seconds: 1)),
+                ) &&
+                purchase.date.isBefore(
+                  _dateRange!.end.add(const Duration(days: 1)),
+                ));
 
-        final matchesMissingSerials = !_missingSerialsOnly || purchase.hasMissingSerials;
+        final matchesMissingSerials =
+            !_missingSerialsOnly || purchase.hasMissingSerials;
 
-        return matchesText && matchesSupplier && matchesType && matchesDate && matchesMissingSerials;
+        return matchesText &&
+            matchesSupplier &&
+            matchesType &&
+            matchesDate &&
+            matchesMissingSerials;
       },
     );
   }

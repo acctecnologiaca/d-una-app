@@ -85,9 +85,13 @@ class Quote {
   final String clientName;
   final DateTime date;
   final double amount;
+  final String? categoryId;
+  final String? categoryName;
   final QuoteStatus status;
   final StockStatus stockStatus;
   final bool isArchived;
+  final String? quoteTag;
+  final DateTime createdAt;
 
   Quote({
     required this.id,
@@ -95,8 +99,12 @@ class Quote {
     required this.clientName,
     required this.date,
     required this.amount,
+    this.categoryId,
+    this.categoryName,
     required this.status,
     required this.stockStatus,
+    required this.createdAt,
     this.isArchived = false,
+    this.quoteTag,
   });
 }

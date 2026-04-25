@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:d_una_app/features/clients/data/models/client_model.dart';
 import 'package:d_una_app/shared/widgets/info_block.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:d_una_app/shared/widgets/custom_dialog.dart';
 import 'package:d_una_app/features/clients/presentation/providers/clients_provider.dart';
 
 class ContactDetailsScreen extends ConsumerWidget {
@@ -21,23 +22,23 @@ class ContactDetailsScreen extends ConsumerWidget {
   });
 
   Future<void> _deleteContact(BuildContext context, WidgetRef ref) async {
-    final confirmed = await showDialog<bool>(
+    final colors = Theme.of(context).colorScheme;
+    final confirmed = await CustomDialog.show<bool>(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Eliminar contacto'),
-        content: const Text(
-          '¿Estás seguro de que deseas eliminar este contacto? Esta acción no se puede deshacer.',
-        ),
+      dialog: CustomDialog.destructive(
+        title: 'Eliminar contacto',
+        contentText:
+            '¿Estás seguro de que deseas eliminar este contacto? Esta acción no se puede deshacer.',
         actions: [
           TextButton(
-            onPressed: () => context.pop(false),
+            onPressed: () =>
+                Navigator.of(context, rootNavigator: true).pop(false),
             child: const Text('Cancelar'),
           ),
-          TextButton(
-            onPressed: () => context.pop(true),
-            style: TextButton.styleFrom(
-              foregroundColor: Theme.of(context).colorScheme.error,
-            ),
+          FilledButton(
+            style: FilledButton.styleFrom(backgroundColor: colors.error),
+            onPressed: () =>
+                Navigator.of(context, rootNavigator: true).pop(true),
             child: const Text('Eliminar'),
           ),
         ],

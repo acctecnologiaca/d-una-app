@@ -41,21 +41,21 @@ class AddPurchaseState extends Equatable {
 
   @override
   List<Object?> get props => [
-        purchaseId,
-        supplierId,
-        supplierName,
-        supplierTaxId,
-        documentType,
-        documentNumber,
-        date.year, // Ignore time components if not strictly required, but let's keep full date if possible. We only set date ignoring time usually.
-        date.month,
-        date.day,
-        taxRate,
-        products,
-        serials,
-        isLoading,
-        error,
-      ];
+    purchaseId,
+    supplierId,
+    supplierName,
+    supplierTaxId,
+    documentType,
+    documentNumber,
+    date.year, // Ignore time components if not strictly required, but let's keep full date if possible. We only set date ignoring time usually.
+    date.month,
+    date.day,
+    taxRate,
+    products,
+    serials,
+    isLoading,
+    error,
+  ];
 
   double get subtotal => products.fold(0, (sum, item) => sum + item.subtotal);
 
@@ -228,6 +228,18 @@ class AddPurchaseNotifier extends StateNotifier<AddPurchaseState> {
           .map(
             (p) =>
                 p.productId == productId ? p.copyWith(quantity: quantity) : p,
+          )
+          .toList(),
+    );
+  }
+
+  void setProductRequiresSerials(String productId, bool requiresSerials) {
+    state = state.copyWith(
+      products: state.products
+          .map(
+            (p) => p.productId == productId
+                ? p.copyWith(requiresSerials: requiresSerials)
+                : p,
           )
           .toList(),
     );

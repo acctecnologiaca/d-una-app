@@ -14,7 +14,10 @@ class InfoBlock extends StatelessWidget {
     required this.label,
     required this.content,
     this.action,
-  }) : assert(icon != null || iconWidget != null, 'Either icon or iconWidget must be provided');
+  }) : assert(
+         icon != null || iconWidget != null,
+         'Either icon or iconWidget must be provided',
+       );
 
   // Convenience constructor when content is just text
   factory InfoBlock.text({
@@ -59,12 +62,9 @@ class InfoBlock extends StatelessWidget {
           width: 32,
           height: 32,
           child: Center(
-            child: iconWidget ??
-                Icon(
-                  icon!,
-                  size: 32,
-                  color: colors.onSurfaceVariant,
-                ),
+            child:
+                iconWidget ??
+                Icon(icon!, size: 32, color: colors.onSurfaceVariant),
           ),
         ),
         const SizedBox(width: 16), // 16px gap

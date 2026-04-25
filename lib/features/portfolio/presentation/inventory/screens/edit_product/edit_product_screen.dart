@@ -8,6 +8,7 @@ import 'package:go_router/go_router.dart';
 import 'package:image_cropper/image_cropper.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:material_symbols_icons/symbols.dart';
+import 'package:d_una_app/shared/widgets/custom_dialog.dart';
 
 import '../../../../../../../shared/widgets/barcode_scanner_screen.dart';
 import '../../../../../../../shared/widgets/custom_dropdown.dart';
@@ -21,6 +22,8 @@ import '../../../../domain/utils/product_validators.dart';
 import '../../../providers/products_provider.dart';
 import '../../../providers/lookup_providers.dart';
 import '../../../../../settings/presentation/widgets/add_edit_brand_sheet.dart';
+import '../../../../../settings/presentation/widgets/add_edit_uom_sheet.dart';
+import '../../../../../settings/presentation/widgets/add_edit_category_sheet.dart';
 
 class EditProductScreen extends ConsumerStatefulWidget {
   final Product product;
@@ -126,53 +129,23 @@ class _EditProductScreenState extends ConsumerState<EditProductScreen> {
     }
   }
 
-  Future<void> _showAddCategoryDialog() async {
-    final textController = TextEditingController();
-    await showDialog(
+  Future<void> _showAddUomDialog() async {
+    final newUom = await showModalBottomSheet<Uom>(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Agregar nueva categoría'),
-        content: TextField(
-          controller: textController,
-          decoration: const InputDecoration(
-            labelText: 'Nombre de la categoría',
-          ),
-          textCapitalization: TextCapitalization.sentences,
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cancelar'),
-          ),
-          FilledButton(
-            onPressed: () async {
-              final name = textController.text.trim();
-              if (name.isNotEmpty) {
-                try {
-                  final newCategory = await ref
-                      .read(lookupRepositoryProvider)
-                      .addCategory(name);
-                  ref.invalidate(categoriesProvider);
-                  ref.invalidate(categoriesProvider);
-                  if (context.mounted) {
-                    setState(() {
-                      _selectedCategory = newCategory;
-                    });
-                    Navigator.pop(context);
-                  }
-                } catch (e) {
-                  if (!context.mounted) return;
-                  ScaffoldMessenger.of(
-                    context,
-                  ).showSnackBar(SnackBar(content: Text('Error: $e')));
-                }
-              }
-            },
-            child: const Text('Agregar'),
-          ),
-        ],
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
       ),
+      backgroundColor: Theme.of(context).colorScheme.surfaceContainer,
+      builder: (context) => const AddEditUomSheet(),
     );
+
+    if (newUom != null && mounted) {
+      setState(() {
+        _selectedUom = newUom;
+      });
+      ref.invalidate(uomsProvider);
+    }
   }
 
   Future<void> _validateAndSave() async {
@@ -188,24 +161,18 @@ class _EditProductScreenState extends ConsumerState<EditProductScreen> {
       // Actually ProductValidators helper might accept list of products.
 
       if (!mounted) return;
-      showDialog(
+      CustomDialog.show(
         context: context,
-        builder: (context) => AlertDialog(
-          title: const Text('Producto Duplicado'),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              // ... Image ...
-              Text(
-                'Ya existe otro equipo con el modelo "$currentModel" en el inventario.\n\n'
-                'Marca existente: ${exactMatch.brand?.name ?? "Desconocida"}',
-              ),
-            ],
-          ),
+        dialog: CustomDialog.confirmation(
+          title: 'Producto Duplicado',
+          icon: Symbols.error,
+          contentText:
+              'Ya existe otro equipo con el modelo "$currentModel" en el inventario.\n\n'
+              'Marca existente: ${exactMatch.brand?.name ?? "Desconocida"}',
           actions: [
-            TextButton(
+            FilledButton(
               onPressed: () {
-                context.pop();
+                Navigator.of(context, rootNavigator: true).pop();
                 FocusScope.of(context).requestFocus(FocusNode());
               },
               child: const Text('Entendido'),
@@ -224,29 +191,25 @@ class _EditProductScreenState extends ConsumerState<EditProductScreen> {
 
     if (similarMatch != null && similarMatch.id != widget.product.id) {
       if (!mounted) return;
-      final shouldProceed = await showDialog<bool>(
+      final shouldProceed = await CustomDialog.show<bool>(
         context: context,
-        builder: (context) => AlertDialog(
-          title: const Text('Modelo Similar Detectado'),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              // ... Image ...
-              Text(
-                'Ya existe un modelo similar en el inventario:\n\n'
-                'Modelo: ${similarMatch.model}\n'
-                'Marca: ${similarMatch.brand?.name ?? "Desconocida"}\n\n'
-                '¿Estás seguro de continuar?',
-              ),
-            ],
-          ),
+        dialog: CustomDialog.confirmation(
+          title: 'Modelo Similar Detectado',
+          icon: Symbols.info,
+          contentText:
+              'Ya existe un modelo similar en el inventario:\n\n'
+              'Modelo: ${similarMatch.model}\n'
+              'Marca: ${similarMatch.brand?.name ?? "Desconocida"}\n\n'
+              '¿Estás seguro de continuar?',
           actions: [
             TextButton(
-              onPressed: () => context.pop(false),
+              onPressed: () =>
+                  Navigator.of(context, rootNavigator: true).pop(false),
               child: const Text('Corregir'),
             ),
-            TextButton(
-              onPressed: () => context.pop(true),
+            FilledButton(
+              onPressed: () =>
+                  Navigator.of(context, rootNavigator: true).pop(true),
               child: const Text('Continuar'),
             ),
           ],
@@ -314,24 +277,24 @@ class _EditProductScreenState extends ConsumerState<EditProductScreen> {
   }
 
   Future<bool?> _showDiscardDialog() async {
-    return showDialog<bool>(
+    final colors = Theme.of(context).colorScheme;
+    return CustomDialog.show<bool>(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('¿Descartar cambios?'),
-        content: const Text(
-          'Si sales ahora, perderás toda la información que has ingresado.',
-        ),
+      dialog: CustomDialog.destructive(
+        title: '¿Descartar cambios?',
+        contentText:
+            'Si sales ahora, perderás toda la información que has ingresado.',
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(context, false),
+            onPressed: () =>
+                Navigator.of(context, rootNavigator: true).pop(false),
             child: const Text('Continuar editando'),
           ),
-          TextButton(
-            onPressed: () => Navigator.pop(context, true),
-            child: Text(
-              'Descartar',
-              style: TextStyle(color: Theme.of(context).colorScheme.error),
-            ),
+          FilledButton(
+            style: FilledButton.styleFrom(backgroundColor: colors.error),
+            onPressed: () =>
+                Navigator.of(context, rootNavigator: true).pop(true),
+            child: const Text('Descartar'),
           ),
         ],
       ),
@@ -468,19 +431,26 @@ class _EditProductScreenState extends ConsumerState<EditProductScreen> {
                 label: 'Categoría',
                 value: _selectedCategory,
                 items: categoriesList,
+                searchable: true,
                 onChanged: (val) {
                   setState(() => _selectedCategory = val);
                 },
                 itemLabelBuilder: (item) => item.name,
                 showAddOption: true,
-                addOptionLabel: 'Agregar',
+                addOptionLabel: 'Agregar categoría',
                 addOptionValue: const Category(
                   id: 'ADD_NEW',
                   name: 'Agregar',
                   type: 'other',
                 ),
-                onAddPressed: () {
-                  _showAddCategoryDialog();
+                onAddPressed: () async {
+                  final newCategory = await AddEditCategorySheet.show(context);
+                  if (newCategory != null && mounted) {
+                    setState(() {
+                      _selectedCategory = newCategory;
+                    });
+                    ref.invalidate(categoriesProvider);
+                  }
                 },
               ),
               const SizedBox(height: 24),
@@ -511,6 +481,7 @@ class _EditProductScreenState extends ConsumerState<EditProductScreen> {
                 label: 'Marca',
                 value: _selectedBrand,
                 items: brandsList,
+                searchable: true,
                 onChanged: (val) {
                   setState(() => _selectedBrand = val);
                 },
@@ -523,7 +494,7 @@ class _EditProductScreenState extends ConsumerState<EditProductScreen> {
                     setState(() => _selectedBrand = newBrand);
                   }
                 },
-                addOptionLabel: 'Agregar',
+                addOptionLabel: 'Agregar marca',
               ),
               const SizedBox(height: 24),
 
@@ -546,11 +517,21 @@ class _EditProductScreenState extends ConsumerState<EditProductScreen> {
                 label: 'Unidad de medida',
                 value: _selectedUom,
                 items: uomsList,
+                searchable: true,
                 onChanged: (val) {
-                  setState(() => _selectedUom = val);
+                  if (val != null && val.id != '___ADD___') {
+                    setState(() => _selectedUom = val);
+                  }
                 },
                 itemLabelBuilder: (item) => '${item.name} (${item.symbol})',
-                showAddOption: false, // UOMs are curated for now
+                showAddOption: true,
+                addOptionLabel: 'Agregar unidad de medida',
+                addOptionValue: const Uom(
+                  id: '___ADD___',
+                  name: '___ADD___',
+                  symbol: '',
+                ),
+                onAddPressed: _showAddUomDialog,
               ),
 
               const SizedBox(height: 48),
