@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import '../../../../../shared/widgets/info_block.dart';
+import '../../../../clients/presentation/widgets/contact_list_tile.dart';
+import '../../../../../core/utils/contact_utils.dart';
 import '../providers/view_quote_provider.dart';
 
 class ViewQuoteClientTab extends ConsumerWidget {
@@ -19,7 +22,9 @@ class ViewQuoteClientTab extends ConsumerWidget {
 
     final quote = state.quote;
     if (quote == null) {
-      return const Center(child: Text('No se pudo cargar la información del cliente'));
+      return const Center(
+        child: Text('No se pudo cargar la información del cliente'),
+      );
     }
 
     final isCompany = quote.clientType == 'company';
@@ -79,7 +84,9 @@ class ViewQuoteClientTab extends ConsumerWidget {
             InfoBlock.text(
               icon: Icons.location_on_outlined,
               label: 'Dirección',
-              value: fullAddress.isNotEmpty ? fullAddress : 'Dirección no registrada',
+              value: fullAddress.isNotEmpty
+                  ? fullAddress
+                  : 'Dirección no registrada',
             ),
           ],
 
@@ -87,7 +94,7 @@ class ViewQuoteClientTab extends ConsumerWidget {
 
           // Contact Info Section
           Text(
-            isCompany ? 'Contacto seleccionado' : 'Información de contácto',
+            isCompany ? 'Contacto' : 'Información de contacto',
             style: textTheme.titleMedium?.copyWith(
               fontWeight: FontWeight.bold,
               color: colors.onSurface,
@@ -96,11 +103,33 @@ class ViewQuoteClientTab extends ConsumerWidget {
           const SizedBox(height: 24),
 
           if (isCompany) ...[
-            InfoBlock.text(
-              icon: Icons.person_outline,
-              label: 'Persona de contacto',
-              value: quote.contactName ?? 'No especificado',
-            ),
+            if (quote.contact != null)
+              ContactListTile(
+                name: quote.contact!.name,
+                role: quote.contact!.role ?? '',
+                initial: quote.contact!.initial,
+                isPrimary: quote.contact!.isPrimary,
+                onPhoneTap: () =>
+                    ContactUtils.makePhoneCall(quote.contact!.phone),
+                onWhatsAppTap: () =>
+                    ContactUtils.launchWhatsApp(quote.contact!.phone),
+                onTap: () {
+                  context.push(
+                    '/clients/${quote.clientId}/contacts/details',
+                    extra: {
+                      'companyName': quote.clientName,
+                      'contact': quote.contact,
+                      'canEdit': false,
+                    },
+                  );
+                },
+              )
+            else
+              InfoBlock.text(
+                icon: Icons.person_outline,
+                label: 'Persona de contacto',
+                value: quote.contactName ?? 'No especificado',
+              ),
           ] else ...[
             InfoBlock.text(
               icon: Icons.contact_phone_outlined,

@@ -146,9 +146,110 @@ class QuoteState {
     return hasItems && hasConditions && baseFields && contactValid;
   }
 
+  double get productsSubtotal =>
+      products.fold(0.0, (sum, p) => sum + (p.unitPrice * p.quantity));
+
+  double get productsCost =>
+      products.fold(0.0, (sum, p) => sum + (p.costPrice * p.quantity));
+
+  double get servicesSubtotal =>
+      services.fold(0.0, (sum, s) => sum + (s.unitPrice * s.quantity));
+
+  double get servicesCost =>
+      services.fold(0.0, (sum, s) => sum + (s.costPrice * s.quantity));
+
+  double get totalSales => productsSubtotal + servicesSubtotal;
+  double get totalCosts => productsCost + servicesCost;
+  double get estimatedProfit => totalSales - totalCosts;
+
+  int get nextGroupIndex {
+    if (products.isEmpty) return 1;
+    final maxIndex = products.fold<int>(
+      0,
+      (max, p) => p.groupIndex > max ? p.groupIndex : max,
+    );
+    return maxIndex + 1;
+  }
+
+  int get nextServiceIndex {
+    if (services.isEmpty) return 1;
+    final maxIndex = services.fold<int>(
+      0,
+      (max, s) => s.orderIndex > max ? s.orderIndex : max,
+    );
+    return maxIndex + 1;
+  }
+
+  double get taxAmount {
+    final taxRateDecimal = globalTaxRate > 1
+        ? globalTaxRate / 100
+        : globalTaxRate;
+    return totalSales * taxRateDecimal;
+  }
+
+  double get finalTotal => totalSales + taxAmount;
+
   bool get hasChanges {
-    return !isReadOnly &&
-        (products.isNotEmpty || services.isNotEmpty || clientId != null);
+    if (isReadOnly) return false;
+
+    // Si es una cotización nueva
+    if (quote == null || quote!.id.isEmpty) {
+      return products.isNotEmpty || services.isNotEmpty || clientId != null;
+    }
+
+    // Si es una cotización existente, comparar con los datos originales
+    if (clientId != quote!.clientId) return true;
+    if (contactId != quote!.contactId) return true;
+    if (advisorId != quote!.advisorId) return true;
+    if (categoryId != quote!.categoryId) return true;
+    if (validityDays != quote!.validityDays) return true;
+    if (notes != quote!.notes) return true;
+    if (label != quote!.quoteTag) return true;
+    if (dateIssued.isAtSameMomentAs(quote!.dateIssued) == false &&
+        dateIssued.toString() != quote!.dateIssued.toString()) {
+      return true;
+    }
+
+    // Comparar productos
+    if (products.length != (quote!.products?.length ?? 0)) return true;
+    for (int i = 0; i < products.length; i++) {
+      final p = products[i];
+      final op = quote!.products![i];
+      if (p.productId != op.productId ||
+          p.quantity != op.quantity ||
+          p.unitPrice != op.unitPrice ||
+          p.sourceType != op.sourceType ||
+          p.name != op.name) {
+        return true;
+      }
+    }
+
+    // Comparar servicios
+    if (services.length != (quote!.services?.length ?? 0)) return true;
+    for (int i = 0; i < services.length; i++) {
+      final s = services[i];
+      final os = quote!.services![i];
+      if (s.serviceId != os.serviceId ||
+          s.quantity != os.quantity ||
+          s.unitPrice != os.unitPrice ||
+          s.name != os.name) {
+        return true;
+      }
+    }
+
+    // Comparar condiciones
+    if (conditions.length != (quote!.conditions?.length ?? 0)) return true;
+    for (int i = 0; i < conditions.length; i++) {
+      final c = conditions[i];
+      final oc = quote!.conditions![i];
+      if (c.conditionId != oc.conditionId ||
+          c.description != oc.description ||
+          c.orderIndex != oc.orderIndex) {
+        return true;
+      }
+    }
+
+    return false;
   }
 }
 
@@ -165,9 +266,7 @@ class CreateQuoteNotifier extends StateNotifier<QuoteState> {
     LookupRepository? lookupRepository,
   }) : _collaboratorsRepository = collaboratorsRepository,
        _lookupRepository = lookupRepository,
-       super(QuoteState()) {
-    initQuote();
-  }
+       super(QuoteState());
 
   void reset() {
     state = QuoteState();
@@ -177,6 +276,7 @@ class CreateQuoteNotifier extends StateNotifier<QuoteState> {
   Future<void> loadQuote(String id) async {
     state = state.copyWith(isLoading: true, error: null);
     try {
+      final params = await _repository.getFinancialParameters();
       final quote = await _repository.getQuoteWithDetails(id);
 
       state = state.copyWith(
@@ -198,6 +298,49 @@ class CreateQuoteNotifier extends StateNotifier<QuoteState> {
         dateIssued: quote.dateIssued,
         currentQuoteNumber: quote.quoteNumber,
         clientType: quote.clientType,
+        globalMargin: params.profitMargin,
+        globalTaxRate: params.taxRate,
+        pricingMethod: params.pricingMethod,
+        isLoading: false,
+      );
+    } catch (e) {
+      state = state.copyWith(isLoading: false, error: e.toString());
+    }
+  }
+
+  Future<void> loadQuoteAsCopy(String sourceQuoteId) async {
+    try {
+      state = state.copyWith(isLoading: true, error: null);
+
+      final params = await _repository.getFinancialParameters();
+      final source = await _repository.getQuoteWithDetails(sourceQuoteId);
+
+      // Generate a new quote number for the copy
+      final lastNumber = await _repository.getLastQuoteNumber();
+      final newNumber = _generateNextQuoteNumber(lastNumber);
+
+      state = QuoteState(
+        // quote is intentionally null — this is a NEW quote
+        products: source.products ?? [],
+        services: source.services ?? [],
+        conditions: source.conditions ?? [],
+        clientId: source.clientId,
+        clientName: source.clientName,
+        contactId: source.contactId,
+        contactName: source.contactName,
+        clientType: source.clientType,
+        validityDays: source.validityDays,
+        categoryId: source.categoryId,
+        categoryName: source.categoryName,
+        advisorId: source.advisorId,
+        advisorName: source.advisorName,
+        notes: source.notes,
+        label: source.quoteTag,
+        dateIssued: DateTime.now(),
+        currentQuoteNumber: newNumber,
+        globalMargin: params.profitMargin,
+        globalTaxRate: params.taxRate,
+        pricingMethod: params.pricingMethod,
         isLoading: false,
       );
     } catch (e) {
@@ -510,46 +653,31 @@ class CreateQuoteNotifier extends StateNotifier<QuoteState> {
     );
   }
 
-  void removeProductGroup(String name) {
+  void removeProductGroup(int groupIndex) {
     state = state.copyWith(
-      products: state.products.where((p) => p.name != name).toList(),
+      products: state.products.where((p) => p.groupIndex != groupIndex).toList(),
     );
   }
 
   void updateGroupPrice(
-    String name,
+    int groupIndex,
     double newUnitPrice,
     double newMargin, [
     String? newDeliveryTimeId,
   ]) {
     final updatedProducts = state.products.map((item) {
-      if (item.name == name) {
+      if (item.groupIndex == groupIndex) {
         final taxAmount = newUnitPrice * (item.taxRate / 100);
         final totalPrice = (newUnitPrice + taxAmount) * item.quantity;
-        return QuoteItemProduct(
-          id: item.id,
-          quoteId: item.quoteId,
-          productId: item.productId,
-          supplierBranchStockId: item.supplierBranchStockId,
+        return item.copyWith(
           deliveryTimeId: newDeliveryTimeId ?? item.deliveryTimeId,
-          name: item.name,
-          brand: item.brand,
-          model: item.model,
-          uom: item.uom,
-          description: item.description,
-          availableStock: item.isTemporal ? item.quantity : item.availableStock,
-          quantity: item.quantity,
-          costPrice: item.costPrice,
+          availableStock: item.sourceType == QuoteItemSourceType.temporal
+              ? item.quantity
+              : item.availableStock,
           profitMargin: newMargin,
           unitPrice: newUnitPrice,
-          taxRate: item.taxRate,
           taxAmount: taxAmount,
           totalPrice: totalPrice,
-          warrantyTime: item.warrantyTime,
-          externalProviderName: item.externalProviderName,
-          isTemporal: item.isTemporal,
-
-          // Sincronizar stock si es temporal
         );
       }
       return item;
@@ -557,8 +685,8 @@ class CreateQuoteNotifier extends StateNotifier<QuoteState> {
     state = state.copyWith(products: updatedProducts);
   }
 
-  void updateGroupQuantity(String name, double newTotalQty) {
-    final items = state.products.where((p) => p.name == name).toList();
+  void updateGroupQuantity(int groupIndex, double newTotalQty) {
+    final items = state.products.where((p) => p.groupIndex == groupIndex).toList();
     if (items.isEmpty) return;
 
     double currentTotal = items.fold(0.0, (sum, item) => sum + item.quantity);
@@ -570,10 +698,39 @@ class CreateQuoteNotifier extends StateNotifier<QuoteState> {
       // Increase qty - Take from CHEAPEST provider first
       double needed = newTotalQty - currentTotal;
       final sortedItems = List<QuoteItemProduct>.from(items)
-        ..sort((a, b) => a.costPrice.compareTo(b.costPrice));
+        ..sort((a, b) {
+          // 1. Prioridad de origen (menor índice = mayor prioridad)
+          int getPriority(QuoteItemSourceType type) {
+            switch (type) {
+              case QuoteItemSourceType.own:
+                return 0;
+              case QuoteItemSourceType.affiliated:
+                return 1;
+              case QuoteItemSourceType.external:
+                return 2;
+              case QuoteItemSourceType.temporal:
+                return 3;
+            }
+          }
+
+          final priorityA = getPriority(a.sourceType);
+          final priorityB = getPriority(b.sourceType);
+
+          if (priorityA != priorityB) {
+            return priorityA.compareTo(priorityB);
+          }
+
+          // 2. Si son del mismo origen, el más barato primero
+          return a.costPrice.compareTo(b.costPrice);
+        });
 
       for (var item in sortedItems) {
-        final available = item.availableStock ?? double.infinity;
+        final isManual =
+            item.sourceType == QuoteItemSourceType.temporal ||
+            item.sourceType == QuoteItemSourceType.external;
+        final available = isManual
+            ? double.infinity
+            : (item.availableStock ?? double.infinity);
         if (item.quantity < available) {
           double canAdd = available - item.quantity;
           double toAdd = needed > canAdd ? canAdd : needed;
@@ -604,11 +761,11 @@ class CreateQuoteNotifier extends StateNotifier<QuoteState> {
     }
 
     // Clean up items with 0 qty
-    updatedProducts.removeWhere((p) => p.name == name && p.quantity <= 0);
+    updatedProducts.removeWhere((p) => p.groupIndex == groupIndex && p.quantity <= 0);
 
     // Recalculate the unit price to maintain the current overall profit margin
     final remainingGroupItems = updatedProducts
-        .where((p) => p.name == name)
+        .where((p) => p.groupIndex == groupIndex)
         .toList();
     if (remainingGroupItems.isNotEmpty) {
       double groupTotalCost = 0;
@@ -632,7 +789,7 @@ class CreateQuoteNotifier extends StateNotifier<QuoteState> {
       }
 
       for (int i = 0; i < updatedProducts.length; i++) {
-        if (updatedProducts[i].name == name) {
+        if (updatedProducts[i].groupIndex == groupIndex) {
           final item = updatedProducts[i];
           final taxAmount = newUnitPrice * (item.taxRate / 100);
           updatedProducts[i] = _copyWithPricing(
@@ -650,29 +807,7 @@ class CreateQuoteNotifier extends StateNotifier<QuoteState> {
 
   QuoteItemProduct _copyWithQty(QuoteItemProduct item, double newQty) {
     final totalPrice = (item.unitPrice + item.taxAmount) * newQty;
-    return QuoteItemProduct(
-      id: item.id,
-      quoteId: item.quoteId,
-      productId: item.productId,
-      supplierBranchStockId: item.supplierBranchStockId,
-      deliveryTimeId: item.deliveryTimeId,
-      name: item.name,
-      brand: item.brand,
-      model: item.model,
-      uom: item.uom,
-      description: item.description,
-      availableStock: item.isTemporal ? newQty : item.availableStock,
-      quantity: newQty,
-      costPrice: item.costPrice,
-      profitMargin: item.profitMargin,
-      unitPrice: item.unitPrice,
-      taxRate: item.taxRate,
-      taxAmount: item.taxAmount,
-      totalPrice: totalPrice,
-      warrantyTime: item.warrantyTime,
-      externalProviderName: item.externalProviderName,
-      isTemporal: item.isTemporal,
-    );
+    return item.copyWith(quantity: newQty, totalPrice: totalPrice);
   }
 
   QuoteItemProduct _copyWithPricing(
@@ -681,34 +816,23 @@ class CreateQuoteNotifier extends StateNotifier<QuoteState> {
     double newTaxAmount,
     double newTotalPrice,
   ) {
-    return QuoteItemProduct(
-      id: item.id,
-      quoteId: item.quoteId,
-      productId: item.productId,
-      supplierBranchStockId: item.supplierBranchStockId,
-      deliveryTimeId: item.deliveryTimeId,
-      name: item.name,
-      brand: item.brand,
-      model: item.model,
-      uom: item.uom,
-      description: item.description,
-      availableStock: item.isTemporal ? item.quantity : item.availableStock,
-      quantity: item.quantity,
-      costPrice: item.costPrice,
-      profitMargin: item.profitMargin,
+    return item.copyWith(
       unitPrice: newUnitPrice,
-      taxRate: item.taxRate,
       taxAmount: newTaxAmount,
       totalPrice: newTotalPrice,
-      warrantyTime: item.warrantyTime,
-      externalProviderName: item.externalProviderName,
-      isTemporal: item.isTemporal,
     );
   }
 
   // --- Service Management ---
   void addService(QuoteItemService service) {
-    state = state.copyWith(services: [...state.services, service]);
+    state = state.copyWith(
+      services: [
+        ...state.services,
+        service.orderIndex == 0
+            ? service.copyWith(orderIndex: state.nextServiceIndex)
+            : service,
+      ],
+    );
   }
 
   void updateService(QuoteItemService service) {
@@ -731,24 +855,10 @@ class CreateQuoteNotifier extends StateNotifier<QuoteState> {
         // Fallback if id is not fully generated yet
         final taxAmount = item.unitPrice * (item.taxRate / 100);
         final newTotalPrice = (item.unitPrice + taxAmount) * newQty;
-        return QuoteItemService(
-          id: item.id,
-          quoteId: item.quoteId,
-          serviceId: item.serviceId,
-          serviceRateId: item.serviceRateId,
-          executionTimeId: item.executionTimeId,
-          name: item.name,
-          description: item.description,
+        return item.copyWith(
           quantity: newQty,
-          costPrice: item.costPrice,
-          profitMargin: item.profitMargin,
-          unitPrice: item.unitPrice,
-          taxRate: item.taxRate,
           taxAmount: taxAmount,
           totalPrice: newTotalPrice,
-          warrantyTime: item.warrantyTime,
-          rateSymbol: item.rateSymbol,
-          rateIconName: item.rateIconName,
         );
       }
       return item;
@@ -775,8 +885,8 @@ class CreateQuoteNotifier extends StateNotifier<QuoteState> {
     return createQuote(status: 'draft');
   }
 
-  Future<bool> createQuote({String status = 'draft'}) async {
-    if (status == 'pending' && !state.isReadyToFinalize) {
+  Future<bool> createQuote({String? status}) async {
+    if (status == 'finalized' && !state.isReadyToFinalize) {
       state = state.copyWith(error: "Faltan datos obligatorios para finalizar");
       return false;
     }
@@ -789,12 +899,27 @@ class CreateQuoteNotifier extends StateNotifier<QuoteState> {
     try {
       state = state.copyWith(isLoading: true, error: null);
 
-      // 1. Recalculate quote number right before saving to avoid duplicates (user request)
-      final lastNumber = await _repository.getLastQuoteNumber();
-      final finalQuoteNumber = _generateNextQuoteNumber(lastNumber);
-      state = state.copyWith(currentQuoteNumber: finalQuoteNumber);
+      final isEditing = state.quote != null && state.quote!.id.isNotEmpty;
 
-      // 2. Calculate Totals
+      // Determine the final status
+      String effectiveStatus =
+          status ?? (isEditing ? state.quote!.status : 'draft');
+
+      // Reactivation logic for expired quotes
+      if (isEditing && effectiveStatus == 'expired') {
+        final expirationDate = state.dateIssued.add(
+          Duration(days: state.validityDays),
+        );
+        final today = DateTime.now();
+        final startOfToday = DateTime(today.year, today.month, today.day);
+
+        // If it's no longer expired based on new date/validity, reset to draft
+        if (!expirationDate.isBefore(startOfToday)) {
+          effectiveStatus = 'draft';
+        }
+      }
+
+      // 1. Calculate Totals
       double subtotal = 0;
       double taxAmount = 0;
 
@@ -809,34 +934,73 @@ class CreateQuoteNotifier extends StateNotifier<QuoteState> {
 
       final total = subtotal + taxAmount;
 
-      // 3. Assemble Quote Object
-      final newQuote = Quote(
-        id: '', // Will be generated by DB
-        userId: '', // Will be filled by repository from auth.uid()
-        quoteNumber: finalQuoteNumber,
-        clientId: state.clientId!,
-        contactId: state.contactId,
-        advisorId: state.advisorId,
-        categoryId: state.categoryId,
-        status: status,
-        dateIssued: state.dateIssued,
-        validityDays: state.validityDays,
-        subtotal: subtotal,
-        taxAmount: taxAmount,
-        total: total,
-        notes: state.notes,
-        quoteTag: state.label,
-        createdAt: DateTime.now(),
-        updatedAt: DateTime.now(),
-      );
+      Quote savedQuote;
 
-      // 4. Save to Repository
-      final savedQuote = await _repository.createQuote(
-        newQuote,
-        products: state.products,
-        services: state.services,
-        conditions: state.conditions,
-      );
+      if (isEditing) {
+        // 2. Assemble Quote Object for Update
+        final updateQuote = Quote(
+          id: state.quote!.id,
+          userId: state.quote!.userId,
+          quoteNumber: state.currentQuoteNumber ?? state.quote!.quoteNumber,
+          clientId: state.clientId!,
+          contactId: state.contactId,
+          advisorId: state.advisorId,
+          categoryId: state.categoryId,
+          status: effectiveStatus,
+          dateIssued: state.dateIssued,
+          validityDays: state.validityDays,
+          subtotal: subtotal,
+          taxAmount: taxAmount,
+          total: total,
+          notes: state.notes,
+          quoteTag: state.label,
+          isArchived: state.quote!.isArchived,
+          createdAt: state.quote!.createdAt,
+          updatedAt: DateTime.now(),
+        );
+
+        // 3. Save to Repository
+        savedQuote = await _repository.updateQuote(
+          updateQuote,
+          products: state.products,
+          services: state.services,
+          conditions: state.conditions,
+        );
+      } else {
+        // 2. Recalculate quote number right before saving to avoid duplicates (user request)
+        final lastNumber = await _repository.getLastQuoteNumber();
+        final finalQuoteNumber = _generateNextQuoteNumber(lastNumber);
+        state = state.copyWith(currentQuoteNumber: finalQuoteNumber);
+
+        // 3. Assemble Quote Object for Create
+        final newQuote = Quote(
+          id: '', // Will be generated by DB
+          userId: '', // Will be filled by repository from auth.uid()
+          quoteNumber: finalQuoteNumber,
+          clientId: state.clientId!,
+          contactId: state.contactId,
+          advisorId: state.advisorId,
+          categoryId: state.categoryId,
+          status: status ?? 'draft',
+          dateIssued: state.dateIssued,
+          validityDays: state.validityDays,
+          subtotal: subtotal,
+          taxAmount: taxAmount,
+          total: total,
+          notes: state.notes,
+          quoteTag: state.label,
+          createdAt: DateTime.now(),
+          updatedAt: DateTime.now(),
+        );
+
+        // 4. Save to Repository
+        savedQuote = await _repository.createQuote(
+          newQuote,
+          products: state.products,
+          services: state.services,
+          conditions: state.conditions,
+        );
+      }
 
       state = state.copyWith(quote: savedQuote, isLoading: false);
 
@@ -859,10 +1023,11 @@ final createQuoteProvider =
       );
       final lookupRepository = ref.watch(lookupRepositoryProvider);
 
-      return CreateQuoteNotifier(
+      final notifier = CreateQuoteNotifier(
         repository,
         ref,
         collaboratorsRepository: collaboratorsRepository,
         lookupRepository: lookupRepository,
       );
+      return notifier;
     });

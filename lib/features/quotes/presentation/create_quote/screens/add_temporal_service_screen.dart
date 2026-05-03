@@ -112,11 +112,11 @@ class _AddTemporalServiceScreenState
   bool identityChangedFromService(
     QuoteItemService existing,
     String currentName,
-    String currentRateId,
+    String currentRateSymbol,
   ) {
     final nameChanged =
         existing.name.normalizeFingerprint != currentName.normalizeFingerprint;
-    final rateChanged = (existing.serviceRateId ?? '') != currentRateId;
+    final rateChanged = existing.rateSymbol != currentRateSymbol;
     return nameChanged || rateChanged;
   }
 
@@ -173,10 +173,13 @@ class _AddTemporalServiceScreenState
           existing.quantity.truncateToDouble() == existing.quantity
           ? existing.quantity.toInt().toString()
           : existing.quantity.toString();
-      _selectedRate =
-          existing.serviceRateId != null && existing.serviceRateId!.isNotEmpty
-          ? existing.serviceRateId
-          : null;
+      // Encontrar el ID de la tarifa basándonos en el símbolo guardado en el snapshot
+      final rates = ref.read(serviceRatesProvider).value ?? [];
+      final match = rates.firstWhere(
+        (r) => r.symbol == existing.rateSymbol,
+        orElse: () => rates.first,
+      );
+      _selectedRate = match.id;
       _salePriceController.text = CurrencyFormatter.formatNumber(
         existing.unitPrice,
       );
@@ -365,6 +368,22 @@ class _AddTemporalServiceScreenState
   Future<void> _saveService() async {
     if (!_formKey.currentState!.validate()) return;
 
+    final rateSymbol =
+        ref
+            .read(serviceRatesProvider)
+            .value
+            ?.where((r) => r.id == _selectedRate)
+            .firstOrNull
+            ?.symbol ??
+        'ud.';
+
+    final rateIconName = ref
+        .read(serviceRatesProvider)
+        .value
+        ?.where((r) => r.id == _selectedRate)
+        .firstOrNull
+        ?.iconName;
+
     // Validación de duplicados (GENERAL para proteger la cotización)
     if (widget.existingItem == null) {
       // Nuevo servicio
@@ -377,7 +396,7 @@ class _AddTemporalServiceScreenState
       if (identityChangedFromService(
         widget.existingItem!,
         _nameController.text.trim(),
-        _selectedRate ?? '',
+        rateSymbol,
       )) {
         if (_alreadyInPortfolio) {
           _showDuplicateDialog();
@@ -416,22 +435,6 @@ class _AddTemporalServiceScreenState
     // In temporal services, we might not have a full UUID for serviceRateId, but we can store a string representation or leave null
     // Here we'll map the name to a dummy ID or just leave it null since it's draft.
 
-    final rateSymbol =
-        ref
-            .read(serviceRatesProvider)
-            .value
-            ?.where((r) => r.id == _selectedRate)
-            .firstOrNull
-            ?.symbol ??
-        'ud.';
-
-    final rateIconName = ref
-        .read(serviceRatesProvider)
-        .value
-        ?.where((r) => r.id == _selectedRate)
-        .firstOrNull
-        ?.iconName;
-
     // Check if rate is time based
     final nameLower =
         (ref
@@ -460,6 +463,13 @@ class _AddTemporalServiceScreenState
     final taxAmount = salePrice * taxRate;
     final unitPriceIncludingTax = salePrice + taxAmount;
 
+    final executionTimes =
+        ref.read(deliveryTimesForExecutionProvider).valueOrNull ?? [];
+    final executionTimeLabel = executionTimes
+        .where((e) => e.id == _selectedExecutionTimeId)
+        .map((e) => e.name)
+        .firstOrNull;
+
     final item = QuoteItemService(
       id: widget.existingItem?.id ?? const Uuid().v4(),
       quoteId: 'draft',
@@ -473,10 +483,11 @@ class _AddTemporalServiceScreenState
       taxAmount: taxAmount,
       totalPrice: unitPriceIncludingTax * qty,
       warrantyTime: warrantyTime,
-      serviceRateId: _selectedRate ?? '',
       rateSymbol: rateSymbol,
       rateIconName: rateIconName,
       executionTimeId: isTimeBased ? null : _selectedExecutionTimeId,
+      executionTimeLabel: executionTimeLabel,
+      // No category for temporal services
     );
 
     if (widget.existingItem != null) {

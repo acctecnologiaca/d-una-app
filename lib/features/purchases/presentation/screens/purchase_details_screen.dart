@@ -244,7 +244,7 @@ class _PurchaseDetailsScreenState extends ConsumerState<PurchaseDetailsScreen>
       child: FloatingActionButton(
         onPressed: () => _enterEditMode(data),
         backgroundColor: colors.primaryContainer,
-        child: Icon(Icons.edit, color: colors.onPrimaryContainer),
+        child: Icon(Icons.edit_outlined, color: colors.onPrimaryContainer),
       ),
     );
   }

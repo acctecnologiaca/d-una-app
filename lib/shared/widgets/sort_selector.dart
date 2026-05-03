@@ -93,8 +93,8 @@ class GenericSortSelector<T> extends StatelessWidget {
               // Title
               Padding(
                 padding: const EdgeInsets.symmetric(
-                  horizontal: 16.0,
-                  vertical: 16.0,
+                  horizontal: 8.0,
+                  vertical: 0.0,
                 ),
                 child: Row(
                   children: [
@@ -142,7 +142,7 @@ class GenericSortSelector<T> extends StatelessWidget {
         context.pop();
       },
       child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 16.0),
+        padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 16.0),
         child: Row(
           children: [
             if (icon != null) ...[

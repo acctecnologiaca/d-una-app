@@ -1,13 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
+import 'package:intl/intl.dart';
+import 'package:material_symbols_icons/symbols.dart';
 import '../providers/create_quote_provider.dart';
-import '../../../../../shared/widgets/custom_extended_fab.dart';
 import '../../../../../shared/utils/currency_formatter.dart';
+import '../../../domain/models/quote_model.dart';
+import '../../../data/models/quote.dart' as data;
 import '../../../data/models/quote_item_product.dart';
 import '../../../data/models/quote_item_service.dart';
-import '../../../../../shared/widgets/custom_action_sheet.dart';
-import '../../../../../shared/widgets/bottom_sheet_action_item.dart';
 
 class QuoteSummaryTab extends ConsumerWidget {
   final Function(int) onNavigateToTab;
@@ -41,154 +41,164 @@ class QuoteSummaryTab extends ConsumerWidget {
       );
     }
 
-    // Calculations
-    double productsSubtotal = 0;
-    double productsCost = 0;
-    for (var p in state.products) {
-      productsSubtotal += p.unitPrice * p.quantity;
-      productsCost += p.costPrice * p.quantity;
-    }
-
-    double servicesSubtotal = 0;
-    double servicesCost = 0;
-    for (var s in state.services) {
-      servicesSubtotal += s.unitPrice * s.quantity;
-      servicesCost += s.costPrice * s.quantity;
-    }
-
-    final totalSales = productsSubtotal + servicesSubtotal;
-    final totalCosts = productsCost + servicesCost;
-    final estimatedProfit = totalSales - totalCosts;
-
     final taxRateDisplay = state.globalTaxRate > 1
         ? state.globalTaxRate
         : state.globalTaxRate * 100;
-    final taxRateDecimal = state.globalTaxRate > 1
-        ? state.globalTaxRate / 100
-        : state.globalTaxRate;
-    final taxAmount = totalSales * taxRateDecimal;
-    final finalTotal = totalSales + taxAmount;
 
-    // Group Products for display
-    final groupedProducts = <String, List<QuoteItemProduct>>{};
+    // Group Products for display by index
+    final groupedProducts = <int, List<QuoteItemProduct>>{};
     for (var product in state.products) {
-      if (!groupedProducts.containsKey(product.name)) {
-        groupedProducts[product.name] = [];
+      if (!groupedProducts.containsKey(product.groupIndex)) {
+        groupedProducts[product.groupIndex] = [];
       }
-      groupedProducts[product.name]!.add(product);
+      groupedProducts[product.groupIndex]!.add(product);
     }
-    final displayProducts = groupedProducts.entries.take(3).toList();
 
-    // Group Services for display (though they might be unique, we'll list them)
-    final displayServices = state.services.take(3).toList();
+    final sortedIndices = groupedProducts.keys.toList()..sort();
+    final displayProducts = sortedIndices
+        .take(3)
+        .map(
+          (idx) =>
+              MapEntry(groupedProducts[idx]!.first.name, groupedProducts[idx]!),
+        )
+        .toList();
+    final totalGroupedProducts = sortedIndices.length;
 
-    return Scaffold(
-      backgroundColor: Colors.transparent,
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.only(
-          left: 16,
-          right: 16,
-          top: 16,
-          bottom: 120,
-        ),
+    // Group Services for display by index
+    final displayServices = [...state.services]
+      ..sort((a, b) => a.orderIndex.compareTo(b.orderIndex));
+    final finalDisplayServices = displayServices.take(3).toList();
+
+    return SingleChildScrollView(
+      padding: const EdgeInsets.only(left: 16, right: 16, top: 16, bottom: 120),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          // 0. Info Section (Status & Last Mod) - Only if editing existing quote
+          if (state.quote != null) ...[
+            _buildInfoCard(context, state.quote!),
+            const SizedBox(height: 16),
+          ],
+
+          // 1. Utilidad Section
+          _buildSectionHeader(context, Icons.bar_chart, 'Rentabilidad'),
+          _buildUtilityCard(
+            context,
+            state.totalSales,
+            state.totalCosts,
+            state.estimatedProfit,
+          ),
+          const SizedBox(height: 16),
+
+          // 2. Cliente Section
+          _buildSectionHeader(context, Icons.people, 'Cliente'),
+          _buildClientCard(context, state),
+          const SizedBox(height: 16),
+
+          // 3. Cotización Section
+          _buildSectionHeader(context, Icons.calculate, 'Cotización'),
+          _buildQuoteCard(
+            context,
+            state,
+            state.productsSubtotal,
+            state.servicesSubtotal,
+            state.totalSales,
+            state.taxAmount,
+            taxRateDisplay,
+            state.finalTotal,
+            displayProducts,
+            finalDisplayServices,
+            totalGroupedProducts,
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildInfoCard(BuildContext context, data.Quote quote) {
+    final colors = Theme.of(context).colorScheme;
+    final dateFormat = DateFormat('dd/MM/yyyy - hh:mm a');
+    final status = QuoteStatus.fromDbValue(quote.status);
+
+    return Card(
+      elevation: 0,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+        side: BorderSide(color: colors.outlineVariant),
+      ),
+      color: colors.surface,
+      child: Padding(
+        padding: const EdgeInsets.all(16.0),
         child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            // 1. Utilidad Section
-            _buildSectionHeader(context, Icons.bar_chart, 'Utilidad'),
-            _buildUtilityCard(context, totalSales, totalCosts, estimatedProfit),
-            const SizedBox(height: 16),
-
-            // 2. Cliente Section
-            _buildSectionHeader(context, Icons.people, 'Cliente'),
-            _buildClientCard(context, state),
-            const SizedBox(height: 16),
-
-            // 3. Cotización Section
-            _buildSectionHeader(context, Icons.calculate, 'Cotización'),
-            _buildQuoteCard(
-              context,
-              state,
-              productsSubtotal,
-              servicesSubtotal,
-              totalSales,
-              taxAmount,
-              taxRateDisplay,
-              finalTotal,
-              displayProducts,
-              displayServices,
+            Row(
+              children: [
+                Icon(
+                  Symbols.conversion_path,
+                  size: 20,
+                  color: colors.onSurfaceVariant,
+                ),
+                const SizedBox(width: 8),
+                Text(
+                  'Estatus:',
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    color: colors.onSurface,
+                  ),
+                ),
+                const SizedBox(width: 12),
+                _buildStatusBadge(context, status),
+              ],
+            ),
+            const SizedBox(height: 12),
+            Row(
+              children: [
+                Icon(Symbols.update, size: 20, color: colors.onSurfaceVariant),
+                const SizedBox(width: 8),
+                Text(
+                  'Últ. mod:',
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    color: colors.onSurface,
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Text(
+                  dateFormat.format(quote.updatedAt.toLocal()),
+                  style: TextStyle(color: colors.onSurfaceVariant),
+                ),
+              ],
             ),
           ],
-        ),
-      ),
-      floatingActionButton: Padding(
-        padding: const EdgeInsets.only(bottom: 40.0),
-        child: CustomExtendedFab(
-          label: state.isLoading ? 'Guardando...' : 'Finalizar',
-          icon: state.isLoading ? Icons.hourglass_empty : Icons.check_outlined,
-          isEnabled: state.isReadyToFinalize && !state.isLoading,
-          onPressed: () async {
-            final success = await ref
-                .read(createQuoteProvider.notifier)
-                .createQuote(status: 'pending');
-
-            if (context.mounted) {
-              if (success) {
-                final savedQuoteNumber =
-                    ref.read(createQuoteProvider).quote?.quoteNumber ?? '';
-                // Instead of immediate pop, show distribution options
-                _showPostSaveOptions(context, ref, savedQuoteNumber);
-              } else {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text(
-                      ref.read(createQuoteProvider).error ?? 'Error al guardar',
-                    ),
-                    backgroundColor: Colors.red,
-                  ),
-                );
-              }
-            }
-          },
         ),
       ),
     );
   }
 
-  void _showPostSaveOptions(
-    BuildContext context,
-    WidgetRef ref,
-    String quoteNumber,
-  ) {
-    CustomActionSheet.show(
-      context: context,
-      title: 'Cotización $quoteNumber guardada',
-      actions: [
-        BottomSheetActionItem(
-          icon: Icons.send_outlined,
-          label: 'Enviar ahora',
-          onTap: () {
-            context.pop(); // Close sheet
-            // TODO: Navigate to sharing flow or PDF generation
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                content: Text('Funcionalidad de envío próximamente disponible'),
-              ),
-            );
-            ref.read(createQuoteProvider.notifier).reset();
-            context.pop(); // Back to list
-          },
-        ),
-        BottomSheetActionItem(
-          icon: Icons.history_outlined,
-          label: 'Enviar más tarde',
-          onTap: () {
-            context.pop(); // Close sheet
-            ref.read(createQuoteProvider.notifier).reset();
-            context.pop(); // Back to list
-          },
-        ),
-      ],
+  Widget _buildStatusBadge(BuildContext context, QuoteStatus status) {
+    final colors = Theme.of(context).colorScheme;
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+      decoration: BoxDecoration(
+        color: colors.surface,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: colors.primary.withValues(alpha: 0.2)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Image.asset(status.iconPath, width: 16, height: 16),
+          const SizedBox(width: 8),
+          Text(
+            status.label,
+            style: TextStyle(
+              color: status.statusColor(colors),
+              fontWeight: FontWeight.bold,
+              fontSize: 14,
+            ),
+          ),
+        ],
+      ),
     );
   }
 
@@ -316,6 +326,7 @@ class QuoteSummaryTab extends ConsumerWidget {
     double finalTotal,
     List<MapEntry<String, List<QuoteItemProduct>>> displayProducts,
     List<QuoteItemService> displayServices,
+    int totalGroupedProducts,
   ) {
     final colors = Theme.of(context).colorScheme;
     final textTheme = Theme.of(context).textTheme;
@@ -337,7 +348,7 @@ class QuoteSummaryTab extends ConsumerWidget {
               context,
               Icons.inventory_2_outlined,
               'Productos',
-              groupedCount: state.products.map((p) => p.name).toSet().length,
+              groupedCount: totalGroupedProducts,
               amount: CurrencyFormatter.format(productsSubtotal),
             ),
             const SizedBox(height: 8),
@@ -367,7 +378,7 @@ class QuoteSummaryTab extends ConsumerWidget {
                 ),
               );
             }),
-            if (state.products.map((p) => p.name).toSet().length > 3)
+            if (totalGroupedProducts > 3)
               Align(
                 alignment: Alignment.centerRight,
                 child: TextButton.icon(

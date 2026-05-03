@@ -37,17 +37,14 @@ class _SelectConditionScreenState extends ConsumerState<SelectConditionScreen> {
           .addConditions(_selectedConditions.toList());
     }
 
-    final uri = Uri.parse(GoRouterState.of(context).uri.toString());
-    final returnTo = uri.queryParameters['returnTo'];
+    final returnTo = GoRouterState.of(context).uri.queryParameters['returnTo'];
 
-    if (returnTo != null) {
+    if (context.canPop()) {
+      context.pop(true);
+    } else if (returnTo != null) {
       context.go(Uri.decodeComponent(returnTo));
     } else {
-      if (context.canPop()) {
-        context.pop();
-      } else {
-        context.go('/quotes/create');
-      }
+      context.go('/quotes/create');
     }
   }
 

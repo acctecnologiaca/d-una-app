@@ -442,6 +442,7 @@ class _AddTemporalProductScreenState
 
     // --- Step 4: Create QuoteItemProduct as PURE temporal ---
     final product = QuoteItemProduct(
+      groupIndex: widget.existingItem?.groupIndex ?? quoteState.nextGroupIndex,
       id: widget.existingItem?.id ?? const Uuid().v4(),
       quoteId: 'draft',
       productId: null,
@@ -453,7 +454,7 @@ class _AddTemporalProductScreenState
       uom: _selectedMeasure,
       uomIconName: 'package_2',
       quantity: qty,
-      availableStock: qty,
+      availableStock: null,
       costPrice: cost,
       profitMargin: margin,
       unitPrice: unitPrice,
@@ -463,7 +464,7 @@ class _AddTemporalProductScreenState
       warrantyTime: warrantyTime,
       deliveryTimeId: _selectedDeliveryTimeId,
       externalProviderName: _externalProviderName,
-      isTemporal: true,
+      sourceType: widget.existingItem?.sourceType ?? QuoteItemSourceType.temporal,
     );
 
     if (widget.existingItem != null) {

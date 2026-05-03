@@ -1,5 +1,7 @@
 import 'package:go_router/go_router.dart';
 import 'package:flutter/material.dart';
+import 'dart:typed_data';
+import 'package:pdf/pdf.dart';
 import 'package:d_una_app/features/auth/presentation/auth_routes.dart';
 import 'package:d_una_app/features/clients/presentation/client_routes.dart';
 
@@ -69,6 +71,7 @@ import '../../features/purchases/presentation/screens/purchases_search_screen.da
 
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../router/router_notifier.dart';
+import '../../shared/screens/pdf_preview_screen.dart';
 
 final rootNavigatorKey = GlobalKey<NavigatorState>();
 final _shellNavigatorClientsKey = GlobalKey<NavigatorState>(
@@ -289,10 +292,14 @@ final appRouter = GoRouter(
                                 initialSelections:
                                     map['initialSelections']
                                         as Map<String, double>?,
+                                initialCostPrices:
+                                    map['initialCostPrices']
+                                        as Map<String, double>?,
                                 externalCostPrice:
                                     map['externalCostPrice'] as double?,
                                 externalProviderName:
                                     map['externalProviderName'] as String?,
+                                groupIndex: map['groupIndex'] as int?,
                               );
                             }
                             // Fallback
@@ -401,6 +408,20 @@ final appRouter = GoRouter(
           builder: (context, state) => const VerificationScreen(),
         ),
       ],
+    ),
+
+    GoRoute(
+      path: '/pdf-preview',
+      parentNavigatorKey: rootNavigatorKey,
+      builder: (context, state) {
+        final extra = state.extra as Map<String, dynamic>;
+        return PdfPreviewScreen(
+          title: extra['title'] as String,
+          subtitle: extra['subtitle'] as String?,
+          fileName: extra['fileName'] as String,
+          buildPdf: extra['buildPdf'] as Future<Uint8List> Function(PdfPageFormat),
+        );
+      },
     ),
 
     GoRoute(

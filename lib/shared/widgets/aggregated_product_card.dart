@@ -50,7 +50,7 @@ class AggregatedProductCard extends StatelessWidget {
     return Opacity(
       opacity: isAlreadyAdded ? 0.5 : 1.0,
       child: StandardListItem(
-        padding: const EdgeInsets.symmetric(vertical: 12.0),
+        //padding: const EdgeInsets.symmetric(vertical: 12.0),
         onTap: onTap,
         leading: (imageUrl != null && imageUrl!.isNotEmpty)
             ? ClipRRect(
@@ -88,28 +88,23 @@ class AggregatedProductCard extends StatelessWidget {
                   Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      if (isLocked) ...[
-                        Icon(
-                          Symbols.lock,
-                          size: 16,
-                          color: colors.onSurfaceVariant,
-                        ),
-                        const SizedBox(width: 4),
-                      ],
                       if (isLocked)
-                        ImageFiltered(
-                          imageFilter: ImageFilter.blur(sigmaX: 4, sigmaY: 4),
-                          child: Row(
-                            children: [
-                              Text(
-                                'MPD: ',
-                                style: TextStyle(
-                                  fontSize: 16,
-                                  fontStyle: FontStyle.italic,
-                                  color: colors.onSurface,
-                                ),
+                        Row(
+                          children: [
+                            Text(
+                              'MPD: ',
+                              style: TextStyle(
+                                fontSize: 14,
+                                fontStyle: FontStyle.italic,
+                                color: colors.onSurface,
                               ),
-                              Text(
+                            ),
+                            ImageFiltered(
+                              imageFilter: ImageFilter.blur(
+                                sigmaX: 4,
+                                sigmaY: 4,
+                              ),
+                              child: Text(
                                 CurrencyFormatter.format(minPrice),
                                 style: TextStyle(
                                   fontSize: 16,
@@ -117,8 +112,8 @@ class AggregatedProductCard extends StatelessWidget {
                                   color: colors.onSurface,
                                 ),
                               ),
-                            ],
-                          ),
+                            ),
+                          ],
                         )
                       else
                         Row(

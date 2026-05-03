@@ -15,6 +15,7 @@ class QuoteProductSourceCard extends ConsumerStatefulWidget {
   final QuoteProductSource source;
   final double selectedQty;
   final String uom;
+  final double? establishedCostPrice;
   final VoidCallback onSelectAll;
   final VoidCallback onDeselectAll;
   final ValueChanged<double> onQtyChanged;
@@ -28,6 +29,7 @@ class QuoteProductSourceCard extends ConsumerStatefulWidget {
     required this.source,
     required this.selectedQty,
     required this.uom,
+    this.establishedCostPrice,
     required this.onSelectAll,
     required this.onDeselectAll,
     required this.onQtyChanged,
@@ -105,6 +107,12 @@ class _QuoteProductSourceCardState
         widget.selectedQty > widget.source.maxStock &&
         widget.selectedQty > 0;
 
+    // PRICE ALERT: Current price exceeds the established cost when the quote was created
+    final hasPriceAlert =
+        !isExternal &&
+        widget.establishedCostPrice != null &&
+        widget.source.price > (widget.establishedCostPrice! + 0.01);
+
     // Let the stepper visibility be toggleable
     final showStepper = _isExpandedManual ?? (widget.selectedQty > 0);
 
@@ -157,7 +165,7 @@ class _QuoteProductSourceCardState
       elevation: 0,
       color: isExternal
           ? colors.primaryContainer
-          : (hasError
+          : ((hasError || hasPriceAlert)
                 ? colors.errorContainer.withValues(alpha: 0.8)
                 : colors.surfaceContainerLowest),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(0)),
@@ -343,6 +351,38 @@ class _QuoteProductSourceCardState
                                   color: colors.onSurfaceVariant,
                                 ),
                               ),
+                            if (hasPriceAlert)
+                              Padding(
+                                padding: const EdgeInsets.only(right: 8.0),
+                                child: Row(
+                                  children: [
+                                    Text(
+                                      CurrencyFormatter.format(
+                                        widget.establishedCostPrice!,
+                                      ),
+                                      style: Theme.of(context)
+                                          .textTheme
+                                          .bodyMedium
+                                          ?.copyWith(
+                                            color: colors.onSurfaceVariant,
+                                            fontWeight: FontWeight.bold,
+                                            decoration:
+                                                TextDecoration.lineThrough,
+                                          ),
+                                    ),
+                                    Text(
+                                      ' →',
+                                      style: Theme.of(context)
+                                          .textTheme
+                                          .bodyMedium
+                                          ?.copyWith(
+                                            color: colors.onSurfaceVariant,
+                                            fontWeight: FontWeight.bold,
+                                          ),
+                                    ),
+                                  ],
+                                ),
+                              ),
                             ImageFiltered(
                               imageFilter: shouldShowSnackBar
                                   ? ImageFilter.blur(sigmaX: 4, sigmaY: 4)
@@ -353,6 +393,9 @@ class _QuoteProductSourceCardState
                                     ?.copyWith(
                                       fontWeight: FontWeight.w700,
                                       fontSize: 18,
+                                      color: hasPriceAlert
+                                          ? colors.error
+                                          : null,
                                     ),
                               ),
                             ),

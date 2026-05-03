@@ -12,6 +12,7 @@ class ContactDetailsScreen extends ConsumerWidget {
   final String? companyName;
   final Contact contact;
   final int? contactCount;
+  final bool canEdit;
 
   const ContactDetailsScreen({
     super.key,
@@ -19,6 +20,7 @@ class ContactDetailsScreen extends ConsumerWidget {
     this.companyName,
     required this.contact,
     this.contactCount,
+    this.canEdit = true,
   });
 
   Future<void> _deleteContact(BuildContext context, WidgetRef ref) async {
@@ -112,41 +114,44 @@ class ContactDetailsScreen extends ConsumerWidget {
           ],
         ),
         actions: [
-          IconButton(
-            onPressed: (contactCount != null && contactCount! > 1)
-                ? () => _deleteContact(context, ref)
-                : null,
-            icon: const Icon(Icons.delete_outline),
-            tooltip: (contactCount != null && contactCount! > 1)
-                ? 'Eliminar contacto'
-                : 'No se puede eliminar el único contacto',
-          ),
+          if (canEdit)
+            IconButton(
+              onPressed: (contactCount != null && contactCount! > 1)
+                  ? () => _deleteContact(context, ref)
+                  : null,
+              icon: const Icon(Icons.delete_outline),
+              tooltip: (contactCount != null && contactCount! > 1)
+                  ? 'Eliminar contacto'
+                  : 'No se puede eliminar el único contacto',
+            ),
         ],
         foregroundColor: colors.onSurface,
         backgroundColor: colors.surface,
         elevation: 0,
       ),
-      floatingActionButton: Padding(
-        padding: const EdgeInsets.only(bottom: 40.0),
-        child: FloatingActionButton(
-          onPressed: () {
-            context.go(
-              '/clients/$clientId/contacts/edit',
-              extra: {
-                'companyName': companyName,
-                'contact': contact,
-                'contactCount': contactCount,
-              },
-            );
-          },
-          backgroundColor: colors.primaryContainer,
-          foregroundColor: colors.onPrimaryContainer,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(16),
-          ),
-          child: const Icon(Icons.edit_outlined),
-        ),
-      ),
+      floatingActionButton: canEdit
+          ? Padding(
+              padding: const EdgeInsets.only(bottom: 40.0),
+              child: FloatingActionButton(
+                onPressed: () {
+                  context.go(
+                    '/clients/$clientId/contacts/edit',
+                    extra: {
+                      'companyName': companyName,
+                      'contact': contact,
+                      'contactCount': contactCount,
+                    },
+                  );
+                },
+                backgroundColor: colors.primaryContainer,
+                foregroundColor: colors.onPrimaryContainer,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                child: const Icon(Icons.edit_outlined),
+              ),
+            )
+          : null,
       body: SingleChildScrollView(
         padding: const EdgeInsets.fromLTRB(16, 24, 16, 40),
         child: Column(

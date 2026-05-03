@@ -4,6 +4,8 @@ Este documento detalla **todas** las tablas, sus campos, tipos de datos y
 relaciones existentes en el esquema `public`. **Uso obligatorio antes de
 cualquier modificación en RPCs o triggers.**
 
+Supabase Project ID: fdkswvzrozijbizdthge
+
 ## 1. Módulo Core y Usuarios
 
 ### `profiles`

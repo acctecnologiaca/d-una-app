@@ -8,8 +8,18 @@ import '../../../../../shared/widgets/standard_list_item.dart';
 class QuoteCard extends StatelessWidget {
   final Quote quote;
   final VoidCallback? onTap;
+  final VoidCallback? onLongPress;
+  final bool isSelectionMode;
+  final bool isSelected;
 
-  const QuoteCard({super.key, required this.quote, this.onTap});
+  const QuoteCard({
+    super.key,
+    required this.quote,
+    this.onTap,
+    this.onLongPress,
+    this.isSelectionMode = false,
+    this.isSelected = false,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -19,36 +29,40 @@ class QuoteCard extends StatelessWidget {
     // Formatters
     final dateFormat = DateFormat('dd/MM/yyyy');
 
+    // Definimos si el estatus permite alertas visuales (evitamos estados finales)
+    final canShowAlert =
+        quote.status != QuoteStatus.rejected &&
+        quote.status != QuoteStatus.finalized &&
+        quote.status != QuoteStatus.cancelled &&
+        quote.status != QuoteStatus.expired;
+
     return Container(
       decoration: BoxDecoration(
-        color: quote.stockStatus != StockStatus.available
-            ? colors.errorContainer.withValues(alpha: 0.8)
-            : null,
+        color: isSelected
+            ? colors.primaryContainer.withValues(alpha: 0.3)
+            : (canShowAlert &&
+                      (quote.stockStatus != StockStatus.available ||
+                          quote.hasPriceIncrease)
+                  ? colors.errorContainer.withValues(alpha: 0.8)
+                  : null),
       ),
       child: StandardListItem(
         padding: const EdgeInsets.symmetric(vertical: 12.0, horizontal: 16.0),
         onTap: onTap,
+        onLongPress: onLongPress,
         overline: Text(
-          '${dateFormat.format(quote.date)} (#${quote.quoteNumber})',
+          '#${quote.quoteNumber} (${dateFormat.format(quote.date)})',
         ),
         title: quote.clientName,
-        /*titleTrailing: quote.quoteTag != null
-            ? Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                decoration: BoxDecoration(
-                  color: colors.primaryContainer,
-                  borderRadius: BorderRadius.circular(4),
-                ),
-                child: Text(
-                  quote.quoteTag!,
-                  style: textTheme.labelSmall?.copyWith(
-                    color: colors.onPrimaryContainer,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
+        subtitle: quote.quoteTag != null
+            ? Row(
+                children: [
+                  const Icon(Icons.label_outline, size: 16),
+                  const SizedBox(width: 4),
+                  Text(quote.quoteTag!),
+                ],
               )
-            : null,*/
-        subtitle: quote.quoteTag != null ? Text(quote.quoteTag!) : null,
+            : null,
         trailing: Column(
           crossAxisAlignment: CrossAxisAlignment.end,
           children: [
@@ -60,23 +74,43 @@ class QuoteCard extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 8),
-            Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                if (quote.isArchived)
-                  _buildStatusIcon(
-                    'assets/icons/status_archived.png',
-                    'Archivada',
+            isSelectionMode
+                ? Checkbox(
+                    value: isSelected,
+                    onChanged: (_) => onTap?.call(),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(4),
+                    ),
                   )
-                else if (quote.stockStatus != StockStatus.available)
-                  _buildStatusIcon(
-                    quote.stockStatus.iconPath,
-                    quote.stockStatus.label,
+                : Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      if (quote.isArchived)
+                        _buildStatusIcon(
+                          'assets/icons/status_archived.png',
+                          'Archivada',
+                        )
+                      else ...[
+                        if (canShowAlert && quote.hasPriceIncrease)
+                          _buildStatusIcon(
+                            'assets/icons/price_increase.png',
+                            'Aumento de costo',
+                          ),
+                        const SizedBox(width: 4),
+                        if (canShowAlert &&
+                            quote.stockStatus != StockStatus.available)
+                          _buildStatusIcon(
+                            quote.stockStatus.iconPath,
+                            quote.stockStatus.label,
+                          ),
+                      ],
+                      const SizedBox(width: 4),
+                      _buildStatusIcon(
+                        quote.status.iconPath,
+                        quote.status.label,
+                      ),
+                    ],
                   ),
-                const SizedBox(width: 4),
-                _buildStatusIcon(quote.status.iconPath, quote.status.label),
-              ],
-            ),
           ],
         ),
       ),

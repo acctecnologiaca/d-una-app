@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import '../../../../../shared/widgets/generic_search_screen.dart';
 import '../../../../../shared/widgets/filter_bottom_sheet.dart';
 import '../../../../../shared/widgets/horizontal_filter_bar.dart';
+import '../../../../../shared/widgets/sort_selector.dart';
 import '../../../../../core/utils/search_utils.dart';
 import '../../../../../core/utils/string_extensions.dart';
 import '../../../domain/models/quote_model.dart'; // New Import
@@ -23,12 +25,15 @@ class _QuotesSearchScreenState extends ConsumerState<QuotesSearchScreen> {
   final Set<String> _selectedCategories = {};
   DateTimeRange? _selectedDateRange;
   String _searchQuery = '';
+  SortOption _currentSort = SortOption.recent;
 
   String _getChipLabel(Set<String> selected, String defaultLabel) {
     if (selected.isEmpty) return defaultLabel;
     if (selected.length == 1) return selected.first;
     return '${selected.first}+${selected.length - 1}';
   }
+
+  static const _archivedLabel = 'Archivadas';
 
   void _showStatusFilter(List<Quote> quotes) {
     // Collect specific strings (labels) for the filter UI
@@ -40,16 +45,25 @@ class _QuotesSearchScreenState extends ConsumerState<QuotesSearchScreen> {
                   q.clientName.normalized.contains(queryNormalized) ||
                   q.quoteNumber.normalized.contains(queryNormalized);
             })
+            .where((q) => !q.isArchived)
             .map((e) => e.status.label)
             .toSet()
             .toList()
           ..sort();
 
+    // Add 'Archivadas' option if any archived quotes exist
+    final hasArchived = quotes.any((q) => q.isArchived);
+    if (hasArchived) {
+      availableStatuses.add(_archivedLabel);
+    }
+
     FilterBottomSheet.showMulti(
       context: context,
-      title: 'Estado',
+      title: 'Estatus',
       options: availableStatuses,
       selectedValues: _selectedStatuses,
+      leadingBuilder: (value) =>
+          _buildStatusLeading(value, Theme.of(context).colorScheme),
       onApply: (selected) {
         setState(() {
           _selectedStatuses.clear();
@@ -100,6 +114,33 @@ class _QuotesSearchScreenState extends ConsumerState<QuotesSearchScreen> {
     }
   }
 
+  Widget _buildStatusLeading(String statusLabel, ColorScheme colors) {
+    final status = QuoteStatus.values
+        .where((s) => s.label == statusLabel)
+        .firstOrNull;
+
+    if (status != null) {
+      return Image.asset(status.iconPath, width: 24, height: 24);
+    }
+
+    if (statusLabel == _archivedLabel) {
+      return Icon(
+        Icons.archive_outlined,
+        size: 24,
+        color: colors.onSurfaceVariant,
+      );
+    }
+
+    return CircleAvatar(
+      radius: 12,
+      backgroundColor: colors.secondaryContainer,
+      child: Text(
+        statusLabel.isNotEmpty ? statusLabel[0].toUpperCase() : '?',
+        style: TextStyle(color: colors.onSecondaryContainer, fontSize: 12),
+      ),
+    );
+  }
+
   String _formatDateRange(DateTimeRange range) {
     final df = DateFormat('dd/MM/yy');
     return '${df.format(range.start)} - ${df.format(range.end)}';
@@ -120,6 +161,7 @@ class _QuotesSearchScreenState extends ConsumerState<QuotesSearchScreen> {
           _selectedCategories.clear();
           _selectedDateRange = null;
           _searchQuery = '';
+          _currentSort = SortOption.recent;
         });
       },
       onQueryChanged: (query) {
@@ -127,17 +169,47 @@ class _QuotesSearchScreenState extends ConsumerState<QuotesSearchScreen> {
           _searchQuery = query;
         });
       },
+      bottomFilterWidget: Padding(
+        padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+        child: Align(
+          alignment: Alignment.centerLeft,
+          child: SortSelector(
+            currentSort: _currentSort,
+            options: const [
+              SortOption.recent,
+              SortOption.nameAZ,
+              SortOption.nameZA,
+            ],
+            onSortChanged: (val) => setState(() => _currentSort = val),
+          ),
+        ),
+      ),
+      comparator: (a, b) {
+        switch (_currentSort) {
+          case SortOption.nameAZ:
+            return a.clientName.toLowerCase().compareTo(
+              b.clientName.toLowerCase(),
+            );
+          case SortOption.nameZA:
+            return b.clientName.toLowerCase().compareTo(
+              a.clientName.toLowerCase(),
+            );
+          case SortOption.recent:
+          default:
+            return b.date.compareTo(a.date);
+        }
+      },
       itemBuilder: (context, quote) {
         return QuoteCard(
           quote: quote,
           onTap: () {
-            // Navigate to details
+            context.push('/quotes/view/${quote.id}');
           },
         );
       },
       filters: [
         FilterChipData(
-          label: _getChipLabel(_selectedStatuses, 'Estado'),
+          label: _getChipLabel(_selectedStatuses, 'Estatus'),
           isActive: _selectedStatuses.isNotEmpty,
           onTap: () {
             dataAsync.whenData((quotes) => _showStatusFilter(quotes));
@@ -165,10 +237,32 @@ class _QuotesSearchScreenState extends ConsumerState<QuotesSearchScreen> {
           quote.quoteTag,
         ]);
 
-        // Filter match by status label
-        final matchesStatus =
-            _selectedStatuses.isEmpty ||
-            _selectedStatuses.contains(quote.status.label);
+        // Separate 'Archivadas' from regular status labels
+        final wantsArchived = _selectedStatuses.contains(_archivedLabel);
+        final regularStatuses = _selectedStatuses
+            .where((s) => s != _archivedLabel)
+            .toSet();
+
+        // Archive visibility logic:
+        // - If no status filters selected: hide archived
+        // - If 'Archivadas' selected: show archived (and filter by regular statuses if any)
+        // - If only regular statuses selected: hide archived
+        bool matchesArchive;
+        if (_selectedStatuses.isEmpty) {
+          // No filters: hide archived
+          matchesArchive = !quote.isArchived;
+        } else if (wantsArchived && regularStatuses.isEmpty) {
+          // Only 'Archivadas' selected: show only archived
+          matchesArchive = quote.isArchived;
+        } else if (wantsArchived && regularStatuses.isNotEmpty) {
+          // 'Archivadas' + regular statuses: show archived that match those statuses
+          matchesArchive =
+              quote.isArchived && regularStatuses.contains(quote.status.label);
+        } else {
+          // Only regular statuses: hide archived, match status
+          matchesArchive =
+              !quote.isArchived && regularStatuses.contains(quote.status.label);
+        }
 
         // Filter match by category
         final matchesCategory =
@@ -197,7 +291,7 @@ class _QuotesSearchScreenState extends ConsumerState<QuotesSearchScreen> {
               quote.date.isBefore(end.add(const Duration(seconds: 1)));
         }
 
-        return matchesText && matchesStatus && matchesCategory && matchesDate;
+        return matchesText && matchesArchive && matchesCategory && matchesDate;
       },
     );
   }

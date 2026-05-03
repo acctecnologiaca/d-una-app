@@ -2,7 +2,6 @@ class QuoteItemService {
   final String id;
   final String quoteId;
   final String? serviceId; // Own
-  final String? serviceRateId;
   final String? executionTimeId;
 
   // Snapshot
@@ -19,15 +18,17 @@ class QuoteItemService {
   final double totalPrice;
   final String? warrantyTime;
 
-  // Runtime-only, not persisted
+  // Persisted Snapshots
   final String rateSymbol;
   final String? rateIconName;
+  final String? categoryName;
+  final String? executionTimeLabel;
+  final int orderIndex;
 
   QuoteItemService({
     required this.id,
     required this.quoteId,
     this.serviceId,
-    this.serviceRateId,
     this.executionTimeId,
     required this.name,
     this.description,
@@ -41,6 +42,9 @@ class QuoteItemService {
     this.warrantyTime,
     this.rateSymbol = 'ud.',
     this.rateIconName,
+    this.categoryName,
+    this.executionTimeLabel,
+    this.orderIndex = 0,
   });
 
   factory QuoteItemService.fromJson(Map<String, dynamic> json) {
@@ -48,7 +52,6 @@ class QuoteItemService {
       id: json['id'] as String,
       quoteId: json['quote_id'] as String,
       serviceId: json['service_id'] as String?,
-      serviceRateId: json['service_rate_id'] as String?,
       executionTimeId: json['execution_time_id'] as String?,
 
       name: json['name'] as String,
@@ -65,6 +68,11 @@ class QuoteItemService {
       totalPrice: (json['total_price'] as num).toDouble(),
 
       warrantyTime: json['warranty_time'] as String?,
+      rateSymbol: json['rate_symbol'] as String? ?? 'ud.',
+      rateIconName: json['rate_icon_name'] as String?,
+      categoryName: json['category_name'] as String?,
+      executionTimeLabel: json['execution_time_label'] as String?,
+      orderIndex: json['order_index'] as int? ?? 0,
     );
   }
 
@@ -73,7 +81,6 @@ class QuoteItemService {
       'id': id,
       'quote_id': quoteId,
       'service_id': serviceId,
-      'service_rate_id': serviceRateId,
       'execution_time_id': executionTimeId,
       'name': name,
       'description': description,
@@ -85,6 +92,55 @@ class QuoteItemService {
       'tax_amount': taxAmount,
       'total_price': totalPrice,
       'warranty_time': warrantyTime,
+      'rate_symbol': rateSymbol,
+      'rate_icon_name': rateIconName,
+      'category_name': categoryName,
+      'execution_time_label': executionTimeLabel,
+      'order_index': orderIndex,
     };
+  }
+
+  QuoteItemService copyWith({
+    String? id,
+    String? quoteId,
+    String? serviceId,
+    String? executionTimeId,
+    String? name,
+    String? description,
+    double? quantity,
+    double? costPrice,
+    double? profitMargin,
+    double? unitPrice,
+    double? taxRate,
+    double? taxAmount,
+    double? totalPrice,
+    String? warrantyTime,
+    String? rateSymbol,
+    String? rateIconName,
+    String? categoryName,
+    String? executionTimeLabel,
+    int? orderIndex,
+  }) {
+    return QuoteItemService(
+      id: id ?? this.id,
+      quoteId: quoteId ?? this.quoteId,
+      serviceId: serviceId ?? this.serviceId,
+      executionTimeId: executionTimeId ?? this.executionTimeId,
+      name: name ?? this.name,
+      description: description ?? this.description,
+      quantity: quantity ?? this.quantity,
+      costPrice: costPrice ?? this.costPrice,
+      profitMargin: profitMargin ?? this.profitMargin,
+      unitPrice: unitPrice ?? this.unitPrice,
+      taxRate: taxRate ?? this.taxRate,
+      taxAmount: taxAmount ?? this.taxAmount,
+      totalPrice: totalPrice ?? this.totalPrice,
+      warrantyTime: warrantyTime ?? this.warrantyTime,
+      rateSymbol: rateSymbol ?? this.rateSymbol,
+      rateIconName: rateIconName ?? this.rateIconName,
+      categoryName: categoryName ?? this.categoryName,
+      executionTimeLabel: executionTimeLabel ?? this.executionTimeLabel,
+      orderIndex: orderIndex ?? this.orderIndex,
+    );
   }
 }

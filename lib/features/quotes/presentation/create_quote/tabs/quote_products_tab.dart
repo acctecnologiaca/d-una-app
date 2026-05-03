@@ -30,7 +30,7 @@ class _QuoteProductsTabState extends ConsumerState<QuoteProductsTab>
     super.initState();
     // Trigger validation once on entering the tab
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      ref.read(quoteValidationProvider.notifier).startValidation();
+      ref.read(quoteValidationProvider(null).notifier).startValidation();
     });
   }
 
@@ -44,7 +44,43 @@ class _QuoteProductsTabState extends ConsumerState<QuoteProductsTab>
   Widget build(BuildContext context) {
     super.build(context);
     final state = ref.watch(createQuoteProvider);
-    final validationState = ref.watch(quoteValidationProvider);
+    final validationState = ref.watch(quoteValidationProvider(null));
+
+    // Si hay productos pero no hay datos de validación (probablemente porque se cargaron asíncronamente
+    // después del initState), disparamos la validación.
+    final needsInitialValidation =
+        state.products.isNotEmpty &&
+        !validationState.isValidating &&
+        validationState.items.isEmpty;
+
+    if (needsInitialValidation) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        // Ignorar si el widget ya no está montado
+        if (!mounted) return;
+        ref.read(quoteValidationProvider(null).notifier).startValidation();
+      });
+    }
+
+    // Mostrar pantalla de carga si estamos en la validación inicial
+    if (state.products.isNotEmpty &&
+        (validationState.isValidating || needsInitialValidation) &&
+        validationState.items.isEmpty) {
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const CircularProgressIndicator(),
+            const SizedBox(height: 16),
+            Text(
+              'Sincronizando inventario...',
+              style: TextStyle(
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
+              ),
+            ),
+          ],
+        ),
+      );
+    }
 
     if (state.products.isNotEmpty && _showRefreshHint && _hintTimer == null) {
       _hintTimer = Timer(const Duration(seconds: 5), () {
@@ -79,13 +115,15 @@ class _QuoteProductsTabState extends ConsumerState<QuoteProductsTab>
       );
     }
 
-    final groupedProducts = <String, List<QuoteItemProduct>>{};
+    final groupedProducts = <int, List<QuoteItemProduct>>{};
     for (var product in state.products) {
-      if (!groupedProducts.containsKey(product.name)) {
-        groupedProducts[product.name] = [];
+      if (!groupedProducts.containsKey(product.groupIndex)) {
+        groupedProducts[product.groupIndex] = [];
       }
-      groupedProducts[product.name]!.add(product);
+      groupedProducts[product.groupIndex]!.add(product);
     }
+
+    final sortedIndices = groupedProducts.keys.toList()..sort();
 
     return Column(
       children: [
@@ -115,15 +153,16 @@ class _QuoteProductsTabState extends ConsumerState<QuoteProductsTab>
         Expanded(
           child: RefreshIndicator(
             onRefresh: () =>
-                ref.read(quoteValidationProvider.notifier).validate(),
+                ref.read(quoteValidationProvider(null).notifier).validate(),
             child: ListView.builder(
               physics: const AlwaysScrollableScrollPhysics(),
-              padding: const EdgeInsets.symmetric(horizontal: 0, vertical: 0),
-              itemCount: groupedProducts.length,
+              padding: const EdgeInsets.only(bottom: 120),
+              itemCount: sortedIndices.length,
               itemBuilder: (context, index) {
-                final groupName = groupedProducts.keys.elementAt(index);
-                final items = groupedProducts[groupName]!;
+                final groupIndex = sortedIndices[index];
+                final items = groupedProducts[groupIndex]!;
                 final firstItem = items.first;
+                final groupName = firstItem.name;
 
                 double totalQuantity = 0;
                 double totalAvailableStock = 0;
@@ -141,74 +180,46 @@ class _QuoteProductsTabState extends ConsumerState<QuoteProductsTab>
                     : firstItem.costPrice;
 
                 final bool hasOwnInventory = items.any(
-                  (i) => i.productId != null && !i.isTemporal,
+                  (i) => i.sourceType == QuoteItemSourceType.own,
                 );
                 final bool hasSupplierInventory = items.any(
-                  (i) => i.supplierBranchStockId != null,
+                  (i) => i.sourceType == QuoteItemSourceType.affiliated,
                 );
-                final bool isTemporal = firstItem.isTemporal;
+                final bool isTemporal =
+                    firstItem.sourceType == QuoteItemSourceType.temporal;
                 final bool isExternalManagement = items.any(
-                  (i) => i.availableStock == -1.0,
+                  (i) => i.sourceType == QuoteItemSourceType.external,
                 );
 
                 // Determine group validation status and fresh stock
-                QuoteValidationStatus? groupStatus;
-                String? validationMessage;
+                final Set<QuoteValidationStatus> groupAlerts = {};
 
                 if (!isTemporal) {
                   for (var item in items) {
-                    if (item.availableStock == -1.0) {
-                      totalAvailableStock += item.quantity;
-                      continue;
-                    }
-                    final vInfo = validationState.items[item.id];
-                    // SYNC: Use fresh stock from validation if available
-                    if (vInfo != null) {
-                      totalAvailableStock += vInfo.currentStock;
-                    } else if (item.availableStock == -1.0) {
-                      // External management: treat as unlimited
+                    if (item.sourceType == QuoteItemSourceType.external) {
+                      // Tope rígido: Solo permitimos incrementar hasta la cantidad externa que
+                      // ya fue negociada (item.quantity).
                       totalAvailableStock += item.quantity;
                     } else {
-                      totalAvailableStock +=
-                          item.availableStock ?? double.infinity;
+                      final vInfo = validationState.items[item.id];
+                      if (vInfo != null) {
+                        totalAvailableStock += vInfo.currentStock;
+                      } else {
+                        totalAvailableStock +=
+                            item.availableStock ?? double.infinity;
+                      }
                     }
 
+                    // Collect alerts
+                    final vInfo = validationState.items[item.id];
                     if (vInfo != null &&
                         vInfo.status != QuoteValidationStatus.ok) {
-                      // Prioritize outOfStock > lowStock > priceIncreased
-                      if (groupStatus == null ||
-                          vInfo.status == QuoteValidationStatus.outOfStock ||
-                          (groupStatus != QuoteValidationStatus.outOfStock &&
-                              vInfo.status == QuoteValidationStatus.lowStock)) {
-                        groupStatus = vInfo.status;
-
-                        switch (groupStatus) {
-                          case QuoteValidationStatus.outOfStock:
-                            validationMessage = 'Sin stock disponible';
-                            break;
-                          case QuoteValidationStatus.lowStock:
-                            final diff = (item.quantity - vInfo.currentStock)
-                                .toInt();
-                            validationMessage =
-                                'Faltan $diff unidades por stock';
-                            break;
-                          case QuoteValidationStatus.priceIncreased:
-                            validationMessage = 'El precio de costo aumentó';
-                            break;
-                          case QuoteValidationStatus.missing:
-                            validationMessage = 'Producto ya no disponible';
-                            break;
-                          default:
-                            break;
-                        }
-                      }
+                      groupAlerts.add(vInfo.status);
                     }
                   }
                 } else {
-                  // Para productos temporales, sumar el stock que traiga el modelo
-                  for (var item in items) {
-                    totalAvailableStock += item.availableStock ?? 999999;
-                  }
+                  // Es un grupo puramente temporal. Debe permitir incrementos infinitos en el stepper.
+                  totalAvailableStock += 999999;
                 }
 
                 return QuoteAddedProductCard(
@@ -216,6 +227,7 @@ class _QuoteProductsTabState extends ConsumerState<QuoteProductsTab>
                   brand: firstItem.brand,
                   model: firstItem.model,
                   uom: firstItem.uom,
+                  uomIconName: firstItem.uomIconName,
                   subtotal: subtotal,
                   totalQuantity: totalQuantity,
                   totalAvailableStock: totalAvailableStock,
@@ -226,7 +238,7 @@ class _QuoteProductsTabState extends ConsumerState<QuoteProductsTab>
                   onDelete: () {
                     ref
                         .read(createQuoteProvider.notifier)
-                        .removeProductGroup(groupName);
+                        .removeProductGroup(groupIndex);
                   },
                   onEditPrice: () async {
                     final result = await QuoteProductSaleDetailsSheet.show(
@@ -248,7 +260,7 @@ class _QuoteProductsTabState extends ConsumerState<QuoteProductsTab>
                       ref
                           .read(createQuoteProvider.notifier)
                           .updateGroupPrice(
-                            groupName,
+                            groupIndex,
                             newPrice,
                             newMargin,
                             newDeliveryTimeId,
@@ -258,17 +270,20 @@ class _QuoteProductsTabState extends ConsumerState<QuoteProductsTab>
                   onEditSources: () {
                     // Build the initial selections map
                     final Map<String, double> initialSelections = {};
+                    final Map<String, double> initialCostPrices = {};
                     double? externalCostPrice;
                     String? externalProviderName;
 
                     for (var item in items) {
-                      final isExternal = item.availableStock == -1.0;
+                      final isExternal =
+                          item.sourceType == QuoteItemSourceType.external;
                       final sourceId = isExternal
                           ? 'external-management'
                           : (item.supplierBranchStockId ?? item.productId);
 
                       if (sourceId != null) {
                         initialSelections[sourceId] = item.quantity;
+                        initialCostPrices[sourceId] = item.costPrice;
                         if (isExternal) {
                           externalCostPrice = item.costPrice;
                           externalProviderName = item.externalProviderName;
@@ -297,8 +312,10 @@ class _QuoteProductsTabState extends ConsumerState<QuoteProductsTab>
                       extra: {
                         'product': productObj,
                         'initialSelections': initialSelections,
+                        'initialCostPrices': initialCostPrices,
                         'externalCostPrice': externalCostPrice,
                         'externalProviderName': externalProviderName,
+                        'groupIndex': groupIndex,
                       },
                     );
                   },
@@ -313,10 +330,9 @@ class _QuoteProductsTabState extends ConsumerState<QuoteProductsTab>
                   onQuantityChanged: (newQty) {
                     ref
                         .read(createQuoteProvider.notifier)
-                        .updateGroupQuantity(groupName, newQty);
+                        .updateGroupQuantity(groupIndex, newQty);
                   },
-                  validationStatus: groupStatus,
-                  validationMessage: validationMessage,
+                  alerts: groupAlerts.toList(),
                 );
               },
             ),

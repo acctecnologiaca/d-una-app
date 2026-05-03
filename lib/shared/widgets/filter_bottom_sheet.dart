@@ -17,6 +17,7 @@ class FilterBottomSheet extends StatefulWidget {
   final Set<String> selectedValues;
   final ValueChanged<Set<String>>? onApply;
   final ValueChanged<String>? onSelect;
+  final Widget Function(String value)? leadingBuilder;
 
   const FilterBottomSheet._({
     required this.title,
@@ -25,6 +26,7 @@ class FilterBottomSheet extends StatefulWidget {
     required this.selectedValues,
     this.onApply,
     this.onSelect,
+    this.leadingBuilder,
   });
 
   static Future<void> showMulti<T>({
@@ -34,6 +36,7 @@ class FilterBottomSheet extends StatefulWidget {
     required Set<String> selectedValues,
     required ValueChanged<Set<String>> onApply,
     String Function(String)? labelBuilder,
+    Widget Function(String value)? leadingBuilder,
   }) {
     return showModalBottomSheet(
       context: context,
@@ -51,6 +54,7 @@ class FilterBottomSheet extends StatefulWidget {
         }).toList(),
         selectedValues: selectedValues,
         onApply: onApply,
+        leadingBuilder: leadingBuilder,
       ),
     );
   }
@@ -210,12 +214,10 @@ class _FilterBottomSheetState extends State<FilterBottomSheet> {
                         contentPadding: const EdgeInsets.symmetric(
                           horizontal: 24,
                         ),
-                        secondary: CircleAvatar(
-                          backgroundColor: colors.primaryContainer,
-                          child: Text(
-                            'T',
-                            style: TextStyle(color: colors.onPrimaryContainer),
-                          ),
+                        secondary: Icon(
+                          Icons.select_all,
+                          color: colors.onSurfaceVariant,
+                          size: 24,
                         ),
                         controlAffinity: ListTileControlAffinity.trailing,
                         onChanged: (bool? value) {
@@ -234,17 +236,19 @@ class _FilterBottomSheetState extends State<FilterBottomSheet> {
                           contentPadding: const EdgeInsets.symmetric(
                             horizontal: 24,
                           ),
-                          secondary: CircleAvatar(
-                            backgroundColor: colors.secondaryContainer,
-                            child: Text(
-                              opt.label.isNotEmpty
-                                  ? opt.label[0].toUpperCase()
-                                  : '?',
-                              style: TextStyle(
-                                color: colors.onSecondaryContainer,
-                              ),
-                            ),
-                          ),
+                          secondary: widget.leadingBuilder != null
+                              ? widget.leadingBuilder!(opt.value)
+                              : CircleAvatar(
+                                  backgroundColor: colors.secondaryContainer,
+                                  child: Text(
+                                    opt.label.isNotEmpty
+                                        ? opt.label[0].toUpperCase()
+                                        : '?',
+                                    style: TextStyle(
+                                      color: colors.onSecondaryContainer,
+                                    ),
+                                  ),
+                                ),
                           controlAffinity: ListTileControlAffinity.trailing,
                           onChanged: (bool? value) {
                             setState(() {

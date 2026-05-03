@@ -1,6 +1,7 @@
 import 'quote_item_product.dart';
 import 'quote_item_service.dart';
 import 'quote_condition.dart';
+import '../../../clients/data/models/client_model.dart';
 
 class Quote {
   final String id;
@@ -30,6 +31,7 @@ class Quote {
   final List<QuoteItemProduct>? products;
   final List<QuoteItemService>? services;
   final List<QuoteCondition>? conditions;
+  final Contact? contact;
 
   // Additional Client Details (for View Mode)
   final String? clientTaxId;
@@ -75,6 +77,7 @@ class Quote {
     this.clientCity,
     this.clientState,
     this.clientCountry,
+    this.contact,
   });
 
   factory Quote.fromJson(Map<String, dynamic> json) {
@@ -108,6 +111,9 @@ class Quote {
 
       // Handle joined contact name
       contactName: _extractContactName(json['contacts']),
+
+      // Handle full contact object
+      contact: json['contacts'] != null ? _extractContact(json['contacts']) : null,
 
       // Handle joined advisor name
       advisorName: _extractAdvisorName(json['advisor']),
@@ -221,6 +227,20 @@ class Quote {
     if (json is List && json.isNotEmpty) {
       final first = json.first;
       if (first is Map) return first[field]?.toString();
+    }
+    return null;
+  }
+
+  static Contact? _extractContact(dynamic contactJson) {
+    if (contactJson == null) return null;
+    if (contactJson is Map) {
+      return Contact.fromJson(contactJson as Map<String, dynamic>);
+    }
+    if (contactJson is List && contactJson.isNotEmpty) {
+      final first = contactJson.first;
+      if (first is Map) {
+        return Contact.fromJson(first as Map<String, dynamic>);
+      }
     }
     return null;
   }

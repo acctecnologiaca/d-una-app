@@ -118,6 +118,7 @@ class InventoryActionSheet {
 
     // 2. Build the QuoteItemProduct
     final quoteItem = QuoteItemProduct(
+      groupIndex: ref.read(createQuoteProvider).nextGroupIndex,
       id: const Uuid().v4(),
       quoteId: 'draft',
       productId: product.id,
@@ -133,6 +134,7 @@ class InventoryActionSheet {
       taxRate: taxRate * 100, // QuoteItemProduct expects percentage
       taxAmount: sellingPrice * taxRate,
       totalPrice: (sellingPrice * (1 + taxRate)),
+      sourceType: QuoteItemSourceType.own,
     );
 
     // 3. Add to state

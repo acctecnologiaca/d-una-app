@@ -1,3 +1,4 @@
+import 'package:d_una_app/shared/widgets/status_badge.dart';
 import 'package:flutter/material.dart';
 import 'package:material_symbols_icons/symbols.dart';
 import '../../../../../core/utils/string_extensions.dart';
@@ -22,6 +23,7 @@ class QuoteAddedServiceCard extends StatelessWidget {
   final ValueChanged<double> onQuantityChanged;
   final bool isTemporal;
   final bool isReadOnly;
+  final VoidCallback? onTap;
 
   const QuoteAddedServiceCard({
     super.key,
@@ -37,6 +39,7 @@ class QuoteAddedServiceCard extends StatelessWidget {
     this.isTemporal = false,
     this.rateIconName,
     this.isReadOnly = false,
+    this.onTap,
   });
 
   @override
@@ -44,6 +47,7 @@ class QuoteAddedServiceCard extends StatelessWidget {
     final colors = Theme.of(context).colorScheme;
 
     return ExpandableActionCard(
+      onTap: onTap,
       overline: category != null
           ? Text(category!.toTitleCase)
           : const Text('Sin categoría'),
@@ -67,7 +71,7 @@ class QuoteAddedServiceCard extends StatelessWidget {
               ],
             )
           : null,
-      padding: const EdgeInsets.fromLTRB(0, 8, 0, 8),
+      padding: const EdgeInsets.symmetric(horizontal: 0.0, vertical: 12.0),
       trailing: Column(
         crossAxisAlignment: CrossAxisAlignment.end,
         children: [
@@ -80,22 +84,22 @@ class QuoteAddedServiceCard extends StatelessWidget {
               color: colors.onSurface,
             ),
           ),
-          const SizedBox(height: 8),
-
+          Text(
+            "(${CurrencyFormatter.format(subtotal / quantity)}/$rateSuffix)",
+            style: TextStyle(fontSize: 12, color: colors.onSurface),
+          ),
+          const SizedBox(height: 4),
           // Badges row
           Row(
             mainAxisSize: MainAxisSize.min,
             children: [
               // Temp badge
               if (isTemporal) ...[
-                Tooltip(
-                  message: 'Servicio temporal',
-                  child: Icon(
-                    Symbols.chronic,
-                    size: 20,
-                    color: colors.outline,
-                    fill: 1,
-                  ),
+                StatusBadge(
+                  backgroundColor: colors.outline,
+                  textColor: colors.surface,
+                  borderRadius: 4.0,
+                  icon: Icon(Symbols.chronic, size: 16, color: colors.surface),
                 ),
                 const SizedBox(width: 8),
               ],
@@ -109,49 +113,51 @@ class QuoteAddedServiceCard extends StatelessWidget {
           ),
         ],
       ),
-      actions: isReadOnly ? [] : [
-        IconButton(
-          icon: const Icon(Symbols.delete),
-          color: colors.onSurfaceVariant,
-          visualDensity: VisualDensity.compact,
-          onPressed: () {
-            CustomDialog.show(
-              context: context,
-              dialog: CustomDialog.destructive(
-                title: 'Eliminar servicio',
-                contentText:
-                    '¿Estás seguro de que deseas eliminar este servicio de la cotización?',
-                actions: [
-                  TextButton(
-                    onPressed: () =>
-                        Navigator.of(context, rootNavigator: true).pop(),
-                    child: const Text('Cancelar'),
-                  ),
-                  FilledButton(
-                    onPressed: () {
-                      Navigator.of(context, rootNavigator: true).pop();
-                      onDelete();
-                    },
-                    style: FilledButton.styleFrom(
-                      backgroundColor: colors.error,
-                      foregroundColor: colors.onError,
+      actions: isReadOnly
+          ? []
+          : [
+              IconButton(
+                icon: const Icon(Symbols.delete),
+                color: colors.onSurfaceVariant,
+                visualDensity: VisualDensity.compact,
+                onPressed: () {
+                  CustomDialog.show(
+                    context: context,
+                    dialog: CustomDialog.destructive(
+                      title: 'Eliminar servicio',
+                      contentText:
+                          '¿Estás seguro de que deseas eliminar este servicio de la cotización?',
+                      actions: [
+                        TextButton(
+                          onPressed: () =>
+                              Navigator.of(context, rootNavigator: true).pop(),
+                          child: const Text('Cancelar'),
+                        ),
+                        FilledButton(
+                          onPressed: () {
+                            Navigator.of(context, rootNavigator: true).pop();
+                            onDelete();
+                          },
+                          style: FilledButton.styleFrom(
+                            backgroundColor: colors.error,
+                            foregroundColor: colors.onError,
+                          ),
+                          child: const Text('Eliminar'),
+                        ),
+                      ],
                     ),
-                    child: const Text('Eliminar'),
-                  ),
-                ],
+                  );
+                },
+                tooltip: 'Eliminar servicio',
               ),
-            );
-          },
-          tooltip: 'Eliminar servicio',
-        ),
-        IconButton(
-          icon: const Icon(Symbols.edit_document),
-          color: colors.onSurfaceVariant,
-          visualDensity: VisualDensity.compact,
-          onPressed: onEditSaleDetails,
-          tooltip: 'Ajustar detalles del servicio',
-        ),
-      ],
+              IconButton(
+                icon: const Icon(Symbols.edit_document),
+                color: colors.onSurfaceVariant,
+                visualDensity: VisualDensity.compact,
+                onPressed: onEditSaleDetails,
+                tooltip: 'Ajustar detalles del servicio',
+              ),
+            ],
       expandedTrailing: isReadOnly
           ? null
           : EditableQuantityStepper(

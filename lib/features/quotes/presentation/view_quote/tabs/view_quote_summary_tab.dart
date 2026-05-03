@@ -1,7 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:intl/intl.dart';
+import 'package:material_symbols_icons/symbols.dart';
 import '../../../../../shared/utils/currency_formatter.dart';
+import '../../../domain/models/quote_model.dart';
 import '../providers/view_quote_provider.dart';
+import '../../../data/models/quote.dart' as data;
 import '../../../data/models/quote_item_product.dart';
 import '../../../data/models/quote_item_service.dart';
 
@@ -55,26 +59,40 @@ class ViewQuoteSummaryTab extends ConsumerWidget {
         ? (taxAmount / totalSales) * 100
         : 0.0;
 
-    // Group Products for display
-    final groupedProducts = <String, List<QuoteItemProduct>>{};
+    // Group Products for display by index
+    final groupedProducts = <int, List<QuoteItemProduct>>{};
     for (var product in state.products) {
-      if (!groupedProducts.containsKey(product.name)) {
-        groupedProducts[product.name] = [];
+      if (!groupedProducts.containsKey(product.groupIndex)) {
+        groupedProducts[product.groupIndex] = [];
       }
-      groupedProducts[product.name]!.add(product);
+      groupedProducts[product.groupIndex]!.add(product);
     }
-    final displayProducts = groupedProducts.entries.take(3).toList();
+
+    final sortedIndices = groupedProducts.keys.toList()..sort();
+    final displayProducts = sortedIndices
+        .take(3)
+        .map(
+          (idx) =>
+              MapEntry(groupedProducts[idx]!.first.name, groupedProducts[idx]!),
+        )
+        .toList();
 
     // Services
-    final displayServices = state.services.take(3).toList();
+    final sortedServices = [...state.services]
+      ..sort((a, b) => a.orderIndex.compareTo(b.orderIndex));
+    final displayServices = sortedServices.take(3).toList();
 
     return SingleChildScrollView(
-      padding: const EdgeInsets.all(16.0),
+      padding: const EdgeInsets.fromLTRB(16, 16, 16, 80),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
+          // 0. Info Section (Status & Last Mod)
+          _buildInfoCard(context, quote),
+          const SizedBox(height: 16),
+
           // 1. Utilidad Section
-          _buildSectionHeader(context, Icons.bar_chart, 'Utilidad'),
+          _buildSectionHeader(context, Icons.bar_chart, 'Rentabilidad'),
           _buildUtilityCard(context, totalSales, totalCosts, estimatedProfit),
           const SizedBox(height: 16),
 
@@ -99,6 +117,93 @@ class ViewQuoteSummaryTab extends ConsumerWidget {
             displayServices,
           ),
           const SizedBox(height: 40),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildInfoCard(BuildContext context, data.Quote quote) {
+    final colors = Theme.of(context).colorScheme;
+    final dateFormat = DateFormat('dd/MM/yyyy - hh:mm a');
+    final status = QuoteStatus.fromDbValue(quote.status);
+
+    return Card(
+      elevation: 0,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+        side: BorderSide(color: colors.outlineVariant),
+      ),
+      color: colors.surface,
+      child: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          children: [
+            Row(
+              children: [
+                Icon(
+                  Symbols.conversion_path,
+                  size: 20,
+                  color: colors.onSurfaceVariant,
+                ),
+                const SizedBox(width: 8),
+                Text(
+                  'Estatus:',
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    color: colors.onSurface,
+                  ),
+                ),
+                const SizedBox(width: 12),
+                _buildStatusBadge(context, status),
+              ],
+            ),
+            const SizedBox(height: 12),
+            Row(
+              children: [
+                Icon(Icons.update, size: 20, color: colors.onSurfaceVariant),
+                const SizedBox(width: 8),
+                Text(
+                  'Últ. mod:',
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    color: colors.onSurface,
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Text(
+                  dateFormat.format(quote.updatedAt.toLocal()),
+                  style: TextStyle(color: colors.onSurfaceVariant),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildStatusBadge(BuildContext context, QuoteStatus status) {
+    final colors = Theme.of(context).colorScheme;
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+      decoration: BoxDecoration(
+        color: colors.surface,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: colors.primary.withValues(alpha: 0.2)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Image.asset(status.iconPath, width: 16, height: 16),
+          const SizedBox(width: 8),
+          Text(
+            status.label,
+            style: TextStyle(
+              color: status.statusColor(colors),
+              fontWeight: FontWeight.bold,
+              fontSize: 14,
+            ),
+          ),
         ],
       ),
     );

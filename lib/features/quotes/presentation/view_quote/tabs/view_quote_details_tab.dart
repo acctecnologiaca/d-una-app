@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
+import 'package:material_symbols_icons/symbols.dart';
 import '../../../../../shared/widgets/info_block.dart';
 import '../providers/view_quote_provider.dart';
+import '../../../domain/models/quote_model.dart';
 
 class ViewQuoteDetailsTab extends ConsumerWidget {
   final String quoteId;
@@ -24,6 +26,18 @@ class ViewQuoteDetailsTab extends ConsumerWidget {
     }
 
     final dateFormat = DateFormat('dd/MM/yyyy');
+    final expirationDate =
+        quote.dateIssued.add(Duration(days: quote.validityDays));
+
+    // Lógica de vencimiento refinada
+    final status = QuoteStatus.fromDbValue(quote.status);
+    final isPending =
+        status == QuoteStatus.draft ||
+        status == QuoteStatus.sent ||
+        status == QuoteStatus.resent ||
+        status == QuoteStatus.inReview;
+
+    final isExpired = isPending && expirationDate.isBefore(DateTime.now());
 
     return SingleChildScrollView(
       padding: const EdgeInsets.all(16.0),
@@ -52,9 +66,12 @@ class ViewQuoteDetailsTab extends ConsumerWidget {
           ),
           const SizedBox(height: 24),
           InfoBlock.text(
-            icon: Icons.timer_outlined,
-            label: 'Validez (días)',
-            value: '${quote.validityDays} días',
+            icon: Symbols.event_busy,
+            label: 'Fecha de Vencimiento',
+            value: dateFormat.format(expirationDate),
+            backgroundColor: isExpired
+                ? colors.errorContainer.withValues(alpha: 0.8)
+                : null,
           ),
           const SizedBox(height: 24),
           InfoBlock.text(

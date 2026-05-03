@@ -1,9 +1,11 @@
 import 'dart:async';
+import 'package:d_una_app/features/quotes/presentation/view_quote/providers/view_quote_provider.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../data/repositories/quote_product_selection_repository.dart';
 import 'create_quote_provider.dart';
 import 'quote_product_selection_provider.dart';
+import '../../../data/models/quote_item_product.dart';
 
 enum QuoteValidationStatus { ok, lowStock, outOfStock, priceIncreased, missing }
 
@@ -39,9 +41,10 @@ class QuoteValidationState {
 class QuoteValidationNotifier extends StateNotifier<QuoteValidationState> {
   final QuoteProductSelectionRepository _repository;
   final Ref _ref;
+  final ProviderListenable<QuoteState> _quoteProvider;
   Timer? _debounceTimer;
 
-  QuoteValidationNotifier(this._repository, this._ref)
+  QuoteValidationNotifier(this._repository, this._ref, this._quoteProvider)
     : super(QuoteValidationState());
 
   void startValidation() {
@@ -53,47 +56,58 @@ class QuoteValidationNotifier extends StateNotifier<QuoteValidationState> {
 
   Future<void> validate() async {
     debugPrint('⚡ TRABAJANDO: Llamada a validate() ejecutada');
-    final quoteState = _ref.read(createQuoteProvider);
-    final products = quoteState.products.where((p) => !p.isTemporal).toList();
+    final quoteState = _ref.read(_quoteProvider);
+    final productsToValidate = quoteState.products.where((p) => p.sourceType != QuoteItemSourceType.temporal && p.sourceType != QuoteItemSourceType.external).toList();
 
-    debugPrint('   - Productos no temporales encontrados: ${products.length}');
+    debugPrint('   - Productos a consultar en DB: ${productsToValidate.length}');
 
-    if (products.isEmpty) {
-      debugPrint('   - SALIDA TEMPRANA: No hay productos para validar');
+    if (quoteState.products.isEmpty) {
+      debugPrint('   - SALIDA TEMPRANA: Cotización totalmente vacía');
       state = state.copyWith(items: {}, isValidating: false);
       return;
     }
 
     state = state.copyWith(isValidating: true);
-    debugPrint('🚀 Iniciando validación para ${products.length} productos...');
+    debugPrint('🚀 Iniciando validación para ${quoteState.products.length} productos totales...');
 
     try {
-      final supplierBranchStockIds = products
-          .where((p) => p.supplierBranchStockId != null)
-          .map((p) => p.supplierBranchStockId!)
-          .toList();
+      List<dynamic> results = [];
 
-      final productIds = products
-          .where((p) => p.productId != null)
-          .map((p) => p.productId!)
-          .toList();
+      // Solo llamar a Supabase si hay productos reales del catálogo
+      if (productsToValidate.isNotEmpty) {
+        final supplierBranchStockIds = productsToValidate
+            .where((p) => p.supplierBranchStockId != null)
+            .map((p) => p.supplierBranchStockId!)
+            .toList();
 
-      debugPrint(
-        '   - Enviando a RPC: ${supplierBranchStockIds.length} proveedores, ${productIds.length} propios',
-      );
+        final productIds = productsToValidate
+            .where((p) => p.productId != null)
+            .map((p) => p.productId!)
+            .toList();
 
-      final results = await _repository.validateQuoteItems(
-        supplierBranchStockIds: supplierBranchStockIds,
-        productIds: productIds,
-      );
+        debugPrint(
+          '   - Enviando a RPC: ${supplierBranchStockIds.length} proveedores, ${productIds.length} propios',
+        );
 
-      debugPrint('   - RPC respondió con ${results.length} resultados');
+        results = await _repository.validateQuoteItems(
+          supplierBranchStockIds: supplierBranchStockIds,
+          productIds: productIds,
+        );
+
+        debugPrint('   - RPC respondió con ${results.length} resultados');
+      }
 
       final Map<String, QuoteValidationItem> newValidationMap = {};
 
       for (final product in quoteState.products) {
-        if (product.isTemporal) {
-          debugPrint('   - Saltando temporal: ${product.name}');
+        // Para productos temporales/externos, generamos un estado 'ok' automático
+        if (product.sourceType == QuoteItemSourceType.temporal || product.sourceType == QuoteItemSourceType.external) {
+          debugPrint('   - Validado automáticamente (Temporal/Externo): ${product.name}');
+          newValidationMap[product.id] = QuoteValidationItem(
+            status: QuoteValidationStatus.ok,
+            currentStock: 999999, // El stock de un temporal/externo se asume ilimitado
+            currentCost: product.costPrice,
+          );
           continue;
         }
 
@@ -144,8 +158,19 @@ class QuoteValidationNotifier extends StateNotifier<QuoteValidationState> {
   }
 }
 
-final quoteValidationProvider =
-    StateNotifierProvider<QuoteValidationNotifier, QuoteValidationState>((ref) {
+// Fixed family provider
+final quoteValidationProvider = StateNotifierProvider.autoDispose
+    .family<QuoteValidationNotifier, QuoteValidationState, String?>((
+      ref,
+      quoteId,
+    ) {
       final repository = ref.watch(quoteProductSelectionRepositoryProvider);
-      return QuoteValidationNotifier(repository, ref);
+
+      // If quoteId is provided, we watch the family member of viewQuoteProvider
+      // otherwise we watch the standard createQuoteProvider
+      final ProviderListenable<QuoteState> targetQuoteProvider = quoteId != null
+          ? viewQuoteProvider(quoteId)
+          : createQuoteProvider;
+
+      return QuoteValidationNotifier(repository, ref, targetQuoteProvider);
     });

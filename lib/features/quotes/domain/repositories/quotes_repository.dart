@@ -28,7 +28,17 @@ abstract class QuotesRepository {
     List<QuoteItemService>? services,
     List<QuoteCondition>? conditions,
   });
+  Future<Quote> updateQuote(
+    Quote quote, {
+    List<QuoteItemProduct>? products,
+    List<QuoteItemService>? services,
+    List<QuoteCondition>? conditions,
+  });
   Future<void> updateQuoteStatus(String id, String status);
   Future<void> archiveQuote(String id, bool isArchived);
   Future<void> deleteQuote(String id);
+
+  // Batch Operations
+  Future<void> batchUpdateStatus(List<String> ids, String status);
+  Future<void> batchArchive(List<String> ids, bool isArchived);
 }

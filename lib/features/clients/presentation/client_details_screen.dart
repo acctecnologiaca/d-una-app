@@ -226,7 +226,7 @@ class ClientDetailsScreen extends ConsumerWidget {
 
                       // Contacts Section
                       Text(
-                        isCompany ? 'Contactos' : 'Información de contácto',
+                        isCompany ? 'Contactos' : 'Información de contacto',
                         style: textTheme.titleMedium?.copyWith(
                           fontWeight: FontWeight.bold,
                           color: colors.onSurface,

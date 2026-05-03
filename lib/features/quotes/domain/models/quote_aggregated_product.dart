@@ -71,11 +71,10 @@ class QuoteAggregatedProduct {
 
   factory QuoteAggregatedProduct.fromMap(Map<String, dynamic> map) {
     return QuoteAggregatedProduct(
-      // Cambiamos las llaves para que coincidan con el nuevo SQL
-      name: map['product_name'] ?? '',
-      brand: map['product_brand'] ?? '',
-      model: map['product_model'] ?? '',
-      uom: map['product_uom'] ?? 'ud.',
+      name: map['name'] ?? map['product_name'] ?? '',
+      brand: map['brand'] ?? map['product_brand'] ?? '',
+      model: map['model'] ?? map['product_model'] ?? '',
+      uom: map['uom'] ?? map['product_uom'] ?? 'ud.',
       uomIconName: map['uom_icon_name'] ?? 'package_2',
       minPrice: (map['min_price'] as num?)?.toDouble() ?? 0.0,
       totalQuantity: (map['total_quantity'] as num?)?.toDouble() ?? 0.0,
@@ -85,14 +84,14 @@ class QuoteAggregatedProduct {
       lastAddedAt: map['last_added_at'] != null
           ? DateTime.parse(map['last_added_at'])
           : DateTime.now(),
-      category: map['product_category'] ?? '',
+      category: map['category'] ?? map['product_category'] ?? '',
       firstSupplierTradeType: map['first_supplier_trade_type'],
       isLocked: map['is_locked'] ?? false,
-      description: map['product_description'] ?? '',
-      imageUrl: map['product_image_url'], // Actualizado
+      description: map['description'] ?? map['product_description'] ?? '',
+      imageUrl: map['image_url'] ?? map['product_image_url'],
 
       suppliersInfo:
-          (map['suppliers_info'] as List<dynamic>?)
+          ((map['supplier_ids'] ?? map['suppliers_info']) as List<dynamic>?)
               ?.map(
                 (item) => {
                   'id': item['id'].toString(),

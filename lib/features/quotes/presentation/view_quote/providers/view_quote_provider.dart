@@ -20,7 +20,9 @@ final viewQuoteProvider = StateNotifierProvider.autoDispose
       );
 
       // Trigger the load
-      notifier.loadExistingQuote(quoteId);
+      notifier.loadFinancialParameters().then((_) {
+        notifier.loadExistingQuote(quoteId);
+      });
 
       return notifier;
     });

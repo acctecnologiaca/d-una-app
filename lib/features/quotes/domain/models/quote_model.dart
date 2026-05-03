@@ -1,10 +1,12 @@
+import 'package:flutter/material.dart';
+
 enum QuoteStatus {
   draft,
   sent,
   resent,
+  inReview,
   approved,
   rejected,
-  inReview,
   finalized,
   cancelled,
   expired;
@@ -17,12 +19,12 @@ enum QuoteStatus {
         return 'Enviada';
       case QuoteStatus.resent:
         return 'Reenviada';
+      case QuoteStatus.inReview:
+        return 'En revisión';
       case QuoteStatus.approved:
         return 'Aprobada';
       case QuoteStatus.rejected:
         return 'Rechazada';
-      case QuoteStatus.inReview:
-        return 'En revisión';
       case QuoteStatus.finalized:
         return 'Finalizada';
       case QuoteStatus.cancelled:
@@ -40,12 +42,12 @@ enum QuoteStatus {
         return 'assets/icons/status_sent.png';
       case QuoteStatus.resent:
         return 'assets/icons/status_resent.png';
+      case QuoteStatus.inReview:
+        return 'assets/icons/status_review.png';
       case QuoteStatus.approved:
         return 'assets/icons/status_approved.png';
       case QuoteStatus.rejected:
         return 'assets/icons/status_rejected.png';
-      case QuoteStatus.inReview:
-        return 'assets/icons/status_review.png';
       case QuoteStatus.finalized:
         return 'assets/icons/status_finalized.png';
       case QuoteStatus.cancelled:
@@ -54,16 +56,90 @@ enum QuoteStatus {
         return 'assets/icons/status_expired.png';
     }
   }
+
+  String get dbValue {
+    switch (this) {
+      case QuoteStatus.draft:
+        return 'draft';
+      case QuoteStatus.sent:
+        return 'sent';
+      case QuoteStatus.resent:
+        return 'resent';
+      case QuoteStatus.inReview:
+        return 'review';
+      case QuoteStatus.approved:
+        return 'approved';
+      case QuoteStatus.rejected:
+        return 'rejected';
+      case QuoteStatus.finalized:
+        return 'finalized';
+      case QuoteStatus.cancelled:
+        return 'cancelled';
+      case QuoteStatus.expired:
+        return 'expired';
+    }
+  }
+
+  static QuoteStatus fromDbValue(String value) {
+    switch (value) {
+      case 'draft':
+        return QuoteStatus.draft;
+      case 'sent':
+        return QuoteStatus.sent;
+      case 'resent':
+        return QuoteStatus.resent;
+      case 'review':
+        return QuoteStatus.inReview;
+      case 'approved':
+        return QuoteStatus.approved;
+      case 'rejected':
+        return QuoteStatus.rejected;
+      case 'finalized':
+        return QuoteStatus.finalized;
+      case 'cancelled':
+        return QuoteStatus.cancelled;
+      case 'expired':
+        return QuoteStatus.expired;
+      default:
+        return QuoteStatus.draft;
+    }
+  }
+
+  Color statusColor(ColorScheme colors) {
+    switch (this) {
+      case QuoteStatus.draft:
+        return colors.onSurfaceVariant;
+      case QuoteStatus.sent:
+        return colors.primary;
+      case QuoteStatus.resent:
+        return const Color(0xFF1D8DC7);
+      case QuoteStatus.inReview:
+        return const Color(0xFFFFB964);
+      case QuoteStatus.approved:
+        return const Color(0xFF388E3C);
+      case QuoteStatus.rejected:
+        return const Color(0xFFF86F28);
+      case QuoteStatus.finalized:
+        return const Color(0xFF6A53AD);
+      case QuoteStatus.cancelled:
+        return colors.error;
+      case QuoteStatus.expired:
+        return colors.secondary;
+    }
+  }
 }
 
 enum StockStatus {
   available,
+  lowStock,
   unavailable;
 
   String get label {
     switch (this) {
       case StockStatus.available:
         return 'Stock disponible';
+      case StockStatus.lowStock:
+        return 'Stock insuficiente';
       case StockStatus.unavailable:
         return 'Stock no disponible';
     }
@@ -73,6 +149,8 @@ enum StockStatus {
     switch (this) {
       case StockStatus.available:
         return 'assets/icons/stock_available.png';
+      case StockStatus.lowStock:
+        return 'assets/icons/stock_down.png';
       case StockStatus.unavailable:
         return 'assets/icons/stock_unavailable.png';
     }
@@ -89,6 +167,7 @@ class Quote {
   final String? categoryName;
   final QuoteStatus status;
   final StockStatus stockStatus;
+  final bool hasPriceIncrease;
   final bool isArchived;
   final String? quoteTag;
   final DateTime createdAt;
@@ -103,6 +182,7 @@ class Quote {
     this.categoryName,
     required this.status,
     required this.stockStatus,
+    this.hasPriceIncrease = false,
     required this.createdAt,
     this.isArchived = false,
     this.quoteTag,

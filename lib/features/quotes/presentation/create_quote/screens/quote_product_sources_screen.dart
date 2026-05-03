@@ -20,15 +20,19 @@ import '../widgets/quote_product_source_card.dart';
 class QuoteProductSourcesScreen extends ConsumerStatefulWidget {
   final QuoteAggregatedProduct product;
   final Map<String, double>? initialSelections;
+  final Map<String, double>? initialCostPrices;
   final double? externalCostPrice;
   final String? externalProviderName;
+  final int? groupIndex;
 
   const QuoteProductSourcesScreen({
     super.key,
     required this.product,
     this.initialSelections,
+    this.initialCostPrices,
     this.externalCostPrice,
     this.externalProviderName,
+    this.groupIndex,
   });
 
   @override
@@ -343,6 +347,7 @@ class _QuoteProductSourcesScreenState
                       source: item,
                       selectedQty: selectionState[item.id] ?? 0.0,
                       uom: widget.product.uom,
+                      establishedCostPrice: widget.initialCostPrices?[item.id],
                       externalCostPrice:
                           item.sourceType ==
                               ProductSourceType.externalManagement
@@ -443,8 +448,19 @@ class _QuoteProductSourcesScreenState
             final double profitMargin = result['profitMargin'];
             final String? deliveryTimeId = result['deliveryTimeId'];
 
-            // 1. Remove previously added items for this product to prevent duplication
-            createQuoteNotifier.removeProductGroup(widget.product.name);
+            // 0. Determine Group Index (use provided one or get next from provider)
+            final targetGroupIndex = widget.groupIndex ?? quoteState.nextGroupIndex;
+
+            // 1. Remove previously added items for this product group to prevent duplication
+            if (widget.groupIndex != null) {
+              createQuoteNotifier.removeProductGroup(widget.groupIndex!);
+            } else {
+              // Legacy/fallback: if we don't have an index but are somehow replacing by name
+              // (This part might need more care if we want to allow replacing by name during migration)
+              // For now, if it's a NEW addition (groupIndex is null), we don't need to remove anything 
+              // unless we are specifically "editing" a product by name.
+              // Given the new architecture, we'll favor groupIndex.
+            }
 
             // 2. Add the newly selected sizes/sources
             for (final entry in selectedSources.entries) {
@@ -461,6 +477,7 @@ class _QuoteProductSourcesScreenState
               final totalPrice = (unitPrice + taxAmount) * qty;
 
               final quoteItem = QuoteItemProduct(
+                groupIndex: targetGroupIndex,
                 id: uuid.v4(),
                 quoteId: 'draft', // Placeholder until quote is saved
                 // External Management: use productId for analytics, no supplierBranchStockId
@@ -476,10 +493,11 @@ class _QuoteProductSourcesScreenState
                 brand: widget.product.brand,
                 model: widget.product.model,
                 uom: widget.product.uom,
+                uomIconName: widget.product.uomIconName,
                 description: null,
                 availableStock: isExternal
-                    ? -1.0
-                    : source.maxStock, // -1 flags external
+                    ? 0.0 // Validation ignores this anyway
+                    : source.maxStock,
                 quantity: qty,
                 costPrice: costPrice,
                 profitMargin: profitMargin,
@@ -488,6 +506,11 @@ class _QuoteProductSourcesScreenState
                 taxAmount: taxAmount,
                 totalPrice: totalPrice,
                 externalProviderName: isExternal ? _externalProviderName : null,
+                sourceType: isExternal 
+                    ? QuoteItemSourceType.external 
+                    : (source.sourceType == ProductSourceType.own 
+                        ? QuoteItemSourceType.own 
+                        : QuoteItemSourceType.affiliated),
               );
 
               createQuoteNotifier.addProduct(quoteItem);

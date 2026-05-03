@@ -8,6 +8,7 @@ class StandardListItem extends StatelessWidget {
   final Widget? subtitle;
   final Widget? trailing; // Usually column with price + badges
   final VoidCallback? onTap;
+  final VoidCallback? onLongPress;
   final EdgeInsetsGeometry padding;
 
   const StandardListItem({
@@ -19,6 +20,7 @@ class StandardListItem extends StatelessWidget {
     this.subtitle,
     this.trailing,
     this.onTap,
+    this.onLongPress,
     this.padding = const EdgeInsets.symmetric(vertical: 12.0),
   });
 
@@ -28,6 +30,7 @@ class StandardListItem extends StatelessWidget {
 
     return InkWell(
       onTap: onTap,
+      onLongPress: onLongPress,
       child: Padding(
         padding: padding,
         child: Row(

@@ -127,7 +127,7 @@ class SupabaseQuotesRepository implements QuotesRepository {
     final response = await _client
         .from('quotes')
         .select(
-          '*, clients(name), category:categories(name), quote_items_products(*), quote_items_services(*), quote_conditions(*)',
+          '*, clients(name), category:categories(name), quote_items_products(*, supplier_branch_stock(supplier_branches(suppliers(name)))), quote_items_services(*), quote_conditions(*)',
         )
         .eq('id', id)
         .single();
@@ -140,7 +140,7 @@ class SupabaseQuotesRepository implements QuotesRepository {
     final response = await _client
         .from('quotes')
         .select(
-          '*, clients(*), contacts(name), advisor:collaborators!advisor_id(full_name), category:categories(name), quote_items_products(*), quote_items_services(*), quote_conditions(*)',
+          '*, clients(*), contacts(*), advisor:collaborators!advisor_id(full_name), category:categories(name), quote_items_products(*, supplier_branch_stock(supplier_branches(suppliers(name)))), quote_items_services(*), quote_conditions(*)',
         )
         .eq('id', id)
         .single();
@@ -210,6 +210,7 @@ class SupabaseQuotesRepository implements QuotesRepository {
               'brand': e.brand,
               'model': e.model,
               'uom': e.uom,
+              'uom_icon_name': e.uomIconName,
               'description': e.description,
               'quantity': e.quantity,
               'cost_price': e.costPrice,
@@ -220,6 +221,8 @@ class SupabaseQuotesRepository implements QuotesRepository {
               'total_price': e.totalPrice,
               'warranty_time': e.warrantyTime,
               'external_provider_name': e.externalProviderName,
+              'source_type': e.sourceType.name,
+              'group_index': e.groupIndex,
             },
           )
           .toList();
@@ -233,7 +236,6 @@ class SupabaseQuotesRepository implements QuotesRepository {
             (e) => {
               'quote_id': newQuoteId,
               'service_id': e.serviceId,
-              'service_rate_id': e.serviceRateId,
               'execution_time_id': e.executionTimeId,
               'name': e.name,
               'description': e.description,
@@ -245,6 +247,11 @@ class SupabaseQuotesRepository implements QuotesRepository {
               'tax_amount': e.taxAmount,
               'total_price': e.totalPrice,
               'warranty_time': e.warrantyTime,
+              'rate_symbol': e.rateSymbol,
+              'rate_icon_name': e.rateIconName,
+              'category_name': e.categoryName,
+              'execution_time_label': e.executionTimeLabel,
+              'order_index': e.orderIndex,
             },
           )
           .toList();
@@ -271,6 +278,129 @@ class SupabaseQuotesRepository implements QuotesRepository {
   }
 
   @override
+  Future<Quote> updateQuote(
+    Quote quote, {
+    List<QuoteItemProduct>? products,
+    List<QuoteItemService>? services,
+    List<QuoteCondition>? conditions,
+  }) async {
+    final userId = _client.auth.currentUser?.id;
+    if (userId == null) throw Exception('Usuario no autenticado');
+
+    if (quote.id.isEmpty) {
+      throw Exception('La cotización no tiene ID para actualizar');
+    }
+
+    // 1. Update Header
+    await _client
+        .from('quotes')
+        .update({
+          'client_id': quote.clientId,
+          'contact_id': quote.contactId,
+          'advisor_id': quote.advisorId,
+          'category_id': quote.categoryId,
+          'validity_days': quote.validityDays,
+          'notes': quote.notes,
+          'quote_tag': quote.quoteTag,
+          'status': quote.status, // might update status to pending or keep it
+          'subtotal': quote.subtotal,
+          'tax_amount': quote.taxAmount,
+          'total': quote.total,
+        })
+        .eq('id', quote.id);
+
+    // 2. Clear old items and conditions
+    await _client
+        .from('quote_items_products')
+        .delete()
+        .eq('quote_id', quote.id);
+    await _client
+        .from('quote_items_services')
+        .delete()
+        .eq('quote_id', quote.id);
+    await _client.from('quote_conditions').delete().eq('quote_id', quote.id);
+
+    // 3. Insert new Products
+    if (products != null && products.isNotEmpty) {
+      final productsData = products
+          .map(
+            (e) => {
+              'quote_id': quote.id,
+              'product_id': e.productId,
+              'supplier_branch_stock_id': e.supplierBranchStockId,
+              'delivery_time_id': e.deliveryTimeId,
+              'name': e.name,
+              'brand': e.brand,
+              'model': e.model,
+              'uom': e.uom,
+              'uom_icon_name': e.uomIconName,
+              'description': e.description,
+              'quantity': e.quantity,
+              'cost_price': e.costPrice,
+              'profit_margin': e.profitMargin,
+              'unit_price': e.unitPrice,
+              'tax_rate': e.taxRate,
+              'tax_amount': e.taxAmount,
+              'total_price': e.totalPrice,
+              'warranty_time': e.warrantyTime,
+              'external_provider_name': e.externalProviderName,
+              'source_type': e.sourceType.name,
+              'group_index': e.groupIndex,
+            },
+          )
+          .toList();
+      await _client.from('quote_items_products').insert(productsData);
+    }
+
+    // 4. Insert new Services
+    if (services != null && services.isNotEmpty) {
+      final servicesData = services
+          .map(
+            (e) => {
+              'quote_id': quote.id,
+              'service_id': e.serviceId,
+              'execution_time_id': e.executionTimeId,
+              'name': e.name,
+              'description': e.description,
+              'quantity': e.quantity,
+              'cost_price': e.costPrice,
+              'profit_margin': e.profitMargin,
+              'unit_price': e.unitPrice,
+              'tax_rate': e.taxRate,
+              'tax_amount': e.taxAmount,
+              'total_price': e.totalPrice,
+              'warranty_time': e.warrantyTime,
+              'rate_symbol': e.rateSymbol,
+              'rate_icon_name': e.rateIconName,
+              'category_name': e.categoryName,
+              'execution_time_label': e.executionTimeLabel,
+              'order_index': e.orderIndex,
+            },
+          )
+          .toList();
+      await _client.from('quote_items_services').insert(servicesData);
+    }
+
+    // 5. Insert new Conditions
+    if (conditions != null && conditions.isNotEmpty) {
+      final conditionsData = conditions
+          .map(
+            (e) => {
+              'quote_id': quote.id,
+              'condition_id': e.conditionId,
+              'description': e.description,
+              'order_index': e.orderIndex,
+            },
+          )
+          .toList();
+      await _client.from('quote_conditions').insert(conditionsData);
+    }
+
+    // Return full updated object
+    return await getQuoteById(quote.id);
+  }
+
+  @override
   Future<void> updateQuoteStatus(String id, String status) async {
     await _client.from('quotes').update({'status': status}).eq('id', id);
   }
@@ -286,5 +416,18 @@ class SupabaseQuotesRepository implements QuotesRepository {
   @override
   Future<void> deleteQuote(String id) async {
     await _client.from('quotes').delete().eq('id', id);
+  }
+
+  @override
+  Future<void> batchUpdateStatus(List<String> ids, String status) async {
+    await _client.from('quotes').update({'status': status}).inFilter('id', ids);
+  }
+
+  @override
+  Future<void> batchArchive(List<String> ids, bool isArchived) async {
+    await _client
+        .from('quotes')
+        .update({'is_archived': isArchived})
+        .inFilter('id', ids);
   }
 }

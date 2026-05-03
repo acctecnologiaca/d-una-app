@@ -11,6 +11,7 @@ class ExpandableActionCard extends StatefulWidget {
   final EdgeInsetsGeometry padding;
   final bool isExpandable;
   final Color? backgroundColor;
+  final VoidCallback? onTap;
 
   const ExpandableActionCard({
     super.key,
@@ -23,6 +24,7 @@ class ExpandableActionCard extends StatefulWidget {
     this.padding = const EdgeInsets.symmetric(horizontal: 0.0, vertical: 12.0),
     this.isExpandable = true,
     this.backgroundColor,
+    this.onTap,
   });
 
   @override
@@ -32,13 +34,17 @@ class ExpandableActionCard extends StatefulWidget {
 class _ExpandableActionCardState extends State<ExpandableActionCard> {
   bool _isExpanded = false;
 
+  bool get _canExpand =>
+      widget.isExpandable &&
+      (widget.actions.isNotEmpty || widget.expandedTrailing != null);
+
   @override
   Widget build(BuildContext context) {
     final colors = Theme.of(context).colorScheme;
 
     return Card(
       elevation: 0,
-      margin: const EdgeInsets.only(bottom: 16),
+      margin: const EdgeInsets.only(bottom: 0),
       color: widget.backgroundColor ?? colors.surfaceContainerLowest,
       shape: const RoundedRectangleBorder(borderRadius: BorderRadius.zero),
       child: Padding(
@@ -47,13 +53,13 @@ class _ExpandableActionCardState extends State<ExpandableActionCard> {
           children: [
             StandardListItem(
               padding: widget.padding,
-              onTap: widget.isExpandable
+              onTap: _canExpand
                   ? () {
                       setState(() {
                         _isExpanded = !_isExpanded;
                       });
                     }
-                  : null,
+                  : widget.onTap,
               overline: widget.overline,
               title: widget.title,
               subtitle: widget.subtitle,
@@ -63,7 +69,7 @@ class _ExpandableActionCardState extends State<ExpandableActionCard> {
               duration: const Duration(milliseconds: 250),
               curve: Curves.easeInOut,
               alignment: Alignment.topCenter,
-              child: _isExpanded
+              child: (_isExpanded && _canExpand)
                   ? Column(
                       children: [
                         const Divider(height: 1),

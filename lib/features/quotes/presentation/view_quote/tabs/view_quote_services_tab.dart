@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:material_symbols_icons/symbols.dart';
 import '../providers/view_quote_provider.dart';
 import '../../create_quote/widgets/quote_added_service_card.dart';
+import '../../create_quote/providers/quote_service_selection_provider.dart';
+import '../widgets/view_service_details_sheet.dart';
+import '../../../../portfolio/presentation/providers/lookup_providers.dart';
 
 class ViewQuoteServicesTab extends ConsumerWidget {
   final String quoteId;
@@ -22,7 +24,7 @@ class ViewQuoteServicesTab extends ConsumerWidget {
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Icon(
-              Symbols.rebase_edit,
+              Icons.handyman_outlined,
               size: 64,
               color: Theme.of(
                 context,
@@ -41,22 +43,55 @@ class ViewQuoteServicesTab extends ConsumerWidget {
       );
     }
 
+    final suggestionsAsync = ref.watch(quoteServiceSuggestionsProvider);
+    final serviceModels = suggestionsAsync.value ?? [];
+    final executionTimes = ref.watch(deliveryTimesProvider).valueOrNull ?? [];
+
+    final services = [...state.services]
+      ..sort((a, b) => a.orderIndex.compareTo(b.orderIndex));
+
     return ListView.builder(
-      itemCount: state.services.length,
-      padding: const EdgeInsets.symmetric(vertical: 8),
+      itemCount: services.length,
+      padding: const EdgeInsets.only(bottom: 120),
       itemBuilder: (context, index) {
-        final item = state.services[index];
+        final item = services[index];
+
+        final serviceModel = serviceModels
+            .where((s) => s.id == item.serviceId)
+            .firstOrNull;
+        final categoryName = item.categoryName ?? serviceModel?.category?.name;
+        final executionTimeLabel =
+            item.executionTimeLabel ??
+            executionTimes
+                .where((e) => e.id == item.executionTimeId)
+                .map((e) => e.name)
+                .firstOrNull;
 
         return QuoteAddedServiceCard(
           name: item.name,
-          category: null, // Model doesn't have category snapshot currently
+          category: categoryName,
           subtotal: item.unitPrice,
           quantity: item.quantity,
           rateSuffix: item.rateSymbol,
-          executionTimeLabel: null, // Model doesn't have execution time snapshot
+          executionTimeLabel: executionTimeLabel,
           rateIconName: item.rateIconName,
           isTemporal: item.serviceId == null,
           isReadOnly: true,
+          onTap: () {
+            ViewServiceDetailsSheet.show(
+              context,
+              serviceName: item.name,
+              category: categoryName,
+              salePrice: item.unitPrice,
+              rateSuffix: item.rateSymbol,
+              executionTimeLabel: executionTimeLabel,
+              isExternal: item.costPrice > 0,
+              externalCost: item.costPrice > 0 ? item.costPrice : null,
+              quantity: item.quantity,
+              rateIconName: item.rateIconName,
+              isTemporal: item.serviceId == null,
+            );
+          },
           onDelete: () {},
           onEditSaleDetails: () {},
           onQuantityChanged: (_) {},

@@ -65,24 +65,24 @@ class CustomActionSheet extends StatelessWidget {
 
             // Title Row
             Padding(
-              padding: const EdgeInsets.fromLTRB(8, 0, 16.0, 0),
+              padding: const EdgeInsets.fromLTRB(8, 0, 16, 0),
               child: Row(
+                mainAxisAlignment: MainAxisAlignment.start,
                 children: [
                   IconButton(
                     icon: const Icon(Icons.close),
                     onPressed: () => context.pop(),
                   ),
-                  Expanded(
-                    child: Text(
-                      title,
-                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.bold,
-                      ),
+                  Text(
+                    title,
+                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.bold,
                     ),
                   ),
                 ],
               ),
             ),
+            const SizedBox(height: 8),
 
             // Optional Content
             if (content != null) ...[

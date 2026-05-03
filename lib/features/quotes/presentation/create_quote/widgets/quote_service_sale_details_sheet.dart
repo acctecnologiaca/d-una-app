@@ -182,11 +182,17 @@ class _QuoteServiceSaleDetailsSheetState
     final taxAmount = finalUnitPrice * taxRate;
     final unitPriceIncludingTax = finalUnitPrice + taxAmount;
 
+    final executionTimes =
+        ref.read(deliveryTimesForExecutionProvider).valueOrNull ?? [];
+    final executionTimeLabel = executionTimes
+        .where((e) => e.id == _selectedExecutionTimeId)
+        .map((e) => e.name)
+        .firstOrNull;
+
     final item = QuoteItemService(
       id: widget.existingItem?.id ?? '', // Preserved if modifying
       quoteId: widget.existingItem?.quoteId ?? '', // Preserved if modifying
       serviceId: widget.service.id,
-      serviceRateId: widget.service.serviceRateId,
       executionTimeId: _isRateTimeBased() ? null : _selectedExecutionTimeId,
       name: widget.service.name,
       description: finalDescription,
@@ -198,6 +204,10 @@ class _QuoteServiceSaleDetailsSheetState
       taxAmount: taxAmount,
       totalPrice: unitPriceIncludingTax * _quantity,
       warrantyTime: widget.service.warrantyTime?.toString(),
+      rateSymbol: widget.service.serviceRate?.symbol ?? 'ud.',
+      rateIconName: widget.service.serviceRate?.iconName,
+      categoryName: widget.service.category?.name,
+      executionTimeLabel: executionTimeLabel,
     );
 
     Navigator.of(context).pop(item);

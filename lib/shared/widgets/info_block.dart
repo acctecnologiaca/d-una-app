@@ -6,6 +6,8 @@ class InfoBlock extends StatelessWidget {
   final String label;
   final Widget content;
   final Widget? action;
+  final Color? color;
+  final Color? backgroundColor;
 
   const InfoBlock({
     super.key,
@@ -14,6 +16,8 @@ class InfoBlock extends StatelessWidget {
     required this.label,
     required this.content,
     this.action,
+    this.color,
+    this.backgroundColor,
   }) : assert(
          icon != null || iconWidget != null,
          'Either icon or iconWidget must be provided',
@@ -27,12 +31,16 @@ class InfoBlock extends StatelessWidget {
     required String label,
     required String value,
     Widget? action,
+    Color? color,
+    Color? backgroundColor,
   }) {
     return InfoBlock(
       key: key,
       icon: icon,
       iconWidget: iconWidget,
       label: label,
+      color: color,
+      backgroundColor: backgroundColor,
       content: Builder(
         builder: (context) {
           final textTheme = Theme.of(context).textTheme;
@@ -40,7 +48,7 @@ class InfoBlock extends StatelessWidget {
           return Text(
             value,
             style: textTheme.bodyLarge?.copyWith(
-              color: colors.onSurface,
+              color: color ?? colors.onSurface,
               fontWeight: FontWeight.normal,
             ),
           );
@@ -55,7 +63,7 @@ class InfoBlock extends StatelessWidget {
     final colors = Theme.of(context).colorScheme;
     final textTheme = Theme.of(context).textTheme;
 
-    return Row(
+    Widget body = Row(
       crossAxisAlignment: CrossAxisAlignment.center, // Vertically centered
       children: [
         SizedBox(
@@ -64,7 +72,7 @@ class InfoBlock extends StatelessWidget {
           child: Center(
             child:
                 iconWidget ??
-                Icon(icon!, size: 32, color: colors.onSurfaceVariant),
+                Icon(icon!, size: 32, color: color ?? colors.onSurfaceVariant),
           ),
         ),
         const SizedBox(width: 16), // 16px gap
@@ -76,7 +84,7 @@ class InfoBlock extends StatelessWidget {
               Text(
                 label,
                 style: textTheme.bodySmall?.copyWith(
-                  color: colors.onSurfaceVariant,
+                  color: color ?? colors.onSurfaceVariant,
                   fontWeight: FontWeight.w500,
                 ),
               ),
@@ -88,5 +96,23 @@ class InfoBlock extends StatelessWidget {
         if (action != null) ...[const SizedBox(width: 8), action!],
       ],
     );
+
+    if (backgroundColor != null) {
+      return Stack(
+        clipBehavior: Clip.none,
+        children: [
+          Positioned(
+            left: -16.0,
+            right: -16.0,
+            top: -12.0,
+            bottom: -12.0,
+            child: Container(color: backgroundColor),
+          ),
+          body,
+        ],
+      );
+    }
+
+    return body;
   }
 }

@@ -1,4 +1,5 @@
 import 'package:d_una_app/features/quotes/presentation/create_quote/providers/create_quote_provider.dart';
+import 'package:d_una_app/features/quotes/presentation/view_quote/providers/view_quote_provider.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -36,12 +37,31 @@ class _CreateQuoteScreenState extends ConsumerState<CreateQuoteScreen>
       if (!_tabController.indexIsChanging) setState(() {});
     });
 
-    // Initialize state
+    // Initialize state only if needed
     WidgetsBinding.instance.addPostFrameCallback((_) {
+      final currentState = ref.read(createQuoteProvider);
+
       if (widget.quoteId != null) {
-        ref.read(createQuoteProvider.notifier).loadQuote(widget.quoteId!);
+        // Modo EDICIÓN: Solo cargar si el ID es diferente
+        if (currentState.quote?.id != widget.quoteId) {
+          ref.read(createQuoteProvider.notifier).loadQuote(widget.quoteId!);
+        }
       } else {
-        ref.read(createQuoteProvider.notifier).reset();
+        // Modo CREACIÓN:
+        // 1. Si venimos de un estado con una cotización cargada (modo edición anterior), RESETEAR.
+        if (currentState.quote != null) {
+          ref.read(createQuoteProvider.notifier).reset();
+        } else {
+          // 2. Si no hay cotización cargada, solo resetear si NO hay datos (para no borrar lo que el usuario está escribiendo al volver de sub-pantallas)
+          final hasData =
+              currentState.products.isNotEmpty ||
+              currentState.services.isNotEmpty ||
+              currentState.clientId != null;
+
+          if (!hasData) {
+            ref.read(createQuoteProvider.notifier).reset();
+          }
+        }
       }
     });
   }
@@ -77,7 +97,7 @@ class _CreateQuoteScreenState extends ConsumerState<CreateQuoteScreen>
       canPop: !state.hasChanges,
       onPopInvokedWithResult: (didPop, result) async {
         if (didPop) return;
-        final shouldPop = await _showDiscardDialog(context);
+        final shouldPop = await _showDiscardDialog();
         if (shouldPop && context.mounted) {
           notifier.reset();
           context.pop();
@@ -85,14 +105,18 @@ class _CreateQuoteScreenState extends ConsumerState<CreateQuoteScreen>
       },
       child: Scaffold(
         appBar: StandardAppBar(
-          title: widget.quoteId != null ? 'Editar cotización' : 'Nueva cotización',
-          subtitle: state.currentQuoteNumber != null
-              ? '#${state.currentQuoteNumber}'
-              : 'Cargando...',
+          title: widget.quoteId != null
+              ? 'Editar cotización'
+              : 'Nueva cotización',
+          subtitle: state.clientName != null
+              ? '#${state.currentQuoteNumber} (${state.clientName})'
+              : (state.currentQuoteNumber != null
+                    ? '#${state.currentQuoteNumber}'
+                    : 'Cargando...'),
           actions: [
             IconButton(
               icon: Icon(Icons.more_vert, color: colors.onSurface),
-              onPressed: () => _showActionsMenu(context, ref),
+              onPressed: () => _showActionsMenu(ref),
             ),
           ],
           bottom: TabBar(
@@ -133,11 +157,51 @@ class _CreateQuoteScreenState extends ConsumerState<CreateQuoteScreen>
   }
 
   Widget? _buildFab() {
-    // Only show FAB on Products (0), Services (1), and Conditions (4) tabs
+    final state = ref.watch(createQuoteProvider);
+
+    // Only show FAB on Products (0), Services (1), Conditions (4), and Summary (5) tabs
     if (_tabController.index != 0 &&
         _tabController.index != 1 &&
-        _tabController.index != 4) {
+        _tabController.index != 4 &&
+        _tabController.index != 5) {
       return null;
+    }
+
+    if (_tabController.index == 5) {
+      return Padding(
+        padding: const EdgeInsets.only(bottom: 40.0),
+        child: CustomExtendedFab(
+          label: state.isLoading ? 'Guardando...' : 'Guardar',
+          icon: state.isLoading ? Icons.hourglass_empty : Icons.save_outlined,
+          isEnabled: state.isReadyToFinalize && !state.isLoading,
+          onPressed: () async {
+            final success = await ref
+                .read(createQuoteProvider.notifier)
+                .createQuote();
+
+            if (!mounted) return;
+
+            if (success) {
+              final quote = ref.read(createQuoteProvider).quote;
+              if (quote != null) {
+                ref.invalidate(viewQuoteProvider(quote.id));
+              }
+              final savedQuoteNumber =
+                  ref.read(createQuoteProvider).quote?.quoteNumber ?? '';
+              _showPostSaveOptions(ref, savedQuoteNumber);
+            } else {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text(
+                    ref.read(createQuoteProvider).error ?? 'Error al guardar',
+                  ),
+                  backgroundColor: Colors.red,
+                ),
+              );
+            }
+          },
+        ),
+      );
     }
 
     return Padding(
@@ -162,7 +226,7 @@ class _CreateQuoteScreenState extends ConsumerState<CreateQuoteScreen>
     );
   }
 
-  void _showActionsMenu(BuildContext context, WidgetRef ref) {
+  void _showActionsMenu(WidgetRef ref) {
     final state = ref.read(createQuoteProvider);
     final notifier = ref.read(createQuoteProvider.notifier);
 
@@ -172,16 +236,21 @@ class _CreateQuoteScreenState extends ConsumerState<CreateQuoteScreen>
       actions: [
         BottomSheetActionItem(
           icon: Icons.save_outlined,
-          label: 'Guardar como borrador',
+          label: 'Guardar y continuar luego',
           enabled: state.isReadyToSaveDraft,
           onTap: () async {
             context.pop(); // Close sheet
             final success = await notifier.saveAsDraft();
-            if (success && context.mounted) {
+            if (!mounted) return;
+            if (success) {
+              final quote = ref.read(createQuoteProvider).quote;
+              if (quote != null) {
+                ref.invalidate(viewQuoteProvider(quote.id));
+              }
               context.pop(); // Go back to list
               ScaffoldMessenger.of(context).showSnackBar(
                 const SnackBar(
-                  content: Text('Cotización guardada como borrador'),
+                  content: Text('Cotización guardada exitosamente'),
                 ),
               );
             }
@@ -192,8 +261,9 @@ class _CreateQuoteScreenState extends ConsumerState<CreateQuoteScreen>
           label: 'Descartar cambios',
           onTap: () async {
             context.pop(); // Close sheet
-            final shouldDiscard = await _showDiscardDialog(context);
-            if (shouldDiscard && context.mounted) {
+            final shouldDiscard = await _showDiscardDialog();
+            if (!mounted) return;
+            if (shouldDiscard) {
               notifier.reset();
               context.pop(); // Go back to list
             }
@@ -203,7 +273,7 @@ class _CreateQuoteScreenState extends ConsumerState<CreateQuoteScreen>
     );
   }
 
-  Future<bool> _showDiscardDialog(BuildContext context) async {
+  Future<bool> _showDiscardDialog() async {
     final colors = Theme.of(context).colorScheme;
     return await CustomDialog.show<bool>(
           context: context,
@@ -228,5 +298,38 @@ class _CreateQuoteScreenState extends ConsumerState<CreateQuoteScreen>
           ),
         ) ??
         false;
+  }
+
+  void _showPostSaveOptions(WidgetRef ref, String quoteNumber) {
+    CustomActionSheet.show(
+      context: context,
+      title: 'Cotización $quoteNumber guardada',
+      actions: [
+        BottomSheetActionItem(
+          icon: Icons.send_outlined,
+          label: 'Enviar ahora',
+          onTap: () {
+            context.pop(); // Close sheet
+            // Future: Navigate to sharing flow or PDF generation
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('Funcionalidad de envío próximamente disponible'),
+              ),
+            );
+            ref.read(createQuoteProvider.notifier).reset();
+            context.pop(); // Back to list
+          },
+        ),
+        BottomSheetActionItem(
+          icon: Icons.history_outlined,
+          label: 'Enviar más tarde',
+          onTap: () {
+            context.pop(); // Close sheet
+            ref.read(createQuoteProvider.notifier).reset();
+            context.pop(); // Back to list
+          },
+        ),
+      ],
+    );
   }
 }

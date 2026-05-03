@@ -54,10 +54,14 @@ class _QuoteServicesTabState extends ConsumerState<QuoteServicesTab>
     final executionTimes =
         ref.watch(deliveryTimesForExecutionProvider).valueOrNull ?? [];
 
+    final services = [...state.services]
+      ..sort((a, b) => a.orderIndex.compareTo(b.orderIndex));
+
     return ListView.builder(
-      itemCount: state.services.length,
+      itemCount: services.length,
+      padding: const EdgeInsets.only(bottom: 120),
       itemBuilder: (context, index) {
-        final serviceItem = state.services[index];
+        final serviceItem = services[index];
         final serviceModel = serviceModels
             .where((s) => s.id == serviceItem.serviceId)
             .firstOrNull;

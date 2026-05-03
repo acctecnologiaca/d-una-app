@@ -94,24 +94,37 @@ final clientRoutes = <RouteBase>[
               ),
               GoRoute(
                 path: 'details', // /clients/:id/contacts/details
+                parentNavigatorKey: rootNavigatorKey,
                 builder: (context, state) {
                   final extra = state.extra as Map<String, dynamic>;
+                  final contactData = extra['contact'];
+                  final contact = contactData is Contact
+                      ? contactData
+                      : Contact.fromJson(contactData as Map<String, dynamic>);
+
                   return ContactDetailsScreen(
                     clientId: state.pathParameters['id']!,
                     companyName: extra['companyName'] as String?,
-                    contact: extra['contact'] as Contact,
+                    contact: contact,
                     contactCount: extra['contactCount'] as int?,
+                    canEdit: extra['canEdit'] as bool? ?? true,
                   );
                 },
               ),
               GoRoute(
                 path: 'edit', // /clients/:id/contacts/edit
+                parentNavigatorKey: rootNavigatorKey,
                 builder: (context, state) {
                   final extra = state.extra as Map<String, dynamic>;
+                  final contactData = extra['contact'];
+                  final contact = contactData is Contact
+                      ? contactData
+                      : Contact.fromJson(contactData as Map<String, dynamic>);
+
                   return AddEditContactScreen(
                     clientId: state.pathParameters['id']!,
                     companyName: extra['companyName'] as String?,
-                    contact: extra['contact'] as Contact,
+                    contact: contact,
                     contactCount: extra['contactCount'] as int?,
                   );
                 },

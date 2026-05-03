@@ -6,6 +6,7 @@ import '../../../data/repositories/quote_product_selection_repository.dart';
 import '../../../domain/models/quote_model.dart' as domain;
 // import '../../../data/models/quote.dart' as data;
 import '../../../domain/models/quote_validation_result.dart';
+import '../../../data/models/quote_item_product.dart';
 
 final quotesRepositoryProvider = Provider<QuotesRepository>((ref) {
   return SupabaseQuotesRepository(Supabase.instance.client);
@@ -15,6 +16,61 @@ final quoteProductSelectionRepositoryProvider =
     Provider<QuoteProductSelectionRepository>((ref) {
       return QuoteProductSelectionRepository(Supabase.instance.client);
     });
+
+class QuoteSelectionState {
+  final Set<String> selectedIds;
+  final bool isSelectionMode;
+
+  const QuoteSelectionState({
+    this.selectedIds = const {},
+    this.isSelectionMode = false,
+  });
+
+  QuoteSelectionState copyWith({
+    Set<String>? selectedIds,
+    bool? isSelectionMode,
+  }) {
+    return QuoteSelectionState(
+      selectedIds: selectedIds ?? this.selectedIds,
+      isSelectionMode: isSelectionMode ?? this.isSelectionMode,
+    );
+  }
+
+  int get count => selectedIds.length;
+  bool get isSingle => count == 1;
+  bool get isMultiple => count > 1;
+  bool isSelected(String id) => selectedIds.contains(id);
+}
+
+class QuoteSelectionNotifier extends StateNotifier<QuoteSelectionState> {
+  QuoteSelectionNotifier() : super(const QuoteSelectionState());
+
+  void toggle(String id) {
+    final updated = Set<String>.from(state.selectedIds);
+    if (updated.contains(id)) {
+      updated.remove(id);
+    } else {
+      updated.add(id);
+    }
+    state = state.copyWith(
+      selectedIds: updated,
+      isSelectionMode: updated.isNotEmpty,
+    );
+  }
+
+  void selectAll(List<String> ids) {
+    state = state.copyWith(selectedIds: ids.toSet(), isSelectionMode: true);
+  }
+
+  void clearSelection() {
+    state = const QuoteSelectionState();
+  }
+}
+
+final quoteSelectionProvider =
+    StateNotifierProvider<QuoteSelectionNotifier, QuoteSelectionState>(
+      (ref) => QuoteSelectionNotifier(),
+    );
 
 final quotesListProvider =
     AsyncNotifierProvider<QuotesListNotifier, List<domain.Quote>>(() {
@@ -28,7 +84,7 @@ class QuotesListNotifier extends AsyncNotifier<List<domain.Quote>> {
     final validationRepo = ref.watch(quoteProductSelectionRepositoryProvider);
 
     // 1. Fetch Quotes (DTOs)
-    final quotesDtos = await repo.getQuotes(includeArchived: false);
+    final quotesDtos = await repo.getQuotes(includeArchived: true);
 
     if (quotesDtos.isEmpty) return [];
 
@@ -40,9 +96,11 @@ class QuotesListNotifier extends AsyncNotifier<List<domain.Quote>> {
     for (final q in quotesDtos) {
       if (q.products != null) {
         for (final p in q.products!) {
-          if (p.supplierBranchStockId != null) {
+          if (p.sourceType == QuoteItemSourceType.affiliated &&
+              p.supplierBranchStockId != null) {
             supplierIds.add(p.supplierBranchStockId!);
-          } else if (p.productId != null) {
+          } else if (p.sourceType == QuoteItemSourceType.own &&
+              p.productId != null) {
             ownProductIds.add(p.productId!);
           }
         }
@@ -62,15 +120,37 @@ class QuotesListNotifier extends AsyncNotifier<List<domain.Quote>> {
     return quotesDtos.map((dto) {
       // Determine Stock Status
       domain.StockStatus stockStatus = domain.StockStatus.available;
+      bool hasPriceIncrease = false;
 
       if (dto.products != null && dto.products!.isNotEmpty) {
         for (final p in dto.products!) {
-          final dbId = p.supplierBranchStockId ?? p.productId;
-          final validation = validationMap[dbId];
+          // Skip external or temporal products for stock validation
+          if (p.sourceType == QuoteItemSourceType.external ||
+              p.sourceType == QuoteItemSourceType.temporal) {
+            continue;
+          }
 
-          if (validation == null || validation.currentStock < p.quantity) {
+          final dbId = p.supplierBranchStockId ?? p.productId;
+          if (dbId == null) continue;
+
+          final validation = validationMap[dbId];
+          
+          // Check Stock
+          if (validation == null) {
             stockStatus = domain.StockStatus.unavailable;
-            break;
+          } else if (validation.currentStock <= 0) {
+            stockStatus = domain.StockStatus.unavailable;
+            // No break, we might still want to check price increases on other items
+          } else if (validation.currentStock < p.quantity) {
+            // Only set to lowStock if not already marked as unavailable by another item
+            if (stockStatus != domain.StockStatus.unavailable) {
+              stockStatus = domain.StockStatus.lowStock;
+            }
+          }
+
+          // Check Price Increase (using 0.01 threshold as in detail view)
+          if (validation != null && validation.currentCost > (p.costPrice + 0.01)) {
+            hasPriceIncrease = true;
           }
         }
       }
@@ -83,6 +163,7 @@ class QuotesListNotifier extends AsyncNotifier<List<domain.Quote>> {
         amount: dto.total,
         status: _mapStatus(dto.status),
         stockStatus: stockStatus,
+        hasPriceIncrease: hasPriceIncrease,
         categoryId: dto.categoryId,
         categoryName: dto.categoryName,
         isArchived: dto.isArchived,
@@ -93,28 +174,7 @@ class QuotesListNotifier extends AsyncNotifier<List<domain.Quote>> {
   }
 
   domain.QuoteStatus _mapStatus(String status) {
-    switch (status.toLowerCase()) {
-      case 'draft':
-        return domain.QuoteStatus.draft;
-      case 'sent':
-        return domain.QuoteStatus.sent;
-      case 'resent':
-        return domain.QuoteStatus.resent;
-      case 'approved':
-        return domain.QuoteStatus.approved;
-      case 'rejected':
-        return domain.QuoteStatus.rejected;
-      case 'in_review':
-        return domain.QuoteStatus.inReview;
-      case 'finalized':
-        return domain.QuoteStatus.finalized;
-      case 'cancelled':
-        return domain.QuoteStatus.cancelled;
-      case 'expired':
-        return domain.QuoteStatus.expired;
-      default:
-        return domain.QuoteStatus.draft;
-    }
+    return domain.QuoteStatus.fromDbValue(status);
   }
 
   Future<void> refresh() async {
@@ -122,8 +182,23 @@ class QuotesListNotifier extends AsyncNotifier<List<domain.Quote>> {
     state = await AsyncValue.guard(() => build());
   }
 
-  Future<void> archiveQuote(String id) async {
-    await ref.read(quotesRepositoryProvider).archiveQuote(id, true);
+  Future<void> archiveQuote(String id, {required bool archive}) async {
+    await ref.read(quotesRepositoryProvider).archiveQuote(id, archive);
+    await refresh();
+  }
+
+  Future<void> updateQuoteStatus(String id, String status) async {
+    await ref.read(quotesRepositoryProvider).updateQuoteStatus(id, status);
+    await refresh();
+  }
+
+  Future<void> batchUpdateStatus(List<String> ids, String status) async {
+    await ref.read(quotesRepositoryProvider).batchUpdateStatus(ids, status);
+    await refresh();
+  }
+
+  Future<void> batchArchive(List<String> ids, {required bool archive}) async {
+    await ref.read(quotesRepositoryProvider).batchArchive(ids, archive);
     await refresh();
   }
 }

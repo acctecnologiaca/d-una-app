@@ -1,3 +1,5 @@
+enum QuoteItemSourceType { own, affiliated, external, temporal }
+
 class QuoteItemProduct {
   final String id;
   final String quoteId;
@@ -5,6 +7,8 @@ class QuoteItemProduct {
   final String? supplierBranchStockId; // From supplier_branch_stock(id)
   final String? deliveryTimeId;
   final String? externalProviderName;
+  final String? supplierName; // Read-only from Join
+  final int groupIndex;
 
   // Snapshot
   final String name;
@@ -25,8 +29,7 @@ class QuoteItemProduct {
   final double totalPrice;
   final String? warrantyTime;
 
-  // Runtime-only flag, not persisted to DB
-  final bool isTemporal;
+  final QuoteItemSourceType sourceType;
 
   QuoteItemProduct({
     required this.id,
@@ -50,10 +53,26 @@ class QuoteItemProduct {
     required this.totalPrice,
     this.warrantyTime,
     this.externalProviderName,
-    this.isTemporal = false,
+    this.supplierName,
+    required this.sourceType,
+    required this.groupIndex,
   });
 
   factory QuoteItemProduct.fromJson(Map<String, dynamic> json) {
+    QuoteItemSourceType determineSourceType() {
+      if (json['source_type'] != null) {
+        return QuoteItemSourceType.values.firstWhere(
+          (e) => e.name == json['source_type'],
+          orElse: () => QuoteItemSourceType.own,
+        );
+      }
+      // Fallback for legacy data
+      if (json['product_id'] != null) return QuoteItemSourceType.own;
+      if (json['supplier_branch_stock_id'] != null) return QuoteItemSourceType.affiliated;
+      if (json['external_provider_name'] != null) return QuoteItemSourceType.external;
+      return QuoteItemSourceType.temporal;
+    }
+
     return QuoteItemProduct(
       id: json['id'] as String,
       quoteId: json['quote_id'] as String,
@@ -69,7 +88,6 @@ class QuoteItemProduct {
       availableStock: json['available_stock'] != null
           ? (json['available_stock'] as num).toDouble()
           : null,
-
       quantity: (json['quantity'] as num).toDouble(),
       costPrice: (json['cost_price'] as num).toDouble(),
       profitMargin: (json['profit_margin'] as num).toDouble(),
@@ -77,10 +95,26 @@ class QuoteItemProduct {
       taxRate: (json['tax_rate'] as num).toDouble(),
       taxAmount: (json['tax_amount'] as num).toDouble(),
       totalPrice: (json['total_price'] as num).toDouble(),
-
       warrantyTime: json['warranty_time'] as String?,
       externalProviderName: json['external_provider_name'] as String?,
+      supplierName: _extractSupplierName(json),
+      sourceType: determineSourceType(),
+      groupIndex: json['group_index'] as int? ?? 0,
     );
+  }
+
+  static String? _extractSupplierName(Map<String, dynamic> json) {
+    final sbs = json['supplier_branch_stock'];
+    if (sbs is Map<String, dynamic>) {
+      final sb = sbs['supplier_branches'];
+      if (sb is Map<String, dynamic>) {
+        final supplier = sb['suppliers'];
+        if (supplier is Map<String, dynamic>) {
+          return supplier['name'] as String?;
+        }
+      }
+    }
+    return null;
   }
 
   Map<String, dynamic> toJson() {
@@ -106,6 +140,63 @@ class QuoteItemProduct {
       'total_price': totalPrice,
       'warranty_time': warrantyTime,
       'external_provider_name': externalProviderName,
+      'source_type': sourceType.name,
+      'group_index': groupIndex,
     };
+  }
+
+  QuoteItemProduct copyWith({
+    String? id,
+    String? quoteId,
+    String? productId,
+    String? supplierBranchStockId,
+    String? deliveryTimeId,
+    String? name,
+    String? brand,
+    String? model,
+    String? uom,
+    String? uomIconName,
+    String? description,
+    double? availableStock,
+    double? quantity,
+    double? costPrice,
+    double? profitMargin,
+    double? unitPrice,
+    double? taxRate,
+    double? taxAmount,
+    double? totalPrice,
+    String? warrantyTime,
+    String? externalProviderName,
+    String? supplierName,
+    QuoteItemSourceType? sourceType,
+    int? groupIndex,
+  }) {
+    return QuoteItemProduct(
+      id: id ?? this.id,
+      quoteId: quoteId ?? this.quoteId,
+      productId: productId ?? this.productId,
+      supplierBranchStockId:
+          supplierBranchStockId ?? this.supplierBranchStockId,
+      deliveryTimeId: deliveryTimeId ?? this.deliveryTimeId,
+      name: name ?? this.name,
+      brand: brand ?? this.brand,
+      model: model ?? this.model,
+      uom: uom ?? this.uom,
+      uomIconName: uomIconName ?? this.uomIconName,
+      description: description ?? this.description,
+      availableStock: availableStock ?? this.availableStock,
+      quantity: quantity ?? this.quantity,
+      costPrice: costPrice ?? this.costPrice,
+      profitMargin: profitMargin ?? this.profitMargin,
+      unitPrice: unitPrice ?? this.unitPrice,
+      taxRate: taxRate ?? this.taxRate,
+      taxAmount: taxAmount ?? this.taxAmount,
+      totalPrice: totalPrice ?? this.totalPrice,
+      warrantyTime: warrantyTime ?? this.warrantyTime,
+      externalProviderName: externalProviderName ?? this.externalProviderName,
+      supplierName: supplierName ?? this.supplierName,
+      sourceType: sourceType ?? this.sourceType,
+      groupIndex: groupIndex ?? this.groupIndex,
+    );
   }
 }
