@@ -8,6 +8,7 @@ import '../../create_quote/providers/quote_validation_provider.dart';
 import '../../../data/models/quote_item_product.dart';
 import '../widgets/view_product_details_sheet.dart';
 import '../../../domain/models/product_origin.dart';
+import '../../create_quote/providers/quote_source_alert.dart';
 
 class ViewQuoteProductsTab extends ConsumerStatefulWidget {
   final String quoteId;
@@ -185,7 +186,8 @@ class _ViewQuoteProductsTabState extends ConsumerState<ViewQuoteProductsTab> {
                     firstItem.sourceType == QuoteItemSourceType.temporal;
 
                 // Determine group validation status and fresh stock
-                final Set<QuoteValidationStatus> groupAlerts = {};
+                final Map<QuoteItemSourceType, Set<QuoteValidationStatus>>
+                alertsBySource = {};
 
                 if (!isTemporal) {
                   for (var item in items) {
@@ -206,9 +208,11 @@ class _ViewQuoteProductsTabState extends ConsumerState<ViewQuoteProductsTab> {
                           item.availableStock ?? double.infinity;
                     }
 
-                    if (vInfo != null &&
-                        vInfo.status != QuoteValidationStatus.ok) {
-                      groupAlerts.add(vInfo.status);
+                    // Collect alerts per source
+                    if (vInfo != null && vInfo.statuses.isNotEmpty) {
+                      alertsBySource
+                          .putIfAbsent(item.sourceType, () => {})
+                          .addAll(vInfo.statuses);
                     }
                   }
                 } else {
@@ -217,6 +221,24 @@ class _ViewQuoteProductsTabState extends ConsumerState<ViewQuoteProductsTab> {
                     totalAvailableStock += item.quantity;
                   }
                 }
+
+                // Convert to source alerts list for the card
+                final sourceAlerts =
+                    alertsBySource.entries
+                        .map(
+                          (e) => QuoteSourceAlert(
+                            sourceType: e.key,
+                            statuses: e.value,
+                          ),
+                        )
+                        .toList();
+
+                // Aggregate alerts for the general error state (background color)
+                final groupAlerts =
+                    alertsBySource.values.fold<Set<QuoteValidationStatus>>({}, (
+                      acc,
+                      set,
+                    ) => acc..addAll(set));
 
                 final bool hasOwnInventory = items.any(
                   (i) => i.sourceType == QuoteItemSourceType.own,
@@ -243,6 +265,7 @@ class _ViewQuoteProductsTabState extends ConsumerState<ViewQuoteProductsTab> {
                   isExternalManagement: isExternalManagement,
                   isReadOnly: true,
                   alerts: groupAlerts.toList(),
+                  sourceAlerts: sourceAlerts,
                   onTap: () {
                     final List<ProductOrigin> origins = [];
 
@@ -323,6 +346,7 @@ class _ViewQuoteProductsTabState extends ConsumerState<ViewQuoteProductsTab> {
                       isTemporal: isTemporal,
                       isExternalManagement: isExternalManagement,
                       alerts: groupAlerts.toList(),
+                      warrantyDisplay: firstItem.warrantyDisplay,
                     );
                   },
                   onDelete: () {},

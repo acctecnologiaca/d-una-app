@@ -9,6 +9,8 @@ import '../../../data/models/quote_item_product.dart';
 import '../widgets/quote_added_product_card.dart';
 import '../widgets/quote_product_sale_details_sheet.dart';
 import '../providers/quote_validation_provider.dart';
+import '../providers/quote_source_alert.dart';
+import '../../../data/repositories/warranty_repository.dart';
 
 class QuoteProductsTab extends ConsumerStatefulWidget {
   const QuoteProductsTab({super.key});
@@ -192,7 +194,8 @@ class _QuoteProductsTabState extends ConsumerState<QuoteProductsTab>
                 );
 
                 // Determine group validation status and fresh stock
-                final Set<QuoteValidationStatus> groupAlerts = {};
+                final Map<QuoteItemSourceType, Set<QuoteValidationStatus>>
+                alertsBySource = {};
 
                 if (!isTemporal) {
                   for (var item in items) {
@@ -210,17 +213,36 @@ class _QuoteProductsTabState extends ConsumerState<QuoteProductsTab>
                       }
                     }
 
-                    // Collect alerts
+                    // Collect alerts per source
                     final vInfo = validationState.items[item.id];
-                    if (vInfo != null &&
-                        vInfo.status != QuoteValidationStatus.ok) {
-                      groupAlerts.add(vInfo.status);
+                    if (vInfo != null && vInfo.statuses.isNotEmpty) {
+                      alertsBySource
+                          .putIfAbsent(item.sourceType, () => {})
+                          .addAll(vInfo.statuses);
                     }
                   }
                 } else {
                   // Es un grupo puramente temporal. Debe permitir incrementos infinitos en el stepper.
                   totalAvailableStock += 999999;
                 }
+
+                // Convert to source alerts list for the card
+                final sourceAlerts =
+                    alertsBySource.entries
+                        .map(
+                          (e) => QuoteSourceAlert(
+                            sourceType: e.key,
+                            statuses: e.value,
+                          ),
+                        )
+                        .toList();
+
+                // Aggregate alerts for the general error state (background color)
+                final groupAlerts =
+                    alertsBySource.values.fold<Set<QuoteValidationStatus>>({}, (
+                      acc,
+                      set,
+                    ) => acc..addAll(set));
 
                 return QuoteAddedProductCard(
                   name: groupName,
@@ -241,6 +263,86 @@ class _QuoteProductsTabState extends ConsumerState<QuoteProductsTab>
                         .removeProductGroup(groupIndex);
                   },
                   onEditPrice: () async {
+                    // --- FETCH WARRANTY SUGGESTIONS ---
+                    int? minTime;
+                    String? minUnit;
+                    bool? minIsExpired;
+                    String? label;
+                    double minDays = double.infinity;
+
+                    final repo = ref.read(warrantyRepositoryProvider);
+
+                    // Helper to normalize to days for comparison
+                    double toDays(int t, String u) => switch (u) {
+                      'years' => t * 365.0,
+                      'months' => t * 30.0,
+                      _ => t.toDouble(),
+                    };
+
+                    for (final item in items) {
+                      if (item.sourceType == QuoteItemSourceType.own &&
+                          item.productId != null) {
+                        final res = await repo.getResidualWarranty(
+                          item.productId!,
+                        );
+                        if (res != null) {
+                          final days = toDays(res.time, res.unit);
+                          if (days < minDays) {
+                            minDays = days;
+                            minTime = res.time;
+                            minUnit = res.unit;
+                            minIsExpired = res.isExpired;
+                            label =
+                                'Garantía mínima (Inventario propio): ${res.time} ${_unitLabel(res.unit)}';
+                          }
+                        } else {
+                          minDays = 0;
+                          minTime = 0;
+                          minUnit = 'days';
+                          minIsExpired = true;
+                          label = 'Garantía mínima: Sin garantía';
+                          break;
+                        }
+                      } else if (item.sourceType ==
+                              QuoteItemSourceType.affiliated &&
+                          item.supplierBranchStockId != null) {
+                        final res = await repo.getSupplierWarranty(
+                          item.supplierBranchStockId!,
+                        );
+                        if (res != null) {
+                          final days = toDays(res.time, res.unit);
+                          if (days < minDays) {
+                            minDays = days;
+                            minTime = res.time;
+                            minUnit = res.unit;
+                            minIsExpired = false;
+                            label =
+                                'Garantía mínima (${item.supplierName}): ${res.time} ${_unitLabel(res.unit)}';
+                          }
+                        } else {
+                          minDays = 0;
+                          minTime = 0;
+                          minUnit = 'days';
+                          minIsExpired = true;
+                          label =
+                              'Producto sin garantía establecida por el proveedor';
+                          break;
+                        }
+                      }
+                    }
+
+                    if (minDays == double.infinity) {
+                      minTime = null;
+                      minUnit = null;
+                      label = null;
+                    }
+
+                    final suggestedTime = minTime;
+                    final suggestedUnit = minUnit;
+                    final isExpired = minIsExpired;
+
+                    if (!context.mounted) return;
+
                     final result = await QuoteProductSaleDetailsSheet.show(
                       context,
                       averageCost: averageCost,
@@ -251,12 +353,20 @@ class _QuoteProductsTabState extends ConsumerState<QuoteProductsTab>
                       initialPrice: firstItem.unitPrice,
                       initialMargin: firstItem.profitMargin,
                       initialDeliveryTimeId: firstItem.deliveryTimeId,
+                      initialWarrantyTime: firstItem.warrantyTime,
+                      initialWarrantyUnit: firstItem.warrantyUnit,
+                      suggestedWarrantyTime: suggestedTime,
+                      suggestedWarrantyUnit: suggestedUnit,
+                      isWarrantyExpired: isExpired,
+                      warrantySuggestionLabel: label,
                     );
                     if (result != null) {
                       final newPrice = result['sellingPrice'] as double;
                       final newMargin = result['profitMargin'] as double;
                       final newDeliveryTimeId =
                           result['deliveryTimeId'] as String?;
+                      final newWarrantyTime = result['warrantyTime'] as int?;
+                      final newWarrantyUnit = result['warrantyUnit'] as String?;
                       ref
                           .read(createQuoteProvider.notifier)
                           .updateGroupPrice(
@@ -264,6 +374,8 @@ class _QuoteProductsTabState extends ConsumerState<QuoteProductsTab>
                             newPrice,
                             newMargin,
                             newDeliveryTimeId,
+                            newWarrantyTime,
+                            newWarrantyUnit,
                           );
                     }
                   },
@@ -333,6 +445,7 @@ class _QuoteProductsTabState extends ConsumerState<QuoteProductsTab>
                         .updateGroupQuantity(groupIndex, newQty);
                   },
                   alerts: groupAlerts.toList(),
+                  sourceAlerts: sourceAlerts,
                 );
               },
             ),
@@ -340,5 +453,14 @@ class _QuoteProductsTabState extends ConsumerState<QuoteProductsTab>
         ),
       ],
     );
+  }
+
+  String _unitLabel(String unit) {
+    return switch (unit) {
+      'days' => 'Días',
+      'months' => 'Meses',
+      'years' => 'Años',
+      _ => unit,
+    };
   }
 }

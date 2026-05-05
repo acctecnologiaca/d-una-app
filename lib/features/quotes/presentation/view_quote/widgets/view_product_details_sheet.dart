@@ -26,6 +26,7 @@ class ViewProductDetailsSheet extends StatelessWidget {
   final bool isTemporal;
   final bool isExternalManagement;
   final List<QuoteValidationStatus> alerts;
+  final String? warrantyDisplay;
 
   const ViewProductDetailsSheet({
     super.key,
@@ -45,6 +46,7 @@ class ViewProductDetailsSheet extends StatelessWidget {
     required this.isTemporal,
     required this.isExternalManagement,
     required this.alerts,
+    this.warrantyDisplay,
   });
 
   static Future<void> show(
@@ -65,6 +67,7 @@ class ViewProductDetailsSheet extends StatelessWidget {
     required bool isTemporal,
     required bool isExternalManagement,
     required List<QuoteValidationStatus> alerts,
+    String? warrantyDisplay,
   }) {
     return showModalBottomSheet(
       context: context,
@@ -90,6 +93,7 @@ class ViewProductDetailsSheet extends StatelessWidget {
         isTemporal: isTemporal,
         isExternalManagement: isExternalManagement,
         alerts: alerts,
+        warrantyDisplay: warrantyDisplay,
       ),
     );
   }
@@ -178,6 +182,21 @@ class ViewProductDetailsSheet extends StatelessWidget {
                       child: _buildOriginCard(context, origin),
                     ),
                   ),
+
+                  if (warrantyDisplay != null) ...[
+                    const SizedBox(height: 16),
+                    _buildSectionTitle(
+                      context,
+                      'Garantía',
+                      Icons.verified_user_outlined,
+                    ),
+                    const SizedBox(height: 16),
+                    _buildInfoCard(
+                      context,
+                      value: warrantyDisplay!,
+                      icon: Icon(Icons.check_rounded, color: colors.primary),
+                    ),
+                  ],
 
                   const SizedBox(height: 16),
 

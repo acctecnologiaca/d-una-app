@@ -90,6 +90,7 @@ class ViewQuoteServicesTab extends ConsumerWidget {
               quantity: item.quantity,
               rateIconName: item.rateIconName,
               isTemporal: item.serviceId == null,
+              warrantyDisplay: item.warrantyDisplay,
             );
           },
           onDelete: () {},

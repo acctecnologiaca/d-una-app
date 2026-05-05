@@ -10,15 +10,18 @@ import '../../../data/models/quote_item_product.dart';
 enum QuoteValidationStatus { ok, lowStock, outOfStock, priceIncreased, missing }
 
 class QuoteValidationItem {
-  final QuoteValidationStatus status;
+  final Set<QuoteValidationStatus> statuses;
   final double currentStock;
   final double currentCost;
 
   QuoteValidationItem({
-    required this.status,
+    required this.statuses,
     required this.currentStock,
     required this.currentCost,
   });
+
+  /// Convenience: true if the item has no issues.
+  bool get isOk => statuses.isEmpty;
 }
 
 class QuoteValidationState {
@@ -101,10 +104,13 @@ class QuoteValidationNotifier extends StateNotifier<QuoteValidationState> {
 
       for (final product in quoteState.products) {
         // Para productos temporales/externos, generamos un estado 'ok' automático
-        if (product.sourceType == QuoteItemSourceType.temporal || product.sourceType == QuoteItemSourceType.external) {
-          debugPrint('   - Validado automáticamente (Temporal/Externo): ${product.name}');
+        if (product.sourceType == QuoteItemSourceType.temporal ||
+            product.sourceType == QuoteItemSourceType.external) {
+          debugPrint(
+            '   - Validado automáticamente (Temporal/Externo): ${product.name}',
+          );
           newValidationMap[product.id] = QuoteValidationItem(
-            status: QuoteValidationStatus.ok,
+            statuses: {}, // Empty = OK
             currentStock: 999999, // El stock de un temporal/externo se asume ilimitado
             currentCost: product.costPrice,
           );
@@ -119,7 +125,7 @@ class QuoteValidationNotifier extends StateNotifier<QuoteValidationState> {
         if (result.isEmpty) {
           debugPrint('     ⚠️ No se encontró en los resultados del RPC');
           newValidationMap[product.id] = QuoteValidationItem(
-            status: QuoteValidationStatus.missing,
+            statuses: {QuoteValidationStatus.missing},
             currentStock: 0,
             currentCost: 0,
           );
@@ -127,22 +133,26 @@ class QuoteValidationNotifier extends StateNotifier<QuoteValidationState> {
         }
 
         final firstResult = result.first;
-        QuoteValidationStatus status = QuoteValidationStatus.ok;
+        final Set<QuoteValidationStatus> statuses = {};
 
+        // Evaluate stock independently
         if (firstResult.currentStock <= 0) {
-          status = QuoteValidationStatus.outOfStock;
+          statuses.add(QuoteValidationStatus.outOfStock);
         } else if (firstResult.currentStock < product.quantity) {
-          status = QuoteValidationStatus.lowStock;
-        } else if (firstResult.currentCost > (product.costPrice + 0.01)) {
-          status = QuoteValidationStatus.priceIncreased;
+          statuses.add(QuoteValidationStatus.lowStock);
+        }
+
+        // Evaluate price independently
+        if (firstResult.currentCost > (product.costPrice + 0.01)) {
+          statuses.add(QuoteValidationStatus.priceIncreased);
         }
 
         debugPrint(
-          '     ✅ Status final: $status (Stock DB: ${firstResult.currentStock})',
+          '     ✅ Statuses: $statuses (Stock DB: ${firstResult.currentStock})',
         );
 
         newValidationMap[product.id] = QuoteValidationItem(
-          status: status,
+          statuses: statuses,
           currentStock: firstResult.currentStock,
           currentCost: firstResult.currentCost,
         );

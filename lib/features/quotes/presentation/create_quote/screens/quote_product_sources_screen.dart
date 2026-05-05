@@ -16,6 +16,7 @@ import '../../../../../shared/widgets/sort_selector.dart';
 import '../../../../../shared/widgets/custom_extended_fab.dart';
 import '../widgets/quote_product_sale_details_sheet.dart';
 import '../widgets/quote_product_source_card.dart';
+import '../../../data/repositories/warranty_repository.dart';
 
 class QuoteProductSourcesScreen extends ConsumerStatefulWidget {
   final QuoteAggregatedProduct product;
@@ -432,6 +433,78 @@ class _QuoteProductSourcesScreenState
 
             final averageCost = totalCostSum / totalQtySelected;
 
+            // --- FETCH WARRANTY SUGGESTIONS ---
+            int? minTime;
+            String? minUnit;
+            bool? isExpired;
+            String? label;
+            double minDays = double.infinity;
+
+            final repo = ref.read(warrantyRepositoryProvider);
+
+            // Helper to normalize to days for comparison
+            double toDays(int t, String u) => switch (u) {
+              'years' => t * 365.0,
+              'months' => t * 30.0,
+              _ => t.toDouble(),
+            };
+
+            for (final source in selectedSources.keys) {
+              if (source.sourceType == ProductSourceType.own) {
+                final res = await repo.getResidualWarranty(source.id);
+                if (res != null) {
+                  final days = toDays(res.time, res.unit);
+                  if (days < minDays) {
+                    minDays = days;
+                    minTime = res.time;
+                    minUnit = res.unit;
+                    isExpired = res.isExpired;
+                    label =
+                        'Garantía mínima (Inventario propio): ${res.time} ${_unitLabel(res.unit)}';
+                  }
+                } else {
+                  // If one source has no warranty info, it's safer to assume 0
+                  minDays = 0;
+                  minTime = 0;
+                  minUnit = 'days';
+                  isExpired = true;
+                  label = 'Garantía mínima: Sin garantía';
+                  break;
+                }
+              } else if (source.sourceType == ProductSourceType.supplier) {
+                final res = await repo.getSupplierWarranty(source.id);
+                if (res != null) {
+                  final days = toDays(res.time, res.unit);
+                  if (days < minDays) {
+                    minDays = days;
+                    minTime = res.time;
+                    minUnit = res.unit;
+                    isExpired = false;
+                    label =
+                        'Garantía mínima (${source.sourceName}): ${res.time} ${_unitLabel(res.unit)}';
+                  }
+                } else {
+                  minDays = 0;
+                  minTime = 0;
+                  minUnit = 'days';
+                  isExpired = true;
+                  label = 'Producto sin garantía establecida por el proveedor';
+                  break;
+                }
+              }
+            }
+
+            if (minDays == double.infinity) {
+              minTime = null;
+              minUnit = null;
+              label = null;
+            }
+
+            final suggestedTime = minTime;
+            final suggestedUnit = minUnit;
+
+            if (!context.mounted) return;
+
             // Show Selling Price Sheet
             final result = await QuoteProductSaleDetailsSheet.show(
               context,
@@ -440,6 +513,10 @@ class _QuoteProductSourcesScreenState
               uom: widget.product.uom,
               brand: widget.product.brand,
               model: widget.product.model,
+              suggestedWarrantyTime: suggestedTime,
+              suggestedWarrantyUnit: suggestedUnit,
+              isWarrantyExpired: isExpired,
+              warrantySuggestionLabel: label,
             );
 
             if (result == null) return; // User cancelled
@@ -447,9 +524,12 @@ class _QuoteProductSourcesScreenState
             final double sellingPrice = result['sellingPrice'];
             final double profitMargin = result['profitMargin'];
             final String? deliveryTimeId = result['deliveryTimeId'];
+            final int? warrantyTime = result['warrantyTime'];
+            final String? warrantyUnit = result['warrantyUnit'];
 
             // 0. Determine Group Index (use provided one or get next from provider)
-            final targetGroupIndex = widget.groupIndex ?? quoteState.nextGroupIndex;
+            final targetGroupIndex =
+                widget.groupIndex ?? quoteState.nextGroupIndex;
 
             // 1. Remove previously added items for this product group to prevent duplication
             if (widget.groupIndex != null) {
@@ -457,7 +537,7 @@ class _QuoteProductSourcesScreenState
             } else {
               // Legacy/fallback: if we don't have an index but are somehow replacing by name
               // (This part might need more care if we want to allow replacing by name during migration)
-              // For now, if it's a NEW addition (groupIndex is null), we don't need to remove anything 
+              // For now, if it's a NEW addition (groupIndex is null), we don't need to remove anything
               // unless we are specifically "editing" a product by name.
               // Given the new architecture, we'll favor groupIndex.
             }
@@ -505,12 +585,15 @@ class _QuoteProductSourcesScreenState
                 taxRate: taxRate,
                 taxAmount: taxAmount,
                 totalPrice: totalPrice,
+                warrantyTime: warrantyTime,
+                warrantyUnit: warrantyUnit,
+                supplierName: source.sourceName,
                 externalProviderName: isExternal ? _externalProviderName : null,
-                sourceType: isExternal 
-                    ? QuoteItemSourceType.external 
-                    : (source.sourceType == ProductSourceType.own 
-                        ? QuoteItemSourceType.own 
-                        : QuoteItemSourceType.affiliated),
+                sourceType: isExternal
+                    ? QuoteItemSourceType.external
+                    : (source.sourceType == ProductSourceType.own
+                          ? QuoteItemSourceType.own
+                          : QuoteItemSourceType.affiliated),
               );
 
               createQuoteNotifier.addProduct(quoteItem);
@@ -634,5 +717,14 @@ class _QuoteProductSourcesScreenState
         },
       ),
     );
+  }
+
+  String _unitLabel(String unit) {
+    return switch (unit) {
+      'days' => 'Días',
+      'months' => 'Meses',
+      'years' => 'Años',
+      _ => unit,
+    };
   }
 }

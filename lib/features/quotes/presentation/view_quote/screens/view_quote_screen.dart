@@ -250,7 +250,7 @@ class _ViewQuoteScreenState extends ConsumerState<ViewQuoteScreen>
                     quoteValidationProvider(widget.quoteId),
                   );
                   final hasAlerts = validationState.items.values.any(
-                    (item) => item.status != QuoteValidationStatus.ok,
+                    (item) => item.statuses.isNotEmpty,
                   );
                   return Row(
                     mainAxisSize: MainAxisSize.min,

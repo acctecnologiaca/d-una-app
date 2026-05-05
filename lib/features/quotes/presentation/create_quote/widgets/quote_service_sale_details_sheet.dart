@@ -14,6 +14,7 @@ import '../../../../portfolio/presentation/providers/lookup_providers.dart';
 import '../../../../../shared/widgets/service_list_item.dart';
 import '../providers/create_quote_provider.dart';
 import '../../../../../features/settings/presentation/widgets/add_edit_delivery_time_sheet.dart';
+import 'package:flutter/services.dart';
 
 class QuoteServiceSaleDetailsSheet extends ConsumerStatefulWidget {
   final ServiceModel service;
@@ -63,6 +64,11 @@ class _QuoteServiceSaleDetailsSheetState
 
   String? _selectedExecutionTimeId;
 
+  // Warranty state
+  bool _noWarranty = false;
+  final _warrantyQtyController = TextEditingController(text: '30');
+  String _warrantyPeriod = 'Meses';
+
   @override
   void initState() {
     super.initState();
@@ -99,6 +105,24 @@ class _QuoteServiceSaleDetailsSheetState
         widget.service.price,
       );
     }
+
+    // Initialize warranty
+    if (widget.existingItem != null) {
+      final item = widget.existingItem!;
+      if (item.warrantyTime != null) {
+        _warrantyQtyController.text = item.warrantyTime.toString();
+        _warrantyPeriod = _warrantyUnitToDisplay(item.warrantyUnit);
+        _noWarranty = false;
+      } else {
+        _noWarranty = true;
+      }
+    } else if (widget.service.warrantyTime != null) {
+      _warrantyQtyController.text = widget.service.warrantyTime.toString();
+      _warrantyPeriod = _warrantyUnitToDisplay(widget.service.warrantyUnit);
+      _noWarranty = widget.service.hasWarranty == false;
+    } else {
+      _noWarranty = !widget.service.hasWarranty;
+    }
   }
 
   @override
@@ -107,6 +131,7 @@ class _QuoteServiceSaleDetailsSheetState
     _descriptionController.dispose();
     _costPriceController.dispose();
     _customPriceController.dispose();
+    _warrantyQtyController.dispose();
     super.dispose();
   }
 
@@ -203,7 +228,10 @@ class _QuoteServiceSaleDetailsSheetState
       taxRate: globalTaxRate,
       taxAmount: taxAmount,
       totalPrice: unitPriceIncludingTax * _quantity,
-      warrantyTime: widget.service.warrantyTime?.toString(),
+      warrantyTime: _noWarranty
+          ? null
+          : int.tryParse(_warrantyQtyController.text),
+      warrantyUnit: _noWarranty ? null : _warrantyPeriodToDb(_warrantyPeriod),
       rateSymbol: widget.service.serviceRate?.symbol ?? 'ud.',
       rateIconName: widget.service.serviceRate?.iconName,
       categoryName: widget.service.category?.name,
@@ -211,6 +239,24 @@ class _QuoteServiceSaleDetailsSheetState
     );
 
     Navigator.of(context).pop(item);
+  }
+
+  String _warrantyPeriodToDb(String displayPeriod) {
+    return switch (displayPeriod) {
+      'Días' => 'days',
+      'Meses' => 'months',
+      'Años' => 'years',
+      _ => 'days',
+    };
+  }
+
+  String _warrantyUnitToDisplay(String? dbUnit) {
+    return switch (dbUnit) {
+      'days' => 'Días',
+      'months' => 'Meses',
+      'years' => 'Años',
+      _ => 'Meses',
+    };
   }
 
   @override
@@ -368,6 +414,105 @@ class _QuoteServiceSaleDetailsSheetState
                     error: (err, stack) => FriendlyErrorWidget(error: err),
                   ),
             ],
+
+            const SizedBox(height: 24),
+            // --- WARRANTY SECTION ---
+            SwitchListTile(
+              contentPadding: EdgeInsets.zero,
+              title: const Text(
+                'Este servicio no tiene garantía',
+                style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
+              ),
+              value: _noWarranty,
+              onChanged: (v) => setState(() => _noWarranty = v),
+              activeThumbColor: colors.onPrimary,
+              activeTrackColor: colors.primary,
+            ),
+            if (!_noWarranty) ...[
+              const SizedBox(height: 8),
+              Row(
+                children: [
+                  Icon(
+                    Icons.verified_user_outlined,
+                    color: colors.onSurfaceVariant,
+                    size: 20,
+                  ),
+                  const SizedBox(width: 8),
+                  Text(
+                    'Garantía',
+                    style: textTheme.titleSmall?.copyWith(
+                      fontWeight: FontWeight.bold,
+                      color: colors.onSurfaceVariant,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 16),
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Expanded(
+                    child: CustomTextField(
+                      controller: _warrantyQtyController,
+                      label: 'Cantidad',
+                      keyboardType: TextInputType.number,
+                      inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                    ),
+                  ),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: CustomDropdown<String>(
+                      value: _warrantyPeriod,
+                      items: const ['Días', 'Meses', 'Años'],
+                      label: 'Período',
+                      itemLabelBuilder: (v) => v,
+                      onChanged: (v) {
+                        if (v != null) setState(() => _warrantyPeriod = v);
+                      },
+                    ),
+                  ),
+                ],
+              ),
+            ],
+            const SizedBox(height: 24),
+
+            // Servicio tercerizado
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  'Servicio tercerizado',
+                  style: textTheme.titleSmall?.copyWith(
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                Switch(
+                  value: _isOutsourced,
+                  onChanged: (val) => setState(() => _isOutsourced = val),
+                  activeTrackColor: colors.primary,
+                ),
+              ],
+            ),
+            if (_isOutsourced) ...[
+              const SizedBox(height: 12),
+              CustomTextField(
+                controller: _costPriceController,
+                label: 'Precio costo*',
+                keyboardType: const TextInputType.numberWithOptions(
+                  decimal: true,
+                ),
+                prefixIcon: const Icon(Icons.attach_money),
+                inputFormatters: [CurrencyInputFormatter()],
+              ),
+              const SizedBox(height: 8),
+              Text(
+                'Sin impuesto',
+                style: textTheme.bodySmall?.copyWith(
+                  color: colors.onSurfaceVariant,
+                ),
+              ),
+            ],
+
             const SizedBox(height: 24),
 
             // Modificar precio
@@ -427,44 +572,7 @@ class _QuoteServiceSaleDetailsSheetState
                 maxLines: 4,
               ),
             ],
-            const SizedBox(height: 24),
 
-            // Servicio tercerizado
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text(
-                  'Servicio tercerizado',
-                  style: textTheme.titleSmall?.copyWith(
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                Switch(
-                  value: _isOutsourced,
-                  onChanged: (val) => setState(() => _isOutsourced = val),
-                  activeTrackColor: colors.primary,
-                ),
-              ],
-            ),
-            if (_isOutsourced) ...[
-              const SizedBox(height: 12),
-              CustomTextField(
-                controller: _costPriceController,
-                label: 'Precio costo*',
-                keyboardType: const TextInputType.numberWithOptions(
-                  decimal: true,
-                ),
-                prefixIcon: const Icon(Icons.attach_money),
-                inputFormatters: [CurrencyInputFormatter()],
-              ),
-              const SizedBox(height: 8),
-              Text(
-                'Sin impuesto',
-                style: textTheme.bodySmall?.copyWith(
-                  color: colors.onSurfaceVariant,
-                ),
-              ),
-            ],
             const SizedBox(height: 12),
           ],
         ),

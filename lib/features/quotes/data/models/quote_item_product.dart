@@ -27,7 +27,8 @@ class QuoteItemProduct {
   final double taxRate;
   final double taxAmount;
   final double totalPrice;
-  final String? warrantyTime;
+  final int? warrantyTime;
+  final String? warrantyUnit;
 
   final QuoteItemSourceType sourceType;
 
@@ -52,6 +53,7 @@ class QuoteItemProduct {
     required this.taxAmount,
     required this.totalPrice,
     this.warrantyTime,
+    this.warrantyUnit,
     this.externalProviderName,
     this.supplierName,
     required this.sourceType,
@@ -95,7 +97,8 @@ class QuoteItemProduct {
       taxRate: (json['tax_rate'] as num).toDouble(),
       taxAmount: (json['tax_amount'] as num).toDouble(),
       totalPrice: (json['total_price'] as num).toDouble(),
-      warrantyTime: json['warranty_time'] as String?,
+      warrantyTime: json['warranty_time'] as int?,
+      warrantyUnit: json['warranty_unit'] as String?,
       externalProviderName: json['external_provider_name'] as String?,
       supplierName: _extractSupplierName(json),
       sourceType: determineSourceType(),
@@ -115,6 +118,18 @@ class QuoteItemProduct {
       }
     }
     return null;
+  }
+
+  /// Returns a human-readable warranty string, e.g., "30 Días"
+  String? get warrantyDisplay {
+    if (warrantyTime == null || warrantyTime == 0) return null;
+    final unitLabel = switch (warrantyUnit) {
+      'days' => 'Días',
+      'months' => 'Meses',
+      'years' => 'Años',
+      _ => 'Días',
+    };
+    return '$warrantyTime $unitLabel';
   }
 
   Map<String, dynamic> toJson() {
@@ -139,6 +154,7 @@ class QuoteItemProduct {
       'tax_amount': taxAmount,
       'total_price': totalPrice,
       'warranty_time': warrantyTime,
+      'warranty_unit': warrantyUnit,
       'external_provider_name': externalProviderName,
       'source_type': sourceType.name,
       'group_index': groupIndex,
@@ -150,7 +166,7 @@ class QuoteItemProduct {
     String? quoteId,
     String? productId,
     String? supplierBranchStockId,
-    String? deliveryTimeId,
+    Object? deliveryTimeId = _sentinel,
     String? name,
     String? brand,
     String? model,
@@ -165,7 +181,8 @@ class QuoteItemProduct {
     double? taxRate,
     double? taxAmount,
     double? totalPrice,
-    String? warrantyTime,
+    Object? warrantyTime = _sentinel,
+    Object? warrantyUnit = _sentinel,
     String? externalProviderName,
     String? supplierName,
     QuoteItemSourceType? sourceType,
@@ -177,7 +194,9 @@ class QuoteItemProduct {
       productId: productId ?? this.productId,
       supplierBranchStockId:
           supplierBranchStockId ?? this.supplierBranchStockId,
-      deliveryTimeId: deliveryTimeId ?? this.deliveryTimeId,
+      deliveryTimeId: deliveryTimeId == _sentinel
+          ? this.deliveryTimeId
+          : (deliveryTimeId as String?),
       name: name ?? this.name,
       brand: brand ?? this.brand,
       model: model ?? this.model,
@@ -192,7 +211,12 @@ class QuoteItemProduct {
       taxRate: taxRate ?? this.taxRate,
       taxAmount: taxAmount ?? this.taxAmount,
       totalPrice: totalPrice ?? this.totalPrice,
-      warrantyTime: warrantyTime ?? this.warrantyTime,
+      warrantyTime: warrantyTime == _sentinel
+          ? this.warrantyTime
+          : (warrantyTime as int?),
+      warrantyUnit: warrantyUnit == _sentinel
+          ? this.warrantyUnit
+          : (warrantyUnit as String?),
       externalProviderName: externalProviderName ?? this.externalProviderName,
       supplierName: supplierName ?? this.supplierName,
       sourceType: sourceType ?? this.sourceType,
@@ -200,3 +224,5 @@ class QuoteItemProduct {
     );
   }
 }
+
+const _sentinel = Object();

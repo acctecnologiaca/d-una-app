@@ -16,7 +16,8 @@ class QuoteItemService {
   final double taxRate;
   final double taxAmount;
   final double totalPrice;
-  final String? warrantyTime;
+  final int? warrantyTime;
+  final String? warrantyUnit;
 
   // Persisted Snapshots
   final String rateSymbol;
@@ -40,6 +41,7 @@ class QuoteItemService {
     this.taxAmount = 0,
     required this.totalPrice,
     this.warrantyTime,
+    this.warrantyUnit,
     this.rateSymbol = 'ud.',
     this.rateIconName,
     this.categoryName,
@@ -67,13 +69,26 @@ class QuoteItemService {
           : 0,
       totalPrice: (json['total_price'] as num).toDouble(),
 
-      warrantyTime: json['warranty_time'] as String?,
+      warrantyTime: json['warranty_time'] as int?,
+      warrantyUnit: json['warranty_unit'] as String?,
       rateSymbol: json['rate_symbol'] as String? ?? 'ud.',
       rateIconName: json['rate_icon_name'] as String?,
       categoryName: json['category_name'] as String?,
       executionTimeLabel: json['execution_time_label'] as String?,
       orderIndex: json['order_index'] as int? ?? 0,
     );
+  }
+
+  /// Returns a human-readable warranty string, e.g., "30 Días"
+  String? get warrantyDisplay {
+    if (warrantyTime == null || warrantyTime == 0) return null;
+    final unitLabel = switch (warrantyUnit) {
+      'days' => 'Días',
+      'months' => 'Meses',
+      'years' => 'Años',
+      _ => 'Días',
+    };
+    return '$warrantyTime $unitLabel';
   }
 
   Map<String, dynamic> toJson() {
@@ -92,6 +107,7 @@ class QuoteItemService {
       'tax_amount': taxAmount,
       'total_price': totalPrice,
       'warranty_time': warrantyTime,
+      'warranty_unit': warrantyUnit,
       'rate_symbol': rateSymbol,
       'rate_icon_name': rateIconName,
       'category_name': categoryName,
@@ -114,7 +130,8 @@ class QuoteItemService {
     double? taxRate,
     double? taxAmount,
     double? totalPrice,
-    String? warrantyTime,
+    Object? warrantyTime = _sentinel,
+    Object? warrantyUnit = _sentinel,
     String? rateSymbol,
     String? rateIconName,
     String? categoryName,
@@ -135,7 +152,12 @@ class QuoteItemService {
       taxRate: taxRate ?? this.taxRate,
       taxAmount: taxAmount ?? this.taxAmount,
       totalPrice: totalPrice ?? this.totalPrice,
-      warrantyTime: warrantyTime ?? this.warrantyTime,
+      warrantyTime: warrantyTime == _sentinel
+          ? this.warrantyTime
+          : (warrantyTime as int?),
+      warrantyUnit: warrantyUnit == _sentinel
+          ? this.warrantyUnit
+          : (warrantyUnit as String?),
       rateSymbol: rateSymbol ?? this.rateSymbol,
       rateIconName: rateIconName ?? this.rateIconName,
       categoryName: categoryName ?? this.categoryName,
@@ -144,3 +166,5 @@ class QuoteItemService {
     );
   }
 }
+
+const _sentinel = Object();

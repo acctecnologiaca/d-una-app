@@ -197,11 +197,13 @@ class _AddTemporalServiceScreenState
       }
       if (existing.warrantyTime != null) {
         _hasWarranty = true;
-        final parts = existing.warrantyTime!.split(' ');
-        if (parts.length == 2) {
-          _warrantyQtyController.text = parts[0];
-          _warrantyPeriod = parts[1];
-        }
+        _warrantyQtyController.text = existing.warrantyTime.toString();
+        _warrantyPeriod = switch (existing.warrantyUnit) {
+          'days' => 'Días',
+          'months' => 'Meses',
+          'years' => 'Años',
+          _ => 'Días',
+        };
       } else {
         _hasWarranty = false;
       }
@@ -428,8 +430,15 @@ class _AddTemporalServiceScreenState
 
     final salePrice = unitPrice;
 
-    final warrantyTime = _hasWarranty
-        ? '${_warrantyQtyController.text} $_warrantyPeriod'
+    final int? warrantyTime =
+        _hasWarranty ? int.tryParse(_warrantyQtyController.text) : null;
+    final String? warrantyUnit = _hasWarranty
+        ? switch (_warrantyPeriod) {
+          'Días' => 'days',
+          'Meses' => 'months',
+          'Años' => 'years',
+          _ => 'days',
+        }
         : null;
 
     // In temporal services, we might not have a full UUID for serviceRateId, but we can store a string representation or leave null
@@ -483,6 +492,7 @@ class _AddTemporalServiceScreenState
       taxAmount: taxAmount,
       totalPrice: unitPriceIncludingTax * qty,
       warrantyTime: warrantyTime,
+      warrantyUnit: warrantyUnit,
       rateSymbol: rateSymbol,
       rateIconName: rateIconName,
       executionTimeId: isTimeBased ? null : _selectedExecutionTimeId,
@@ -507,10 +517,8 @@ class _AddTemporalServiceScreenState
               serviceRateId: _selectedRate ?? '',
               categoryId: null,
               hasWarranty: _hasWarranty,
-              warrantyTime: _hasWarranty
-                  ? int.tryParse(_warrantyQtyController.text)
-                  : null,
-              warrantyUnit: _hasWarranty ? _warrantyPeriod : null,
+              warrantyTime: warrantyTime,
+              warrantyUnit: warrantyUnit,
             );
       } catch (e) {
         debugPrint('Failed to add to own services: $e');

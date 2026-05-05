@@ -14,6 +14,7 @@ class ViewServiceDetailsSheet extends StatelessWidget {
   final double quantity;
   final String? rateIconName;
   final bool isTemporal;
+  final String? warrantyDisplay;
 
   const ViewServiceDetailsSheet({
     super.key,
@@ -27,6 +28,7 @@ class ViewServiceDetailsSheet extends StatelessWidget {
     required this.quantity,
     this.rateIconName,
     this.isTemporal = false,
+    this.warrantyDisplay,
   });
 
   static Future<void> show(
@@ -41,6 +43,7 @@ class ViewServiceDetailsSheet extends StatelessWidget {
     required double quantity,
     String? rateIconName,
     bool isTemporal = false,
+    String? warrantyDisplay,
   }) {
     return showModalBottomSheet(
       context: context,
@@ -60,6 +63,7 @@ class ViewServiceDetailsSheet extends StatelessWidget {
         quantity: quantity,
         rateIconName: rateIconName,
         isTemporal: isTemporal,
+        warrantyDisplay: warrantyDisplay,
       ),
     );
   }
@@ -146,8 +150,8 @@ class ViewServiceDetailsSheet extends StatelessWidget {
                         ? 'Servicio Tercerizado'
                         : 'Gestión Propia',
                     icon: Icon(
-                      isExternal ? Symbols.outbound : Symbols.shield_person,
-                      color: isExternal ? colors.tertiary : Colors.green,
+                      Symbols.settings_accessibility,
+                      color: colors.onSurfaceVariant.withValues(alpha: 0.7),
                     ),
                   ),
 
@@ -157,7 +161,23 @@ class ViewServiceDetailsSheet extends StatelessWidget {
                       context,
                       title: 'Tiempo de Ejecución',
                       value: executionTimeLabel!,
-                      icon: Icon(Symbols.schedule, color: colors.outline),
+                      icon: Icon(
+                        Icons.timer_outlined,
+                        color: colors.onSurfaceVariant.withValues(alpha: 0.7),
+                      ),
+                    ),
+                  ],
+
+                  if (warrantyDisplay != null) ...[
+                    const SizedBox(height: 12),
+                    _buildInfoCard(
+                      context,
+                      title: 'Garantía',
+                      value: warrantyDisplay!,
+                      icon: Icon(
+                        Icons.verified_user_outlined,
+                        color: colors.onSurfaceVariant.withValues(alpha: 0.7),
+                      ),
                     ),
                   ],
 

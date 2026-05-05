@@ -664,13 +664,15 @@ class CreateQuoteNotifier extends StateNotifier<QuoteState> {
     double newUnitPrice,
     double newMargin, [
     String? newDeliveryTimeId,
+    int? newWarrantyTime,
+    String? newWarrantyUnit,
   ]) {
     final updatedProducts = state.products.map((item) {
       if (item.groupIndex == groupIndex) {
         final taxAmount = newUnitPrice * (item.taxRate / 100);
         final totalPrice = (newUnitPrice + taxAmount) * item.quantity;
         return item.copyWith(
-          deliveryTimeId: newDeliveryTimeId ?? item.deliveryTimeId,
+          deliveryTimeId: newDeliveryTimeId,
           availableStock: item.sourceType == QuoteItemSourceType.temporal
               ? item.quantity
               : item.availableStock,
@@ -678,6 +680,8 @@ class CreateQuoteNotifier extends StateNotifier<QuoteState> {
           unitPrice: newUnitPrice,
           taxAmount: taxAmount,
           totalPrice: totalPrice,
+          warrantyTime: newWarrantyTime,
+          warrantyUnit: newWarrantyUnit,
         );
       }
       return item;

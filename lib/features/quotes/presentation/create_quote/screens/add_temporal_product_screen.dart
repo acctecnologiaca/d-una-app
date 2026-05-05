@@ -125,11 +125,13 @@ class _AddTemporalProductScreenState
       if (existing.warrantyTime == null) {
         _noWarranty = true;
       } else {
-        final parts = existing.warrantyTime!.split(' ');
-        if (parts.length == 2) {
-          _warrantyQtyController.text = parts[0];
-          _warrantyPeriod = parts[1];
-        }
+        _warrantyQtyController.text = existing.warrantyTime.toString();
+        _warrantyPeriod = switch (existing.warrantyUnit) {
+          'days' => 'Días',
+          'months' => 'Meses',
+          'years' => 'Años',
+          _ => 'Días',
+        };
       }
       _selectedDeliveryTimeId = existing.deliveryTimeId;
       _externalProviderName = existing.externalProviderName;
@@ -325,9 +327,16 @@ class _AddTemporalProductScreenState
     final taxAmount = unitPrice * taxRateFactor;
     final totalPrice = (unitPrice + taxAmount) * qty;
 
-    final warrantyTime = _noWarranty
+    final int? warrantyTime =
+        _noWarranty ? null : int.tryParse(_warrantyQtyController.text);
+    final String? warrantyUnit = _noWarranty
         ? null
-        : '${_warrantyQtyController.text} $_warrantyPeriod';
+        : switch (_warrantyPeriod) {
+          'Días' => 'days',
+          'Meses' => 'months',
+          'Años' => 'years',
+          _ => 'days',
+        };
 
     final currentModel = _modelController.text.trim().isEmpty
         ? 'NO APLICA'
@@ -462,6 +471,7 @@ class _AddTemporalProductScreenState
       taxAmount: taxAmount,
       totalPrice: totalPrice,
       warrantyTime: warrantyTime,
+      warrantyUnit: warrantyUnit,
       deliveryTimeId: _selectedDeliveryTimeId,
       externalProviderName: _externalProviderName,
       sourceType: widget.existingItem?.sourceType ?? QuoteItemSourceType.temporal,

@@ -7,6 +7,8 @@ import '../../../../../shared/widgets/status_badge.dart';
 import '../../../../../shared/widgets/uom_status_badge.dart';
 import '../../../../../shared/widgets/editable_quantity_stepper.dart';
 import '../providers/quote_validation_provider.dart';
+import '../providers/quote_source_alert.dart';
+import '../../../data/models/quote_item_product.dart';
 
 class QuoteAddedProductCard extends StatelessWidget {
   final String name;
@@ -31,6 +33,7 @@ class QuoteAddedProductCard extends StatelessWidget {
 
   // Validation
   final List<QuoteValidationStatus> alerts;
+  final List<QuoteSourceAlert> sourceAlerts;
   final bool isReadOnly;
   final VoidCallback? onTap;
 
@@ -54,6 +57,7 @@ class QuoteAddedProductCard extends StatelessWidget {
     this.hasOwnInventory = false,
     this.hasSupplierInventory = false,
     this.alerts = const [],
+    this.sourceAlerts = const [],
     this.isReadOnly = false,
     this.onTap,
   });
@@ -79,143 +83,13 @@ class QuoteAddedProductCard extends StatelessWidget {
           mainAxisAlignment: MainAxisAlignment.end,
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
+            // Unified Column: Alerts + Badge per source
             SizedBox(
-              width: 64,
-              child: Row(
-                children: [
-                  // Columna 1: Alertas
-                  Expanded(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.end,
-                      crossAxisAlignment: CrossAxisAlignment.end,
-                      children: [
-                        // Price Alert Icon
-                        if (alerts.contains(
-                          QuoteValidationStatus.priceIncreased,
-                        )) ...[
-                          const SizedBox(height: 2),
-                          Tooltip(
-                            message: 'El precio de costo aumentó',
-                            child: Image.asset(
-                              'assets/icons/price_increase.png',
-                              width: 20,
-                              height: 20,
-                            ),
-                          ),
-                          const SizedBox(height: 2),
-                        ],
-
-                        // Stock Alert Icon
-                        if (alerts.contains(QuoteValidationStatus.outOfStock) ||
-                            alerts.contains(
-                              QuoteValidationStatus.lowStock,
-                            )) ...[
-                          const SizedBox(height: 2),
-                          Tooltip(
-                            message:
-                                alerts.contains(
-                                  QuoteValidationStatus.outOfStock,
-                                )
-                                ? 'Sin stock disponible'
-                                : 'Stock insuficiente',
-                            child: Image.asset(
-                              alerts.contains(QuoteValidationStatus.outOfStock)
-                                  ? 'assets/icons/stock_unavailable.png'
-                                  : 'assets/icons/stock_down.png',
-                              width: 20,
-                              height: 20,
-                            ),
-                          ),
-                          const SizedBox(height: 2),
-                        ],
-
-                        // Missing Product Icon
-                        if (alerts.contains(QuoteValidationStatus.missing)) ...[
-                          const SizedBox(height: 2),
-                          Tooltip(
-                            message: 'Producto ya no disponible',
-                            child: Icon(
-                              Symbols.warning,
-                              size: 20,
-                              color: Colors.amber.shade700,
-                              fill: 1,
-                            ),
-                          ),
-                          const SizedBox(height: 2),
-                        ],
-                      ],
-                    ),
-                  ),
-                  const SizedBox(width: 4),
-                  // Columna 2: Estados/Origen
-                  Expanded(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.end,
-                      crossAxisAlignment: CrossAxisAlignment.end,
-                      children: [
-                        if (isTemporal) ...[
-                          const SizedBox(height: 2),
-                          StatusBadge(
-                            backgroundColor: colors.outline,
-                            textColor: colors.surface,
-                            borderRadius: 4.0,
-                            icon: Icon(
-                              Symbols.chronic,
-                              size: 16,
-                              color: colors.surface,
-                            ),
-                          ),
-                          const SizedBox(height: 2),
-                        ],
-
-                        if (isExternalManagement) ...[
-                          const SizedBox(height: 2),
-                          StatusBadge(
-                            backgroundColor: colors.onSurfaceVariant,
-                            textColor: colors.surface,
-                            borderRadius: 4.0,
-                            icon: Icon(
-                              Symbols.outbound,
-                              size: 16,
-                              color: colors.surface,
-                            ),
-                          ),
-                          const SizedBox(height: 2),
-                        ],
-
-                        if (hasSupplierInventory) ...[
-                          const SizedBox(height: 2),
-                          StatusBadge(
-                            backgroundColor: colors.tertiaryContainer,
-                            textColor: colors.onTertiaryContainer,
-                            borderRadius: 4.0,
-                            icon: Icon(
-                              Symbols.warehouse,
-                              size: 16,
-                              color: colors.onTertiaryContainer,
-                            ),
-                          ),
-                          const SizedBox(height: 2),
-                        ],
-
-                        if (hasOwnInventory) ...[
-                          const SizedBox(height: 2),
-                          StatusBadge(
-                            backgroundColor: colors.primary,
-                            textColor: colors.onPrimary,
-                            borderRadius: 4.0,
-                            icon: Icon(
-                              Symbols.inventory_2,
-                              size: 16,
-                              color: colors.onPrimary,
-                            ),
-                          ),
-                          const SizedBox(height: 2),
-                        ],
-                      ],
-                    ),
-                  ),
-                ],
+              width: 72,
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.end,
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: _buildSourceRows(context, colors),
               ),
             ),
             const SizedBox(width: 8),
@@ -335,6 +209,154 @@ class QuoteAddedProductCard extends StatelessWidget {
               max: totalAvailableStock,
               onChanged: onQuantityChanged,
             ),
+    );
+  }
+
+  List<Widget> _buildSourceRows(BuildContext context, ColorScheme colors) {
+    final List<Widget> rows = [];
+
+    // Helper to find alerts for a specific sourceType
+    Set<QuoteValidationStatus> alertsFor(QuoteItemSourceType type) {
+      final match = sourceAlerts.where((sa) => sa.sourceType == type);
+      return match.isEmpty ? {} : match.first.statuses;
+    }
+
+    // Order: External, Affiliated, Own, Temporal
+
+    // External Management
+    if (isExternalManagement) {
+      rows.add(
+        _buildSourceRow(
+          context,
+          alerts: alertsFor(QuoteItemSourceType.external),
+          badge: StatusBadge(
+            backgroundColor: colors.onSurfaceVariant,
+            textColor: colors.surface,
+            borderRadius: 4.0,
+            icon: Icon(Symbols.outbound, size: 16, color: colors.surface),
+          ),
+        ),
+      );
+    }
+
+    // Supplier Inventory (Affiliated)
+    if (hasSupplierInventory) {
+      rows.add(
+        _buildSourceRow(
+          context,
+          alerts: alertsFor(QuoteItemSourceType.affiliated),
+          badge: StatusBadge(
+            backgroundColor: colors.tertiaryContainer,
+            textColor: colors.onTertiaryContainer,
+            borderRadius: 4.0,
+            icon: Icon(
+              Symbols.warehouse,
+              size: 16,
+              color: colors.onTertiaryContainer,
+            ),
+          ),
+        ),
+      );
+    }
+
+    // Own Inventory
+    if (hasOwnInventory) {
+      rows.add(
+        _buildSourceRow(
+          context,
+          alerts: alertsFor(QuoteItemSourceType.own),
+          badge: StatusBadge(
+            backgroundColor: colors.primary,
+            textColor: colors.onPrimary,
+            borderRadius: 4.0,
+            icon: Icon(Symbols.inventory_2, size: 16, color: colors.onPrimary),
+          ),
+        ),
+      );
+    }
+
+    // Temporal
+    if (isTemporal) {
+      rows.add(
+        _buildSourceRow(
+          context,
+          alerts: alertsFor(QuoteItemSourceType.temporal),
+          badge: StatusBadge(
+            backgroundColor: colors.outline,
+            textColor: colors.surface,
+            borderRadius: 4.0,
+            icon: Icon(Symbols.chronic, size: 16, color: colors.surface),
+          ),
+        ),
+      );
+    }
+
+    return rows;
+  }
+
+  Widget _buildSourceRow(
+    BuildContext context, {
+    required Set<QuoteValidationStatus> alerts,
+    required Widget badge,
+  }) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 2),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        mainAxisAlignment: MainAxisAlignment.end,
+        children: [
+          // Price Alert
+          if (alerts.contains(QuoteValidationStatus.priceIncreased))
+            Padding(
+              padding: const EdgeInsets.only(right: 2),
+              child: Tooltip(
+                message: 'El precio de costo aumentó',
+                child: Image.asset(
+                  'assets/icons/price_increase.png',
+                  width: 18,
+                  height: 18,
+                ),
+              ),
+            ),
+
+          // Stock Alerts
+          if (alerts.contains(QuoteValidationStatus.outOfStock) ||
+              alerts.contains(QuoteValidationStatus.lowStock))
+            Padding(
+              padding: const EdgeInsets.only(right: 2),
+              child: Tooltip(
+                message: alerts.contains(QuoteValidationStatus.outOfStock)
+                    ? 'Sin stock disponible'
+                    : 'Stock insuficiente',
+                child: Image.asset(
+                  alerts.contains(QuoteValidationStatus.outOfStock)
+                      ? 'assets/icons/stock_unavailable.png'
+                      : 'assets/icons/stock_down.png',
+                  width: 18,
+                  height: 18,
+                ),
+              ),
+            ),
+
+          // Missing Product Alert
+          if (alerts.contains(QuoteValidationStatus.missing))
+            Padding(
+              padding: const EdgeInsets.only(right: 2),
+              child: Tooltip(
+                message: 'Producto ya no disponible',
+                child: Icon(
+                  Symbols.warning,
+                  size: 18,
+                  color: Colors.amber.shade700,
+                  fill: 1,
+                ),
+              ),
+            ),
+
+          // Origin Badge
+          badge,
+        ],
+      ),
     );
   }
 }
