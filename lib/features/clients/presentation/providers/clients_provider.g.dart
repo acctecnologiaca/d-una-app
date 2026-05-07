@@ -25,7 +25,7 @@ final clientsRepositoryProvider =
 // ignore: unused_element
 typedef ClientsRepositoryRef =
     AutoDisposeProviderRef<SupabaseClientsRepository>;
-String _$clientsHash() => r'7b35825ad4eeb45222fb6f02eaa48cf008838de4';
+String _$clientsHash() => r'8cd694c822be9e6492a85f2c0e22f955a7e18ccc';
 
 /// See also [Clients].
 @ProviderFor(Clients)

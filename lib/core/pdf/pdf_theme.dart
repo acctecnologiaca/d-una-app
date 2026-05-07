@@ -21,7 +21,13 @@ class PdfThemeConfig {
 
   // Estilos de Texto
   static pw.TextStyle titleStyle = pw.TextStyle(
-    fontSize: 24,
+    fontSize: 22,
+    fontWeight: pw.FontWeight.bold,
+    color: black,
+  );
+
+  static pw.TextStyle subTitleStyle = pw.TextStyle(
+    fontSize: 16,
     fontWeight: pw.FontWeight.bold,
     color: black,
   );
@@ -33,6 +39,11 @@ class PdfThemeConfig {
   );
 
   static pw.TextStyle bodyStyle = const pw.TextStyle(fontSize: 9, color: black);
+  static pw.TextStyle bodyBoldStyle = pw.TextStyle(
+    fontSize: 9,
+    color: black,
+    fontWeight: pw.FontWeight.bold,
+  );
 
   static pw.TextStyle smallStyle = const pw.TextStyle(
     fontSize: 8,
@@ -45,7 +56,7 @@ class PdfThemeConfig {
   );
 
   static pw.TextStyle tableHeaderStyle = pw.TextStyle(
-    fontSize: 8,
+    fontSize: 7,
     fontWeight: pw.FontWeight.bold,
     color: white,
   );
@@ -58,6 +69,6 @@ class PdfThemeConfig {
   );
 
   // Configuración de página
-  static const double horizontalMargin = 40.0;
-  static const double verticalMargin = 40.0;
+  static const double horizontalMargin = 30.0;
+  static const double verticalMargin = 35.0;
 }

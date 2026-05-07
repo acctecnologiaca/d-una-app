@@ -88,15 +88,15 @@ class QuoteItemProduct {
       uomIconName: json['uom_icon_name'] as String?,
       description: json['description'] as String?,
       availableStock: json['available_stock'] != null
-          ? (json['available_stock'] as num).toDouble()
+          ? (json['available_stock'] as num?)?.toDouble()
           : null,
-      quantity: (json['quantity'] as num).toDouble(),
-      costPrice: (json['cost_price'] as num).toDouble(),
-      profitMargin: (json['profit_margin'] as num).toDouble(),
-      unitPrice: (json['unit_price'] as num).toDouble(),
-      taxRate: (json['tax_rate'] as num).toDouble(),
-      taxAmount: (json['tax_amount'] as num).toDouble(),
-      totalPrice: (json['total_price'] as num).toDouble(),
+      quantity: (json['quantity'] as num?)?.toDouble() ?? 0.0,
+      costPrice: (json['cost_price'] as num?)?.toDouble() ?? 0.0,
+      profitMargin: (json['profit_margin'] as num?)?.toDouble() ?? 0.0,
+      unitPrice: (json['unit_price'] as num?)?.toDouble() ?? 0.0,
+      taxRate: (json['tax_rate'] as num?)?.toDouble() ?? 0.0,
+      taxAmount: (json['tax_amount'] as num?)?.toDouble() ?? 0.0,
+      totalPrice: (json['total_price'] as num?)?.toDouble() ?? 0.0,
       warrantyTime: json['warranty_time'] as int?,
       warrantyUnit: json['warranty_unit'] as String?,
       externalProviderName: json['external_provider_name'] as String?,

@@ -28,6 +28,19 @@ class QuotePdfTemplate {
   });
 
   Future<Uint8List> generate(PdfPageFormat format) async {
+    // 0. Validación de Seguridad (Early Return si datos críticos fallan)
+    if (quote.id.isEmpty) {
+      final errorPdf = pw.Document();
+      errorPdf.addPage(
+        pw.Page(
+          build: (context) => pw.Center(
+            child: pw.Text('Error: Datos de cotización incompletos.'),
+          ),
+        ),
+      );
+      return errorPdf.save();
+    }
+
     final pdf = pw.Document(theme: PdfThemeConfig.buildTheme());
 
     // Resolver info del emisor (con fallback)
@@ -35,6 +48,9 @@ class QuotePdfTemplate {
 
     // Cargar logo si existe
     final logoImage = await PdfHelpers.loadNetworkImage(senderInfo.logoUrl);
+
+    // Cargar imagen de marca para el footer
+    final footerImage = await PdfHelpers.loadAssetImage('assets/images/creado_con_d_una.png');
 
     pdf.addPage(
       pw.MultiPage(
@@ -47,12 +63,12 @@ class QuotePdfTemplate {
           senderInfo: senderInfo,
           logoImage: logoImage,
         ),
-        footer: (context) => PdfCommonSections.buildFooter(context),
+        footer: (context) => PdfCommonSections.buildFooter(context, footerImage: footerImage),
         build: (context) => [
           _buildInfoGrid(senderInfo),
           pw.SizedBox(height: 20),
           _buildItemsTable(),
-          pw.SizedBox(height: 20),
+          pw.SizedBox(height: 10),
           _buildTotalsBlock(),
           pw.SizedBox(height: 20),
           _buildConditionsBlock(),
@@ -91,8 +107,14 @@ class QuotePdfTemplate {
               ),
               if (quote.clientType != 'person')
                 _infoRow('Atención:', quote.contactName ?? '-'),
-              _infoRow('Teléfono:', quote.clientPhone ?? '-'),
-              _infoRow('Email:', quote.clientEmail ?? '-'),
+              _infoRow(
+                'Teléfono:',
+                quote.contactPhone ?? quote.clientPhone ?? '-',
+              ),
+              _infoRow(
+                'Email:',
+                quote.contactEmail ?? quote.clientEmail ?? '-',
+              ),
             ],
           ),
         ),
@@ -160,26 +182,31 @@ class QuotePdfTemplate {
     final sortedGroupIndices = groupedProducts.keys.toList()..sort();
 
     final headers = [
-      'Cant.',
-      'Producto / Servicio',
-      'Código',
-      'Marca',
-      'Garantía',
-      'Precio Unit.',
-      'SubTotal',
+      'CANT.',
+      'PRODUCTO / SERVICIO',
+      'GARANTÍA',
+      'PRECIO UNIT.',
+      'SUB-TOTAL',
     ];
 
     final columnWidths = {
       0: const pw.FixedColumnWidth(35), // Cantidad
-      1: const pw.FlexColumnWidth(90), // Producto/Servicio
-      2: const pw.FixedColumnWidth(80), // Código
-      3: const pw.FixedColumnWidth(60), // Marca
-      4: const pw.FixedColumnWidth(55), // Garantía
-      5: const pw.FixedColumnWidth(70), // P. Unitario
-      6: const pw.FixedColumnWidth(60), // Sub-total
+      1: const pw.FlexColumnWidth(1), // Producto/Servicio (Ocupa el resto)
+      2: const pw.FixedColumnWidth(55), // Garantía
+      3: const pw.FixedColumnWidth(70), // P. Unitario
+      4: const pw.FixedColumnWidth(70), // Sub-total
     };
 
-    final reducedStyle = PdfThemeConfig.bodyStyle.copyWith(fontSize: 6.3);
+    final normalStyle = PdfThemeConfig.bodyStyle.copyWith(fontSize: 7);
+    final boldStyle = PdfThemeConfig.bodyStyle.copyWith(
+      fontSize: 8,
+      fontWeight: pw.FontWeight.bold,
+    );
+    final softItalicStyle = PdfThemeConfig.bodyStyle.copyWith(
+      fontSize: 6.5,
+      color: PdfColors.grey700,
+      fontItalic: pw.Font.helveticaOblique(),
+    );
 
     final dataRows = [
       // Filas de Productos
@@ -196,65 +223,64 @@ class QuotePdfTemplate {
         }
 
         return [
-          totalQuantity.toStringAsFixed(0),
+          pw.Text(totalQuantity.toStringAsFixed(0), style: boldStyle),
           pw.Column(
             crossAxisAlignment: pw.CrossAxisAlignment.start,
             children: [
-              pw.Text(
-                firstItem.name,
-                style: PdfThemeConfig.bodyStyle.copyWith(
-                  fontWeight: pw.FontWeight.bold,
+              pw.Text(firstItem.name, style: boldStyle), //Producto
+              // Metadatos consolidadores (Modelo y Marca)
+              if (firstItem.model != 'NO APLICA' && firstItem.model != null)
+                pw.Text(
+                  'Modelo: ${firstItem.model} (${firstItem.brand != "Sin marca" && firstItem.brand != null ? firstItem.brand : ""})',
+                  style: softItalicStyle,
                 ),
-              ),
               if (firstItem.description != null &&
                   firstItem.description!.isNotEmpty)
-                pw.Padding(
-                  padding: const pw.EdgeInsets.only(top: 2, left: 4),
-                  child: pw.Text(
-                    '- ${firstItem.description}',
-                    style: PdfThemeConfig.captionStyle.copyWith(fontSize: 7),
-                  ),
-                ),
+                pw.Text(
+                  '${firstItem.description}',
+                  style: softItalicStyle,
+                ), //Descripion producto propio
             ],
           ),
-          pw.Text(firstItem.model ?? '-', style: reducedStyle),
-          pw.Text(firstItem.brand ?? '-', style: reducedStyle),
-          pw.Text(firstItem.warrantyDisplay ?? '-', style: reducedStyle),
-          PdfHelpers.formatCurrency(firstItem.unitPrice),
-          PdfHelpers.formatCurrency(subtotal),
+          pw.Text(
+            firstItem.warrantyDisplay ?? '-',
+            style: normalStyle,
+          ), //Garantía
+          PdfHelpers.formatCurrency(firstItem.unitPrice), //P. Unitario
+          PdfHelpers.formatCurrency(subtotal), //Sub-total
         ];
       }),
       // Filas de Servicios
       ...services.map(
         (s) => [
-          s.quantity.toStringAsFixed(0),
+          pw.Text(s.quantity.toStringAsFixed(0), style: boldStyle),
           pw.Column(
             crossAxisAlignment: pw.CrossAxisAlignment.start,
             children: [
-              pw.Text(
-                s.name,
-                style: PdfThemeConfig.bodyStyle.copyWith(
-                  fontWeight: pw.FontWeight.bold,
-                ),
-              ),
+              pw.Text(s.name, style: boldStyle), //Servicio
               if (s.description != null && s.description!.isNotEmpty)
-                pw.Padding(
-                  padding: const pw.EdgeInsets.only(top: 2, left: 4),
-                  child: pw.Text(
-                    '- ${s.description}',
-                    style: PdfThemeConfig.captionStyle.copyWith(fontSize: 7),
-                  ),
-                ),
+                pw.Text(
+                  '${s.description}',
+                  style: softItalicStyle,
+                ), //Descripcion servicio
             ],
           ),
-          pw.Text('-', style: reducedStyle),
-          pw.Text('-', style: reducedStyle),
-          pw.Text('-', style: reducedStyle),
-          PdfHelpers.formatCurrency(s.unitPrice),
-          PdfHelpers.formatCurrency(s.totalPrice),
+          pw.Text(s.warrantyDisplay ?? '-', style: normalStyle), // Garantía
+          PdfHelpers.formatCurrency(s.unitPrice), // Precio Unit.
+          PdfHelpers.formatCurrency(s.totalPrice), // Sub-total
         ],
       ),
     ];
+
+    if (dataRows.isEmpty) {
+      return pw.Container(
+        padding: const pw.EdgeInsets.all(10),
+        child: pw.Text(
+          'Esta cotización no contiene productos ni servicios registrados.',
+          style: normalStyle,
+        ),
+      );
+    }
 
     return pw.Column(
       children: [
@@ -270,7 +296,8 @@ class QuotePdfTemplate {
                 final index = headers.indexOf(h);
                 pw.Alignment alignment = pw.Alignment.centerLeft;
                 if (index == 0) alignment = pw.Alignment.center;
-                if (index >= 5) alignment = pw.Alignment.centerRight;
+                if (index == 1) alignment = pw.Alignment.center;
+                if (index >= 3) alignment = pw.Alignment.centerRight;
 
                 return pw.Container(
                   alignment: alignment,
@@ -289,10 +316,10 @@ class QuotePdfTemplate {
         pw.Table(
           columnWidths: columnWidths,
           border: const pw.TableBorder(
-            left: pw.BorderSide(color: PdfColors.grey300, width: 0.5),
-            right: pw.BorderSide(color: PdfColors.grey300, width: 0.5),
-            top: pw.BorderSide(color: PdfColors.grey300, width: 0.5),
-            bottom: pw.BorderSide(color: PdfColors.grey300, width: 0.5),
+            left: pw.BorderSide(color: PdfColors.grey400, width: 0.5),
+            right: pw.BorderSide(color: PdfColors.grey400, width: 0.5),
+            top: pw.BorderSide(color: PdfColors.grey400, width: 0.5),
+            bottom: pw.BorderSide(color: PdfColors.grey400, width: 0.5),
           ),
           children: dataRows.map((row) {
             return pw.TableRow(
@@ -300,11 +327,11 @@ class QuotePdfTemplate {
                 final index = row.indexOf(cell);
                 pw.Alignment alignment = pw.Alignment.topLeft;
                 if (index == 0) alignment = pw.Alignment.topCenter;
-                if (index >= 5) alignment = pw.Alignment.topRight;
+                if (index >= 3) alignment = pw.Alignment.topRight;
 
                 return pw.Container(
                   alignment: alignment,
-                  padding: const pw.EdgeInsets.all(3),
+                  padding: const pw.EdgeInsets.all(5),
                   child: cell is pw.Widget
                       ? cell
                       : pw.Text(
@@ -331,13 +358,13 @@ class QuotePdfTemplate {
       children: [
         pw.Container(
           width: 150,
-          padding: const pw.EdgeInsets.all(10),
+          padding: const pw.EdgeInsets.all(5),
           decoration: pw.BoxDecoration(
             border: pw.TableBorder(
-              bottom: pw.BorderSide(color: PdfColors.grey300, width: 0.5),
-              top: pw.BorderSide(color: PdfColors.grey300, width: 0.5),
-              left: pw.BorderSide(color: PdfColors.grey300, width: 0.5),
-              right: pw.BorderSide(color: PdfColors.grey300, width: 0.5),
+              bottom: pw.BorderSide(color: PdfColors.grey400, width: 0.5),
+              top: pw.BorderSide(color: PdfColors.grey400, width: 0.5),
+              left: pw.BorderSide(color: PdfColors.grey400, width: 0.5),
+              right: pw.BorderSide(color: PdfColors.grey400, width: 0.5),
             ),
           ),
           child: pw.Column(
@@ -389,24 +416,25 @@ class QuotePdfTemplate {
     return pw.Column(
       crossAxisAlignment: pw.CrossAxisAlignment.start,
       children: [
+        pw.Text(
+          'Condiciones comerciales:',
+          style: PdfThemeConfig.bodyBoldStyle,
+        ),
         ...conditions.map((c) {
           final isImportant =
               c.description.toLowerCase().contains('importante') ||
               c.description.toLowerCase().contains('retención');
 
-          return pw.Padding(
-            padding: const pw.EdgeInsets.only(bottom: 4),
-            child: pw.Text(
-              c.description,
-              style: isImportant
-                  ? PdfThemeConfig.importantStyle
-                  : PdfThemeConfig.smallStyle,
-            ),
+          return pw.Text(
+            '- ${c.description}',
+            style: isImportant
+                ? PdfThemeConfig.importantStyle
+                : PdfThemeConfig.smallStyle,
           );
         }),
         if (quote.notes != null && quote.notes!.isNotEmpty) ...[
           pw.SizedBox(height: 10),
-          pw.Text('Observaciones:', style: PdfThemeConfig.headerStyle),
+          pw.Text('Notas adicionales:', style: PdfThemeConfig.bodyBoldStyle),
           pw.Text(quote.notes!, style: PdfThemeConfig.smallStyle),
         ],
       ],

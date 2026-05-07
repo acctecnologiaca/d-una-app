@@ -21,6 +21,9 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:d_una_app/core/pdf/templates/quote_pdf_template.dart';
 import 'package:d_una_app/features/profile/presentation/providers/profile_provider.dart';
 import 'package:pdf/pdf.dart';
+import '../../../../../shared/utils/string_utils.dart';
+import '../widgets/send_email_bottom_sheet.dart';
+
 
 class ViewQuoteScreen extends ConsumerStatefulWidget {
   final String quoteId;
@@ -73,7 +76,11 @@ class _ViewQuoteScreenState extends ConsumerState<ViewQuoteScreen>
             : (state.currentQuoteNumber ?? 'Cargando...'),
         actions: [
           IconButton(
-            onPressed: () {},
+            onPressed: () {
+              if (state.quote != null) {
+                SendEmailBottomSheet.show(context, state.quote!);
+              }
+            },
             icon: Icon(Icons.send, color: colors.onSurfaceVariant),
           ),
           IconButton(
@@ -131,11 +138,16 @@ class _ViewQuoteScreenState extends ConsumerState<ViewQuoteScreen>
                       if (quote == null) return;
 
                       final userProfile = ref.read(userProfileProvider).value;
-                      final userEmail = Supabase.instance.client.auth.currentUser?.email;
+                      final userEmail =
+                          Supabase.instance.client.auth.currentUser?.email;
 
                       if (userProfile == null) {
                         ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(content: Text('Cargando perfil de usuario... Por favor espere.')),
+                          const SnackBar(
+                            content: Text(
+                              'Cargando perfil de usuario... Por favor espere.',
+                            ),
+                          ),
                         );
                         return;
                       }
@@ -146,9 +158,13 @@ class _ViewQuoteScreenState extends ConsumerState<ViewQuoteScreen>
                         '/pdf-preview',
                         extra: {
                           'title': 'Previsualizar Cotización',
-                          'subtitle': quote.quoteNumber,
-                          'fileName': 'Cotizacion_${quote.quoteNumber ?? quote.id}.pdf',
-                          'buildPdf': (PdfPageFormat format) => QuotePdfTemplate(
+                          'subtitle':
+                              ' ${quote.quoteNumber} (${quote.clientName})',
+                          'fileName': StringUtils.sanitizeForFileName(
+                            '${quote.dateIssued.toIso8601String().substring(0, 10)}_${quote.clientName ?? ''}_${quote.quoteNumber ?? quote.id}_${quote.quoteTag ?? ''}.pdf',
+                          ),
+                          'buildPdf': (PdfPageFormat format) =>
+                              QuotePdfTemplate(
                                 quote: quote,
                                 products: quote.products ?? [],
                                 services: quote.services ?? [],

@@ -15,6 +15,10 @@ import '../../../../../shared/widgets/bottom_sheet_action_item.dart';
 import '../../../../../shared/widgets/custom_dialog.dart';
 import '../../create_quote/providers/create_quote_provider.dart';
 import 'package:material_symbols_icons/symbols.dart';
+import 'package:pdf/pdf.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:d_una_app/core/pdf/templates/quote_pdf_template.dart';
+import '../../../../../shared/utils/string_utils.dart';
 
 class QuotesListScreen extends ConsumerStatefulWidget {
   const QuotesListScreen({super.key});
@@ -360,9 +364,67 @@ class _QuotesListScreenState extends ConsumerState<QuotesListScreen> {
         BottomSheetActionItem(
           icon: Icons.picture_as_pdf_outlined,
           label: 'Descargar PDF',
-          onTap: () {
+          onTap: () async {
             context.pop();
-            _showComingSoon(context, 'Descargar PDF');
+
+            final userProfile = ref.read(userProfileProvider).value;
+            final userEmail = Supabase.instance.client.auth.currentUser?.email;
+
+            if (userProfile == null) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text(
+                    'Cargando perfil de usuario... Por favor espere.',
+                  ),
+                ),
+              );
+              return;
+            }
+
+            // Mostramos feedback de carga
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('Preparando documento...'),
+                duration: Duration(seconds: 1),
+              ),
+            );
+
+            try {
+              // Cargamos la cotización completa con sus detalles
+              final fullQuote = await ref
+                  .read(quotesRepositoryProvider)
+                  .getQuoteWithDetails(quote.id);
+
+              if (context.mounted) {
+                context.push(
+                  '/pdf-preview',
+                  extra: {
+                    'title': 'Previsualizar Cotización',
+                    'subtitle':
+                        ' ${fullQuote.quoteNumber} (${fullQuote.clientName})',
+                    'fileName': StringUtils.sanitizeForFileName(
+                      '${fullQuote.dateIssued.toIso8601String().substring(0, 10)}_${fullQuote.clientName ?? ''}_${fullQuote.quoteNumber ?? fullQuote.id}_${fullQuote.quoteTag ?? ''}.pdf',
+                    ),
+                    'buildPdf': (PdfPageFormat format) => QuotePdfTemplate(
+                          quote: fullQuote,
+                          products: fullQuote.products ?? [],
+                          services: fullQuote.services ?? [],
+                          conditions: fullQuote.conditions ?? [],
+                          userProfile: userProfile,
+                          userEmail: userEmail,
+                        ).generate(format),
+                  },
+                );
+              }
+            } catch (e) {
+              if (context.mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text('Error al cargar detalles de cotización: $e'),
+                  ),
+                );
+              }
+            }
           },
         ),
         const Divider(height: 1, indent: 16, endIndent: 16),
@@ -438,14 +500,6 @@ class _QuotesListScreenState extends ConsumerState<QuotesListScreen> {
           onTap: () {
             context.pop();
             _showStatusDialog(context, ref, selection);
-          },
-        ),
-        BottomSheetActionItem(
-          icon: Icons.picture_as_pdf_outlined,
-          label: 'Descargar PDF',
-          onTap: () {
-            context.pop();
-            _showComingSoon(context, 'Descargar PDF');
           },
         ),
         const Divider(height: 1, indent: 16, endIndent: 16),

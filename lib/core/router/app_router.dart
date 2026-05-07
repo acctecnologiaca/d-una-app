@@ -68,10 +68,15 @@ import '../../features/purchases/presentation/screens/add_purchase_select_produc
 import '../../features/purchases/presentation/screens/add_purchase_product_search_screen.dart';
 import '../../features/purchases/presentation/screens/manage_product_serials_screen.dart';
 import '../../features/purchases/presentation/screens/purchases_search_screen.dart';
+import '../../features/settings/presentation/screens/email_templates_list_screen.dart';
+import '../../features/settings/presentation/screens/edit_email_template_screen.dart';
+import '../../features/settings/data/models/email_template.dart';
+
 
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../router/router_notifier.dart';
 import '../../shared/screens/pdf_preview_screen.dart';
+import '../../shared/providers/pdf_preview_provider.dart';
 
 final rootNavigatorKey = GlobalKey<NavigatorState>();
 final _shellNavigatorClientsKey = GlobalKey<NavigatorState>(
@@ -414,12 +419,36 @@ final appRouter = GoRouter(
       path: '/pdf-preview',
       parentNavigatorKey: rootNavigatorKey,
       builder: (context, state) {
-        final extra = state.extra as Map<String, dynamic>;
+        final extra = state.extra;
+        
+        if (extra is Map<String, dynamic>) {
+          // Guardar en el respaldo global
+          PdfPreviewData.lastData = PdfPreviewData(
+            title: extra['title'] as String,
+            subtitle: extra['subtitle'] as String?,
+            fileName: extra['fileName'] as String,
+            buildPdf: extra['buildPdf'] as Future<Uint8List> Function(PdfPageFormat),
+          );
+        }
+
+        final data = PdfPreviewData.lastData;
+
+        if (data == null) {
+          return const Scaffold(
+            body: Center(
+              child: Text(
+                'Error: Datos del PDF no encontrados.\nPor favor, intente de nuevo.',
+                textAlign: TextAlign.center,
+              ),
+            ),
+          );
+        }
+
         return PdfPreviewScreen(
-          title: extra['title'] as String,
-          subtitle: extra['subtitle'] as String?,
-          fileName: extra['fileName'] as String,
-          buildPdf: extra['buildPdf'] as Future<Uint8List> Function(PdfPageFormat),
+          title: data.title,
+          subtitle: data.subtitle,
+          fileName: data.fileName,
+          buildPdf: data.buildPdf,
         );
       },
     ),
@@ -472,7 +501,16 @@ final appRouter = GoRouter(
                 GoRoute(
                   path: 'manage-serials',
                   builder: (context, state) {
-                    final extra = state.extra as Map<String, dynamic>;
+                    final extra = state.extra;
+                    if (extra is! Map<String, dynamic>) {
+                      return const Scaffold(
+                        body: Center(
+                          child: Text(
+                            'Error: Datos del producto no encontrados.',
+                          ),
+                        ),
+                      );
+                    }
                     return ManageProductSerialsScreen(
                       product: extra['product'] as Product,
                       quantity: extra['quantity'] as int,
@@ -550,6 +588,23 @@ final appRouter = GoRouter(
         GoRoute(
           path: 'financial-parameters',
           builder: (context, state) => const FinancialParametersScreen(),
+        ),
+        GoRoute(
+          path: 'email-templates',
+          builder: (context, state) => const EmailTemplatesListScreen(),
+          routes: [
+            GoRoute(
+              path: 'edit',
+              builder: (context, state) {
+                final extra = state.extra as Map<String, dynamic>;
+                return EditEmailTemplateScreen(
+                  typeId: extra['typeId'] as String,
+                  label: extra['label'] as String,
+                  template: extra['template'] as EmailTemplate?,
+                );
+              },
+            ),
+          ],
         ),
       ],
     ),

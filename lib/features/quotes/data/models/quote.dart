@@ -27,6 +27,8 @@ class Quote {
   final String? clientName; // New Field from join
   final String? categoryName; // New Field from join
   final String? contactName; // New Field from join
+  final String? contactPhone; // New Field from join
+  final String? contactEmail; // New Field from join
   final String? advisorName; // New Field from join
   final List<QuoteItemProduct>? products;
   final List<QuoteItemService>? services;
@@ -65,6 +67,8 @@ class Quote {
     this.clientName,
     this.categoryName,
     this.contactName,
+    this.contactPhone,
+    this.contactEmail,
     this.advisorName,
     this.products,
     this.services,
@@ -109,8 +113,10 @@ class Quote {
       // Handle joined category name
       categoryName: _extractCategoryName(json['category'] ?? json['categories']),
 
-      // Handle joined contact name
-      contactName: _extractContactName(json['contacts']),
+      // Handle joined contact info
+      contactName: _extractField(json['contacts'], 'name'),
+      contactPhone: _extractField(json['contacts'], 'phone'),
+      contactEmail: _extractField(json['contacts'], 'email'),
 
       // Handle full contact object
       contact: json['contacts'] != null ? _extractContact(json['contacts']) : null,
@@ -120,13 +126,16 @@ class Quote {
 
       // Handle nested items if joined
       products: (json['quote_items_products'] as List?)
-          ?.map((e) => QuoteItemProduct.fromJson(e))
+          ?.whereType<Map<String, dynamic>>()
+          .map((e) => QuoteItemProduct.fromJson(e))
           .toList(),
       services: (json['quote_items_services'] as List?)
-          ?.map((e) => QuoteItemService.fromJson(e))
+          ?.whereType<Map<String, dynamic>>()
+          .map((e) => QuoteItemService.fromJson(e))
           .toList(),
       conditions: (json['quote_conditions'] as List?)
-          ?.map((e) => QuoteCondition.fromJson(e))
+          ?.whereType<Map<String, dynamic>>()
+          .map((e) => QuoteCondition.fromJson(e))
           .toList(),
 
       // Extract additional client info
@@ -165,19 +174,17 @@ class Quote {
   }
 
   static String? _extractClientName(dynamic clientsJson) {
-    if (clientsJson == null) {
-      throw Exception('Error: El nombre del cliente no puede estar vacío.');
-    }
+    if (clientsJson == null) return 'Cliente Desconocido';
     if (clientsJson is Map) {
-      return clientsJson['name'] as String?;
+      return clientsJson['name'] as String? ?? 'Cliente Desconocido';
     }
     if (clientsJson is List && clientsJson.isNotEmpty) {
       final first = clientsJson.first;
       if (first is Map) {
-        return first['name'] as String?;
+        return first['name'] as String? ?? 'Cliente Desconocido';
       }
     }
-    throw Exception('Error: Estructura de cliente no válida o nombre ausente.');
+    return 'Cliente Desconocido';
   }
 
   static String? _extractCategoryName(dynamic categoriesJson) {
@@ -207,19 +214,6 @@ class Quote {
     return null;
   }
 
-  static String? _extractContactName(dynamic contactJson) {
-    if (contactJson == null) return null;
-    if (contactJson is Map) {
-      return contactJson['name'] as String?;
-    }
-    if (contactJson is List && contactJson.isNotEmpty) {
-      final first = contactJson.first;
-      if (first is Map) {
-        return first['name'] as String?;
-      }
-    }
-    return null;
-  }
 
   static String? _extractField(dynamic json, String field) {
     if (json == null) return null;

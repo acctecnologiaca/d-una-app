@@ -112,9 +112,9 @@ class UserProfile {
       'avatar_url': avatarUrl,
       'phone': phone,
       'secondary_phone': secondaryPhone,
-      'occupation': occupation,
+      // 'occupation': occupation, // ELIMINADO: No existe en la BD
       'occupation_id': occupationId,
-      'secondary_occupations': secondaryOccupations,
+      // 'secondary_occupations': secondaryOccupations, // ELIMINADO: No existe en la BD
       'secondary_occupation_ids': secondaryOccupationIds,
       'main_address': mainAddress,
       'main_city': mainCity,

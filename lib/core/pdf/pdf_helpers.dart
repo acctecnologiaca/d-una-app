@@ -1,4 +1,5 @@
 import 'package:flutter/foundation.dart';
+import 'package:flutter/services.dart';
 import 'package:http/http.dart' as http;
 import 'package:pdf/widgets.dart' as pw;
 import 'package:intl/intl.dart';
@@ -34,6 +35,17 @@ class PdfHelpers {
       }
     } catch (e) {
       debugPrint('Error loading PDF network image: $e');
+    }
+    return null;
+  }
+
+  /// Carga una imagen desde los assets y la convierte en MemoryImage para PDF
+  static Future<pw.MemoryImage?> loadAssetImage(String path) async {
+    try {
+      final data = await rootBundle.load(path);
+      return pw.MemoryImage(data.buffer.asUint8List());
+    } catch (e) {
+      debugPrint('Error loading PDF asset image: $e');
     }
     return null;
   }

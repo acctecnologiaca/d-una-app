@@ -29,31 +29,54 @@ class PdfCommonSections {
                   )
                 else
                   pw.SizedBox(height: 50), // Placeholder espacio
-                
+
                 pw.SizedBox(height: 8),
-                pw.Text('RIF: ${senderInfo.rif}', style: PdfThemeConfig.smallStyle),
+                pw.Text(senderInfo.name, style: PdfThemeConfig.smallStyle),
+                pw.Text(
+                  'RIF: ${senderInfo.rif}',
+                  style: PdfThemeConfig.smallStyle,
+                ),
                 pw.Container(
                   width: 250,
-                  child: pw.Text('Dirección: ${senderInfo.address}', style: PdfThemeConfig.smallStyle),
+                  child: pw.Text(
+                    'Dirección: ${senderInfo.address}',
+                    style: PdfThemeConfig.smallStyle,
+                  ),
                 ),
                 if (senderInfo.phone != null)
-                  pw.Text('Teléfono: ${senderInfo.phone}', style: PdfThemeConfig.smallStyle),
+                  pw.Text(
+                    'Teléfono: ${senderInfo.phone}',
+                    style: PdfThemeConfig.smallStyle,
+                  ),
                 if (senderInfo.email != null)
-                  pw.Text('Email: ${senderInfo.email}', style: PdfThemeConfig.smallStyle),
+                  pw.Text(
+                    'Email: ${senderInfo.email}',
+                    style: PdfThemeConfig.smallStyle,
+                  ),
               ],
             ),
-            
+
             // Columna Derecha: Título + Nro + Fecha
             pw.Column(
               crossAxisAlignment: pw.CrossAxisAlignment.end,
               children: [
                 pw.Text(title, style: PdfThemeConfig.titleStyle),
+                pw.Text(
+                  '#$documentNumber',
+                  style: PdfThemeConfig.subTitleStyle,
+                ),
                 pw.SizedBox(height: 20),
                 pw.Text('Fecha', style: PdfThemeConfig.headerStyle),
-                pw.Text(PdfHelpers.formatDate(date), style: PdfThemeConfig.bodyStyle),
-                pw.SizedBox(height: 10),
-                pw.Text('Nro. ${title.split(' ').first}', style: PdfThemeConfig.headerStyle),
-                pw.Text(documentNumber, style: PdfThemeConfig.bodyStyle),
+                pw.Text(
+                  PdfHelpers.formatDate(date),
+                  style: PdfThemeConfig.bodyStyle,
+                ),
+                /*  pw.SizedBox(height: 10),
+                pw.Text(
+                  'Nro. ${title.split(' ').first}',
+                  style: PdfThemeConfig.headerStyle,
+                ),
+                pw.Text(documentNumber, style: PdfThemeConfig.bodyStyle),*/
               ],
             ),
           ],
@@ -63,15 +86,29 @@ class PdfCommonSections {
     );
   }
 
-  /// Construye el pie de página con número de página
-  static pw.Widget buildFooter(pw.Context context) {
-    return pw.Container(
-      alignment: pw.Alignment.center,
-      margin: const pw.EdgeInsets.only(top: 20),
-      child: pw.Text(
-        'Página ${context.pageNumber} de ${context.pagesCount}',
-        style: PdfThemeConfig.captionStyle,
-      ),
+  /// Construye el pie de página con número de página e imagen de marca
+  static pw.Widget buildFooter(
+    pw.Context context, {
+    pw.ImageProvider? footerImage,
+  }) {
+    return pw.Column(
+      children: [
+        pw.Container(
+          alignment: pw.Alignment.center,
+          margin: const pw.EdgeInsets.only(top: 20),
+          child: pw.Text(
+            'Página ${context.pageNumber} de ${context.pagesCount}',
+            style: PdfThemeConfig.captionStyle,
+          ),
+        ),
+        pw.SizedBox(height: 10),
+        if (footerImage != null)
+          pw.Container(
+            width: 50,
+            height: 25,
+            child: pw.Image(footerImage, fit: pw.BoxFit.contain),
+          ),
+      ],
     );
   }
 }

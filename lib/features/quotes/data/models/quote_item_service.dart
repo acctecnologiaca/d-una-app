@@ -59,15 +59,13 @@ class QuoteItemService {
       name: json['name'] as String,
       description: json['description'] as String?,
 
-      quantity: (json['quantity'] as num).toDouble(),
-      costPrice: (json['cost_price'] as num).toDouble(),
-      profitMargin: (json['profit_margin'] as num).toDouble(),
-      unitPrice: (json['unit_price'] as num).toDouble(),
-      taxRate: (json['tax_rate'] as num).toDouble(),
-      taxAmount: json['tax_amount'] != null
-          ? (json['tax_amount'] as num).toDouble()
-          : 0,
-      totalPrice: (json['total_price'] as num).toDouble(),
+      quantity: (json['quantity'] as num?)?.toDouble() ?? 0.0,
+      costPrice: (json['cost_price'] as num?)?.toDouble() ?? 0.0,
+      profitMargin: (json['profit_margin'] as num?)?.toDouble() ?? 0.0,
+      unitPrice: (json['unit_price'] as num?)?.toDouble() ?? 0.0,
+      taxRate: (json['tax_rate'] as num?)?.toDouble() ?? 0.0,
+      taxAmount: (json['tax_amount'] as num?)?.toDouble() ?? 0.0,
+      totalPrice: (json['total_price'] as num?)?.toDouble() ?? 0.0,
 
       warrantyTime: json['warranty_time'] as int?,
       warrantyUnit: json['warranty_unit'] as String?,

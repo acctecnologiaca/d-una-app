@@ -83,6 +83,11 @@ class SettingsScreen extends StatelessWidget {
             context,
             onTap: () => context.push('/settings/observations'),
           ),
+          _buildSettingsItem(
+            'Plantillas de correo',
+            context,
+            onTap: () => context.push('/settings/email-templates'),
+          ),
           const Divider(height: 32),
 
           // Group 4: General (No header)

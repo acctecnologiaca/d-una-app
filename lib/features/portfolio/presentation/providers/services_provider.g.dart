@@ -25,7 +25,7 @@ final servicesRepositoryProvider =
 @Deprecated('Will be removed in 3.0. Use Ref instead')
 // ignore: unused_element
 typedef ServicesRepositoryRef = AutoDisposeProviderRef<ServicesRepository>;
-String _$servicesHash() => r'3e9e99c4f746ef30290d82ec151e77dd0e845687';
+String _$servicesHash() => r'92c716a2b1e1de888dee27f5d6d1905139b62e7c';
 
 /// See also [Services].
 @ProviderFor(Services)
