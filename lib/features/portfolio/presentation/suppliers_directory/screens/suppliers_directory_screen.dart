@@ -18,6 +18,11 @@ class SuppliersDirectoryScreen extends ConsumerWidget {
     final suppliersAsync = ref.watch(suppliersProvider);
     final userProfileAsync = ref.watch(userProfileProvider);
 
+    final isError = suppliersAsync.maybeWhen(
+      error: (error, stack) => true,
+      orElse: () => false,
+    );
+
     // Determine verification status safely
     final isVerified =
         userProfileAsync.asData?.value?.verificationStatus == 'verified';
@@ -33,33 +38,37 @@ class SuppliersDirectoryScreen extends ConsumerWidget {
       ),
       body: Column(
         children: [
-          Padding(
-            padding: const EdgeInsets.all(16.0),
-            child: CustomSearchBar(
-              hintText: 'Buscar proveedores, productos, marcas,...',
-              readOnly: true,
-              showFilterIcon: true,
-              onTap: () {
-                Navigator.of(context).push(
-                  MaterialPageRoute(
-                    builder: (context) => const SupplierSearchScreen(),
-                  ),
-                );
-              },
-              onFilterTap: () {
-                Navigator.of(context).push(
-                  MaterialPageRoute(
-                    builder: (context) => const SupplierSearchScreen(),
-                  ),
-                );
-              },
+          if (!isError)
+            Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: CustomSearchBar(
+                hintText: 'Buscar proveedores, productos, marcas,...',
+                readOnly: true,
+                showFilterIcon: true,
+                onTap: () {
+                  Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (context) => const SupplierSearchScreen(),
+                    ),
+                  );
+                },
+                onFilterTap: () {
+                  Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (context) => const SupplierSearchScreen(),
+                    ),
+                  );
+                },
+              ),
             ),
-          ),
 
           Expanded(
             child: suppliersAsync.when(
               loading: () => const Center(child: CircularProgressIndicator()),
-              error: (err, stack) => FriendlyErrorWidget(error: err),
+              error: (err, stack) => FriendlyErrorWidget(
+                error: err,
+                onRetry: () => ref.invalidate(suppliersProvider),
+              ),
               data: (suppliers) {
                 if (suppliers.isEmpty) {
                   return const Center(

@@ -91,6 +91,38 @@ class _EditEmailTemplateScreenState extends ConsumerState<EditEmailTemplateScree
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            // Informational banner about template usage
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: colors.primaryContainer.withValues(alpha: 0.3),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(
+                  color: colors.primaryContainer,
+                ),
+              ),
+              child: Row(
+                children: [
+                  Icon(
+                    Icons.info_outline,
+                    size: 20,
+                    color: colors.primary,
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Text(
+                      'Esta plantilla se utiliza tanto para correos electrónicos como para mensajes de WhatsApp.',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: colors.onSurface,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 24),
+
             _buildSectionHeader(colors, 'Asunto del Correo'),
             const SizedBox(height: 8),
             CustomTextField(

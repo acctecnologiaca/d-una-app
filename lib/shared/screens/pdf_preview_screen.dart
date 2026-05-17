@@ -1,6 +1,7 @@
 import 'dart:io';
 import 'dart:typed_data';
 import 'package:flutter/material.dart';
+import 'package:material_symbols_icons/symbols.dart';
 import 'package:pdf/pdf.dart';
 import 'package:printing/printing.dart';
 import 'package:flutter_file_dialog/flutter_file_dialog.dart';
@@ -31,15 +32,23 @@ class PdfPreviewScreen extends StatelessWidget {
         build: buildPdf,
         pdfFileName: fileName,
         allowPrinting: false,
-        allowSharing: true,
-        canChangePageFormat: true,
+        allowSharing: false,
+        canChangeOrientation: false,
+        canChangePageFormat: false,
         initialPageFormat: PdfPageFormat.letter,
+        enableScrollToPage: true,
+        canDebug: false,
+        scrollViewDecoration: BoxDecoration(color: Colors.white),
+        actionBarTheme: PdfActionBarTheme(
+          backgroundColor: colors.surface,
+          iconColor: colors.onSurfaceVariant,
+        ),
         loadingWidget: const Center(child: CircularProgressIndicator()),
         onError: (context, error) =>
             const Center(child: Text('Error al generar el PDF')),
         actions: [
           PdfPreviewAction(
-            icon: const Icon(Icons.download_rounded),
+            icon: const Icon(Symbols.download, size: 36),
             onPressed: (context, buildPdf, pageFormat) async {
               // Feedback visual inmediato
               ScaffoldMessenger.of(context).showSnackBar(

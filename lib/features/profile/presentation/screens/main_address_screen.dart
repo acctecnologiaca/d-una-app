@@ -1,5 +1,6 @@
 import 'package:csc_picker_plus/csc_picker_plus.dart';
 import 'package:d_una_app/shared/widgets/friendly_error_widget.dart';
+import 'package:d_una_app/shared/widgets/custom_dialog.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -101,6 +102,36 @@ class _MainAddressScreenState extends ConsumerState<MainAddressScreen> {
       return;
     }
 
+    final colors = Theme.of(context).colorScheme;
+    final isVerified = currentProfile.verificationStatus == 'verified';
+
+    if (isVerified) {
+      final confirmed = await CustomDialog.show<bool>(
+        context: context,
+        dialog: CustomDialog.destructive(
+          title: 'Modificar dirección principal',
+          contentText:
+              'Al modificar tu dirección principal, perderás tu estado de verificación actual y pasarás a "No verificado". ¿Deseas continuar?',
+          actions: [
+            TextButton(
+              onPressed: () => context.pop(false),
+              child: const Text('Cancelar'),
+            ),
+            FilledButton(
+              onPressed: () => context.pop(true),
+              style: FilledButton.styleFrom(
+                backgroundColor: colors.error,
+                foregroundColor: colors.onError,
+              ),
+              child: const Text('Aceptar'),
+            ),
+          ],
+        ),
+      );
+
+      if (confirmed != true) return;
+    }
+
     setState(() => _isLoading = true);
 
     try {
@@ -109,6 +140,7 @@ class _MainAddressScreenState extends ConsumerState<MainAddressScreen> {
         mainCountry: _selectedCountry,
         mainState: _selectedState,
         mainCity: _selectedCity,
+        verificationStatus: isVerified ? 'unverified' : currentProfile.verificationStatus,
       );
 
       await ref.read(profileRepositoryProvider).updateProfile(updatedProfile);

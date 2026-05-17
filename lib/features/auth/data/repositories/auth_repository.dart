@@ -1,5 +1,7 @@
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+enum EmailStatus { available, verified, unverified }
+
 abstract class AuthRepository {
   Future<void> signUp({
     required String email,
@@ -18,7 +20,7 @@ abstract class AuthRepository {
   Future<void> resetPassword({required String email});
 
   Future<void> updatePassword(String newPassword);
-
+  Future<EmailStatus> getEmailStatus(String email);
   User? get currentUser;
 }
 
@@ -71,5 +73,23 @@ class SupabaseAuthRepository implements AuthRepository {
   @override
   Future<void> updatePassword(String newPassword) async {
     await _supabase.auth.updateUser(UserAttributes(password: newPassword));
+  }
+
+  @override
+  Future<EmailStatus> getEmailStatus(String email) async {
+    final response = await _supabase.rpc('check_email_status', params: {
+      'email_to_check': email,
+    });
+
+    switch (response.toString()) {
+      case 'AVAILABLE':
+        return EmailStatus.available;
+      case 'VERIFIED':
+        return EmailStatus.verified;
+      case 'UNVERIFIED':
+        return EmailStatus.unverified;
+      default:
+        return EmailStatus.verified;
+    }
   }
 }

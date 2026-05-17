@@ -7,6 +7,7 @@ import '../widgets/profile_menu_tile.dart';
 import '../providers/profile_provider.dart';
 import '../providers/occupations_provider.dart';
 import '../../../../core/utils/session_manager.dart';
+import '../../../../main.dart';
 import '../../../../shared/widgets/custom_dialog.dart';
 
 class ProfileScreen extends ConsumerWidget {
@@ -31,8 +32,13 @@ class ProfileScreen extends ConsumerWidget {
             onPressed: () async {
               context.pop(); // Close dialog
               try {
+                // Perform sign out
                 await Supabase.instance.client.auth.signOut();
                 await SessionManager().clearSessionData();
+                
+                // Nuclear reset of Riverpod state using the GlobalKey
+                // This must happen to clear keepAlive providers
+                RootApp.restart(null);
               } catch (e) {
                 if (context.mounted) {
                   ScaffoldMessenger.of(context).showSnackBar(

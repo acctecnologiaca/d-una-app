@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:d_una_app/shared/widgets/friendly_error_widget.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:material_symbols_icons/symbols.dart';
 import 'providers/clients_provider.dart';
 import 'package:d_una_app/features/profile/presentation/providers/profile_provider.dart';
 import 'providers/add_client_provider.dart';
@@ -10,6 +11,8 @@ import '../../../../shared/widgets/custom_search_bar.dart';
 import '../../../../shared/widgets/sort_selector.dart';
 import '../../../shared/widgets/custom_extended_fab.dart';
 import '../../../shared/widgets/standard_list_item.dart';
+import '../../../shared/widgets/user_profile_avatar.dart';
+import '../../../../shared/widgets/empty_list_state.dart';
 
 class ClientListScreen extends ConsumerStatefulWidget {
   const ClientListScreen({super.key});
@@ -45,229 +48,210 @@ class _ClientListScreenState extends ConsumerState<ClientListScreen> {
     final userProfileAsync = ref.watch(userProfileProvider);
     final colors = Theme.of(context).colorScheme;
 
+    final isError = clientsAsync.hasError || userProfileAsync.hasError;
+
     return Scaffold(
       backgroundColor: colors.surface,
       resizeToAvoidBottomInset: false,
       body: SafeArea(
         child: Column(
           children: [
-            // Custom Header with Search Bar
-            Column(
-              children: [
-                // App Bar Row
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(4, 4, 16, 0),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      IconButton(
-                        icon: const Icon(Icons.menu),
-                        onPressed: () {
-                          Scaffold.of(context).openDrawer();
-                        },
-                      ),
-                      Text(
-                        'Clientes',
-                        style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                          fontSize: 22,
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
-                      InkWell(
-                        onTap: () => context.push('/profile'),
-                        child: userProfileAsync.when(
-                          data: (profile) {
-                            final avatarUrl = profile?.avatarUrl;
-                            return CircleAvatar(
-                              radius: 18,
-                              backgroundImage: avatarUrl != null
-                                  ? NetworkImage(avatarUrl)
-                                  : const NetworkImage(
-                                      'https://i.pravatar.cc/150?img=11',
-                                    ),
-                            );
-                          },
-                          loading: () => const CircleAvatar(
-                            radius: 18,
-                            child: CircularProgressIndicator(strokeWidth: 2),
-                          ),
-                          error: (err, stack) => const CircleAvatar(
-                            radius: 18,
-                            backgroundImage: NetworkImage(
-                              'https://i.pravatar.cc/150?img=11',
-                            ),
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 16),
-
-                // Search Bar
-                Padding(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 16.0,
-                    vertical: 8.0,
-                  ),
-                  child: CustomSearchBar(
-                    controller: _searchController,
-                    hintText: 'Buscar...',
-                    readOnly: true,
-                    showFilterIcon: true,
-                    onTap: () {
-                      context.push('/clients/search');
-                    },
-                  ),
-                ),
-
-                const SizedBox(height: 16),
-              ],
-            ),
-
-            // Sort Options Row
+            // App Bar Row (Always visible)
             Padding(
-              padding: const EdgeInsets.symmetric(
-                horizontal: 16.0,
-                vertical: 8.0,
-              ),
+              padding: const EdgeInsets.fromLTRB(4, 4, 16, 0),
               child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  SortSelector(
-                    currentSort: _currentSort,
-                    options: const [
-                      SortOption.recent,
-                      SortOption.nameAZ,
-                      SortOption.nameZA,
-                      SortOption.type,
-                    ],
-                    onSortChanged: (val) => setState(() => _currentSort = val),
+                  IconButton(
+                    icon: const Icon(Icons.menu),
+                    onPressed: isError
+                        ? null
+                        : () {
+                            Scaffold.of(context).openDrawer();
+                          },
                   ),
+                  Text(
+                    'Clientes',
+                    style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                      fontSize: 22,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                  UserProfileAvatar(enabled: !isError),
                 ],
               ),
             ),
+            const SizedBox(height: 16),
+
+            if (!isError) ...[
+              // Search Bar
+              Padding(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16.0,
+                  vertical: 8.0,
+                ),
+                child: CustomSearchBar(
+                  controller: _searchController,
+                  hintText: 'Buscar...',
+                  readOnly: true,
+                  showFilterIcon: true,
+                  onTap: () {
+                    context.push('/clients/search');
+                  },
+                ),
+              ),
+
+              const SizedBox(height: 16),
+
+              // Sort Options Row
+              Padding(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16.0,
+                  vertical: 8.0,
+                ),
+                child: Row(
+                  children: [
+                    SortSelector(
+                      currentSort: _currentSort,
+                      options: const [
+                        SortOption.recent,
+                        SortOption.nameAZ,
+                        SortOption.nameZA,
+                        SortOption.type,
+                      ],
+                      onSortChanged: (val) =>
+                          setState(() => _currentSort = val),
+                    ),
+                  ],
+                ),
+              ),
+            ],
 
             // Content
             Expanded(
-              child: clientsAsync.when(
+              child: userProfileAsync.when(
                 loading: () => const Center(child: CircularProgressIndicator()),
-                error: (err, stack) => FriendlyErrorWidget(error: err),
-                data: (clients) {
-                  // Filter Clients
-                  var filteredClients = clients.where((client) {
-                    final normalizedQuery = _searchQuery.normalized;
-                    final name = client.name.normalized;
-                    final id = (client.taxId ?? '').normalized;
-                    final email = (client.email ?? '').normalized;
-                    return name.contains(normalizedQuery) ||
-                        id.contains(normalizedQuery) ||
-                        email.contains(normalizedQuery);
-                  }).toList();
+                error: (err, stack) => FriendlyErrorWidget(
+                  error: err,
+                  onRetry: () {
+                    ref.invalidate(userProfileProvider);
+                    ref.invalidate(clientsProvider);
+                  },
+                ),
+                data: (_) => clientsAsync.when(
+                  loading: () =>
+                      const Center(child: CircularProgressIndicator()),
+                  error: (err, stack) => FriendlyErrorWidget(
+                    error: err,
+                    onRetry: () => ref.invalidate(clientsProvider),
+                  ),
+                  data: (clients) {
+                    // Filter Clients
+                    var filteredClients = clients.where((client) {
+                      final normalizedQuery = _searchQuery.normalized;
+                      final name = client.name.normalized;
+                      final id = (client.taxId ?? '').normalized;
+                      final email = (client.email ?? '').normalized;
+                      return name.contains(normalizedQuery) ||
+                          id.contains(normalizedQuery) ||
+                          email.contains(normalizedQuery);
+                    }).toList();
 
-                  // Sort Clients
-                  filteredClients.sort((a, b) {
-                    switch (_currentSort) {
-                      case SortOption.recent:
-                      case SortOption.frequency:
-                        // Assuming createdAt exists and is DateTime.
-                        // If not, we might need another field or fallback.
-                        // Checked model: DateTime createdAt exists.
-                        return b.createdAt.compareTo(a.createdAt);
-                      case SortOption.nameAZ:
-                        return a.name.toLowerCase().compareTo(
-                          b.name.toLowerCase(),
-                        );
-                      case SortOption.nameZA:
-                        return b.name.toLowerCase().compareTo(
-                          a.name.toLowerCase(),
-                        );
-                      case SortOption.type:
-                        // Sort by type: company first, then person.
-                        // If same type, sort by name A-Z.
-                        if (a.type != b.type) {
-                          return a.type == 'company' ? -1 : 1;
-                        }
-                        return a.name.toLowerCase().compareTo(
-                          b.name.toLowerCase(),
-                        );
-                      default:
-                        return 0;
-                    }
-                  });
+                    // Sort Clients
+                    filteredClients.sort((a, b) {
+                      switch (_currentSort) {
+                        case SortOption.recent:
+                        case SortOption.frequency:
+                          // Assuming createdAt exists and is DateTime.
+                          // If not, we might need another field or fallback.
+                          // Checked model: DateTime createdAt exists.
+                          return b.createdAt.compareTo(a.createdAt);
+                        case SortOption.nameAZ:
+                          return a.name.toLowerCase().compareTo(
+                            b.name.toLowerCase(),
+                          );
+                        case SortOption.nameZA:
+                          return b.name.toLowerCase().compareTo(
+                            a.name.toLowerCase(),
+                          );
+                        case SortOption.type:
+                          // Sort by type: company first, then person.
+                          // If same type, sort by name A-Z.
+                          if (a.type != b.type) {
+                            return a.type == 'company' ? -1 : 1;
+                          }
+                          return a.name.toLowerCase().compareTo(
+                            b.name.toLowerCase(),
+                          );
+                        default:
+                          return 0;
+                      }
+                    });
 
-                  if (filteredClients.isEmpty) {
-                    if (_searchQuery.isNotEmpty) {
-                      return Center(
-                        child: Text(
-                          'No se encontraron resultados',
-                          style: TextStyle(color: colors.outline, fontSize: 16),
-                        ),
+                    if (filteredClients.isEmpty) {
+                      return EmptyListState(
+                        icon: Symbols.people,
+                        message: 'No hay clientes agregados',
+                        searchQuery: _searchQuery,
                       );
                     }
-                    return Center(
-                      child: Text(
-                        'No hay clientes agregados',
-                        style: TextStyle(
-                          color: Colors.grey.shade400,
-                          fontSize: 16,
-                        ),
+
+                    return ListView.separated(
+                      padding: const EdgeInsets.fromLTRB(0, 8, 0, 100),
+                      itemCount: filteredClients.length,
+                      separatorBuilder: (context, index) => const Divider(
+                        height: 1,
+                        indent: 16,
+                        endIndent: 16,
+                        color: Colors.transparent,
                       ),
-                    );
-                  }
+                      itemBuilder: (context, index) {
+                        final client = filteredClients[index];
 
-                  return ListView.separated(
-                    padding: const EdgeInsets.fromLTRB(0, 8, 0, 100),
-                    itemCount: filteredClients.length,
-                    separatorBuilder: (context, index) => const Divider(
-                      height: 1,
-                      indent: 16,
-                      endIndent: 16,
-                      color: Colors.transparent,
-                    ),
-                    itemBuilder: (context, index) {
-                      final client = filteredClients[index];
-
-                      return Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 16.0),
-                        child: StandardListItem(
-                          leading: Icon(
-                            client.type == 'company'
-                                ? Icons.domain_outlined
-                                : Icons.person_outlined,
-                            size: 32,
-                            color: colors.onSurfaceVariant,
+                        return Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                          child: StandardListItem(
+                            leading: Icon(
+                              client.type == 'company'
+                                  ? Icons.domain_outlined
+                                  : Icons.person_outlined,
+                              size: 32,
+                              color: colors.onSurfaceVariant,
+                            ),
+                            title: client.name,
+                            subtitle: Text(client.taxId ?? 'Sin ID'),
+                            onTap: () {
+                              // Navigate to details using ID
+                              context.push(
+                                '/clients/${client.id}',
+                                extra: client,
+                              );
+                            },
                           ),
-                          title: client.name,
-                          subtitle: Text(client.taxId ?? 'Sin ID'),
-                          onTap: () {
-                            // Navigate to details using ID
-                            context.push(
-                              '/clients/${client.id}',
-                              extra: client,
-                            );
-                          },
-                        ),
-                      );
-                    },
-                  );
-                },
+                        );
+                      },
+                    );
+                  },
+                ),
               ),
             ),
           ],
         ),
       ),
-      floatingActionButton: Padding(
-        padding: const EdgeInsets.only(bottom: 0.0),
-        child: CustomExtendedFab(
-          onPressed: () {
-            // Reset provider state before starting new wizard
-            ref.read(addClientProvider.notifier).reset();
-            context.push('/clients/add?returnTo=/clients');
-          },
-          label: 'Agregar',
-          icon: Icons.add,
-        ),
-      ),
+      floatingActionButton: isError
+          ? null
+          : Padding(
+              padding: const EdgeInsets.only(bottom: 0.0),
+              child: CustomExtendedFab(
+                onPressed: () {
+                  // Reset provider state before starting new wizard
+                  ref.read(addClientProvider.notifier).reset();
+                  context.push('/clients/add?returnTo=/clients');
+                },
+                label: 'Agregar',
+                icon: Icons.add,
+              ),
+            ),
     );
   }
 }

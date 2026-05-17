@@ -21,7 +21,7 @@ class EmailTemplatesListScreen extends ConsumerWidget {
     return Scaffold(
       backgroundColor: colors.surface,
       appBar: AppBar(
-        title: const Text('Configuración de Correos'),
+        title: const Text('Plantillas de mensajes'),
         backgroundColor: colors.surface,
         elevation: 0,
       ),

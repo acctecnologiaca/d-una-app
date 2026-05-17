@@ -12,7 +12,7 @@ ServicesRepository servicesRepository(Ref ref) {
   return SupabaseServicesRepository(Supabase.instance.client);
 }
 
-@riverpod
+@Riverpod(keepAlive: true)
 class Services extends _$Services {
   @override
   FutureOr<List<ServiceModel>> build() {

@@ -6,6 +6,9 @@ import 'core/router/app_router.dart';
 import 'core/theme/app_theme.dart';
 import 'core/utils/session_manager.dart';
 import 'package:d_una_app/features/profile/presentation/providers/profile_provider.dart';
+import 'package:d_una_app/shared/providers/pdf_preview_provider.dart';
+
+final GlobalKey<RootAppState> rootAppKey = GlobalKey();
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -17,7 +20,6 @@ void main() async {
     authOptions: const FlutterAuthClientOptions(
       authFlowType: AuthFlowType.pkce,
     ),
-
     debug: true, // Enable debug logs to track connection issues
   );
 
@@ -25,7 +27,67 @@ void main() async {
   final sessionManager = SessionManager();
   sessionManager.checkSessionValidity(); // Fire and forget, don't block startup
 
-  runApp(const ProviderScope(child: DUnaApp()));
+  runApp(RootApp(key: rootAppKey));
+}
+
+class RootApp extends StatefulWidget {
+  const RootApp({super.key});
+
+  static void restart(BuildContext? context) {
+    debugPrint(
+      'RootApp.restart() called. Context provided: ${context != null}',
+    );
+    if (context != null) {
+      final state = context.findAncestorStateOfType<RootAppState>();
+      if (state != null) {
+        state.restart();
+      } else {
+        debugPrint(
+          'Warning: RootAppState not found in context. Falling back to rootAppKey.',
+        );
+        rootAppKey.currentState?.restart();
+      }
+    } else {
+      rootAppKey.currentState?.restart();
+    }
+  }
+
+  @override
+  State<RootApp> createState() => RootAppState();
+}
+
+class RootAppState extends State<RootApp> {
+  Key _providerScopeKey = UniqueKey();
+
+  Future<void> restart() async {
+    debugPrint(
+      'RootAppState.restart() executing. Full cleanup and Recreating ProviderScope.',
+    );
+
+    try {
+      // 1. Clear Supabase Auth
+      await Supabase.instance.client.auth.signOut();
+
+      // 2. Clear Session Manager (SharedPreferences)
+      await SessionManager().clearSessionData();
+
+      // 3. Clear Static Caches (like PDF preview)
+      PdfPreviewData.lastData = null;
+    } catch (e) {
+      debugPrint('Error during full restart cleanup: $e');
+    }
+
+    if (mounted) {
+      setState(() {
+        _providerScopeKey = UniqueKey();
+      });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return ProviderScope(key: _providerScopeKey, child: DUnaApp());
+  }
 }
 
 class DUnaApp extends ConsumerStatefulWidget {
@@ -39,6 +101,7 @@ class _DUnaAppState extends ConsumerState<DUnaApp> with WidgetsBindingObserver {
   @override
   void initState() {
     super.initState();
+    debugPrint('DUnaApp.initState() - App is starting or restarting.');
     WidgetsBinding.instance.addObserver(this);
   }
 
@@ -70,19 +133,20 @@ class _DUnaAppState extends ConsumerState<DUnaApp> with WidgetsBindingObserver {
         ref.invalidate(userProfileProvider);
         ref.invalidate(shippingMethodsProvider);
         ref.invalidate(verificationDocumentsProvider);
-        debugPrint('Providers realtime invalidados para restaurar streams.');
       }
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    final router = ref.watch(routerProvider);
+
     return MaterialApp.router(
-      title: 'd·una',
+      title: 'D-Una',
       theme: AppTheme.lightTheme,
       darkTheme: AppTheme.lightTheme,
       themeMode: ThemeMode.system,
-      routerConfig: appRouter,
+      routerConfig: router,
       localizationsDelegates: const [
         GlobalMaterialLocalizations.delegate,
         GlobalWidgetsLocalizations.delegate,

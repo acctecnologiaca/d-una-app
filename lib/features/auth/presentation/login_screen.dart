@@ -265,6 +265,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                 CustomButton(
                   text: 'Crear una cuenta nueva',
                   onPressed: () {
+                    ref.read(registerProvider.notifier).reset();
                     context.push('/register');
                   },
                   type: ButtonType.secondary,

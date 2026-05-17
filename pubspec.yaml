@@ -1,8 +1,8 @@
 name: d_una_app
-description: "A small ERP for freelancers."
+description: "More than a small ERP for freelancers."
 # The following line prevents the package from being accidentally published to
 # pub.dev using `flutter pub publish`. This is preferred for private packages.
-publish_to: 'none' # Remove this line if you wish to publish to pub.dev
+publish_to: "none" # Remove this line if you wish to publish to pub.dev
 
 # The following defines the version and build number for your application.
 # A version number is three numbers separated by dots, like 1.2.43
@@ -38,7 +38,7 @@ dev_dependencies:
 
 flutter_launcher_icons:
   android: "launcher_icon"
-  ios: true
+  ios: false
   image_path: "assets/icons/icon_d_una.png"
   min_sdk_android: 21 # android min sdk min:16, default 21
   web:
@@ -50,21 +50,21 @@ flutter_launcher_icons:
 dependencies:
   flutter:
     sdk: flutter
-  
+
   # Core
   supabase_flutter: ^2.8.2
   flutter_riverpod: ^2.5.1
   riverpod_annotation: ^2.3.5
   go_router: ^14.8.0
-  
+
   # UI
   google_fonts: ^6.2.1
   flutter_svg: ^2.0.10+1
-  
+
   # Utilities
   equatable: ^2.0.5
   json_annotation: ^4.9.0
-  
+
   # Icons
   cupertino_icons: ^1.0.8
   csc_picker_plus: ^0.0.3
@@ -85,7 +85,7 @@ dependencies:
   path_provider: ^2.1.2
   http: ^1.1.0
   path: ^1.9.0
-  
+
   # PDF Generation
   pdf: ^3.12.0
   printing: ^5.14.3

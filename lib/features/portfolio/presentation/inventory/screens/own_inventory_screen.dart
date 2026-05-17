@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:d_una_app/shared/widgets/friendly_error_widget.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import '../../../../profile/presentation/providers/profile_provider.dart';
 import '../../providers/products_provider.dart';
 import '../widgets/inventory_item_card.dart';
 import '../../../../../shared/widgets/custom_search_bar.dart';
@@ -9,6 +10,7 @@ import '../../../../../core/utils/string_extensions.dart';
 import '../widgets/inventory_action_sheet.dart';
 import '../../../../../shared/widgets/sort_selector.dart';
 import '../../../../../shared/widgets/custom_extended_fab.dart';
+import '../../../../../shared/widgets/empty_list_state.dart';
 
 class OwnInventoryScreen extends ConsumerStatefulWidget {
   const OwnInventoryScreen({super.key});
@@ -45,6 +47,9 @@ class _OwnInventoryScreenState extends ConsumerState<OwnInventoryScreen> {
   Widget build(BuildContext context) {
     final colors = Theme.of(context).colorScheme;
     final productsAsync = ref.watch(productsProvider);
+    final userProfileAsync = ref.watch(userProfileProvider);
+
+    final isError = productsAsync.hasError || userProfileAsync.hasError;
 
     return Scaffold(
       appBar: AppBar(
@@ -64,63 +69,78 @@ class _OwnInventoryScreenState extends ConsumerState<OwnInventoryScreen> {
       ),
       body: Column(
         children: [
-          // Search & Filter Bar
-          Padding(
-            padding: const EdgeInsets.symmetric(
-              horizontal: 16.0,
-              vertical: 8.0,
-            ),
-            child: CustomSearchBar(
-              controller: _searchController,
-              hintText: 'Buscar...',
-              readOnly: true,
-              showFilterIcon: true,
-              onTap: () {
-                context.push('/portfolio/own-inventory/search');
-              },
-            ),
-          ),
-
-          // Disclaimer (Updated text since price/stock are 0 for now)
-          Padding(
-            padding: const EdgeInsets.only(bottom: 8.0),
-            child: Text(
-              'Precios no incluyen impuesto',
-              style: TextStyle(
-                fontSize: 12,
-                fontWeight: FontWeight.bold,
-                color: colors.onSurface,
+          if (!isError) ...[
+            // Search & Filter Bar
+            Padding(
+              padding: const EdgeInsets.symmetric(
+                horizontal: 16.0,
+                vertical: 8.0,
+              ),
+              child: CustomSearchBar(
+                controller: _searchController,
+                hintText: 'Buscar...',
+                readOnly: true,
+                showFilterIcon: true,
+                onTap: () {
+                  context.push('/portfolio/own-inventory/search');
+                },
               ),
             ),
-          ),
 
-          // Sort Selector
-          Padding(
-            padding: const EdgeInsets.symmetric(
-              horizontal: 16.0,
-              vertical: 8.0,
-            ),
-            child: Row(
-              children: [
-                SortSelector(
-                  currentSort: _currentSort,
-                  onSortChanged: (val) => setState(() => _currentSort = val),
-                  options: const [
-                    SortOption.recent,
-                    SortOption.nameAZ,
-                    SortOption.nameZA,
-                  ],
+            // Disclaimer (Updated text since price/stock are 0 for now)
+            Padding(
+              padding: const EdgeInsets.only(bottom: 8.0),
+              child: Text(
+                'Precios no incluyen impuesto',
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.bold,
+                  color: colors.onSurface,
                 ),
-              ],
+              ),
             ),
-          ),
+
+            // Sort Selector
+            Padding(
+              padding: const EdgeInsets.symmetric(
+                horizontal: 16.0,
+                vertical: 8.0,
+              ),
+              child: Row(
+                children: [
+                  SortSelector(
+                    currentSort: _currentSort,
+                    onSortChanged: (val) => setState(() => _currentSort = val),
+                    options: const [
+                      SortOption.recent,
+                      SortOption.nameAZ,
+                      SortOption.nameZA,
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ],
 
           // Inventory List
           Expanded(
-            child: productsAsync.when(
+            child: userProfileAsync.when(
               loading: () => const Center(child: CircularProgressIndicator()),
-              error: (error, stack) => FriendlyErrorWidget(error: error),
-              data: (products) {
+              error: (err, stack) => FriendlyErrorWidget(
+                error: err,
+                onRetry: () {
+                  ref.invalidate(userProfileProvider);
+                  ref.invalidate(productsProvider);
+                },
+              ),
+              data: (_) => productsAsync.when(
+                loading: () =>
+                    const Center(child: CircularProgressIndicator()),
+                error: (error, stack) => FriendlyErrorWidget(
+                  error: error,
+                  onRetry: () => ref.invalidate(productsProvider),
+                ),
+                data: (products) {
                 // Filter List
                 var filteredList = products.where((product) {
                   final normalizedQuery = _searchQuery.normalizeFingerprint;
@@ -152,11 +172,10 @@ class _OwnInventoryScreenState extends ConsumerState<OwnInventoryScreen> {
                 });
 
                 if (filteredList.isEmpty) {
-                  return Center(
-                    child: Text(
-                      'No hay productos agregados a tu inventario',
-                      style: TextStyle(color: colors.outline, fontSize: 16),
-                    ),
+                  return EmptyListState(
+                    icon: Icons.inventory_2_outlined,
+                    message: 'No hay productos agregados a tu inventario',
+                    searchQuery: _searchQuery,
                   );
                 }
 
@@ -193,9 +212,12 @@ class _OwnInventoryScreenState extends ConsumerState<OwnInventoryScreen> {
               },
             ),
           ),
-        ],
+        ),
+      ],
       ),
-      floatingActionButton: Padding(
+      floatingActionButton: isError
+          ? null
+          : Padding(
         padding: const EdgeInsets.only(bottom: 40.0),
         child: CustomExtendedFab(
           onPressed: () {

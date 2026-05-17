@@ -13,7 +13,10 @@ class RegisterState {
   final String? primaryOccupationId;
   final List<String> secondaryOccupationIds;
   final bool isLoading;
+  final bool isCheckingEmail;
   final String? error;
+  final String? emailError;
+  final EmailStatus? emailStatus;
 
   const RegisterState({
     this.email = '',
@@ -23,7 +26,10 @@ class RegisterState {
     this.primaryOccupationId,
     this.secondaryOccupationIds = const [],
     this.isLoading = false,
+    this.isCheckingEmail = false,
     this.error,
+    this.emailError,
+    this.emailStatus,
   });
 
   RegisterState copyWith({
@@ -34,7 +40,12 @@ class RegisterState {
     String? primaryOccupationId,
     List<String>? secondaryOccupationIds,
     bool? isLoading,
+    bool? isCheckingEmail,
     String? error,
+    String? emailError,
+    bool clearEmailError = false,
+    EmailStatus? emailStatus,
+    bool clearEmailStatus = false,
   }) {
     return RegisterState(
       email: email ?? this.email,
@@ -45,7 +56,10 @@ class RegisterState {
       secondaryOccupationIds:
           secondaryOccupationIds ?? this.secondaryOccupationIds,
       isLoading: isLoading ?? this.isLoading,
+      isCheckingEmail: isCheckingEmail ?? this.isCheckingEmail,
       error: error ?? this.error,
+      emailError: clearEmailError ? null : (emailError ?? this.emailError),
+      emailStatus: clearEmailStatus ? null : (emailStatus ?? this.emailStatus),
     );
   }
 }
@@ -75,8 +89,52 @@ class RegisterNotifier extends StateNotifier<RegisterState> {
 
   RegisterNotifier(this._authRepository) : super(const RegisterState());
 
+  void reset() {
+    state = const RegisterState();
+  }
+
   void updateEmail(String email) {
-    state = state.copyWith(email: email);
+    state = state.copyWith(
+      email: email,
+      clearEmailError: true,
+      clearEmailStatus: true,
+      isCheckingEmail: false,
+    );
+  }
+
+  Future<EmailStatus?> checkEmailAvailability(String email) async {
+    if (email.isEmpty) return null;
+
+    state = state.copyWith(isCheckingEmail: true, clearEmailError: true);
+    try {
+      final status = await _authRepository.getEmailStatus(email);
+
+      // Verify if the email in state is still the one we just checked
+      if (state.email != email) return null;
+
+      String? errorMessage;
+      if (status == EmailStatus.verified) {
+        errorMessage = 'Este correo ya está registrado';
+      } else if (status == EmailStatus.unverified) {
+        errorMessage = 'Registro pendiente. Continúa para verificar tu correo';
+      }
+
+      state = state.copyWith(
+        emailStatus: status,
+        emailError: errorMessage,
+        clearEmailError: errorMessage == null,
+      );
+      return status;
+    } catch (e) {
+      if (state.email == email) {
+        state = state.copyWith(error: 'Error al verificar el correo');
+      }
+      return null;
+    } finally {
+      if (state.email == email) {
+        state = state.copyWith(isCheckingEmail: false);
+      }
+    }
   }
 
   void updateName({String? firstName, String? lastName}) {

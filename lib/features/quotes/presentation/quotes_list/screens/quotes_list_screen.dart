@@ -19,6 +19,8 @@ import 'package:pdf/pdf.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:d_una_app/core/pdf/templates/quote_pdf_template.dart';
 import '../../../../../shared/utils/string_utils.dart';
+import '../../../../../shared/widgets/user_profile_avatar.dart';
+import '../../../../../shared/widgets/empty_list_state.dart';
 
 class QuotesListScreen extends ConsumerStatefulWidget {
   const QuotesListScreen({super.key});
@@ -48,9 +50,11 @@ class _QuotesListScreenState extends ConsumerState<QuotesListScreen> {
   @override
   Widget build(BuildContext context) {
     final colors = Theme.of(context).colorScheme;
-    final textTheme = Theme.of(context).textTheme;
     final userProfileAsync = ref.watch(userProfileProvider);
     final selection = ref.watch(quoteSelectionProvider);
+    final quotesState = ref.watch(quotesListProvider);
+
+    final isError = quotesState.hasError || userProfileAsync.hasError;
 
     return Scaffold(
       backgroundColor: colors.surface,
@@ -60,157 +64,155 @@ class _QuotesListScreenState extends ConsumerState<QuotesListScreen> {
             // Header
             selection.isSelectionMode
                 ? _buildSelectionHeader(context, ref, selection)
-                : _buildNormalHeader(context, ref, userProfileAsync),
+                : _buildNormalHeader(context, ref, userProfileAsync, isError),
             const SizedBox(height: 16),
 
-            // Search Bar
-            Padding(
-              padding: const EdgeInsets.symmetric(
-                horizontal: 16.0,
-                vertical: 8.0,
+            if (!isError) ...[
+              // Search Bar
+              Padding(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16.0,
+                  vertical: 8.0,
+                ),
+                child: CustomSearchBar(
+                  controller: _searchController,
+                  hintText: 'Buscar...',
+                  readOnly: true,
+                  showFilterIcon: true,
+                  onFilterTap: () {},
+                  onTap: () {
+                    context.push('/quotes/search');
+                  },
+                ),
               ),
-              child: CustomSearchBar(
-                controller: _searchController,
-                hintText: 'Buscar...',
-                readOnly: true,
-                showFilterIcon: true,
-                onFilterTap: () {},
-                onTap: () {
-                  context.push('/quotes/search');
-                },
+              const SizedBox(height: 16),
+              // Sort Header
+              Padding(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16.0,
+                  vertical: 8.0,
+                ),
+                child: Row(
+                  children: [
+                    SortSelector(
+                      currentSort: _currentSort,
+                      onSortChanged: (val) =>
+                          setState(() => _currentSort = val),
+                      options: const [
+                        SortOption.recent,
+                        SortOption.dateIssued,
+                        SortOption.nameAZ,
+                        SortOption.nameZA,
+                      ],
+                    ),
+                  ],
+                ),
               ),
-            ),
-            const SizedBox(height: 16),
-            // Sort Header
-            Padding(
-              padding: const EdgeInsets.symmetric(
-                horizontal: 16.0,
-                vertical: 8.0,
-              ),
-              child: Row(
-                children: [
-                  SortSelector(
-                    currentSort: _currentSort,
-                    onSortChanged: (val) => setState(() => _currentSort = val),
-                    options: const [
-                      SortOption.recent,
-                      SortOption.dateIssued,
-                      SortOption.nameAZ,
-                      SortOption.nameZA,
-                    ],
-                  ),
-                ],
-              ),
-            ),
-
+              const SizedBox(height: 16),
+            ],
             // List
             Expanded(
-              child: ref
-                  .watch(quotesListProvider)
-                  .when(
-                    data: (items) {
-                      // Exclude archived quotes from main list
-                      final activeItems = items
-                          .where((q) => !q.isArchived)
-                          .toList();
+              child: userProfileAsync.when(
+                loading: () => const Center(child: CircularProgressIndicator()),
+                error: (err, stack) => FriendlyErrorWidget(
+                  error: err,
+                  onRetry: () {
+                    ref.invalidate(userProfileProvider);
+                    ref.read(quotesListProvider.notifier).refresh();
+                  },
+                ),
+                data: (_) => ref
+                    .watch(quotesListProvider)
+                    .when(
+                      data: (items) {
+                        // Exclude archived quotes from main list
+                        final activeItems = items
+                            .where((q) => !q.isArchived)
+                            .toList();
 
-                      // Filter Logic (Search)
-                      var filteredItems = activeItems.where((quote) {
-                        final query = _searchController.text.toLowerCase();
-                        if (query.isEmpty) return true;
-                        return quote.clientName.toLowerCase().contains(query) ||
-                            quote.quoteNumber.toLowerCase().contains(query);
-                      }).toList();
+                        // Filter Logic (Search)
+                        var filteredItems = activeItems.where((quote) {
+                          final query = _searchController.text.toLowerCase();
+                          if (query.isEmpty) return true;
+                          return quote.clientName.toLowerCase().contains(
+                                query,
+                              ) ||
+                              quote.quoteNumber.toLowerCase().contains(query);
+                        }).toList();
 
-                      // Sort Logic
-                      filteredItems.sort((a, b) {
-                        switch (_currentSort) {
-                          case SortOption.recent:
-                          case SortOption.frequency:
-                            return b.createdAt.compareTo(a.createdAt);
-                          case SortOption.dateIssued:
-                            return b.date.compareTo(a.date);
-                          case SortOption.nameAZ:
-                            return a.clientName.compareTo(b.clientName);
-                          case SortOption.nameZA:
-                            return b.clientName.compareTo(a.clientName);
-                          default:
-                            return 0;
+                        // Sort Logic
+                        filteredItems.sort((a, b) {
+                          switch (_currentSort) {
+                            case SortOption.recent:
+                            case SortOption.frequency:
+                              return b.createdAt.compareTo(a.createdAt);
+                            case SortOption.dateIssued:
+                              return b.date.compareTo(a.date);
+                            case SortOption.nameAZ:
+                              return a.clientName.compareTo(b.clientName);
+                            case SortOption.nameZA:
+                              return b.clientName.compareTo(a.clientName);
+                            default:
+                              return 0;
+                          }
+                        });
+
+                        if (filteredItems.isEmpty) {
+                          return EmptyListState(
+                            icon: Icons.description_outlined,
+                            message: 'No hay cotizaciones registradas.',
+                            searchQuery: _searchController.text,
+                          );
                         }
-                      });
 
-                      if (filteredItems.isEmpty) {
-                        return Center(
-                          child: Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Icon(
-                                Icons.description_outlined,
-                                size: 64,
-                                color: colors.onSurfaceVariant.withValues(
-                                  alpha: 0.5,
-                                ),
-                              ),
-                              const SizedBox(height: 16),
-                              Text(
-                                _searchController.text.isEmpty
-                                    ? 'No hay cotizaciones registradas.'
-                                    : 'No se encontraron resultados.',
-                                style: textTheme.bodyLarge?.copyWith(
-                                  color: colors.onSurfaceVariant,
-                                ),
-                              ),
-                            ],
+                        return RefreshIndicator(
+                          onRefresh: () =>
+                              ref.read(quotesListProvider.notifier).refresh(),
+                          child: ListView.separated(
+                            //padding: const EdgeInsets.symmetric(horizontal: 0),
+                            physics: const AlwaysScrollableScrollPhysics(),
+                            itemCount: filteredItems.length,
+                            separatorBuilder: (context, index) => const Divider(
+                              height: 0,
+                              indent: 16,
+                              endIndent: 16,
+                              color: Colors.transparent,
+                            ),
+                            itemBuilder: (context, index) {
+                              final item = filteredItems[index];
+                              return QuoteCard(
+                                quote: item,
+                                isSelectionMode: selection.isSelectionMode,
+                                isSelected: selection.isSelected(item.id),
+                                onLongPress: () => ref
+                                    .read(quoteSelectionProvider.notifier)
+                                    .toggle(item.id),
+                                onTap: selection.isSelectionMode
+                                    ? () => ref
+                                          .read(quoteSelectionProvider.notifier)
+                                          .toggle(item.id)
+                                    : () => context.push(
+                                        '/quotes/view/${item.id}',
+                                      ),
+                              );
+                            },
                           ),
                         );
-                      }
-
-                      return RefreshIndicator(
-                        onRefresh: () =>
+                      },
+                      loading: () =>
+                          const Center(child: CircularProgressIndicator()),
+                      error: (err, stack) => FriendlyErrorWidget(
+                        error: err,
+                        onRetry: () =>
                             ref.read(quotesListProvider.notifier).refresh(),
-                        child: ListView.separated(
-                          //padding: const EdgeInsets.symmetric(horizontal: 0),
-                          physics: const AlwaysScrollableScrollPhysics(),
-                          itemCount: filteredItems.length,
-                          separatorBuilder: (context, index) => const Divider(
-                            height: 0,
-                            indent: 16,
-                            endIndent: 16,
-                            color: Colors.transparent,
-                          ),
-                          itemBuilder: (context, index) {
-                            final item = filteredItems[index];
-                            return QuoteCard(
-                              quote: item,
-                              isSelectionMode: selection.isSelectionMode,
-                              isSelected: selection.isSelected(item.id),
-                              onLongPress: () => ref
-                                  .read(quoteSelectionProvider.notifier)
-                                  .toggle(item.id),
-                              onTap: selection.isSelectionMode
-                                  ? () => ref
-                                        .read(quoteSelectionProvider.notifier)
-                                        .toggle(item.id)
-                                  : () =>
-                                        context.push('/quotes/view/${item.id}'),
-                            );
-                          },
-                        ),
-                      );
-                    },
-                    loading: () =>
-                        const Center(child: CircularProgressIndicator()),
-                    error: (err, stack) => FriendlyErrorWidget(
-                      error: err,
-                      onRetry: () =>
-                          ref.read(quotesListProvider.notifier).refresh(),
+                      ),
                     ),
-                  ),
+              ),
             ),
           ],
         ),
       ),
-      floatingActionButton: selection.isSelectionMode
+      floatingActionButton: selection.isSelectionMode || isError
           ? null
           : Padding(
               padding: const EdgeInsets.only(bottom: 0.0),
@@ -230,6 +232,7 @@ class _QuotesListScreenState extends ConsumerState<QuotesListScreen> {
     BuildContext context,
     WidgetRef ref,
     AsyncValue<UserProfile?> userProfileAsync,
+    bool isError,
   ) {
     return Padding(
       padding: const EdgeInsets.fromLTRB(4, 4, 16, 0),
@@ -238,9 +241,11 @@ class _QuotesListScreenState extends ConsumerState<QuotesListScreen> {
         children: [
           IconButton(
             icon: const Icon(Icons.menu),
-            onPressed: () {
-              Scaffold.of(context).openDrawer();
-            },
+            onPressed: isError
+                ? null
+                : () {
+                    Scaffold.of(context).openDrawer();
+                  },
           ),
           Text(
             'Cotizaciones',
@@ -249,30 +254,7 @@ class _QuotesListScreenState extends ConsumerState<QuotesListScreen> {
               fontWeight: FontWeight.w500,
             ),
           ),
-          InkWell(
-            onTap: () => context.push('/profile'),
-            child: userProfileAsync.when(
-              data: (profile) {
-                final avatarUrl = profile?.avatarUrl;
-                return CircleAvatar(
-                  radius: 18,
-                  backgroundImage: avatarUrl != null
-                      ? NetworkImage(avatarUrl)
-                      : const NetworkImage('https://i.pravatar.cc/150?img=12'),
-                );
-              },
-              loading: () => const CircleAvatar(
-                radius: 18,
-                child: CircularProgressIndicator(strokeWidth: 2),
-              ),
-              error: (err, stack) => const CircleAvatar(
-                radius: 18,
-                backgroundImage: NetworkImage(
-                  'https://i.pravatar.cc/150?img=12',
-                ),
-              ),
-            ),
-          ),
+          UserProfileAvatar(enabled: !isError),
         ],
       ),
     );
@@ -406,13 +388,13 @@ class _QuotesListScreenState extends ConsumerState<QuotesListScreen> {
                       '${fullQuote.dateIssued.toIso8601String().substring(0, 10)}_${fullQuote.clientName ?? ''}_${fullQuote.quoteNumber ?? fullQuote.id}_${fullQuote.quoteTag ?? ''}.pdf',
                     ),
                     'buildPdf': (PdfPageFormat format) => QuotePdfTemplate(
-                          quote: fullQuote,
-                          products: fullQuote.products ?? [],
-                          services: fullQuote.services ?? [],
-                          conditions: fullQuote.conditions ?? [],
-                          userProfile: userProfile,
-                          userEmail: userEmail,
-                        ).generate(format),
+                      quote: fullQuote,
+                      products: fullQuote.products ?? [],
+                      services: fullQuote.services ?? [],
+                      conditions: fullQuote.conditions ?? [],
+                      userProfile: userProfile,
+                      userEmail: userEmail,
+                    ).generate(format),
                   },
                 );
               }

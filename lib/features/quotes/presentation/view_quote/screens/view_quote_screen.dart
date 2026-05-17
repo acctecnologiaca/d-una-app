@@ -23,7 +23,7 @@ import 'package:d_una_app/features/profile/presentation/providers/profile_provid
 import 'package:pdf/pdf.dart';
 import '../../../../../shared/utils/string_utils.dart';
 import '../widgets/send_email_bottom_sheet.dart';
-
+import '../widgets/send_whatsapp_bottom_sheet.dart';
 
 class ViewQuoteScreen extends ConsumerStatefulWidget {
   final String quoteId;
@@ -76,10 +76,31 @@ class _ViewQuoteScreenState extends ConsumerState<ViewQuoteScreen>
             : (state.currentQuoteNumber ?? 'Cargando...'),
         actions: [
           IconButton(
-            onPressed: () {
-              if (state.quote != null) {
-                SendEmailBottomSheet.show(context, state.quote!);
-              }
+            onPressed: () async {
+              if (state.quote == null) return;
+
+              CustomActionSheet.show(
+                context: context,
+                title: 'Enviar cotización',
+                actions: [
+                  BottomSheetActionItem(
+                    icon: Icons.email_outlined,
+                    label: 'Enviar por correo electrónico',
+                    onTap: () {
+                      Navigator.of(context).pop();
+                      SendEmailBottomSheet.show(context, state.quote!);
+                    },
+                  ),
+                  BottomSheetActionItem(
+                    icon: 'assets/icons/whatsapp_icon.png',
+                    label: 'Enviar por WhatsApp',
+                    onTap: () {
+                      Navigator.of(context).pop();
+                      SendWhatsAppBottomSheet.show(context, state.quote!);
+                    },
+                  ),
+                ],
+              );
             },
             icon: Icon(Icons.send, color: colors.onSurfaceVariant),
           ),

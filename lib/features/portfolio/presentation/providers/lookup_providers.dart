@@ -16,13 +16,26 @@ final lookupRepositoryProvider = Provider<LookupRepository>((ref) {
 });
 
 final categoriesProvider = FutureProvider<List<Category>>((ref) async {
-  return ref.watch(lookupRepositoryProvider).getCategories();
+  final categories = await ref.watch(lookupRepositoryProvider).getCategories();
+  final currentUserId = Supabase.instance.client.auth.currentUser?.id;
+
+  // Filter: verified categories OR categories owned by the current user
+  return categories.where((category) {
+    return category.isVerified || (currentUserId != null && category.userId == currentUserId);
+  }).toList();
 });
 
 final brandsProvider = FutureProvider<List<Brand>>((ref) async {
   final brands = await ref.watch(lookupRepositoryProvider).getBrands();
+  final currentUserId = Supabase.instance.client.auth.currentUser?.id;
+
+  // Filter: verified brands OR brands owned by the current user
+  final filteredBrands = brands.where((brand) {
+    return brand.isVerified || (currentUserId != null && brand.userId == currentUserId);
+  }).toList();
+
   // Ensure "SIN MARCA" is always the first option
-  final sortedBrands = List<Brand>.from(brands);
+  final sortedBrands = List<Brand>.from(filteredBrands);
   final sinMarcaIndex = sortedBrands.indexWhere(
     (b) => b.name.toUpperCase() == 'SIN MARCA',
   );
@@ -40,7 +53,13 @@ final serviceRatesProvider = FutureProvider<List<ServiceRate>>((ref) async {
 });
 
 final uomsProvider = FutureProvider<List<Uom>>((ref) async {
-  return ref.watch(lookupRepositoryProvider).getUoms();
+  final uoms = await ref.watch(lookupRepositoryProvider).getUoms();
+  final currentUserId = Supabase.instance.client.auth.currentUser?.id;
+
+  // Filter: verified UOMs OR UOMs owned by the current user
+  return uoms.where((uom) {
+    return uom.isVerified || (currentUserId != null && uom.userId == currentUserId);
+  }).toList();
 });
 
 final unaffiliatedSuppliersProvider =

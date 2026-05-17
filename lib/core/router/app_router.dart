@@ -1,10 +1,12 @@
-import 'package:go_router/go_router.dart';
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'dart:typed_data';
 import 'package:pdf/pdf.dart';
+
 import 'package:d_una_app/features/auth/presentation/auth_routes.dart';
 import 'package:d_una_app/features/clients/presentation/client_routes.dart';
-
 import 'package:d_una_app/features/home/presentation/home_screen.dart';
 import 'package:d_una_app/features/portfolio/presentation/portfolio_screen.dart';
 import '../../features/portfolio/presentation/inventory/screens/own_inventory_screen.dart';
@@ -72,8 +74,6 @@ import '../../features/settings/presentation/screens/email_templates_list_screen
 import '../../features/settings/presentation/screens/edit_email_template_screen.dart';
 import '../../features/settings/data/models/email_template.dart';
 
-
-import 'package:supabase_flutter/supabase_flutter.dart';
 import '../router/router_notifier.dart';
 import '../../shared/screens/pdf_preview_screen.dart';
 import '../../shared/providers/pdf_preview_provider.dart';
@@ -92,33 +92,33 @@ final _shellNavigatorReportsKey = GlobalKey<NavigatorState>(
   debugLabel: 'shellReports',
 );
 
-final appRouter = GoRouter(
-  navigatorKey: rootNavigatorKey,
-  initialLocation: '/login',
-  refreshListenable: GoRouterRefreshStream(
-    Supabase.instance.client.auth.onAuthStateChange,
-  ),
-  redirect: (context, state) {
-    final session = Supabase.instance.client.auth.currentUser;
-    final isLoggingIn =
-        state.uri.toString() == '/login' ||
-        state.uri.toString() == '/register' ||
-        state.uri.toString().startsWith('/register/');
+final routerProvider = Provider<GoRouter>((ref) {
+  return GoRouter(
+    navigatorKey: rootNavigatorKey,
+    initialLocation: '/login',
+    refreshListenable: GoRouterRefreshStream(
+      Supabase.instance.client.auth.onAuthStateChange,
+    ),
+    redirect: (context, state) {
+      final session = Supabase.instance.client.auth.currentUser;
+      final isLoggingIn = state.uri.toString() == '/login' ||
+          state.uri.toString() == '/register' ||
+          state.uri.toString().startsWith('/register/');
 
-    // If not logged in and not on login/register pages, redirect to login
-    if (session == null && !isLoggingIn) {
-      return '/login';
-    }
+      // If not logged in and not on login/register pages, redirect to login
+      if (session == null && !isLoggingIn) {
+        return '/login';
+      }
 
-    // If logged in and on login/register pages, redirect to home (clients)
-    if (session != null && isLoggingIn) {
-      return '/clients';
-    }
+      // If logged in and on login/register pages, redirect to home (clients)
+      if (session != null && isLoggingIn) {
+        return '/clients';
+      }
 
-    return null;
-  },
-  routes: [
-    ...authRoutes,
+      return null;
+    },
+    routes: [
+      ...authRoutes,
 
     // Authenticated Routes (Shell)
     StatefulShellRoute.indexedStack(
@@ -610,3 +610,4 @@ final appRouter = GoRouter(
     ),
   ],
 );
+});

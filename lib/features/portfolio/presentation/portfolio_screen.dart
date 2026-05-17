@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:d_una_app/features/profile/presentation/providers/profile_provider.dart';
 import 'widgets/dashboard_card.dart';
 import 'package:material_symbols_icons/symbols.dart';
+import 'package:d_una_app/shared/widgets/user_profile_avatar.dart';
 
 class PortfolioScreen extends ConsumerWidget {
   const PortfolioScreen({super.key});
@@ -12,6 +13,7 @@ class PortfolioScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final colors = Theme.of(context).colorScheme;
     final userProfileAsync = ref.watch(userProfileProvider);
+    final isError = userProfileAsync.hasError;
 
     return Scaffold(
       backgroundColor: colors.surface,
@@ -26,43 +28,20 @@ class PortfolioScreen extends ConsumerWidget {
                 children: [
                   IconButton(
                     icon: const Icon(Icons.menu),
-                    onPressed: () {
-                      Scaffold.of(context).openDrawer();
-                    },
+                    onPressed: isError
+                        ? null
+                        : () {
+                            Scaffold.of(context).openDrawer();
+                          },
                   ),
                   Text(
                     'Portafolio',
                     style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                      fontSize: 22,
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
-                  InkWell(
-                    onTap: () => context.push('/profile'),
-                    child: userProfileAsync.when(
-                      data: (profile) {
-                        final avatarUrl = profile?.avatarUrl;
-                        return CircleAvatar(
-                          radius: 18,
-                          backgroundImage: avatarUrl != null
-                              ? NetworkImage(avatarUrl)
-                              : const NetworkImage(
-                                  'https://i.pravatar.cc/150?img=11',
-                                ),
-                        );
-                      },
-                      loading: () => const CircleAvatar(
-                        radius: 18,
-                        child: CircularProgressIndicator(strokeWidth: 2),
-                      ),
-                      error: (err, stack) => const CircleAvatar(
-                        radius: 18,
-                        backgroundImage: NetworkImage(
-                          'https://i.pravatar.cc/150?img=11',
+                          fontSize: 22,
+                          fontWeight: FontWeight.w500,
                         ),
-                      ),
-                    ),
                   ),
+                  UserProfileAvatar(enabled: !isError),
                 ],
               ),
             ),

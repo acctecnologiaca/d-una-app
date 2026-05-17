@@ -23,6 +23,8 @@ class CustomTextField extends StatefulWidget {
   final String? prefixText;
   final bool autofocus;
   final String? errorText;
+  final int? maxLength;
+
 
   const CustomTextField({
     super.key,
@@ -47,6 +49,7 @@ class CustomTextField extends StatefulWidget {
     this.prefixText,
     this.autofocus = false,
     this.errorText,
+    this.maxLength,
   });
 
   @override
@@ -138,6 +141,7 @@ class _CustomTextFieldState extends State<CustomTextField> {
           enabled: widget.enabled,
           onTap: widget.onTap,
           textCapitalization: widget.textCapitalization,
+          maxLength: widget.maxLength,
           decoration: InputDecoration(
             labelText: widget.label,
             hintText: widget.hintText,

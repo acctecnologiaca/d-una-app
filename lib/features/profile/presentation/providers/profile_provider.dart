@@ -79,9 +79,8 @@ final userProfileProvider = StreamProvider.autoDispose<UserProfile?>((
       yield null;
       return;
     } catch (e) {
-      // debugPrint('General Error: $e');
-      yield null;
-      return;
+      // Re-throw to allow dependent providers and UI to handle the error state
+      rethrow;
     }
   }
 });

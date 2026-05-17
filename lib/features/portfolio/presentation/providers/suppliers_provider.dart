@@ -12,9 +12,16 @@ SuppliersRepository suppliersRepository(Ref ref) {
   return SuppliersRepository(Supabase.instance.client);
 }
 
-@riverpod
+@Riverpod(keepAlive: true)
 Future<List<Supplier>> suppliers(Ref ref) async {
-  final userProfile = await ref.watch(userProfileProvider.future);
+  final supabase = Supabase.instance.client;
+  final user = supabase.auth.currentUser;
+
+  if (user == null) {
+    return [];
+  }
+
+  final userProfile = await ref.watch(profileRepositoryProvider).getProfile(user.id);
 
   if (userProfile == null) {
     return [];

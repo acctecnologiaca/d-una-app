@@ -1,6 +1,7 @@
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:flutter/foundation.dart';
+import '../../main.dart' as import_main;
 
 class SessionManager {
   static const String _lastActiveKey = 'session_last_active_timestamp';
@@ -28,6 +29,7 @@ class SessionManager {
         // Session expired due to inactivity
         await Supabase.instance.client.auth.signOut();
         await prefs.remove(_lastActiveKey);
+        import_main.RootApp.restart(null);
         return false;
       }
     }
@@ -47,6 +49,6 @@ class SessionManager {
   /// Clear session data (useful on manual logout)
   Future<void> clearSessionData() async {
     final prefs = await SharedPreferences.getInstance();
-    await prefs.remove(_lastActiveKey);
+    await prefs.clear(); // Limpieza nuclear de todos los historiales y variables.
   }
 }

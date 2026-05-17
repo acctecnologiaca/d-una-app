@@ -1,4 +1,5 @@
 import { createTransport } from "npm:nodemailer";
+import { createClient } from "jsr:@supabase/supabase-js@2";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -21,7 +22,7 @@ Deno.serve(async (req) => {
       fileName, 
       recipientEmails, 
       userContext, 
-      emailContent 
+      emailContent
     } = body;
 
     // Verify required fields
@@ -29,6 +30,119 @@ Deno.serve(async (req) => {
       console.error('Error: Faltan campos obligatorios');
       throw new Error('Missing required fields in payload');
     }
+
+    // ============================================================
+    // AUTHENTICATION: Extract user from JWT
+    // ============================================================
+    const authHeader = req.headers.get('Authorization');
+    if (!authHeader) {
+      throw new Error('Missing Authorization header');
+    }
+
+    const supabaseAdmin = createClient(
+      Deno.env.get('SUPABASE_URL') ?? '',
+      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
+    );
+
+    const token = authHeader.replace('Bearer ', '');
+    const { data: { user }, error: userError } = await supabaseAdmin.auth.getUser(token);
+    
+    if (userError || !user) {
+      throw new Error('Invalid or expired authentication token');
+    }
+
+    const userId = user.id;
+
+    // ============================================================
+    // RATE LIMITING: Validate before sending
+    // ============================================================
+    const MAX_RECIPIENTS_PER_SEND = 3;
+    const COOLDOWN_SECONDS = 60;
+
+    // Read system default from env var
+    const systemDefault = parseInt(Deno.env.get('DEFAULT_DAILY_EMAIL_LIMIT') || '10');
+
+    // Read user's extra credits from profiles
+    const { data: profile, error: profileError } = await supabaseAdmin
+      .from('profiles')
+      .select('daily_extra_email_credits')
+      .eq('id', userId)
+      .single();
+
+    if (profileError) {
+      console.error('Error reading profile:', profileError);
+    }
+
+    const extraCredits = profile?.daily_extra_email_credits ?? 0;
+    const MAX_CREDITS_PER_DAY = systemDefault + extraCredits;
+
+    console.log(`Credits config: base=${systemDefault}, extra=${extraCredits}, total=${MAX_CREDITS_PER_DAY}`);
+
+    // 1. Validate max recipients per send
+    if (!Array.isArray(recipientEmails) || recipientEmails.length > MAX_RECIPIENTS_PER_SEND) {
+      return new Response(JSON.stringify({ 
+        success: false, 
+        error: `Máximo ${MAX_RECIPIENTS_PER_SEND} destinatarios por envío`,
+        errorCode: 'MAX_RECIPIENTS_EXCEEDED'
+      }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        status: 429,
+      });
+    }
+
+    // 2. Check daily credit usage (last 24 hours)
+    const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+    
+    const { data: usageLogs, error: usageError } = await supabaseAdmin
+      .from('email_logs')
+      .select('recipient_count, created_at')
+      .eq('user_id', userId)
+      .gte('created_at', twentyFourHoursAgo)
+      .order('created_at', { ascending: false });
+
+    if (usageError) {
+      console.error('Error checking usage:', usageError);
+      throw new Error('Could not verify sending limits');
+    }
+
+    const usedCredits = (usageLogs || []).reduce((sum: number, log: { recipient_count: number }) => sum + log.recipient_count, 0);
+    const remainingCredits = MAX_CREDITS_PER_DAY - usedCredits;
+
+    console.log(`Rate limit check: used=${usedCredits}, remaining=${remainingCredits}, requested=${recipientEmails.length}`);
+
+    if (recipientEmails.length > remainingCredits) {
+      return new Response(JSON.stringify({ 
+        success: false, 
+        error: `Has alcanzado el límite de envíos diarios. Créditos restantes: ${remainingCredits}`,
+        errorCode: 'DAILY_LIMIT_EXCEEDED',
+        remainingCredits: remainingCredits,
+      }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        status: 429,
+      });
+    }
+
+    // 3. Check cooldown (last send must be > 60 seconds ago)
+    if (usageLogs && usageLogs.length > 0) {
+      const lastSendTime = new Date(usageLogs[0].created_at).getTime();
+      const secondsSinceLastSend = (Date.now() - lastSendTime) / 1000;
+      
+      if (secondsSinceLastSend < COOLDOWN_SECONDS) {
+        const waitSeconds = Math.ceil(COOLDOWN_SECONDS - secondsSinceLastSend);
+        return new Response(JSON.stringify({ 
+          success: false, 
+          error: `Debes esperar ${waitSeconds} segundos antes de enviar otro correo`,
+          errorCode: 'COOLDOWN_ACTIVE',
+          waitSeconds: waitSeconds,
+        }), {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          status: 429,
+        });
+      }
+    }
+    // ============================================================
+    // END RATE LIMITING
+    // ============================================================
 
     const provider = Deno.env.get('MAIL_PROVIDER') || 'GOOGLE';
     console.log('Proveedor de correo:', provider);
@@ -60,10 +174,8 @@ Deno.serve(async (req) => {
           pass: smtpPass,
         },
         tls: {
-          // No cerrar la conexión prematuramente
           rejectUnauthorized: false,
         },
-        // Aumentar el tiempo de espera
         connectionTimeout: 10000,
         greetingTimeout: 10000,
         socketTimeout: 10000,
@@ -80,8 +192,8 @@ Deno.serve(async (req) => {
             <table cellpadding="0" cellspacing="0" style="width: 100%; border-collapse: collapse;">
               <tr>
                 ${userContext.companyLogo ? `
-                <td style="width: 80px; vertical-align: top; padding-right: 15px;">
-                  <img src="${userContext.companyLogo}" width="70" height="70" style="border-radius: 12px; object-fit: contain;" alt="Logo">
+                <td style="width: 120px; vertical-align: top; padding-right: 15px;">
+                  <img src="${userContext.companyLogo}" width="120" height="120" style="border-radius: 12px; object-fit: contain;" alt="Logo">
                 </td>` : ''}
                 <td style="vertical-align: middle;">
                   <div style="font-size: 16px; font-weight: bold; color: #1a1a1a;">${userContext.name}</div>
@@ -94,6 +206,10 @@ Deno.serve(async (req) => {
               </tr>
             </table>
           </div>
+
+          <div style="margin-top: 40px; text-align: center;">
+            <img src="https://fdkswvzrozijbizdthge.supabase.co/storage/v1/object/sign/app_images/creado_con_d_una.png?token=eyJraWQiOiJzdG9yYWdlLXVybC1zaWduaW5nLWtleV8yNjZhOWZkMS0xYWQyLTQ3OWEtOGNlYS1kYjQzMjA0OGNlMjkiLCJhbGciOiJIUzI1NiJ9.eyJ1cmwiOiJhcHBfaW1hZ2VzL2NyZWFkb19jb25fZF91bmEucG5nIiwiaWF0IjoxNzc4MjUwNzI0LCJleHAiOjQ5MzE4NTA3MjR9.sP-lgLmlurZ3oMZxk6IGFwaRQ6_OTKZgMmiZQ0CM4Mc" width="100" style="opacity: 0.7; display: inline-block;" alt="Creado con d'una">
+          </div>
         </div>
       `;
 
@@ -103,6 +219,10 @@ Deno.serve(async (req) => {
         replyTo: userContext.replyToEmail,
         subject: emailContent.subject,
         html: fullBodyHtml,
+        envelope: {
+          from: smtpUser,
+          to: recipientEmails,
+        },
         attachments: [
           {
             filename: fileName || 'documento.pdf',
@@ -121,7 +241,6 @@ Deno.serve(async (req) => {
         throw new Error('RESEND_API_KEY not configured');
       }
 
-      // Logic for Resend API call
       const res = await fetch('https://api.resend.com/emails', {
         method: 'POST',
         headers: {
@@ -133,7 +252,7 @@ Deno.serve(async (req) => {
           to: recipientEmails,
           reply_to: userContext.replyToEmail,
           subject: emailContent.subject,
-          html: emailContent.bodyHtml, // For Resend we'd need a similar HTML structure logic
+          html: emailContent.bodyHtml,
           attachments: [
             {
               filename: fileName || 'documento.pdf',
@@ -154,7 +273,32 @@ Deno.serve(async (req) => {
       throw new Error(`Unsupported MAIL_PROVIDER: ${provider}`);
     }
 
-    return new Response(JSON.stringify({ success: true, message: 'Email sent successfully' }), {
+    // ============================================================
+    // LOG SUCCESSFUL SEND (after email is sent, before response)
+    // ============================================================
+    const { error: logError } = await supabaseAdmin
+      .from('email_logs')
+      .insert({
+        user_id: userId,
+        recipient_count: recipientEmails.length,
+        document_type: body.documentType || null,
+      });
+
+    if (logError) {
+      console.error('Warning: Failed to log email send:', logError);
+      // Don't fail the request - the email was already sent successfully
+    }
+    // ============================================================
+
+    // Calculate remaining credits after this send
+    const updatedRemainingCredits = remainingCredits - recipientEmails.length;
+
+    return new Response(JSON.stringify({
+      success: true,
+      message: 'Email sent successfully',
+      remainingCredits: updatedRemainingCredits,
+      totalCredits: MAX_CREDITS_PER_DAY,
+    }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       status: 200,
     })

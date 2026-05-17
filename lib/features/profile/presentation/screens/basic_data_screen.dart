@@ -1,5 +1,6 @@
 import 'dart:io';
 import 'package:d_una_app/shared/widgets/friendly_error_widget.dart';
+import 'package:d_una_app/shared/widgets/custom_dialog.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -184,6 +185,36 @@ class _BasicDataScreenState extends ConsumerState<BasicDataScreen> {
   Future<void> _save(String userId, UserProfile currentProfile) async {
     if (!_formKey.currentState!.validate()) return;
 
+    final colors = Theme.of(context).colorScheme;
+    final isVerified = currentProfile.verificationStatus == 'verified';
+
+    if (isVerified) {
+      final confirmed = await CustomDialog.show<bool>(
+        context: context,
+        dialog: CustomDialog.destructive(
+          title: 'Modificar datos básicos',
+          contentText:
+              'Al modificar tus datos básicos, perderás tu estado de verificación actual y pasarás a "No verificado". ¿Deseas continuar?',
+          actions: [
+            TextButton(
+              onPressed: () => context.pop(false),
+              child: const Text('Cancelar'),
+            ),
+            FilledButton(
+              onPressed: () => context.pop(true),
+              style: FilledButton.styleFrom(
+                backgroundColor: colors.error,
+                foregroundColor: colors.onError,
+              ),
+              child: const Text('Aceptar'),
+            ),
+          ],
+        ),
+      );
+
+      if (confirmed != true) return;
+    }
+
     setState(() => _isLoading = true);
 
     try {
@@ -205,6 +236,7 @@ class _BasicDataScreenState extends ConsumerState<BasicDataScreen> {
         gender: _selectedGender,
         birthDate: _selectedDate,
         avatarUrl: newAvatarUrl,
+        verificationStatus: isVerified ? 'unverified' : currentProfile.verificationStatus,
       );
 
       await ref.read(profileRepositoryProvider).updateProfile(updatedProfile);

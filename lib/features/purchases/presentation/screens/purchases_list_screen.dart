@@ -10,6 +10,7 @@ import 'package:d_una_app/shared/widgets/custom_extended_fab.dart';
 import 'package:d_una_app/core/utils/string_extensions.dart';
 import 'package:d_una_app/features/purchases/presentation/providers/purchases_providers.dart';
 import '../widgets/purchase_list_item.dart';
+import '../../../../shared/widgets/empty_list_state.dart';
 
 class PurchasesListScreen extends ConsumerStatefulWidget {
   const PurchasesListScreen({super.key});
@@ -126,14 +127,10 @@ class _PurchasesListScreenState extends ConsumerState<PurchasesListScreen> {
                 });
 
                 if (filteredList.isEmpty) {
-                  return Center(
-                    child: Text(
-                      'No tienes compras registradas',
-                      style: TextStyle(
-                        color: colors.outlineVariant,
-                        fontSize: 16,
-                      ),
-                    ),
+                  return EmptyListState(
+                    icon: Icons.receipt_long,
+                    message: 'No tienes compras registradas',
+                    searchQuery: _searchQuery,
                   );
                 }
 

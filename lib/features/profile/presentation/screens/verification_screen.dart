@@ -180,12 +180,10 @@ class _VerificationScreenState extends ConsumerState<VerificationScreen> {
     List<VerificationDocument> uploadedDocs,
   ) async {
     final colors = Theme.of(context).colorScheme;
-    // Check if verification status is active (verified or pending)
-    final isVerifiedOrPending =
-        currentProfile.verificationStatus == 'verified' ||
-        currentProfile.verificationStatus == 'pending';
+    // Check if verification status is active (verified)
+    final isVerified = currentProfile.verificationStatus == 'verified';
 
-    if (isVerifiedOrPending) {
+    if (isVerified) {
       final confirmed = await CustomDialog.show<bool>(
         context: context,
         dialog: CustomDialog.destructive(

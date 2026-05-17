@@ -1,12 +1,14 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../shared/widgets/custom_button.dart';
+import 'providers/register_provider.dart';
 
-class RegisterIntroScreen extends StatelessWidget {
+class RegisterIntroScreen extends ConsumerWidget {
   const RegisterIntroScreen({super.key});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     return Scaffold(
       // backgroundColor: Colors.white, // Removed to use Theme Surface
       body: SafeArea(
@@ -78,6 +80,7 @@ class RegisterIntroScreen extends StatelessWidget {
                       CustomButton(
                         text: 'Comenzar',
                         onPressed: () {
+                          ref.read(registerProvider.notifier).reset();
                           context.push('/register/email');
                         },
                         type: ButtonType.primary,

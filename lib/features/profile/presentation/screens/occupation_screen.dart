@@ -69,10 +69,8 @@ class _OccupationScreenState extends ConsumerState<OccupationScreen> {
     final colors = Theme.of(context).colorScheme;
     if (!_formKey.currentState!.validate()) return;
 
-    // Check if verification status is active (verified or pending)
-    final isVerifiedOrPending =
-        currentProfile.verificationStatus == 'verified' ||
-        currentProfile.verificationStatus == 'pending';
+    // Check if verification status is active (verified)
+    final isVerified = currentProfile.verificationStatus == 'verified';
 
     // Calculate if the SET of occupations has changed
     final initialSet = {
@@ -85,7 +83,7 @@ class _OccupationScreenState extends ConsumerState<OccupationScreen> {
         initialSet.length != currentSet.length ||
         !initialSet.containsAll(currentSet);
 
-    if (isSubstantiveChange && isVerifiedOrPending) {
+    if (isSubstantiveChange && isVerified) {
       final confirmed = await CustomDialog.show<bool>(
         context: context,
         dialog: CustomDialog.destructive(
@@ -117,8 +115,8 @@ class _OccupationScreenState extends ConsumerState<OccupationScreen> {
       final updatedProfile = currentProfile.copyWith(
         occupationId: _primaryOccupationId,
         secondaryOccupationIds: _secondaryOccupationIds,
-        // Reset verification status if it was verified/pending and substantive changes were made
-        verificationStatus: (isVerifiedOrPending && isSubstantiveChange)
+        // Reset verification status if it was verified and substantive changes were made
+        verificationStatus: (isVerified && isSubstantiveChange)
             ? 'unverified'
             : currentProfile.verificationStatus,
       );

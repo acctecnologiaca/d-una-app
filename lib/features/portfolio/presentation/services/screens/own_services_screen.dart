@@ -10,6 +10,7 @@ import '../../../data/models/service_model.dart';
 import '../../providers/services_provider.dart';
 import '../../../../../shared/widgets/service_list_item.dart';
 import '../widgets/service_action_sheet.dart';
+import '../../../../../shared/widgets/empty_list_state.dart';
 
 class OwnServicesScreen extends ConsumerStatefulWidget {
   const OwnServicesScreen({super.key});
@@ -34,6 +35,11 @@ class _OwnServicesScreenState extends ConsumerState<OwnServicesScreen> {
     final colors = Theme.of(context).colorScheme;
     final servicesAsync = ref.watch(servicesProvider);
 
+    final isError = servicesAsync.maybeWhen(
+      error: (error, stack) => true,
+      orElse: () => false,
+    );
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('Servicios propios'),
@@ -52,65 +58,76 @@ class _OwnServicesScreenState extends ConsumerState<OwnServicesScreen> {
       ),
       body: Column(
         children: [
-          // Search Bar
-          Padding(
-            padding: const EdgeInsets.symmetric(
-              horizontal: 16.0,
-              vertical: 8.0,
-            ),
-            child: CustomSearchBar(
-              controller: _searchController,
-              hintText: 'Buscar servicio...',
-              readOnly: true,
-              onTap: () {
-                context.push('/portfolio/own-services/search');
-              },
-              showFilterIcon: true,
-            ),
-          ),
-          Padding(
-            padding: const EdgeInsets.only(bottom: 8.0),
-            child: Text(
-              'Precios no incluyen impuesto',
-              style: TextStyle(
-                fontSize: 12,
-                fontWeight: FontWeight.bold,
-                color: colors.onSurface,
+          if (!isError) ...[
+            // Search Bar
+            Padding(
+              padding: const EdgeInsets.symmetric(
+                horizontal: 16.0,
+                vertical: 8.0,
+              ),
+              child: CustomSearchBar(
+                controller: _searchController,
+                hintText: 'Buscar servicio...',
+                readOnly: true,
+                showFilterIcon: true,
+                onTap: () {
+                  context.push('/portfolio/own-services/search');
+                },
               ),
             ),
-          ),
-          // Sort/Filter Header
-          Padding(
-            padding: const EdgeInsets.symmetric(
-              horizontal: 16.0,
-              vertical: 8.0,
-            ),
-            child: Row(
-              children: [
-                SortSelector(
-                  currentSort: _currentSort,
-                  options: const [
-                    SortOption.recent,
-                    SortOption.nameAZ,
-                    SortOption.nameZA,
-                  ],
-                  onSortChanged: (val) => setState(() => _currentSort = val),
+
+            // Disclaimer
+            Padding(
+              padding: const EdgeInsets.only(bottom: 8.0),
+              child: Text(
+                'Precios no incluyen impuesto',
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.bold,
+                  color: colors.onSurface,
                 ),
-              ],
+              ),
             ),
-          ),
+
+            // Sort Header
+            Padding(
+              padding: const EdgeInsets.symmetric(
+                horizontal: 16.0,
+                vertical: 8.0,
+              ),
+              child: Row(
+                children: [
+                  SortSelector(
+                    currentSort: _currentSort,
+                    onSortChanged: (val) => setState(() => _currentSort = val),
+                    options: const [
+                      SortOption.recent,
+                      SortOption.nameAZ,
+                      SortOption.nameZA,
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ],
 
           Expanded(
             child: servicesAsync.when(
               loading: () => const Center(child: CircularProgressIndicator()),
-              error: (err, stack) => FriendlyErrorWidget(error: err),
+              error: (err, stack) => FriendlyErrorWidget(
+                error: err,
+                onRetry: () => ref.invalidate(
+                  servicesAsync.asData == null
+                      ? servicesProvider
+                      : servicesProvider,
+                ), // Force refresh
+              ),
               data: (services) {
                 if (services.isEmpty) {
-                  return Center(
-                    child: Text(
-                      'No tienes servicios registrados',
-                      style: TextStyle(color: colors.outline),
-                    ),
+                  return EmptyListState(
+                    icon: Icons.handyman_outlined,
+                    message: 'No tienes servicios registrados',
+                    searchQuery: _searchController.text,
                   );
                 }
 
@@ -154,17 +171,19 @@ class _OwnServicesScreenState extends ConsumerState<OwnServicesScreen> {
           ),
         ],
       ),
-      floatingActionButton: Padding(
-        padding: const EdgeInsets.only(bottom: 40.0),
-        child: CustomExtendedFab(
-          onPressed: () {
-            // Navigate to Add Service Wizard
-            context.push('/portfolio/own-services/add');
-          },
-          label: 'Agregar',
-          icon: Icons.add,
-        ),
-      ),
+      floatingActionButton: isError
+          ? null
+          : Padding(
+              padding: const EdgeInsets.only(bottom: 40.0),
+              child: CustomExtendedFab(
+                onPressed: () {
+                  // Navigate to Add Service Wizard
+                  context.push('/portfolio/own-services/add');
+                },
+                label: 'Agregar',
+                icon: Icons.add,
+              ),
+            ),
     );
   }
 

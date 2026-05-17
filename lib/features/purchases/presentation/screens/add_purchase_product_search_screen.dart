@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:d_una_app/shared/widgets/generic_search_screen.dart';
 import 'package:d_una_app/shared/widgets/horizontal_filter_bar.dart';
 import 'package:d_una_app/shared/widgets/filter_bottom_sheet.dart';
@@ -44,19 +45,26 @@ class _AddPurchaseProductSearchScreenState
                 (p.model?.normalized ?? '').contains(q);
           }).toList();
 
-    // Derive available categories from search results
+    // Derive available categories from search results, filtered by verified or owned by the current user
+    final currentUserId = Supabase.instance.client.auth.currentUser?.id;
     final categoryMap = queryMatchedProducts
         .map((p) => p.category)
         .whereType<Category>()
+        .where((cat) => cat.isVerified || (currentUserId != null && cat.userId == currentUserId))
         .fold<Map<String, String>>({}, (map, cat) {
           map[cat.id] = cat.name.toTitleCase;
           return map;
         });
 
-    // Derive available brands from search results
+    // Derive available brands from search results, filtered by verified or owned by the current user
     final brandMap = queryMatchedProducts
         .map((p) => p.brand)
         .whereType<Brand>()
+        .where(
+          (brand) =>
+              brand.isVerified ||
+              (currentUserId != null && brand.userId == currentUserId),
+        )
         .fold<Map<String, String>>({}, (map, brand) {
           map[brand.id] = brand.name.toTitleCase;
           return map;

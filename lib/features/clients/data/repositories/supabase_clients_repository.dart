@@ -9,9 +9,13 @@ class SupabaseClientsRepository {
   SupabaseClientsRepository(this._supabase);
 
   Future<List<Client>> getClients() async {
+    final userId = _supabase.auth.currentUser?.id;
+    if (userId == null) return [];
+
     final response = await _supabase
         .from('clients')
-        .select('*, contacts(*)'); // Fetch clients with their contacts
+        .select('*, contacts(*)')
+        .eq('user_id', userId); // Fetch clients only for current user
 
     // ignore: unnecessary_cast
     final data = response as List<dynamic>;

@@ -5,16 +5,18 @@ import '../../../../shared/widgets/wizard_progress_bar.dart';
 
 class RegisterLayout extends StatelessWidget {
   final String title;
-  final String? subtitle;
+  final dynamic subtitle;
   final int progress;
   final Widget content;
   final VoidCallback onNext;
   final VoidCallback? onBack;
   final VoidCallback? onCancel;
   final bool isNextEnabled;
+  final bool isLoading;
   final String nextButtonText;
   final String cancelButtonText;
   final String backButtonText;
+  final bool showBackButton;
 
   const RegisterLayout({
     super.key,
@@ -26,9 +28,11 @@ class RegisterLayout extends StatelessWidget {
     this.onBack,
     this.onCancel,
     this.isNextEnabled = true,
+    this.isLoading = false,
     this.nextButtonText = 'Siguiente',
     this.cancelButtonText = 'Cancelar',
     this.backButtonText = 'Atrás',
+    this.showBackButton = true,
   });
 
   @override
@@ -42,8 +46,11 @@ class RegisterLayout extends StatelessWidget {
         backgroundColor: Colors.transparent,
         elevation: 0,
         leading: IconButton(
-          icon: Icon(Icons.arrow_back, color: colors.onSurface),
-          onPressed: onBack ?? () => context.pop(),
+          icon: Icon(
+            Icons.arrow_back,
+            color: showBackButton ? colors.onSurface : Colors.grey.shade400,
+          ),
+          onPressed: showBackButton ? (onBack ?? () => context.pop()) : null,
         ),
         title: Text(
           'Crea una cuenta',
@@ -63,7 +70,7 @@ class RegisterLayout extends StatelessWidget {
       ),
       body: SafeArea(
         child: SingleChildScrollView(
-          padding: const EdgeInsets.fromLTRB(16.0, 24.0, 16.0, 40.0),
+          padding: const EdgeInsets.fromLTRB(0, 24.0, 0, 40.0),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
@@ -81,19 +88,27 @@ class RegisterLayout extends StatelessWidget {
               ),
               if (subtitle != null) ...[
                 const SizedBox(height: 16),
-                Text(
-                  subtitle!,
-                  textAlign: TextAlign.center,
-                  style: textTheme.bodyLarge?.copyWith(
-                    color: colors.onSurfaceVariant,
-                  ),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 24.0),
+                  child: subtitle is String
+                      ? Text(
+                          subtitle!,
+                          textAlign: TextAlign.center,
+                          style: textTheme.bodyLarge?.copyWith(
+                            color: colors.onSurfaceVariant,
+                          ),
+                        )
+                      : subtitle, // It's already a Widget
                 ),
               ],
 
               const SizedBox(height: 32),
 
               // Form Content
-              content,
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                child: content,
+              ),
 
               const SizedBox(height: 60),
 
@@ -101,14 +116,18 @@ class RegisterLayout extends StatelessWidget {
               // Footer Navigation
               WizardButtonBar(
                 onCancel: onCancel ?? () => context.go('/login'),
-                onBack: (onBack != null || Navigator.canPop(context))
-                    ? (onBack ?? () => context.pop())
+                onBack: showBackButton
+                    ? (onBack ??
+                        (Navigator.canPop(context)
+                            ? () => context.pop()
+                            : null))
                     : null,
                 onNext: onNext,
                 labelNext: nextButtonText,
                 labelCancel: cancelButtonText,
                 labelBack: backButtonText,
                 isNextEnabled: isNextEnabled,
+                isLoading: isLoading,
               ),
             ],
           ),
