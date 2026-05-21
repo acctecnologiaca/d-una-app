@@ -42,3 +42,12 @@ abstract class QuotesRepository {
   Future<void> batchUpdateStatus(List<String> ids, String status);
   Future<void> batchArchive(List<String> ids, bool isArchived);
 }
+
+class InsufficientStockException implements Exception {
+  final List<String> productNames;
+  InsufficientStockException(this.productNames);
+
+  @override
+  String toString() =>
+      'Stock insuficiente para los siguientes productos del inventario propio: ${productNames.join(', ')}';
+}

@@ -9,6 +9,7 @@ import '../../../../../shared/utils/currency_formatter.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../providers/create_quote_provider.dart';
+import '../../quotes_list/providers/quotes_provider.dart';
 import '../../../../portfolio/data/models/delivery_time_model.dart';
 import '../../../../portfolio/presentation/providers/lookup_providers.dart';
 import '../../../../../features/settings/presentation/widgets/add_edit_delivery_time_sheet.dart';
@@ -103,26 +104,27 @@ class _QuoteProductSaleDetailsSheetState
   double _currentMargin = 25.0; // Default margin
   double _currentPrice = 0.0;
   String? _selectedDeliveryTimeId;
-  late final String _pricingMethod;
+  String _pricingMethod = 'margin';
+  double _taxRate = 16.0; // Default tax rate
 
   // Warranty state
   bool _noWarranty = false;
-  final _warrantyQtyController = TextEditingController(text: '30');
+  final _warrantyQtyController = TextEditingController(text: '12');
   String _warrantyPeriod = 'Meses';
 
   @override
   void initState() {
     super.initState();
-    _pricingMethod = ref.read(createQuoteProvider).pricingMethod;
     if (widget.initialPrice != null && widget.initialMargin != null) {
+      _pricingMethod = ref.read(createQuoteProvider).pricingMethod;
+      _taxRate = ref.read(createQuoteProvider).globalTaxRate;
       _currentPrice = widget.initialPrice!;
       _currentMargin = widget.initialMargin! * 100;
       _priceController.text = CurrencyFormatter.formatNumber(_currentPrice);
       _marginController.text = CurrencyFormatter.formatNumber(_currentMargin);
       _selectedDeliveryTimeId = widget.initialDeliveryTimeId;
     } else {
-      _currentMargin = ref.read(createQuoteProvider).globalMargin;
-      _recalculatePriceFromMargin();
+      _loadFinancialParametersAndRecalculate();
     }
 
     // Initialize warranty
@@ -142,6 +144,24 @@ class _QuoteProductSaleDetailsSheetState
     } else {
       // 4. Default for new items if no suggestion
       _noWarranty = false;
+    }
+  }
+
+  Future<void> _loadFinancialParametersAndRecalculate() async {
+    try {
+      final repo = ref.read(quotesRepositoryProvider);
+      final params = await repo.getFinancialParameters();
+      if (mounted) {
+        setState(() {
+          _currentMargin = params.profitMargin;
+          _pricingMethod = params.pricingMethod;
+          _taxRate = params.taxRate;
+          _recalculatePriceFromMargin();
+        });
+      }
+    } catch (e) {
+      debugPrint('Error loading financial parameters: $e');
+      _recalculatePriceFromMargin();
     }
   }
 
@@ -241,8 +261,7 @@ class _QuoteProductSaleDetailsSheetState
     Navigator.of(context).pop({
       'sellingPrice': _currentPrice,
       'profitMargin': _currentMargin / 100, // as decimal
-      'taxRate':
-          ref.read(createQuoteProvider).globalTaxRate / 100, // as decimal
+      'taxRate': _taxRate / 100, // as decimal
       'deliveryTimeId': deliveryTimeId,
       'warrantyTime': _noWarranty
           ? null

@@ -66,8 +66,8 @@ class _QuoteServiceSaleDetailsSheetState
 
   // Warranty state
   bool _noWarranty = false;
-  final _warrantyQtyController = TextEditingController(text: '30');
-  String _warrantyPeriod = 'Meses';
+  final _warrantyQtyController = TextEditingController(text: '7');
+  String _warrantyPeriod = 'Días';
 
   @override
   void initState() {

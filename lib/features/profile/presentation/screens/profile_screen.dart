@@ -3,7 +3,7 @@ import 'package:d_una_app/shared/widgets/friendly_error_widget.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import '../widgets/profile_menu_tile.dart';
+import '../../../../shared/widgets/custom_menu_tile.dart';
 import '../providers/profile_provider.dart';
 import '../providers/occupations_provider.dart';
 import '../../../../core/utils/session_manager.dart';
@@ -202,25 +202,25 @@ class ProfileScreen extends ConsumerWidget {
                 const SizedBox(height: 32),
 
                 // MENU OPTIONS
-                ProfileMenuTile(
+                CustomMenuTile(
                   icon: Icons.person_outline,
                   title: 'Datos básicos',
                   subtitle: 'Nombre, ID, entre otros.',
                   onTap: () => context.push('/profile/basic-data'),
                 ),
-                ProfileMenuTile(
+                CustomMenuTile(
                   icon: Icons.mail_outline,
                   title: 'Datos de contacto',
                   subtitle: 'Correo y teléfono.',
                   onTap: () => context.push('/profile/contact-data'),
                 ),
-                ProfileMenuTile(
+                CustomMenuTile(
                   icon: Icons.location_on_outlined,
                   title: 'Dirección principal',
                   subtitle: 'Tu dirección principal o fiscal',
                   onTap: () => context.push('/profile/main-address'),
                 ),
-                ProfileMenuTile(
+                CustomMenuTile(
                   icon: Icons.manage_accounts_outlined,
                   title: 'Ocupación',
                   subtitle: 'A lo que te dedicas.',
@@ -228,7 +228,7 @@ class ProfileScreen extends ConsumerWidget {
                     context.push('/profile/occupation');
                   },
                 ),
-                ProfileMenuTile(
+                CustomMenuTile(
                   icon: Icons.security,
                   title: 'Seguridad',
                   subtitle: 'Contraseña.',
@@ -236,7 +236,7 @@ class ProfileScreen extends ConsumerWidget {
                     context.push('/profile/security');
                   },
                 ),
-                ProfileMenuTile(
+                CustomMenuTile(
                   icon: Icons.verified_outlined,
                   title: 'Verificación',
                   subtitle: 'Para aprovechar al máximo la app.',

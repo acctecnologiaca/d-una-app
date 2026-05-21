@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:material_symbols_icons/symbols.dart';
+import 'package:d_una_app/shared/widgets/standard_app_bar.dart';
+import 'package:d_una_app/shared/widgets/custom_menu_tile.dart';
 import '../providers/email_templates_provider.dart';
 
 class EmailTemplatesListScreen extends ConsumerWidget {
@@ -9,71 +12,60 @@ class EmailTemplatesListScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final colors = Theme.of(context).colorScheme;
+    final textTheme = Theme.of(context).textTheme;
     final templatesAsync = ref.watch(emailTemplatesListProvider);
 
     const documentTypes = [
-      {'id': 'quote', 'label': 'Cotizaciones', 'icon': Icons.description_outlined},
+      {'id': 'quote', 'label': 'Cotizaciones', 'icon': Symbols.request_quote},
       {'id': 'order', 'label': 'Pedidos', 'icon': Icons.shopping_cart_outlined},
-      {'id': 'receipt', 'label': 'Recibos', 'icon': Icons.receipt_long_outlined},
-      {'id': 'report', 'label': 'Reportes', 'icon': Icons.analytics_outlined},
+      {
+        'id': 'receipt',
+        'label': 'Recibos',
+        'icon': Icons.receipt_long_outlined,
+      },
+      {'id': 'report', 'label': 'Reportes', 'icon': Symbols.contract},
     ];
 
     return Scaffold(
       backgroundColor: colors.surface,
-      appBar: AppBar(
-        title: const Text('Plantillas de mensajes'),
-        backgroundColor: colors.surface,
-        elevation: 0,
-      ),
+      appBar: const StandardAppBar(title: 'Plantillas de correos electrónicos'),
       body: templatesAsync.when(
         data: (templates) {
-          return ListView.separated(
-            padding: const EdgeInsets.all(16),
-            itemCount: documentTypes.length,
-            separatorBuilder: (context, index) => const SizedBox(height: 12),
-            itemBuilder: (context, index) {
-              final type = documentTypes[index];
-              final template = templates.where((t) => t.documentType == type['id']).firstOrNull;
-
-              return Card(
-                elevation: 0,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                  side: BorderSide(color: colors.outlineVariant),
+          return ListView(
+            padding: const EdgeInsets.symmetric(
+              vertical: 16.0,
+              horizontal: 16.0,
+            ),
+            children: documentTypes.map((type) {
+              final template = templates
+                  .where((t) => t.documentType == type['id'])
+                  .firstOrNull;
+              return CustomMenuTile(
+                icon: type['icon'] as IconData,
+                title: type['label'] as String,
+                subtitle: template != null
+                    ? 'Plantilla personalizada'
+                    : 'Plantilla por defecto',
+                subtitleStyle: textTheme.bodyMedium?.copyWith(
+                  color: template != null
+                      ? colors.onSurfaceVariant
+                      : colors.onSurfaceVariant,
+                  fontWeight: template != null
+                      ? FontWeight.bold
+                      : FontWeight.normal,
                 ),
-                child: ListTile(
-                  contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                  leading: CircleAvatar(
-                    backgroundColor: colors.primaryContainer,
-                    child: Icon(type['icon'] as IconData, color: colors.onPrimaryContainer),
-                  ),
-                  title: Text(
-                    type['label'] as String,
-                    style: const TextStyle(fontWeight: FontWeight.bold),
-                  ),
-                  subtitle: Text(
-                    template != null 
-                        ? 'Configurado' 
-                        : 'Usando valores por defecto',
-                    style: TextStyle(
-                      color: template != null ? colors.primary : colors.onSurfaceVariant,
-                      fontSize: 12,
-                    ),
-                  ),
-                  trailing: const Icon(Icons.chevron_right),
-                  onTap: () {
-                    context.push(
-                      '/settings/email-templates/edit',
-                      extra: {
-                        'typeId': type['id'],
-                        'label': type['label'],
-                        'template': template,
-                      },
-                    );
-                  },
-                ),
+                onTap: () {
+                  context.push(
+                    '/settings/email-templates/edit',
+                    extra: {
+                      'typeId': type['id'],
+                      'label': type['label'],
+                      'template': template,
+                    },
+                  );
+                },
               );
-            },
+            }).toList(),
           );
         },
         loading: () => const Center(child: CircularProgressIndicator()),

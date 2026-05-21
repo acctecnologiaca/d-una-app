@@ -343,9 +343,35 @@ class _QuoteProductSourcesScreenState
                   itemCount: filteredSources.length,
                   itemBuilder: (context, index) {
                     final item = filteredSources[index];
+
+                    // For approved quotes, adjust reservedStock to exclude
+                    // this quote's own contribution (already counted by the DB trigger).
+                    QuoteProductSource effectiveSource = item;
+                    if (item.sourceType == ProductSourceType.own &&
+                        item.reservedStock > 0) {
+                      final quoteState = ref.read(createQuoteProvider);
+                      if (quoteState.quote?.status == 'approved' &&
+                          widget.groupIndex != null) {
+                        final originalOwnQtyInQuote = quoteState.quote?.products
+                                ?.where((p) =>
+                                    p.groupIndex == widget.groupIndex &&
+                                    p.sourceType == QuoteItemSourceType.own)
+                                .fold(0.0, (sum, p) => sum + p.quantity) ??
+                            0.0;
+                        final adjusted = item.reservedStock - originalOwnQtyInQuote;
+                        if (adjusted > 0) {
+                          effectiveSource =
+                              item.copyWith(reservedStock: adjusted);
+                        } else {
+                          effectiveSource =
+                              item.copyWith(reservedStock: 0.0);
+                        }
+                      }
+                    }
+
                     return QuoteProductSourceCard(
                       key: ValueKey(item.id),
-                      source: item,
+                      source: effectiveSource,
                       selectedQty: selectionState[item.id] ?? 0.0,
                       uom: widget.product.uom,
                       establishedCostPrice: widget.initialCostPrices?[item.id],

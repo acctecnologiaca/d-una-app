@@ -7,6 +7,8 @@ class DeliveryTime {
   final String unit;
   final String type;
   final int orderIdx;
+  final bool isVerified;
+  final bool isActive;
 
   DeliveryTime({
     required this.id,
@@ -17,6 +19,8 @@ class DeliveryTime {
     required this.unit,
     required this.type,
     required this.orderIdx,
+    this.isVerified = false,
+    this.isActive = true,
   });
 
   factory DeliveryTime.fromJson(Map<String, dynamic> json) {
@@ -29,6 +33,8 @@ class DeliveryTime {
       unit: json['unit'] ?? 'days',
       type: json['type'] ?? 'delivery',
       orderIdx: json['order_idx'] ?? 0,
+      isVerified: json['is_verified'] ?? false,
+      isActive: json['is_active'] ?? true,
     );
   }
 
@@ -42,6 +48,8 @@ class DeliveryTime {
       'unit': unit,
       'type': type,
       'order_idx': orderIdx,
+      'is_verified': isVerified,
+      'is_active': isActive,
     };
   }
 

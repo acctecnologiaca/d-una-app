@@ -13,7 +13,14 @@ import '../widgets/quote_card.dart';
 import '../providers/quotes_provider.dart';
 
 class QuotesSearchScreen extends ConsumerStatefulWidget {
-  const QuotesSearchScreen({super.key});
+  final bool selectionMode;
+  final Set<String>? excludeStatuses;
+
+  const QuotesSearchScreen({
+    super.key,
+    this.selectionMode = false,
+    this.excludeStatuses,
+  });
 
   @override
   ConsumerState<QuotesSearchScreen> createState() => _QuotesSearchScreenState();
@@ -151,10 +158,11 @@ class _QuotesSearchScreenState extends ConsumerState<QuotesSearchScreen> {
     final dataAsync = ref.watch(quotesListProvider);
 
     return GenericSearchScreen<Quote>(
-      title: 'Buscar cotización',
+      title: widget.selectionMode ? 'Seleccionar cotización' : 'Buscar cotización',
       hintText: 'Cliente, número o etiqueta...',
       historyKey: 'quotes_search_history',
       data: dataAsync,
+      showHistory: !widget.selectionMode,
       onResetFilters: () {
         setState(() {
           _selectedStatuses.clear();
@@ -203,7 +211,11 @@ class _QuotesSearchScreenState extends ConsumerState<QuotesSearchScreen> {
         return QuoteCard(
           quote: quote,
           onTap: () {
-            context.push('/quotes/view/${quote.id}');
+            if (widget.selectionMode) {
+              Navigator.of(context).pop(quote);
+            } else {
+              context.push('/quotes/view/${quote.id}');
+            }
           },
         );
       },
@@ -231,6 +243,11 @@ class _QuotesSearchScreenState extends ConsumerState<QuotesSearchScreen> {
         ),
       ],
       filter: (quote, query) {
+        if (widget.excludeStatuses != null &&
+            widget.excludeStatuses!.contains(quote.status.name)) {
+          return false;
+        }
+
         final matchesText = SearchUtils.matchesCombo(query, [
           quote.clientName,
           quote.quoteNumber,

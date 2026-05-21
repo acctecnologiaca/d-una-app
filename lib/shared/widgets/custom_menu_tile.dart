@@ -1,16 +1,18 @@
 import 'package:flutter/material.dart';
 
-class ProfileMenuTile extends StatelessWidget {
+class CustomMenuTile extends StatelessWidget {
   final IconData icon;
   final String title;
   final String subtitle;
+  final TextStyle? subtitleStyle;
   final VoidCallback? onTap;
 
-  const ProfileMenuTile({
+  const CustomMenuTile({
     super.key,
     required this.icon,
     required this.title,
     required this.subtitle,
+    this.subtitleStyle,
     this.onTap,
   });
 
@@ -26,10 +28,8 @@ class ProfileMenuTile extends StatelessWidget {
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.center,
           children: [
-            // Leading Icon
             Icon(icon, size: 32, color: colors.onSurfaceVariant),
             const SizedBox(width: 16),
-            // Text Content
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -44,9 +44,11 @@ class ProfileMenuTile extends StatelessWidget {
                   const SizedBox(height: 4),
                   Text(
                     subtitle,
-                    style: textTheme.bodyMedium?.copyWith(
-                      color: colors.onSurfaceVariant,
-                    ),
+                    style:
+                        subtitleStyle ??
+                        textTheme.bodyMedium?.copyWith(
+                          color: colors.onSurfaceVariant,
+                        ),
                   ),
                 ],
               ),

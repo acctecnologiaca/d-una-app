@@ -18,10 +18,13 @@ class Product extends Equatable {
   final Uom? uomModel; // Full UOM object
   final String? imageUrl;
   final double inventoryQuantity;
+  final double reservedQuantity;
   final double averageCost;
   final int purchaseCount;
   final DateTime createdAt;
   final DateTime updatedAt;
+
+  double get availableQuantity => inventoryQuantity - reservedQuantity;
 
   const Product({
     required this.id,
@@ -38,6 +41,7 @@ class Product extends Equatable {
     this.uomModel,
     this.imageUrl,
     this.inventoryQuantity = 0.0,
+    this.reservedQuantity = 0.0,
     this.averageCost = 0.0,
     this.purchaseCount = 0,
     required this.createdAt,
@@ -63,6 +67,8 @@ class Product extends Equatable {
       imageUrl: json['image_url'],
       inventoryQuantity:
           (json['inventory_quantity'] as num?)?.toDouble() ?? 0.0,
+      reservedQuantity:
+          (json['reserved_quantity'] as num?)?.toDouble() ?? 0.0,
       averageCost: (json['average_cost'] as num?)?.toDouble() ?? 0.0,
       purchaseCount: (json['purchase_count'] as num?)?.toInt() ?? 0,
       createdAt: DateTime.parse(json['created_at']),
@@ -83,6 +89,7 @@ class Product extends Equatable {
       // 'categories': category?.toJson(),
       'uom_id': uomId,
       'image_url': imageUrl,
+      'reserved_quantity': reservedQuantity,
       'created_at': createdAt.toIso8601String(),
       'updated_at': updatedAt.toIso8601String(),
     };
@@ -103,6 +110,7 @@ class Product extends Equatable {
     Uom? uomModel,
     String? imageUrl,
     double? inventoryQuantity,
+    double? reservedQuantity,
     double? averageCost,
     int? purchaseCount,
     DateTime? createdAt,
@@ -123,6 +131,7 @@ class Product extends Equatable {
       uomModel: uomModel ?? this.uomModel,
       imageUrl: imageUrl ?? this.imageUrl,
       inventoryQuantity: inventoryQuantity ?? this.inventoryQuantity,
+      reservedQuantity: reservedQuantity ?? this.reservedQuantity,
       averageCost: averageCost ?? this.averageCost,
       purchaseCount: purchaseCount ?? this.purchaseCount,
       createdAt: createdAt ?? this.createdAt,
@@ -146,6 +155,7 @@ class Product extends Equatable {
     uomModel,
     imageUrl,
     inventoryQuantity,
+    reservedQuantity,
     averageCost,
     purchaseCount,
     createdAt,

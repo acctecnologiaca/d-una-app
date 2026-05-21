@@ -13,11 +13,13 @@ class QuoteValidationItem {
   final Set<QuoteValidationStatus> statuses;
   final double currentStock;
   final double currentCost;
+  final double reservedStock;
 
   QuoteValidationItem({
     required this.statuses,
     required this.currentStock,
     required this.currentCost,
+    this.reservedStock = 0.0,
   });
 
   /// Convenience: true if the item has no issues.
@@ -113,6 +115,7 @@ class QuoteValidationNotifier extends StateNotifier<QuoteValidationState> {
             statuses: {}, // Empty = OK
             currentStock: 999999, // El stock de un temporal/externo se asume ilimitado
             currentCost: product.costPrice,
+            reservedStock: 0.0,
           );
           continue;
         }
@@ -155,6 +158,7 @@ class QuoteValidationNotifier extends StateNotifier<QuoteValidationState> {
           statuses: statuses,
           currentStock: firstResult.currentStock,
           currentCost: firstResult.currentCost,
+          reservedStock: firstResult.reservedStock,
         );
       }
 

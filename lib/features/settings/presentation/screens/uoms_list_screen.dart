@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:d_una_app/shared/widgets/generic_list_screen.dart';
 import 'package:d_una_app/shared/widgets/standard_list_item.dart';
 import 'package:d_una_app/shared/widgets/sort_selector.dart';
@@ -50,10 +49,6 @@ class UomsListScreen extends ConsumerWidget {
       onAddPressed: () => _showAddUomSheet(context),
       sortOptions: const [SortOption.nameAZ, SortOption.nameZA],
       initialSort: SortOption.nameAZ,
-      preFilter: (items) {
-        final currentUserId = Supabase.instance.client.auth.currentUser?.id;
-        return items.where((u) => u.userId == currentUserId).toList();
-      },
       onSearch: (item, query) =>
           item.name.toLowerCase().contains(query.toLowerCase()) ||
           item.symbol.toLowerCase().contains(query.toLowerCase()),

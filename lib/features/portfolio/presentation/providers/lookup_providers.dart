@@ -49,7 +49,13 @@ final brandsProvider = FutureProvider<List<Brand>>((ref) async {
 });
 
 final serviceRatesProvider = FutureProvider<List<ServiceRate>>((ref) async {
-  return ref.watch(lookupRepositoryProvider).getServiceRates();
+  final rates = await ref.watch(lookupRepositoryProvider).getServiceRates();
+  final currentUserId = Supabase.instance.client.auth.currentUser?.id;
+
+  // Filter: verified service rates OR service rates owned by the current user
+  return rates.where((rate) {
+    return rate.isVerified || (currentUserId != null && rate.userId == currentUserId);
+  }).toList();
 });
 
 final uomsProvider = FutureProvider<List<Uom>>((ref) async {
@@ -64,7 +70,13 @@ final uomsProvider = FutureProvider<List<Uom>>((ref) async {
 
 final unaffiliatedSuppliersProvider =
     FutureProvider<List<UnaffiliatedSupplier>>((ref) async {
-      return ref.watch(lookupRepositoryProvider).getUnaffiliatedSuppliers();
+      final suppliers = await ref.watch(lookupRepositoryProvider).getUnaffiliatedSuppliers();
+      final currentUserId = Supabase.instance.client.auth.currentUser?.id;
+
+      // Filter: verified suppliers OR suppliers owned by the current user
+      return suppliers.where((supplier) {
+        return supplier.isVerified || (currentUserId != null && supplier.userId == currentUserId);
+      }).toList();
     });
 
 final allSuppliersProvider = FutureProvider<List<UnaffiliatedSupplier>>((
@@ -86,11 +98,24 @@ final observationsProvider = FutureProvider<List<Observation>>((ref) async {
 final shippingCompaniesProvider = FutureProvider<List<ShippingCompany>>((
   ref,
 ) async {
-  return ref.watch(lookupRepositoryProvider).getShippingCompanies();
+  final companies = await ref.watch(lookupRepositoryProvider).getShippingCompanies();
+  final currentUserId = Supabase.instance.client.auth.currentUser?.id;
+
+  // Filter: verified shipping companies OR shipping companies owned by the current user
+  return companies.where((company) {
+    return company.isVerified || (currentUserId != null && company.userId == currentUserId);
+  }).toList();
 });
 
 final deliveryTimesProvider = FutureProvider<List<DeliveryTime>>((ref) async {
-  return ref.watch(lookupRepositoryProvider).getDeliveryTimes();
+  final times = await ref.watch(lookupRepositoryProvider).getDeliveryTimes();
+  final currentUserId = Supabase.instance.client.auth.currentUser?.id;
+
+  // Filter: MUST be active AND (verified OR owned by current user)
+  return times.where((dt) {
+    if (!dt.isActive) return false;
+    return dt.isVerified || (currentUserId != null && dt.userId == currentUserId);
+  }).toList();
 });
 
 final deliveryTimesForDeliveryProvider = FutureProvider<List<DeliveryTime>>((

@@ -16,6 +16,7 @@ import '../../../../../shared/widgets/custom_action_sheet.dart';
 import '../../../../../shared/widgets/bottom_sheet_action_item.dart';
 import '../../../../../shared/widgets/custom_dialog.dart';
 import '../../../domain/models/quote_model.dart';
+import '../../../domain/repositories/quotes_repository.dart';
 import 'package:material_symbols_icons/symbols.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:d_una_app/core/pdf/templates/quote_pdf_template.dart';
@@ -129,22 +130,49 @@ class _ViewQuoteScreenState extends ConsumerState<ViewQuoteScreen>
 
                       if (selectedStatus != null &&
                           selectedStatus != currentEnum) {
-                        await ref
-                            .read(quotesListProvider.notifier)
-                            .updateQuoteStatus(
-                              widget.quoteId,
-                              selectedStatus.dbValue,
-                            );
+                        try {
+                          await ref
+                              .read(quotesListProvider.notifier)
+                              .updateQuoteStatus(
+                                widget.quoteId,
+                                selectedStatus.dbValue,
+                              );
 
-                        // Refresh view provider
-                        ref.invalidate(viewQuoteProvider(widget.quoteId));
+                          if (!context.mounted) return;
 
-                        if (mounted) {
+                          // Refresh view provider
+                          ref.invalidate(viewQuoteProvider(widget.quoteId));
+
                           messenger.showSnackBar(
                             SnackBar(
                               content: Text(
                                 'Estatus cambiado a "${selectedStatus.label}"',
                               ),
+                            ),
+                          );
+                        } on InsufficientStockException catch (e) {
+                          if (!context.mounted) return;
+                          CustomDialog.show(
+                            context: context,
+                            dialog: CustomDialog.confirmation(
+                              icon: Symbols.warning,
+                              iconColor: Colors.amber.shade800,
+                              title: 'Stock Insuficiente',
+                              contentText:
+                                  'No se puede aprobar la cotización porque no hay suficiente stock disponible en el inventario propio de los siguientes productos:\n\n${e.productNames.map((name) => '• $name').join('\n')}\n\nPor favor, agregue más stock para poder aprobarla.',
+                              actions: [
+                                TextButton(
+                                  onPressed: () => Navigator.of(context, rootNavigator: true).pop(),
+                                  child: const Text('Entendido'),
+                                ),
+                              ],
+                            ),
+                          );
+                        } catch (e) {
+                          if (!context.mounted) return;
+                          messenger.showSnackBar(
+                            SnackBar(
+                              content: Text('Error al cambiar estatus: $e'),
                             ),
                           );
                         }

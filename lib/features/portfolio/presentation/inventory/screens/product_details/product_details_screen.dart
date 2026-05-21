@@ -269,11 +269,33 @@ class _ProductDetailsScreenState extends ConsumerState<ProductDetailsScreen> {
                         ? Symbols.package_2
                         : null,
                     label: 'Existencia',
-                    content: Text(
-                      '${UomStatusBadge.formatQuantity(currentProduct.inventoryQuantity)} ${currentProduct.uomModel?.name ?? 'Unidades'} (${currentProduct.uom ?? 'ud.'})',
-                      style: textTheme.bodyLarge?.copyWith(
-                        color: colors.onSurface,
-                      ),
+                    content: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          '${UomStatusBadge.formatQuantity(currentProduct.availableQuantity)} ${currentProduct.uomModel?.name ?? 'Unidades'} (${currentProduct.uom ?? 'ud.'}) disponibles',
+                          style: textTheme.bodyLarge?.copyWith(
+                            color: colors.onSurface,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          'Total físico: ${UomStatusBadge.formatQuantity(currentProduct.inventoryQuantity)}',
+                          style: textTheme.bodyMedium?.copyWith(
+                            color: colors.onSurfaceVariant,
+                          ),
+                        ),
+                        if (currentProduct.reservedQuantity > 0) ...[
+                          const SizedBox(height: 2),
+                          Text(
+                            'Apartado para cotizaciones aprobadas: ${UomStatusBadge.formatQuantity(currentProduct.reservedQuantity)}',
+                            style: textTheme.bodyMedium?.copyWith(
+                              color: Colors.orange.shade800,
+                            ),
+                          ),
+                        ],
+                      ],
                     ),
                   ),
 

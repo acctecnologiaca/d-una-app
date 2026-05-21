@@ -21,7 +21,7 @@ import 'package:d_una_app/core/pdf/templates/quote_pdf_template.dart';
 import '../../../../../shared/utils/string_utils.dart';
 import '../../../../../shared/widgets/user_profile_avatar.dart';
 import '../../../../../shared/widgets/empty_list_state.dart';
-
+import '../../../domain/repositories/quotes_repository.dart';
 class QuotesListScreen extends ConsumerStatefulWidget {
   const QuotesListScreen({super.key});
 
@@ -531,17 +531,43 @@ class _QuotesListScreenState extends ConsumerState<QuotesListScreen> {
     );
 
     if (selectedStatus != null) {
-      await ref
-          .read(quotesListProvider.notifier)
-          .batchUpdateStatus(
-            selection.selectedIds.toList(),
-            selectedStatus.dbValue,
+      try {
+        await ref
+            .read(quotesListProvider.notifier)
+            .batchUpdateStatus(
+              selection.selectedIds.toList(),
+              selectedStatus.dbValue,
+            );
+        ref.read(quoteSelectionProvider.notifier).clearSelection();
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Estatus cambiado a "${selectedStatus.label}"'),
+            ),
           );
-      ref.read(quoteSelectionProvider.notifier).clearSelection();
-      if (context.mounted) {
+        }
+      } on InsufficientStockException catch (e) {
+        if (!context.mounted) return;
+        CustomDialog.show(
+          context: context,
+          dialog: CustomDialog.confirmation(
+            icon: Symbols.warning,
+            iconColor: Colors.amber.shade800,
+            title: 'Stock Insuficiente',
+            contentText: 'No se puede aprobar la cotización porque no hay suficiente stock disponible en el inventario propio de los siguientes productos:\n\n${e.productNames.map((name) => '• $name').join('\n')}\n\nPor favor, agregue más stock para poder aprobarla.',
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(context, rootNavigator: true).pop(),
+                child: const Text('Entendido'),
+              ),
+            ],
+          ),
+        );
+      } catch (e) {
+        if (!context.mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Estatus cambiado a "${selectedStatus.label}"'),
+            content: Text('Error al cambiar estatus: $e'),
           ),
         );
       }

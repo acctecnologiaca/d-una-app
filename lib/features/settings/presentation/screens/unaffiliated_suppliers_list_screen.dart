@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:d_una_app/shared/widgets/generic_list_screen.dart';
 import 'package:d_una_app/shared/widgets/standard_list_item.dart';
 import 'package:d_una_app/shared/widgets/sort_selector.dart';
@@ -56,10 +55,6 @@ class UnaffiliatedSuppliersListScreen extends ConsumerWidget {
         return s.name.toLowerCase().contains(q) ||
             (s.legalName?.toLowerCase().contains(q) ?? false) ||
             (s.taxId?.toLowerCase().contains(q) ?? false);
-      },
-      preFilter: (items) {
-        final currentUserId = Supabase.instance.client.auth.currentUser?.id;
-        return items.where((s) => s.userId == currentUserId).toList();
       },
       onSort: (a, b, sort) {
         final nameA = a.legalName ?? a.name;

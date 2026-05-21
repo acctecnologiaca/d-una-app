@@ -17,6 +17,7 @@ class QuoteAddedProductCard extends StatelessWidget {
   final double subtotal; // Changed from salePrice
   final double totalQuantity;
   final double totalAvailableStock;
+  final double? reservedStock;
   final String uom;
   final String? uomIconName;
 
@@ -45,6 +46,7 @@ class QuoteAddedProductCard extends StatelessWidget {
     required this.subtotal,
     required this.totalQuantity,
     required this.totalAvailableStock,
+    this.reservedStock,
     required this.uom,
     this.uomIconName,
     required this.onDelete,
@@ -202,13 +204,29 @@ class QuoteAddedProductCard extends StatelessWidget {
             ],
       expandedTrailing: isReadOnly
           ? null
-          : EditableQuantityStepper(
-              label: 'Cantidad:',
-              value: totalQuantity,
-              min: 1, // Minimum 1, otherwise they should delete it
-              max: totalAvailableStock,
-              onChanged: onQuantityChanged,
+          : Column(
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                EditableQuantityStepper(
+                  label: 'Cantidad:',
+                  value: totalQuantity,
+                  min: 1, // Minimum 1, otherwise they should delete it
+                  max: totalAvailableStock,
+                  onChanged: onQuantityChanged,
+                ),
+              ],
             ),
+      note: (hasOwnInventory && reservedStock != null && reservedStock! > 0)
+          ? Text(
+              'Existen ${reservedStock!.toStringAsFixed(reservedStock!.truncateToDouble() == reservedStock ? 0 : 2)} $uom reservadas de este producto en cotizaciones aprobadas.',
+              style: TextStyle(
+                color: colors.error,
+                fontSize: 12,
+                fontWeight: FontWeight.bold,
+              ),
+              textAlign: TextAlign.left,
+            )
+          : null,
     );
   }
 

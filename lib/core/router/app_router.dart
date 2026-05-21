@@ -246,6 +246,17 @@ final routerProvider = Provider<GoRouter>((ref) {
                   builder: (context, state) => const QuotesSearchScreen(),
                 ),
                 GoRoute(
+                  path: 'select',
+                  parentNavigatorKey: rootNavigatorKey,
+                  builder: (context, state) {
+                    final excludeStatuses = (state.extra as Set?)?.cast<String>();
+                    return QuotesSearchScreen(
+                      selectionMode: true,
+                      excludeStatuses: excludeStatuses,
+                    );
+                  },
+                ),
+                GoRoute(
                   path: 'view/:id',
                   parentNavigatorKey: rootNavigatorKey,
                   builder: (context, state) {
@@ -597,10 +608,19 @@ final routerProvider = Provider<GoRouter>((ref) {
               path: 'edit',
               builder: (context, state) {
                 final extra = state.extra as Map<String, dynamic>;
+                final templateExtra = extra['template'];
+                
+                EmailTemplate? template;
+                if (templateExtra is EmailTemplate) {
+                  template = templateExtra;
+                } else if (templateExtra is Map<String, dynamic>) {
+                  template = EmailTemplate.fromJson(templateExtra);
+                }
+
                 return EditEmailTemplateScreen(
                   typeId: extra['typeId'] as String,
                   label: extra['label'] as String,
-                  template: extra['template'] as EmailTemplate?,
+                  template: template,
                 );
               },
             ),

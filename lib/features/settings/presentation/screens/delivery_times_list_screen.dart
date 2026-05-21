@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:d_una_app/shared/widgets/generic_list_screen.dart';
 import 'package:d_una_app/shared/widgets/standard_list_item.dart';
 import 'package:d_una_app/shared/widgets/sort_selector.dart';
@@ -58,9 +57,6 @@ class DeliveryTimesListScreen extends ConsumerWidget {
         SortOption.nameZA,
       ],
       initialSort: SortOption.durationAsc,
-      preFilter: (items) {
-        return items.where((t) => t.userId != null).toList();
-      },
       onSearch: (item, query) =>
           item.name.toLowerCase().contains(query.toLowerCase()),
       onSort: (a, b, sort) {
@@ -76,49 +72,68 @@ class DeliveryTimesListScreen extends ConsumerWidget {
         return a.name.compareTo(b.name);
       },
       itemBuilder: (context, time) {
-        final currentUserId = Supabase.instance.client.auth.currentUser?.id;
-        final isGlobal = time.userId == null;
-        final isOwned = time.userId == currentUserId;
-        final canEdit = isOwned;
+        final bool canEdit = !time.isVerified;
 
-        return StandardListItem(
-          title: time.name,
-          trailing: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              if (time.type == 'delivery' || time.type == 'both')
-                Icon(
-                  Icons.local_shipping_outlined,
-                  color: colors.onSurfaceVariant,
-                ),
-              if (time.type == 'both') const SizedBox(width: 8),
-              if (time.type == 'execution' || time.type == 'both')
-                Icon(Icons.timer_outlined, color: colors.onSurfaceVariant),
-              if (isGlobal) ...[
-                const SizedBox(width: 8),
-                Icon(
-                  Icons.public,
-                  size: 14,
-                  color: colors.primary.withValues(alpha: 0.5),
-                ),
-              ],
-            ],
-          ),
-          onTap: () {
-            if (canEdit) {
-              _showAddEditSheet(context, time);
-            } else {
-              ScaffoldMessenger.of(context)
-                ..hideCurrentSnackBar()
-                ..showSnackBar(
-                  const SnackBar(
-                    content: Text(
-                      'Este es un ajuste global fijado por el sistema, no puede ser modificado.',
-                    ),
+        return Opacity(
+          opacity: canEdit ? 1.0 : 0.5,
+          child: StandardListItem(
+            title: time.name,
+            trailing: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                if (time.type == 'delivery' || time.type == 'both')
+                  Icon(
+                    Icons.local_shipping_outlined,
+                    color: colors.onSurfaceVariant,
                   ),
-                );
-            }
-          },
+                if (time.type == 'both') const SizedBox(width: 8),
+                if (time.type == 'execution' || time.type == 'both')
+                  Icon(Icons.timer_outlined, color: colors.onSurfaceVariant),
+                if (time.isVerified) ...[
+                  const SizedBox(width: 8),
+                  Icon(
+                    Icons.verified,
+                    size: 20,
+                    color: colors.primary.withValues(alpha: 0.5),
+                  ),
+                ],
+              ],
+            ),
+            onTap: () {
+              if (canEdit) {
+                _showAddEditSheet(context, time);
+              } else {
+                ScaffoldMessenger.of(context)
+                  ..hideCurrentSnackBar()
+                  ..showSnackBar(
+                    SnackBar(
+                      duration: const Duration(seconds: 5),
+                      content: Row(
+                        children: [
+                          const Expanded(
+                            child: Text(
+                              'Este es un ajuste verificado, no puede ser modificado.',
+                              style: TextStyle(fontSize: 13),
+                            ),
+                          ),
+                          IconButton(
+                            icon: const Icon(
+                              Icons.close,
+                              color: Colors.white,
+                            ),
+                            padding: EdgeInsets.zero,
+                            constraints: const BoxConstraints(),
+                            onPressed: () => ScaffoldMessenger.of(
+                              context,
+                            ).hideCurrentSnackBar(),
+                          ),
+                        ],
+                      ),
+                    ),
+                  );
+              }
+            },
+          ),
         );
       },
     );

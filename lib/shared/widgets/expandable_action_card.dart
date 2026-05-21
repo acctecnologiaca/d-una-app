@@ -12,6 +12,7 @@ class ExpandableActionCard extends StatefulWidget {
   final bool isExpandable;
   final Color? backgroundColor;
   final VoidCallback? onTap;
+  final Widget? note;
 
   const ExpandableActionCard({
     super.key,
@@ -25,6 +26,7 @@ class ExpandableActionCard extends StatefulWidget {
     this.isExpandable = true,
     this.backgroundColor,
     this.onTap,
+    this.note,
   });
 
   @override
@@ -78,13 +80,25 @@ class _ExpandableActionCardState extends State<ExpandableActionCard> {
                             horizontal: 0.0,
                             vertical: 4.0,
                           ),
-                          child: Row(
+                          child: Column(
                             children: [
-                              ...widget.actions,
-                              if (widget.expandedTrailing != null) ...[
-                                const Spacer(),
-                                widget.expandedTrailing!,
-                              ],
+                              Row(
+                                children: [
+                                  ...widget.actions,
+                                  if (widget.expandedTrailing != null) ...[
+                                    const Spacer(),
+                                    widget.expandedTrailing!,
+                                  ],
+                                ],
+                              ),
+                              if (widget.note != null)
+                                Padding(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 0.0,
+                                    vertical: 6.0,
+                                  ),
+                                  child: widget.note!,
+                                ),
                             ],
                           ),
                         ),

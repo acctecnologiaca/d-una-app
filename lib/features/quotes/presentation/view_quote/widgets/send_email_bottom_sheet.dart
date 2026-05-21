@@ -89,6 +89,7 @@ class _SendEmailBottomSheetState extends ConsumerState<SendEmailBottomSheet> {
       clientName: clientDisplayName,
       userName: userName.isEmpty ? 'Usuario' : userName,
       companyName: companyName,
+      collaboratorName: widget.quote.advisorName,
     );
 
     if (mounted) {

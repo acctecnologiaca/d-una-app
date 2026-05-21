@@ -406,6 +406,19 @@ class SupabaseQuotesRepository implements QuotesRepository {
 
   @override
   Future<void> updateQuoteStatus(String id, String status) async {
+    if (status == 'approved') {
+      final List<dynamic> insufficient = await _client.rpc(
+        'check_quote_insufficient_stock',
+        params: {'p_quote_id': id},
+      );
+
+      if (insufficient.isNotEmpty) {
+        final names = insufficient
+            .map((item) => item['product_name'] as String)
+            .toList();
+        throw InsufficientStockException(names);
+      }
+    }
     await _client.from('quotes').update({'status': status}).eq('id', id);
   }
 
@@ -424,6 +437,23 @@ class SupabaseQuotesRepository implements QuotesRepository {
 
   @override
   Future<void> batchUpdateStatus(List<String> ids, String status) async {
+    if (status == 'approved') {
+      final List<String> allInsufficientNames = [];
+      for (final id in ids) {
+        final List<dynamic> insufficient = await _client.rpc(
+          'check_quote_insufficient_stock',
+          params: {'p_quote_id': id},
+        );
+        if (insufficient.isNotEmpty) {
+          allInsufficientNames.addAll(
+            insufficient.map((item) => item['product_name'] as String),
+          );
+        }
+      }
+      if (allInsufficientNames.isNotEmpty) {
+        throw InsufficientStockException(allInsufficientNames.toSet().toList());
+      }
+    }
     await _client.from('quotes').update({'status': status}).inFilter('id', ids);
   }
 

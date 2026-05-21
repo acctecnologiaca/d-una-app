@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../../../quotes/presentation/create_quote/providers/create_quote_provider.dart';
+import '../../../quotes/presentation/quotes_list/providers/quotes_provider.dart';
 import '../../../../shared/widgets/custom_action_sheet.dart';
 import '../../../../shared/widgets/custom_stepper.dart';
 
@@ -58,18 +58,33 @@ class EstimatePriceSheet extends ConsumerStatefulWidget {
 class _EstimatePriceSheetState extends ConsumerState<EstimatePriceSheet> {
   double _profitPercentage = 25.0; // Default will be overwritten in initState
   late final TextEditingController _percentageController;
-  late String _pricingMethod;
-  bool _isEdited = false;
+  String _pricingMethod = 'margin';
+
 
   @override
   void initState() {
     super.initState();
-    final quoteState = ref.read(createQuoteProvider);
-    _profitPercentage = quoteState.globalMargin;
-    _pricingMethod = quoteState.pricingMethod;
     _percentageController = TextEditingController(
       text: _formatNumber(_profitPercentage),
     );
+    _loadFinancialParameters();
+  }
+
+  Future<void> _loadFinancialParameters() async {
+    try {
+      final repo = ref.read(quotesRepositoryProvider);
+      final params = await repo.getFinancialParameters();
+      if (mounted) {
+        setState(() {
+          _profitPercentage = params.profitMargin;
+          _pricingMethod = params.pricingMethod;
+          _percentageController.text = _formatNumber(_profitPercentage);
+        });
+      }
+    } catch (e) {
+      // Fallback: keep default 25%
+      debugPrint('Error loading financial parameters: $e');
+    }
   }
 
   @override
@@ -102,7 +117,7 @@ class _EstimatePriceSheetState extends ConsumerState<EstimatePriceSheet> {
     final val = double.tryParse(sanitized);
     if (val != null) {
       setState(() {
-        _isEdited = true;
+
         _profitPercentage = val;
       });
     }
@@ -110,7 +125,7 @@ class _EstimatePriceSheetState extends ConsumerState<EstimatePriceSheet> {
 
   void _increment() {
     setState(() {
-      _isEdited = true;
+
       _profitPercentage += 1.0;
       _percentageController.text = _formatNumber(_profitPercentage);
     });
@@ -119,7 +134,7 @@ class _EstimatePriceSheetState extends ConsumerState<EstimatePriceSheet> {
   void _decrement() {
     setState(() {
       if (_profitPercentage > 0) {
-        _isEdited = true;
+
         _profitPercentage -= 1.0;
         _percentageController.text = _formatNumber(_profitPercentage);
       }
@@ -134,18 +149,6 @@ class _EstimatePriceSheetState extends ConsumerState<EstimatePriceSheet> {
 
   @override
   Widget build(BuildContext context) {
-    ref.listen<QuoteState>(createQuoteProvider, (previous, next) {
-      // If was loading and finished, or if it was the first load and we have defaults
-      if ((previous == null || previous.isLoading) && !next.isLoading) {
-        if (!_isEdited) {
-          setState(() {
-            _profitPercentage = next.globalMargin;
-            _percentageController.text = _formatNumber(_profitPercentage);
-            _pricingMethod = next.pricingMethod;
-          });
-        }
-      }
-    });
 
     final theme = Theme.of(context);
     final colors = theme.colorScheme;

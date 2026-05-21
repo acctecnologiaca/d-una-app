@@ -13,7 +13,8 @@ RETURNS TABLE (
     stock numeric,
     trade_type text,
     uom_icon_name text,
-    is_accessible boolean
+    is_accessible boolean,
+    reserved_stock numeric
 ) 
 LANGUAGE plpgsql
 SECURITY DEFINER
@@ -52,7 +53,8 @@ BEGIN
         public.inventory_quantity(p),
         'RETAIL'::text,
         COALESCE(u.icon_name, 'package_2'),
-        true -- El inventario propio siempre es accesible
+        true, -- El inventario propio siempre es accesible
+        COALESCE(p.reserved_quantity, 0.0)::numeric
     FROM products p
     LEFT JOIN brands b ON p.brand_id = b.id
     LEFT JOIN uoms u ON p.uom_id = u.id
@@ -84,7 +86,8 @@ BEGIN
                    AND 
                    COALESCE(s.allowed_verification_types::text, '') NOT ILIKE '%individual%'
                 )
-        END
+        END,
+        0.0::numeric
     FROM supplier_products sp
     JOIN supplier_branch_stock sbs ON sp.id = sbs.product_id
     JOIN suppliers s ON sp.supplier_id = s.id

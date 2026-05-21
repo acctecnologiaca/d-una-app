@@ -19,6 +19,7 @@ class GenericSearchScreen<T> extends StatefulWidget {
   final Widget? bottomFilterWidget;
   final int Function(T a, T b)? comparator;
   final String? initialQuery;
+  final bool showHistory;
 
   const GenericSearchScreen({
     super.key,
@@ -35,6 +36,7 @@ class GenericSearchScreen<T> extends StatefulWidget {
     this.bottomFilterWidget,
     this.comparator,
     this.initialQuery,
+    this.showHistory = true,
   });
 
   @override
@@ -183,7 +185,7 @@ class _GenericSearchScreenState<T> extends State<GenericSearchScreen<T>> {
     // The `FilterChipData.isActive` usually means "User has selected a value".
 
     final bool hasActiveFilters = widget.filters.any((f) => f.isActive);
-    final bool showHistory = _searchQuery.isEmpty && !hasActiveFilters;
+    final bool showHistory = widget.showHistory && _searchQuery.isEmpty && !hasActiveFilters;
 
     if (showHistory) {
       if (_history.isEmpty) {

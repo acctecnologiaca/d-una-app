@@ -18,6 +18,7 @@ class QuoteItemProduct {
   final String? uomIconName;
   final String? description;
   final double? availableStock; // UI helper for tracking total stock available
+  final double? reservedStock; // UI helper for tracking reserved own stock
 
   // Economic
   final double quantity;
@@ -45,6 +46,7 @@ class QuoteItemProduct {
     this.uomIconName,
     this.description,
     this.availableStock,
+    this.reservedStock,
     required this.quantity,
     required this.costPrice,
     required this.profitMargin,
@@ -89,6 +91,9 @@ class QuoteItemProduct {
       description: json['description'] as String?,
       availableStock: json['available_stock'] != null
           ? (json['available_stock'] as num?)?.toDouble()
+          : null,
+      reservedStock: json['reserved_stock'] != null
+          ? (json['reserved_stock'] as num?)?.toDouble()
           : null,
       quantity: (json['quantity'] as num?)?.toDouble() ?? 0.0,
       costPrice: (json['cost_price'] as num?)?.toDouble() ?? 0.0,
@@ -146,6 +151,7 @@ class QuoteItemProduct {
       'uom_icon_name': uomIconName,
       'description': description,
       'available_stock': availableStock,
+      'reserved_stock': reservedStock,
       'quantity': quantity,
       'cost_price': costPrice,
       'profit_margin': profitMargin,
@@ -174,6 +180,7 @@ class QuoteItemProduct {
     String? uomIconName,
     String? description,
     double? availableStock,
+    double? reservedStock,
     double? quantity,
     double? costPrice,
     double? profitMargin,
@@ -204,6 +211,7 @@ class QuoteItemProduct {
       uomIconName: uomIconName ?? this.uomIconName,
       description: description ?? this.description,
       availableStock: availableStock ?? this.availableStock,
+      reservedStock: reservedStock ?? this.reservedStock,
       quantity: quantity ?? this.quantity,
       costPrice: costPrice ?? this.costPrice,
       profitMargin: profitMargin ?? this.profitMargin,

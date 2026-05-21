@@ -11,6 +11,7 @@ class QuoteProductSource {
   final bool isAccessible;
   final String uomIconName;
   final String? externalProviderName;
+  final double reservedStock;
 
   // Mutable UI state for draft selection
   double selectedQuantity;
@@ -27,6 +28,7 @@ class QuoteProductSource {
     required this.uomIconName,
     this.externalProviderName,
     this.selectedQuantity = 0.0,
+    this.reservedStock = 0.0,
   });
 
   factory QuoteProductSource.fromMap(Map<String, dynamic> map) {
@@ -43,6 +45,7 @@ class QuoteProductSource {
       isAccessible: map['is_accessible'] as bool? ?? false,
       uomIconName: map['uom_icon_name'] ?? '',
       externalProviderName: map['external_provider_name'],
+      reservedStock: (map['reserved_stock'] as num?)?.toDouble() ?? 0.0,
     );
   }
 
@@ -60,6 +63,7 @@ class QuoteProductSource {
       tradeType: null,
       isAccessible: true,
       uomIconName: '',
+      reservedStock: 0.0,
     );
   }
 
@@ -68,6 +72,7 @@ class QuoteProductSource {
     bool? isAccessible,
     String? externalProviderName,
     double? price,
+    double? reservedStock,
   }) {
     return QuoteProductSource(
       id: id,
@@ -81,6 +86,7 @@ class QuoteProductSource {
       uomIconName: uomIconName,
       externalProviderName: externalProviderName ?? this.externalProviderName,
       selectedQuantity: selectedQuantity ?? this.selectedQuantity,
+      reservedStock: reservedStock ?? this.reservedStock,
     );
   }
 }

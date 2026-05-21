@@ -244,6 +244,30 @@ class _QuoteProductsTabState extends ConsumerState<QuoteProductsTab>
                       set,
                     ) => acc..addAll(set));
 
+                final ownItem = items.where((item) => item.sourceType == QuoteItemSourceType.own).firstOrNull;
+                double? reservedStock;
+                if (ownItem != null) {
+                  final vInfo = validationState.items[ownItem.id];
+                  if (vInfo != null && vInfo.reservedStock > 0) {
+                    double effectiveReserved = vInfo.reservedStock;
+                    // If this quote is approved, the DB reserved_quantity
+                    // already includes this quote's own items. Subtract them
+                    // so we only show reservations from *other* approved quotes.
+                    if (state.quote?.status == 'approved') {
+                      final originalOwnQtyInQuote = state.quote?.products
+                              ?.where((p) =>
+                                  p.productId == ownItem.productId &&
+                                  p.sourceType == QuoteItemSourceType.own)
+                              .fold(0.0, (sum, p) => sum + p.quantity) ??
+                          0.0;
+                      effectiveReserved -= originalOwnQtyInQuote;
+                    }
+                    if (effectiveReserved > 0) {
+                      reservedStock = effectiveReserved;
+                    }
+                  }
+                }
+
                 return QuoteAddedProductCard(
                   name: groupName,
                   brand: firstItem.brand,
@@ -253,10 +277,13 @@ class _QuoteProductsTabState extends ConsumerState<QuoteProductsTab>
                   subtotal: subtotal,
                   totalQuantity: totalQuantity,
                   totalAvailableStock: totalAvailableStock,
+                  reservedStock: reservedStock,
                   hasOwnInventory: hasOwnInventory,
                   hasSupplierInventory: hasSupplierInventory,
                   isTemporal: isTemporal,
                   isExternalManagement: isExternalManagement,
+                  alerts: groupAlerts.toList(),
+                  sourceAlerts: sourceAlerts,
                   onDelete: () {
                     ref
                         .read(createQuoteProvider.notifier)
@@ -444,8 +471,6 @@ class _QuoteProductsTabState extends ConsumerState<QuoteProductsTab>
                         .read(createQuoteProvider.notifier)
                         .updateGroupQuantity(groupIndex, newQty);
                   },
-                  alerts: groupAlerts.toList(),
-                  sourceAlerts: sourceAlerts,
                 );
               },
             ),

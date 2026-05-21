@@ -693,72 +693,91 @@ class _QuoteProductSourceCardState
                 bottom: 12,
                 top: 8,
               ),
-              child: Row(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  !isExternal
-                      ? Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            SizedBox(
-                              width: 24,
-                              height: 24,
-                              child: Checkbox(
-                                value: checkboxState,
-                                tristate: true,
-                                activeColor: colors.primary,
-                                side: BorderSide(
-                                  color: checkboxState == false
-                                      ? colors.onSurfaceVariant
-                                      : colors.primary,
-                                  width: 2,
+                  Row(
+                    children: [
+                      !isExternal
+                          ? Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                SizedBox(
+                                  width: 24,
+                                  height: 24,
+                                  child: Checkbox(
+                                    value: checkboxState,
+                                    tristate: true,
+                                    activeColor: colors.primary,
+                                    side: BorderSide(
+                                      color: checkboxState == false
+                                          ? colors.onSurfaceVariant
+                                          : colors.primary,
+                                      width: 2,
+                                    ),
+                                    onChanged:
+                                        (shouldShowSnackBar ||
+                                            (!hasStock &&
+                                                checkboxState == false))
+                                        ? null
+                                        : (bool? newValue) {
+                                            if (checkboxState == false) {
+                                              widget.onSelectAll();
+                                            } else {
+                                              widget.onDeselectAll();
+                                            }
+                                          },
+                                  ),
                                 ),
-                                onChanged:
-                                    (shouldShowSnackBar ||
-                                        (!hasStock && checkboxState == false))
-                                    ? null
-                                    : (bool? newValue) {
-                                        if (checkboxState == false) {
-                                          widget.onSelectAll();
-                                        } else {
-                                          widget.onDeselectAll();
-                                        }
-                                      },
-                              ),
-                            ),
-                            const SizedBox(width: 8),
-                            Text(
-                              checkboxState == null ? 'Parcial' : 'Todos',
-                              style: TextStyle(
-                                fontSize: 14,
-                                color:
-                                    (shouldShowSnackBar ||
-                                        (!hasStock && checkboxState == false))
-                                    ? colors.onSurfaceVariant.withValues(
-                                        alpha: 0.38,
-                                      )
-                                    : colors.onSurfaceVariant,
-                                fontWeight: FontWeight.w500,
-                              ),
-                            ),
-                          ],
-                        )
-                      : SizedBox.shrink(),
-                  const Spacer(),
-                  Text(
-                    'Cantidad:',
-                    style: TextStyle(
-                      fontSize: 13,
-                      color: colors.onSurfaceVariant,
-                      fontWeight: FontWeight.w500,
+                                const SizedBox(width: 8),
+                                Text(
+                                  checkboxState == null ? 'Parcial' : 'Todos',
+                                  style: TextStyle(
+                                    fontSize: 14,
+                                    color:
+                                        (shouldShowSnackBar ||
+                                            (!hasStock &&
+                                                checkboxState == false))
+                                        ? colors.onSurfaceVariant.withValues(
+                                            alpha: 0.38,
+                                          )
+                                        : colors.onSurfaceVariant,
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                ),
+                              ],
+                            )
+                          : SizedBox.shrink(),
+                      const Spacer(),
+                      Text(
+                        'Cantidad:',
+                        style: TextStyle(
+                          fontSize: 13,
+                          color: colors.onSurfaceVariant,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                      const SizedBox(width: 4),
+                      EditableQuantityStepper(
+                        value: widget.selectedQty,
+                        min: 0,
+                        max: maxQty,
+                        onChanged: widget.onQtyChanged,
+                      ),
+                    ],
+                  ),
+                  if (isOwn && widget.source.reservedStock > 0) ...[
+                    const SizedBox(height: 6),
+                    Text(
+                      'Existen ${widget.source.reservedStock.toStringAsFixed(widget.source.reservedStock.truncateToDouble() == widget.source.reservedStock ? 0 : 2)} ${widget.uom} reservadas de este producto en cotizaciones aprobadas.',
+                      style: TextStyle(
+                        color: colors.error,
+                        fontSize: 12,
+                        fontWeight: FontWeight.bold,
+                      ),
+                      textAlign: TextAlign.left,
                     ),
-                  ),
-                  const SizedBox(width: 4),
-                  EditableQuantityStepper(
-                    value: widget.selectedQty,
-                    min: 0,
-                    max: maxQty,
-                    onChanged: widget.onQtyChanged,
-                  ),
+                  ],
                 ],
               ),
             ),
