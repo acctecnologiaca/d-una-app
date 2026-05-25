@@ -8,7 +8,6 @@ import '../../../../shared/widgets/generic_search_screen.dart';
 import '../../../../shared/widgets/filter_bottom_sheet.dart';
 import '../../../../shared/widgets/sort_selector.dart';
 import '../../../auth/presentation/providers/register_provider.dart';
-import '../../../../core/utils/string_extensions.dart';
 import '../../../../shared/widgets/standard_list_item.dart';
 
 class ClientSearchScreen extends ConsumerStatefulWidget {
@@ -21,7 +20,6 @@ class ClientSearchScreen extends ConsumerStatefulWidget {
 class _ClientSearchScreenState extends ConsumerState<ClientSearchScreen> {
   String? _selectedFilterType; // null = All, 'company', 'person'
   final Set<String> _selectedFilterCities = {};
-  String _searchQuery = '';
   SortOption _currentSort = SortOption.recent;
 
   String _getHistoryKey() {
@@ -31,25 +29,32 @@ class _ClientSearchScreenState extends ConsumerState<ClientSearchScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final clientsAsync = ref.watch(clientsProvider);
+    final paginatedAsync = ref.watch(paginatedClientSearchProvider);
     final colors = Theme.of(context).colorScheme;
 
     return GenericSearchScreen<Client>(
       hintText: 'Buscar cliente...',
       historyKey: _getHistoryKey(),
-      data: clientsAsync,
+      isPaginatedMode: true,
+      paginatedDataAsync: paginatedAsync,
+      onServerSearch: (query) {
+        ref.read(paginatedClientSearchProvider.notifier).updateSearch(query);
+      },
+      onLoadMore: () {
+        ref.read(paginatedClientSearchProvider.notifier).loadMore();
+      },
       onResetFilters: () {
         setState(() {
           _selectedFilterType = null;
           _selectedFilterCities.clear();
-          _searchQuery = '';
           _currentSort = SortOption.recent;
         });
+        ref.read(paginatedClientSearchProvider.notifier).updateSearch(null);
+        ref.read(paginatedClientSearchProvider.notifier).updateFilters(typeFilter: null);
+        ref.read(paginatedClientSearchProvider.notifier).updateSort('created_at', false);
       },
       onQueryChanged: (query) {
-        setState(() {
-          _searchQuery = query;
-        });
+        // Handle query if needed locally, though server search debounce takes care of it
       },
       filters: [
         FilterChipData(
@@ -83,6 +88,7 @@ class _ClientSearchScreenState extends ConsumerState<ClientSearchScreen> {
                 setState(() {
                   _selectedFilterType = value == 'all' ? null : value;
                 });
+                ref.read(paginatedClientSearchProvider.notifier).updateFilters(typeFilter: _selectedFilterType);
               },
             );
           },
@@ -94,69 +100,39 @@ class _ClientSearchScreenState extends ConsumerState<ClientSearchScreen> {
           ),
           isActive: _selectedFilterCities.isNotEmpty,
           onTap: () {
-            clientsAsync.whenData((clients) {
-              final queryNormalized = _searchQuery.normalized;
-              final availableCities = clients
-                  .where((c) {
-                    return queryNormalized.isEmpty ||
-                        c.name.normalized.contains(queryNormalized) ||
-                        (c.taxId?.normalized ?? '').contains(queryNormalized) ||
-                        (c.alias?.normalized ?? '').contains(queryNormalized) ||
-                        (c.email?.normalized ?? '').contains(queryNormalized);
-                  })
-                  .map((c) => c.city)
-                  .whereType<String>()
-                  .where((c) => c.isNotEmpty)
-                  .toSet()
-                  .toList();
+            final currentClients = paginatedAsync.valueOrNull?.items ?? [];
+            final validCities = currentClients
+                .map((c) => c.city)
+                .whereType<String>()
+                .where((c) => c.trim().isNotEmpty)
+                .toSet();
 
-              FilterBottomSheet.showMulti(
-                context: context,
-                title: 'Ciudad',
-                options: availableCities,
-                selectedValues: _selectedFilterCities,
-                onApply: (newSet) {
-                  setState(() {
-                    _selectedFilterCities.clear();
-                    _selectedFilterCities.addAll(newSet);
-                  });
-                },
-              );
-            });
+            final options = {...validCities, ..._selectedFilterCities}.toList()..sort();
+
+            FilterBottomSheet.showMulti(
+              context: context,
+              title: 'Ciudad',
+              options: options,
+              selectedValues: _selectedFilterCities,
+              onApply: (newSet) {
+                setState(() {
+                  _selectedFilterCities.clear();
+                  _selectedFilterCities.addAll(newSet);
+                });
+              },
+            );
           },
         ),
       ],
       filter: (client, query) {
-        final normalizedQuery = query.normalized;
-        final matchesQuery =
-            normalizedQuery.isEmpty ||
-            client.name.normalized.contains(normalizedQuery) ||
-            (client.taxId?.normalized ?? '').contains(normalizedQuery) ||
-            (client.alias?.normalized ?? '').contains(normalizedQuery) ||
-            (client.email?.normalized ?? '').contains(normalizedQuery);
-
-        final matchesType =
-            _selectedFilterType == null || client.type == _selectedFilterType;
-
-        final matchesCity =
-            _selectedFilterCities.isEmpty ||
-            (client.city != null &&
-                _selectedFilterCities.contains(client.city));
-
-        return matchesQuery && matchesType && matchesCity;
-      },
-      comparator: (a, b) {
-        switch (_currentSort) {
-          case SortOption.recent:
-            return b.createdAt.compareTo(a.createdAt);
-          case SortOption.nameAZ:
-            return a.name.toLowerCase().compareTo(b.name.toLowerCase());
-          case SortOption.nameZA:
-            return b.name.toLowerCase().compareTo(a.name.toLowerCase());
-          default:
-            return 0;
+        if (_selectedFilterCities.isNotEmpty) {
+          if (client.city == null || !_selectedFilterCities.contains(client.city)) {
+            return false;
+          }
         }
+        return true;
       },
+      comparator: null,
       bottomFilterWidget: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
         child: Row(
@@ -172,6 +148,17 @@ class _ClientSearchScreenState extends ConsumerState<ClientSearchScreen> {
                 setState(() {
                   _currentSort = val;
                 });
+                
+                String orderBy = 'created_at';
+                bool ascending = false;
+                if (val == SortOption.nameAZ) {
+                  orderBy = 'name';
+                  ascending = true;
+                } else if (val == SortOption.nameZA) {
+                  orderBy = 'name';
+                  ascending = false;
+                }
+                ref.read(paginatedClientSearchProvider.notifier).updateSort(orderBy, ascending);
               },
             ),
           ],

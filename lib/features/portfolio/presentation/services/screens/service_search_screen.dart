@@ -50,12 +50,13 @@ class _ServiceSearchScreenState extends ConsumerState<ServiceSearchScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final servicesAsync = ref.watch(servicesProvider);
+    final paginatedAsync = ref.watch(paginatedServicesProvider);
 
     return GenericSearchScreen<ServiceModel>(
       hintText: 'Buscar servicios...',
       historyKey: _getHistoryKey(),
-      data: servicesAsync,
+      isPaginatedMode: true,
+      paginatedDataAsync: paginatedAsync,
       onResetFilters: () {
         setState(() {
           _selectedCategories.clear();
@@ -63,12 +64,20 @@ class _ServiceSearchScreenState extends ConsumerState<ServiceSearchScreen> {
           _minPrice = null;
           _maxPrice = null;
           _searchQuery = '';
+          _currentSort = SortOption.nameAZ;
         });
+        ref.read(paginatedServicesProvider.notifier).updateSearch(null);
+        ref.read(paginatedServicesProvider.notifier).updateFilters(categoryId: null);
+        ref.read(paginatedServicesProvider.notifier).updateSort('name', true);
+      },
+      onServerSearch: (query) {
+        ref.read(paginatedServicesProvider.notifier).updateSearch(query);
+      },
+      onLoadMore: () {
+        ref.read(paginatedServicesProvider.notifier).loadMore();
       },
       onQueryChanged: (query) {
-        setState(() {
-          _searchQuery = query;
-        });
+        // Handled by onServerSearch
       },
       filters: [
         // Category Filter
@@ -76,9 +85,9 @@ class _ServiceSearchScreenState extends ConsumerState<ServiceSearchScreen> {
           label: _getChipLabel('Categoría', _selectedCategories),
           isActive: _selectedCategories.isNotEmpty,
           onTap: () {
-            servicesAsync.whenData((services) {
-              final queryNormalized = _searchQuery.normalized;
-              final availableCategories = services
+            final items = paginatedAsync.valueOrNull?.items ?? [];
+            final queryNormalized = _searchQuery.normalized;
+            final availableCategories = items
                   .where((s) {
                     return queryNormalized.isEmpty ||
                         s.name.normalized.contains(queryNormalized) ||
@@ -92,19 +101,18 @@ class _ServiceSearchScreenState extends ConsumerState<ServiceSearchScreen> {
                   .where((s) => s.isNotEmpty)
                   .toList();
 
-              FilterBottomSheet.showMulti(
-                context: context,
-                title: 'Categoría',
-                options: availableCategories,
-                selectedValues: _selectedCategories,
-                onApply: (newSet) {
-                  setState(() {
-                    _selectedCategories.clear();
-                    _selectedCategories.addAll(newSet);
-                  });
-                },
-              );
-            });
+            FilterBottomSheet.showMulti(
+              context: context,
+              title: 'Categoría',
+              options: availableCategories,
+              selectedValues: _selectedCategories,
+              onApply: (newSet) {
+                setState(() {
+                  _selectedCategories.clear();
+                  _selectedCategories.addAll(newSet);
+                });
+              },
+            );
           },
         ),
 
@@ -113,9 +121,9 @@ class _ServiceSearchScreenState extends ConsumerState<ServiceSearchScreen> {
           label: _getChipLabel('Tarifa', _selectedRates),
           isActive: _selectedRates.isNotEmpty,
           onTap: () {
-            servicesAsync.whenData((services) {
-              final queryNormalized = _searchQuery.normalized;
-              final availableRates = services
+            final items = paginatedAsync.valueOrNull?.items ?? [];
+            final queryNormalized = _searchQuery.normalized;
+            final availableRates = items
                   .where((s) {
                     return queryNormalized.isEmpty ||
                         s.name.normalized.contains(queryNormalized) ||
@@ -129,19 +137,18 @@ class _ServiceSearchScreenState extends ConsumerState<ServiceSearchScreen> {
                   .where((s) => s.isNotEmpty)
                   .toList();
 
-              FilterBottomSheet.showMulti(
-                context: context,
-                title: 'Tarifa',
-                options: availableRates,
-                selectedValues: _selectedRates,
-                onApply: (newSet) {
-                  setState(() {
-                    _selectedRates.clear();
-                    _selectedRates.addAll(newSet);
-                  });
-                },
-              );
-            });
+            FilterBottomSheet.showMulti(
+              context: context,
+              title: 'Tarifa',
+              options: availableRates,
+              selectedValues: _selectedRates,
+              onApply: (newSet) {
+                setState(() {
+                  _selectedRates.clear();
+                  _selectedRates.addAll(newSet);
+                });
+              },
+            );
           },
         ),
 
@@ -166,47 +173,23 @@ class _ServiceSearchScreenState extends ConsumerState<ServiceSearchScreen> {
             setState(() {
               _currentSort = val;
             });
+            String orderBy = 'name';
+            bool ascending = true;
+            if (val == SortOption.nameZA) {
+              ascending = false;
+            } else if (val == SortOption.highestPrice) {
+              orderBy = 'price';
+              ascending = false;
+            } else if (val == SortOption.lowestPrice) {
+              orderBy = 'price';
+              ascending = true;
+            }
+            ref.read(paginatedServicesProvider.notifier).updateSort(orderBy, ascending);
           },
         ),
       ),
-      comparator: (a, b) {
-        switch (_currentSort) {
-          case SortOption.nameAZ:
-            return a.name.toLowerCase().compareTo(b.name.toLowerCase());
-          case SortOption.nameZA:
-            return b.name.toLowerCase().compareTo(a.name.toLowerCase());
-          case SortOption.highestPrice:
-            return b.price.compareTo(a.price);
-          case SortOption.lowestPrice:
-            return a.price.compareTo(b.price);
-          default:
-            return 0;
-        }
-      },
-      filter: (s, query) {
-        final normalizedQuery = query.normalized;
-        final matchesQuery =
-            normalizedQuery.isEmpty ||
-            s.name.normalized.contains(normalizedQuery) ||
-            (s.description?.normalized ?? '').contains(normalizedQuery);
-
-        final matchesCategory =
-            _selectedCategories.isEmpty ||
-            (s.category != null &&
-                _selectedCategories.contains(s.category!.name));
-
-        final matchesRate =
-            _selectedRates.isEmpty ||
-            (s.serviceRate != null &&
-                _selectedRates.contains(s.serviceRate!.name));
-
-        final price = s.price;
-        final matchesPrice =
-            (_minPrice == null || price >= _minPrice!) &&
-            (_maxPrice == null || price <= _maxPrice!);
-
-        return matchesQuery && matchesCategory && matchesRate && matchesPrice;
-      },
+      comparator: null,
+      filter: null,
       itemBuilder: (context, service) {
         return Padding(
           padding: const EdgeInsets.symmetric(vertical: 4.0),

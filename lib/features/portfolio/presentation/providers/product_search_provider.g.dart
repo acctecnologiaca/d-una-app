@@ -150,5 +150,26 @@ class _ProductSearchProviderElement
   ProductSearchParams get params => (origin as ProductSearchProvider).params;
 }
 
+String _$paginatedQuoteProductSearchHash() =>
+    r'9f31097040a34c0dd8b022c98f95ac58825b496c';
+
+/// See also [PaginatedQuoteProductSearch].
+@ProviderFor(PaginatedQuoteProductSearch)
+final paginatedQuoteProductSearchProvider =
+    AutoDisposeAsyncNotifierProvider<
+      PaginatedQuoteProductSearch,
+      PaginatedState<QuoteAggregatedProduct>
+    >.internal(
+      PaginatedQuoteProductSearch.new,
+      name: r'paginatedQuoteProductSearchProvider',
+      debugGetCreateSourceHash: const bool.fromEnvironment('dart.vm.product')
+          ? null
+          : _$paginatedQuoteProductSearchHash,
+      dependencies: null,
+      allTransitiveDependencies: null,
+    );
+
+typedef _$PaginatedQuoteProductSearch =
+    AutoDisposeAsyncNotifier<PaginatedState<QuoteAggregatedProduct>>;
 // ignore_for_file: type=lint
 // ignore_for_file: subtype_of_sealed_class, invalid_use_of_internal_member, invalid_use_of_visible_for_testing_member, deprecated_member_use_from_same_package

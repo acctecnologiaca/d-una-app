@@ -6,12 +6,19 @@ import 'package:d_una_app/shared/widgets/generic_search_screen.dart';
 import 'package:d_una_app/shared/widgets/filter_bottom_sheet.dart';
 import 'package:d_una_app/shared/widgets/horizontal_filter_bar.dart';
 import 'package:d_una_app/features/purchases/presentation/providers/purchases_providers.dart';
-import 'package:d_una_app/core/utils/search_utils.dart';
+import 'package:d_una_app/features/portfolio/presentation/providers/suppliers_provider.dart';
+import 'package:d_una_app/features/portfolio/presentation/providers/lookup_providers.dart';
+
 import '../widgets/purchase_list_item.dart';
 import '../../domain/models/purchase_model.dart';
 
 class PurchasesSearchScreen extends ConsumerStatefulWidget {
-  const PurchasesSearchScreen({super.key});
+  final bool selectionMode;
+
+  const PurchasesSearchScreen({
+    super.key,
+    this.selectionMode = false,
+  });
 
   @override
   ConsumerState<PurchasesSearchScreen> createState() =>
@@ -36,14 +43,41 @@ class _PurchasesSearchScreenState extends ConsumerState<PurchasesSearchScreen> {
     return '$defaultLabel +${selected.length}';
   }
 
-  void _showSupplierFilter(List<Purchase> purchases) {
-    final options =
-        purchases
-            .map((e) => e.supplierName)
-            .whereType<String>()
-            .toSet()
-            .toList()
-          ..sort();
+  void _showSupplierFilter() async {
+    final affiliatedSuppliers = await ref.read(suppliersProvider.future);
+    final unaffiliatedSuppliers = await ref.read(allSuppliersProvider.future);
+    final currentPurchases =
+        ref.read(paginatedPurchaseSearchProvider).valueOrNull?.items ?? [];
+
+    Set<String> availableOptions = {};
+    availableOptions.addAll(affiliatedSuppliers.map((s) => s.name));
+    availableOptions.addAll(unaffiliatedSuppliers.map((s) => s.legalName ?? s.name));
+    
+    // Ensure all valid supplier names from the current purchases are ALWAYS included 
+    // (this guarantees that if the repository resolves a name differently, we still show it)
+    final validSupplierNames = currentPurchases
+        .map((p) => p.supplierName)
+        .whereType<String>()
+        .toSet();
+        
+    availableOptions.addAll(validSupplierNames);
+
+    if (currentPurchases.isNotEmpty) {
+      final validSupplierNames =
+          currentPurchases
+              .map((p) => p.supplierName)
+              .whereType<String>()
+              .toSet();
+      availableOptions = availableOptions.where(
+        (name) =>
+            validSupplierNames.contains(name) ||
+            _selectedSupplierNames.contains(name),
+      ).toSet();
+    }
+
+    if (!mounted) return;
+
+    final options = availableOptions.toSet().toList()..sort();
 
     FilterBottomSheet.showMulti(
       context: context,
@@ -60,18 +94,31 @@ class _PurchasesSearchScreenState extends ConsumerState<PurchasesSearchScreen> {
   }
 
   void _showTypeFilter() {
-    final options = {'invoice': 'Factura', 'delivery_note': 'Nota de Entrega'};
+    final allOptions = {'invoice': 'Factura', 'delivery_note': 'Nota de Entrega'};
+    final currentPurchases =
+        ref.read(paginatedPurchaseSearchProvider).valueOrNull?.items ?? [];
+
+    Map<String, String> availableOptions = Map.from(allOptions);
+
+    if (currentPurchases.isNotEmpty) {
+      final validTypes = currentPurchases.map((p) => p.documentType).toSet();
+      availableOptions.removeWhere(
+        (key, value) =>
+            !validTypes.contains(key) && !_selectedTypes.contains(key),
+      );
+    }
 
     FilterBottomSheet.showMulti(
       context: context,
       title: 'Tipo de documento',
-      options: options.values.toList(),
-      selectedValues: _selectedTypes.map((t) => options[t]!).toSet(),
+      options: availableOptions.values.toList(),
+      selectedValues: _selectedTypes.map((t) => allOptions[t]!).toSet(),
       onApply: (selectedValues) {
         setState(() {
           _selectedTypes.clear();
           for (var label in selectedValues) {
-            final key = options.entries.firstWhere((e) => e.value == label).key;
+            final key =
+                allOptions.entries.firstWhere((e) => e.value == label).key;
             _selectedTypes.add(key);
           }
         });
@@ -109,14 +156,16 @@ class _PurchasesSearchScreenState extends ConsumerState<PurchasesSearchScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final purchasesAsync = ref.watch(purchasesProvider(null));
+    final paginatedAsync = ref.watch(paginatedPurchaseSearchProvider);
     final dateFormat = DateFormat('dd/MM/yyyy');
 
     return GenericSearchScreen<Purchase>(
-      title: 'Buscar compra',
+      title: widget.selectionMode ? 'Seleccionar compra' : 'Buscar compra',
       hintText: 'Proveedor o número...',
       historyKey: 'purchases_search_history',
-      data: purchasesAsync,
+      isPaginatedMode: true,
+      paginatedDataAsync: paginatedAsync,
+      showHistory: !widget.selectionMode,
       onResetFilters: () {
         setState(() {
           _selectedSupplierNames.clear();
@@ -124,12 +173,26 @@ class _PurchasesSearchScreenState extends ConsumerState<PurchasesSearchScreen> {
           _dateRange = null;
           _missingSerialsOnly = false;
         });
+        ref.read(paginatedPurchaseSearchProvider.notifier).updateSearch(null);
+      },
+      onServerSearch: (query) {
+        ref.read(paginatedPurchaseSearchProvider.notifier).updateSearch(query);
+      },
+      onLoadMore: () {
+        ref.read(paginatedPurchaseSearchProvider.notifier).loadMore();
+      },
+      onQueryChanged: (query) {
+        // Handled by onServerSearch
       },
       itemBuilder: (context, purchase) {
         return PurchaseListItem(
           purchase: purchase,
           onTap: () {
-            context.push('/my-purchases/view/${purchase.id}');
+            if (widget.selectionMode) {
+              Navigator.of(context).pop(purchase);
+            } else {
+              context.push('/my-purchases/view/${purchase.id}');
+            }
           },
         );
       },
@@ -137,11 +200,7 @@ class _PurchasesSearchScreenState extends ConsumerState<PurchasesSearchScreen> {
         FilterChipData(
           label: _getChipLabel(_selectedSupplierNames, 'Proveedor'),
           isActive: _selectedSupplierNames.isNotEmpty,
-          onTap: () {
-            purchasesAsync.whenData(
-              (purchases) => _showSupplierFilter(purchases),
-            );
-          },
+          onTap: _showSupplierFilter,
         ),
         FilterChipData(
           label: _getChipLabel(_selectedTypes, 'Tipo'),
@@ -163,36 +222,34 @@ class _PurchasesSearchScreenState extends ConsumerState<PurchasesSearchScreen> {
         ),
       ],
       filter: (purchase, query) {
-        final matchesText = SearchUtils.matchesCombo(query, [
-          purchase.supplierName,
-          purchase.documentNumber,
-        ]);
+        if (_selectedSupplierNames.isNotEmpty &&
+            !_selectedSupplierNames.contains(purchase.supplierName)) {
+          return false;
+        }
 
-        final matchesSupplier =
-            _selectedSupplierNames.isEmpty ||
-            _selectedSupplierNames.contains(purchase.supplierName);
+        if (_selectedTypes.isNotEmpty) {
+          final options = {'invoice': 'Factura', 'delivery_note': 'Nota de Entrega'};
+          final mappedTypes = _selectedTypes.map((t) => options[t]).toSet();
+          final purchaseTypeMapped = options[purchase.documentType];
+          
+          if (!mappedTypes.contains(purchaseTypeMapped) && !_selectedTypes.contains(purchase.documentType)) {
+             return false;
+          }
+        }
 
-        final matchesType =
-            _selectedTypes.isEmpty ||
-            _selectedTypes.contains(purchase.documentType);
+        if (_dateRange != null) {
+          final start = DateTime(_dateRange!.start.year, _dateRange!.start.month, _dateRange!.start.day);
+          final end = DateTime(_dateRange!.end.year, _dateRange!.end.month, _dateRange!.end.day, 23, 59, 59);
+          if (purchase.date.isBefore(start) || purchase.date.isAfter(end)) {
+            return false;
+          }
+        }
 
-        final matchesDate =
-            _dateRange == null ||
-            (purchase.date.isAfter(
-                  _dateRange!.start.subtract(const Duration(seconds: 1)),
-                ) &&
-                purchase.date.isBefore(
-                  _dateRange!.end.add(const Duration(days: 1)),
-                ));
+        if (_missingSerialsOnly && !purchase.hasMissingSerials) {
+          return false;
+        }
 
-        final matchesMissingSerials =
-            !_missingSerialsOnly || purchase.hasMissingSerials;
-
-        return matchesText &&
-            matchesSupplier &&
-            matchesType &&
-            matchesDate &&
-            matchesMissingSerials;
+        return true;
       },
     );
   }

@@ -15,10 +15,10 @@ class HomeScreen extends StatelessWidget {
 
     // Define main paths where the bottom bar should be visible
     final bool showBottomBar = [
-      '/clients',
       '/portfolio',
       '/quotes',
       '/reports',
+      '/clients',
     ].contains(location);
 
     return Scaffold(
@@ -36,10 +36,6 @@ class HomeScreen extends StatelessWidget {
               },
               destinations: const [
                 NavigationDestination(
-                  icon: Icon(Symbols.people, weight: 600),
-                  label: 'Clientes',
-                ),
-                NavigationDestination(
                   icon: Icon(Symbols.widgets, weight: 600),
                   label: 'Portafolio',
                 ),
@@ -50,6 +46,10 @@ class HomeScreen extends StatelessWidget {
                 NavigationDestination(
                   icon: Icon(Symbols.contract, weight: 600),
                   label: 'Reportes',
+                ),
+                NavigationDestination(
+                  icon: Icon(Symbols.people, weight: 600),
+                  label: 'Clientes',
                 ),
               ],
             )

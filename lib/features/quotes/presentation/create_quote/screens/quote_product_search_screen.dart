@@ -1,4 +1,3 @@
-import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -13,7 +12,6 @@ import '../../../domain/models/quote_aggregated_product.dart';
 import '../providers/quote_product_selection_provider.dart';
 import '../../../../portfolio/domain/models/product_search_filters.dart';
 import '../../../../portfolio/presentation/providers/product_search_provider.dart';
-import '../../../../profile/presentation/providers/profile_provider.dart';
 import '../providers/create_quote_provider.dart';
 
 class QuoteProductSearchScreen extends ConsumerStatefulWidget {
@@ -28,7 +26,7 @@ class QuoteProductSearchScreen extends ConsumerStatefulWidget {
 
 class _QuoteProductSearchScreenState
     extends ConsumerState<QuoteProductSearchScreen> {
-  late String _currentQuery = widget.initialQuery ?? '';
+  late final String _currentQuery = widget.initialQuery ?? '';
   SortOption _currentSort = SortOption.lowestPrice;
 
   // Filters State
@@ -39,23 +37,9 @@ class _QuoteProductSearchScreenState
   double? _minPrice;
   double? _maxPrice;
 
-  Timer? _debounce;
-
   @override
   void dispose() {
-    _debounce?.cancel();
     super.dispose();
-  }
-
-  void _onQueryChanged(String query) {
-    if (_debounce?.isActive ?? false) _debounce!.cancel();
-    _debounce = Timer(const Duration(milliseconds: 300), () {
-      if (mounted) {
-        setState(() {
-          _currentQuery = query;
-        });
-      }
-    });
   }
 
   void _resetFilters() {
@@ -67,6 +51,9 @@ class _QuoteProductSearchScreenState
       _maxPrice = null;
       _currentSort = SortOption.lowestPrice;
     });
+    ref
+        .read(paginatedQuoteProductSearchProvider.notifier)
+        .updateFilters(const ProductSearchFilters());
   }
 
   // --- Dynamic Label Helpers ---
@@ -203,6 +190,7 @@ class _QuoteProductSearchScreenState
         setState(() {
           _selectedSuppliers = selected.toSet();
         });
+        _applyFiltersToServer();
       },
     );
   }
@@ -221,6 +209,7 @@ class _QuoteProductSearchScreenState
         setState(() {
           _selectedBrands = selected.toSet();
         });
+        _applyFiltersToServer();
       },
     );
   }
@@ -238,6 +227,7 @@ class _QuoteProductSearchScreenState
         setState(() {
           _selectedCategories = selected.toSet();
         });
+        _applyFiltersToServer();
       },
     );
   }
@@ -254,87 +244,57 @@ class _QuoteProductSearchScreenState
             _minPrice = min;
             _maxPrice = max;
           });
+          _applyFiltersToServer();
         },
       ),
     );
   }
 
+  void _applyFiltersToServer() {
+    ref
+        .read(paginatedQuoteProductSearchProvider.notifier)
+        .updateFilters(
+          ProductSearchFilters(
+            brands: _selectedBrands.toList(),
+            categories: _selectedCategories.toList(),
+            supplierIds: _selectedSuppliers.toList(),
+            minPrice: _minPrice,
+            maxPrice: _maxPrice,
+          ),
+        );
+  }
+
   @override
   Widget build(BuildContext context) {
-    final userProfileAsync = ref.watch(userProfileProvider);
-    final userProfile = userProfileAsync.valueOrNull;
-    final isVerified = userProfile?.verificationStatus == 'verified';
     final colors = Theme.of(context).colorScheme;
 
-    // 1. Fetch base query for Facets (fast UI)
+    // 1. Fetch base query for Facets (fast UI, we keep using the unpaginated one to get all facets)
     final baseParams = ProductSearchParams(query: _currentQuery);
     ref.watch(quoteProductSuggestionsProvider(baseParams));
 
-    // 2. Fetch filtered query for Data
-    final filterParams = ProductSearchParams(
-      query: _currentQuery,
-      filters: ProductSearchFilters(
-        brands: _selectedBrands.toList(),
-        categories: _selectedCategories.toList(),
-        supplierIds: _selectedSuppliers.toList(),
-        minPrice: _minPrice,
-        maxPrice: _maxPrice,
-      ),
-    );
-
-    final suggestionsAsync = ref.watch(
-      quoteProductSuggestionsProvider(filterParams),
-    );
+    // 2. We don't need filterParams here, we just use PaginatedQuoteProductSearch directly
+    final paginatedAsync = ref.watch(paginatedQuoteProductSearchProvider);
 
     final quoteProducts = ref.watch(createQuoteProvider).products;
 
-    var filteredProducts = suggestionsAsync.valueOrNull ?? [];
-
-    // Local Verification Rules
-    filteredProducts = filteredProducts.where((p) {
-      if (!isVerified) {
-        if (!p.hasOwnInventory &&
-            p.supplierCount == 1 &&
-            p.firstSupplierTradeType == 'WHOLESALE') {
-          return false;
-        }
-      }
-      return true;
-    }).toList();
-
-    // Sort Logic
-    filteredProducts.sort((a, b) {
-      switch (_currentSort) {
-        case SortOption.lowestPrice:
-          return a.minPrice.compareTo(b.minPrice);
-        case SortOption.highestPrice:
-          return b.minPrice.compareTo(a.minPrice);
-        case SortOption.quantityAsc:
-          return a.totalQuantity.compareTo(b.totalQuantity);
-        case SortOption.quantityDesc:
-          return b.totalQuantity.compareTo(a.totalQuantity);
-        case SortOption.nameAZ:
-          return a.name.toLowerCase().compareTo(b.name.toLowerCase());
-        case SortOption.nameZA:
-          return b.name.toLowerCase().compareTo(a.name.toLowerCase());
-        default:
-          return 0;
-      }
-    });
-
-    final AsyncValue<List<QuoteAggregatedProduct>> processedAsyncValue =
-        suggestionsAsync.when(
-          data: (_) => AsyncValue.data(filteredProducts),
-          loading: () => const AsyncValue.loading(),
-          error: (e, s) => AsyncValue.error(e, s),
-        );
+    // We can't do local Verification Rules or Sorting on the full list if it's paginated on the server.
+    // The server-side RPC should eventually handle this or we just display what server gives.
+    // For now, the RPC handles base filtering, we just pass the async state directly to GenericSearchScreen.
 
     return GenericSearchScreen<QuoteAggregatedProduct>(
       title: 'Buscar Producto',
       hintText: 'Buscar productos, modelos, marcas...',
       historyKey: 'quote_product_search_history',
-      data: processedAsyncValue,
-      onQueryChanged: _onQueryChanged,
+      isPaginatedMode: true,
+      paginatedDataAsync: paginatedAsync,
+      onServerSearch: (query) {
+        ref
+            .read(paginatedQuoteProductSearchProvider.notifier)
+            .updateSearch(query);
+      },
+      onLoadMore: () {
+        ref.read(paginatedQuoteProductSearchProvider.notifier).loadMore();
+      },
       onResetFilters: _resetFilters,
       initialQuery: widget.initialQuery,
 

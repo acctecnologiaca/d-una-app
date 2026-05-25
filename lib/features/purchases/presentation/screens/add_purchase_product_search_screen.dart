@@ -33,8 +33,8 @@ class _AddPurchaseProductSearchScreenState
 
   @override
   Widget build(BuildContext context) {
-    final productsAsync = ref.watch(productsProvider);
-    final products = productsAsync.valueOrNull ?? [];
+    final paginatedAsync = ref.watch(paginatedProductSearchProvider);
+    final products = paginatedAsync.valueOrNull?.items ?? [];
 
     final q = _searchQuery.normalized;
     final queryMatchedProducts = q.isEmpty
@@ -74,7 +74,14 @@ class _AddPurchaseProductSearchScreenState
       title: 'Buscar producto',
       hintText: 'Nombre, marca o modelo...',
       historyKey: 'purchase_product_selection_search_history',
-      data: productsAsync,
+      isPaginatedMode: true,
+      paginatedDataAsync: paginatedAsync,
+      onServerSearch: (query) {
+        ref.read(paginatedProductSearchProvider.notifier).updateSearch(query);
+      },
+      onLoadMore: () {
+        ref.read(paginatedProductSearchProvider.notifier).loadMore();
+      },
       onQueryChanged: (query) {
         setState(() {
           _searchQuery = query;
@@ -132,6 +139,7 @@ class _AddPurchaseProductSearchScreenState
           _selectedBrandIds.clear();
           _searchQuery = '';
         });
+        ref.read(paginatedProductSearchProvider.notifier).updateSearch(null);
       },
       filter: (product, query) {
         final matchesQuery = SearchUtils.matchesCombo(query, [

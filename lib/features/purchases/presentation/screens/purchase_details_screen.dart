@@ -14,14 +14,20 @@ import '../widgets/view_purchase_summary_tab.dart';
 import '../widgets/add_purchase_details_tab.dart';
 import '../widgets/add_purchase_products_tab.dart';
 import '../widgets/add_purchase_summary_tab.dart';
-import 'package:d_una_app/features/purchases/presentation/widgets/save_changes_dialog.dart';
 import 'package:d_una_app/shared/widgets/custom_dialog.dart';
 import 'package:material_symbols_icons/symbols.dart';
 
 class PurchaseDetailsScreen extends ConsumerStatefulWidget {
   final String purchaseId;
+  final bool startInEditMode;
+  final String? highlightProductId;
 
-  const PurchaseDetailsScreen({super.key, required this.purchaseId});
+  const PurchaseDetailsScreen({
+    super.key,
+    required this.purchaseId,
+    this.startInEditMode = false,
+    this.highlightProductId,
+  });
 
   @override
   ConsumerState<PurchaseDetailsScreen> createState() =>
@@ -37,8 +43,13 @@ class _PurchaseDetailsScreenState extends ConsumerState<PurchaseDetailsScreen>
   @override
   void initState() {
     super.initState();
-    // Inicia en la pestaña "Resúmen" (index 2)
-    _tabController = TabController(length: 3, initialIndex: 2, vsync: this);
+    // Inicia en la pestaña "Productos" (index 1) si startInEditMode es true o se especificó un producto a destacar,
+    // de lo contrario en "Resúmen" (index 2)
+    _tabController = TabController(
+      length: 3,
+      initialIndex: (widget.startInEditMode || widget.highlightProductId != null) ? 1 : 2,
+      vsync: this,
+    );
     _tabController.addListener(() {
       if (!_tabController.indexIsChanging) {
         setState(() {});
@@ -54,14 +65,17 @@ class _PurchaseDetailsScreenState extends ConsumerState<PurchaseDetailsScreen>
 
   void _enterEditMode(PurchaseDetailsData data) {
     if (!_dataLoadedToEditState) {
-      ref
-          .read(addPurchaseProvider.notifier)
-          .loadFromDetails(
-            data.purchase,
-            data.items,
-            data.serials,
-            data.supplierTaxId,
-          );
+      final editState = ref.read(addPurchaseProvider);
+      if (editState.purchaseId != widget.purchaseId) {
+        ref
+            .read(addPurchaseProvider.notifier)
+            .loadFromDetails(
+              data.purchase,
+              data.items,
+              data.serials,
+              data.supplierTaxId,
+            );
+      }
       _dataLoadedToEditState = true;
     }
     setState(() {
@@ -87,26 +101,51 @@ class _PurchaseDetailsScreenState extends ConsumerState<PurchaseDetailsScreen>
         final purchase = data.purchase;
         final notifier = ref.read(addPurchaseProvider.notifier);
 
+        if (widget.startInEditMode && !_dataLoadedToEditState) {
+          _dataLoadedToEditState = true;
+          _isEditing = true;
+          final editState = ref.read(addPurchaseProvider);
+          if (editState.purchaseId != widget.purchaseId) {
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              ref.read(addPurchaseProvider.notifier).loadFromDetails(
+                    data.purchase,
+                    data.items,
+                    data.serials,
+                    data.supplierTaxId,
+                  );
+            });
+          }
+        }
+
         return PopScope(
           canPop: !(_isEditing && notifier.hasChanges),
           onPopInvokedWithResult: (didPop, result) async {
             if (didPop) return;
 
-            final shouldPop = await SaveChangesDialog.show<bool>(
-              context,
-              onSave: () async {
-                final success = await notifier.createPurchase();
-                if (success && context.mounted) {
-                  Navigator.of(context).pop(true);
-                }
-              },
-              onDiscard: () {
-                notifier.reset();
-                Navigator.of(context).pop(true);
-              },
-              onContinue: () {
-                Navigator.of(context).pop(false);
-              },
+            final shouldPop = await CustomDialog.show<bool>(
+              context: context,
+              dialog: CustomDialog.destructive(
+                title: '¿Descartar cambios?',
+                contentText:
+                    'Se perderán todos los cambios realizados en esta compra.',
+                actions: [
+                  TextButton(
+                    onPressed: () => Navigator.of(context).pop(false),
+                    child: const Text('Continuar editando'),
+                  ),
+                  FilledButton(
+                    onPressed: () {
+                      notifier.reset(); // clear state if discarded
+                      Navigator.of(context).pop(true);
+                    },
+                    style: FilledButton.styleFrom(
+                      backgroundColor: colors.error,
+                      foregroundColor: colors.onError,
+                    ),
+                    child: const Text('Descartar'),
+                  ),
+                ],
+              ),
             );
 
             if (shouldPop == true && context.mounted) {
@@ -132,21 +171,30 @@ class _PurchaseDetailsScreenState extends ConsumerState<PurchaseDetailsScreen>
                     tooltip: 'Cancelar edición',
                     onPressed: () async {
                       if (notifier.hasChanges) {
-                        final shouldClose = await SaveChangesDialog.show<bool>(
-                          context,
-                          onSave: () async {
-                            final success = await notifier.createPurchase();
-                            if (success && context.mounted) {
-                              Navigator.of(context).pop(true);
-                            }
-                          },
-                          onDiscard: () {
-                            notifier.reset();
-                            Navigator.of(context).pop(true);
-                          },
-                          onContinue: () {
-                            Navigator.of(context).pop(false);
-                          },
+                        final shouldClose = await CustomDialog.show<bool>(
+                          context: context,
+                          dialog: CustomDialog.destructive(
+                            title: '¿Descartar cambios?',
+                            contentText:
+                                'Se perderán todos los cambios realizados en esta compra.',
+                            actions: [
+                              TextButton(
+                                onPressed: () => Navigator.of(context).pop(false),
+                                child: const Text('Continuar editando'),
+                              ),
+                              FilledButton(
+                                onPressed: () {
+                                  notifier.reset(); // clear state if discarded
+                                  Navigator.of(context).pop(true);
+                                },
+                                style: FilledButton.styleFrom(
+                                  backgroundColor: colors.error,
+                                  foregroundColor: colors.onError,
+                                ),
+                                child: const Text('Descartar'),
+                              ),
+                            ],
+                          ),
                         );
 
                         if (shouldClose == true && mounted) {
@@ -193,7 +241,7 @@ class _PurchaseDetailsScreenState extends ConsumerState<PurchaseDetailsScreen>
               children: _isEditing
                   ? [
                       const AddPurchaseDetailsTab(),
-                      const AddPurchaseProductsTab(),
+                      AddPurchaseProductsTab(highlightProductId: widget.highlightProductId),
                       AddPurchaseSummaryTab(
                         onNavigateToTab: (index) =>
                             _tabController.animateTo(index),
@@ -201,7 +249,10 @@ class _PurchaseDetailsScreenState extends ConsumerState<PurchaseDetailsScreen>
                     ]
                   : [
                       ViewPurchaseDetailsTab(data: data),
-                      ViewPurchaseProductsTab(data: data),
+                      ViewPurchaseProductsTab(
+                        data: data,
+                        highlightProductId: widget.highlightProductId,
+                      ),
                       ViewPurchaseSummaryTab(
                         data: data,
                         onNavigateToTab: (index) =>

@@ -2,16 +2,19 @@ import 'package:flutter/material.dart';
 import 'package:d_una_app/shared/widgets/friendly_error_widget.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'dart:async';
 import 'custom_search_bar.dart';
 import 'horizontal_filter_bar.dart';
+import '../models/paginated_state.dart';
+import 'paginated_list_view.dart';
 
 class GenericSearchScreen<T> extends StatefulWidget {
   final String title;
   final String hintText;
   final String historyKey;
-  final AsyncValue<List<T>> data;
+  final AsyncValue<List<T>>? data;
   final Widget Function(BuildContext context, T item) itemBuilder;
-  final bool Function(T item, String query) filter;
+  final bool Function(T item, String query)? filter;
   final List<FilterChipData> filters;
   final Widget? emptyState;
   final VoidCallback? onResetFilters;
@@ -20,15 +23,22 @@ class GenericSearchScreen<T> extends StatefulWidget {
   final int Function(T a, T b)? comparator;
   final String? initialQuery;
   final bool showHistory;
+  final PreferredSizeWidget? appBarOverride;
+  
+  // Paginated Mode
+  final bool isPaginatedMode;
+  final AsyncValue<PaginatedState<T>>? paginatedDataAsync;
+  final ValueChanged<String>? onServerSearch;
+  final VoidCallback? onLoadMore;
 
   const GenericSearchScreen({
     super.key,
     this.title = 'Buscar',
     this.hintText = 'Buscar...',
     required this.historyKey,
-    required this.data,
+    this.data,
     required this.itemBuilder,
-    required this.filter,
+    this.filter,
     this.filters = const [],
     this.emptyState,
     this.onResetFilters,
@@ -37,6 +47,11 @@ class GenericSearchScreen<T> extends StatefulWidget {
     this.comparator,
     this.initialQuery,
     this.showHistory = true,
+    this.appBarOverride,
+    this.isPaginatedMode = false,
+    this.paginatedDataAsync,
+    this.onServerSearch,
+    this.onLoadMore,
   });
 
   @override
@@ -48,6 +63,7 @@ class _GenericSearchScreenState<T> extends State<GenericSearchScreen<T>> {
   final FocusNode _focusNode = FocusNode();
   List<String> _history = [];
   String _searchQuery = '';
+  Timer? _debounce;
 
   @override
   void initState() {
@@ -58,6 +74,13 @@ class _GenericSearchScreenState<T> extends State<GenericSearchScreen<T>> {
         _searchQuery = _searchController.text;
       });
       widget.onQueryChanged?.call(_searchController.text);
+      
+      if (widget.isPaginatedMode) {
+        if (_debounce?.isActive ?? false) _debounce!.cancel();
+        _debounce = Timer(const Duration(milliseconds: 500), () {
+          widget.onServerSearch?.call(_searchController.text);
+        });
+      }
     });
     // Pre-fill search if initialQuery is provided
     if (widget.initialQuery != null && widget.initialQuery!.isNotEmpty) {
@@ -71,6 +94,7 @@ class _GenericSearchScreenState<T> extends State<GenericSearchScreen<T>> {
 
   @override
   void dispose() {
+    _debounce?.cancel();
     _searchController.dispose();
     _focusNode.dispose();
     super.dispose();
@@ -131,7 +155,7 @@ class _GenericSearchScreenState<T> extends State<GenericSearchScreen<T>> {
 
     return Scaffold(
       backgroundColor: colors.surface,
-      appBar: AppBar(
+      appBar: widget.appBarOverride ?? AppBar(
         backgroundColor: colors.surfaceContainerHigh,
         elevation: 0,
         leading: IconButton(
@@ -165,11 +189,21 @@ class _GenericSearchScreenState<T> extends State<GenericSearchScreen<T>> {
           if (widget.bottomFilterWidget != null) widget.bottomFilterWidget!,
 
           Expanded(
-            child: widget.data.when(
-              data: (items) => _buildBody(items, colors),
-              loading: () => const Center(child: CircularProgressIndicator()),
-              error: (err, stack) => FriendlyErrorWidget(error: err),
-            ),
+            child: widget.isPaginatedMode
+                ? (widget.paginatedDataAsync != null
+                    ? widget.paginatedDataAsync!.when(
+                        data: (paginatedState) => _buildPaginatedBody(paginatedState, colors),
+                        loading: () => const Center(child: CircularProgressIndicator()),
+                        error: (err, stack) => FriendlyErrorWidget(error: err),
+                      )
+                    : const SizedBox.shrink())
+                : (widget.data != null
+                    ? widget.data!.when(
+                        data: (items) => _buildBody(items, colors),
+                        loading: () => const Center(child: CircularProgressIndicator()),
+                        error: (err, stack) => FriendlyErrorWidget(error: err),
+                      )
+                    : const SizedBox.shrink()),
           ),
         ],
       ),
@@ -272,9 +306,9 @@ class _GenericSearchScreenState<T> extends State<GenericSearchScreen<T>> {
     }
 
     // Filter Items
-    final filteredItems = items.where((item) {
-      return widget.filter(item, _searchQuery);
-    }).toList();
+    final filteredItems = widget.filter != null 
+        ? items.where((item) => widget.filter!(item, _searchQuery)).toList()
+        : items;
 
     // Sort Items
     if (widget.comparator != null) {
@@ -307,6 +341,135 @@ class _GenericSearchScreenState<T> extends State<GenericSearchScreen<T>> {
       itemCount: filteredItems.length,
       itemBuilder: (context, index) =>
           widget.itemBuilder(context, filteredItems[index]),
+    );
+  }
+
+  Widget _buildPaginatedBody(PaginatedState<T> state, ColorScheme colors) {
+    final bool hasActiveFilters = widget.filters.any((f) => f.isActive);
+    final bool showHistory = widget.showHistory && _searchQuery.isEmpty && !hasActiveFilters;
+
+    if (showHistory) {
+      if (_history.isEmpty) {
+        return Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(Icons.history, size: 64, color: colors.outline),
+              const SizedBox(height: 16),
+              Text(
+                'No hay búsquedas recientes',
+                style: TextStyle(color: colors.outline),
+              ),
+            ],
+          ),
+        );
+      }
+
+      return Column(
+        children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  'Historial de busqueda',
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: colors.onSurface,
+                  ),
+                ),
+                if (_history.isNotEmpty)
+                  TextButton(
+                    onPressed: _clearHistory,
+                    child: const Text('Borrar todo'),
+                  ),
+              ],
+            ),
+          ),
+          Expanded(
+            child: ListView.separated(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              itemCount: _history.length,
+              separatorBuilder: (context, index) => const SizedBox(height: 4),
+              itemBuilder: (context, index) {
+                final term = _history[index];
+                return Container(
+                  decoration: BoxDecoration(
+                    color: colors.surfaceContainer,
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: ListTile(
+                    dense: true,
+                    visualDensity: const VisualDensity(vertical: -1),
+                    leading: Icon(
+                      Icons.history,
+                      color: colors.onSurfaceVariant,
+                      size: 20,
+                    ),
+                    title: Text(
+                      term,
+                      style: TextStyle(color: colors.onSurface, fontSize: 15),
+                    ),
+                    trailing: IconButton(
+                      icon: const Icon(Icons.close, size: 18),
+                      onPressed: () => _removeFromHistory(term),
+                    ),
+                    onTap: () {
+                      _searchController.text = term;
+                      _searchController.selection = TextSelection.fromPosition(
+                        TextPosition(offset: term.length),
+                      );
+                    },
+                  ),
+                );
+              },
+            ),
+          ),
+        ],
+      );
+    }
+
+    if (state.isInitialLoading) {
+      return const Center(child: CircularProgressIndicator());
+    }
+
+    // Apply client-side filter to paginated items if provided
+    final filteredItems = widget.filter != null
+        ? state.items.where((item) => widget.filter!(item, _searchQuery)).toList()
+        : state.items;
+
+    if (filteredItems.isEmpty && !state.isLoadingMore) {
+      return widget.emptyState ??
+          Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(
+                  Icons.search_off,
+                  size: 48,
+                  color: colors.outline,
+                ),
+                const SizedBox(height: 16),
+                Text(
+                  'No se encontraron resultados',
+                  style: TextStyle(color: colors.outline),
+                ),
+              ],
+            ),
+          );
+    }
+
+    return PaginatedListView<T>(
+      items: filteredItems,
+      isLoadingMore: state.isLoadingMore,
+      hasReachedEnd: state.hasReachedEnd,
+      onLoadMore: () {
+        widget.onLoadMore?.call();
+      },
+      padding: const EdgeInsets.only(bottom: 80),
+      itemBuilder: (context, index, item) => widget.itemBuilder(context, item),
     );
   }
 }

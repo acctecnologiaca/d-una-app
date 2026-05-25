@@ -769,7 +769,7 @@ class _QuoteProductSourceCardState
                   if (isOwn && widget.source.reservedStock > 0) ...[
                     const SizedBox(height: 6),
                     Text(
-                      'Existen ${widget.source.reservedStock.toStringAsFixed(widget.source.reservedStock.truncateToDouble() == widget.source.reservedStock ? 0 : 2)} ${widget.uom} reservadas de este producto en cotizaciones aprobadas.',
+                      'Hay ${widget.source.reservedStock.toStringAsFixed(widget.source.reservedStock.truncateToDouble() == widget.source.reservedStock ? 0 : 2)} ${widget.uom} de inventario propio reservadas a cotizaciones "aprobadas".',
                       style: TextStyle(
                         color: colors.error,
                         fontSize: 12,

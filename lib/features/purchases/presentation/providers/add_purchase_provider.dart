@@ -150,8 +150,8 @@ class AddPurchaseNotifier extends StateNotifier<AddPurchaseState> {
       final quotesRepo = _ref.read(quotesRepositoryProvider);
       final params = await quotesRepo.getFinancialParameters();
       state = state.copyWith(taxRate: params.taxRate);
-      // Update baseline if taxRate changes so we don't accidentally detect it as a user change (though taxRate isn't checked in hasChanges, this keeps baseline fresh)
-      _baselineState = state;
+      // Update baseline if taxRate changes so we don't accidentally detect it as a user change
+      _baselineState = _baselineState?.copyWith(taxRate: params.taxRate) ?? state.copyWith(taxRate: params.taxRate);
     } catch (_) {
       // Fallback to default 16% if fetch fails
     }

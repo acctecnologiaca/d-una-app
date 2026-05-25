@@ -6,11 +6,11 @@ import '../../../../profile/presentation/providers/profile_provider.dart';
 import '../../providers/products_provider.dart';
 import '../widgets/inventory_item_card.dart';
 import '../../../../../shared/widgets/custom_search_bar.dart';
-import '../../../../../core/utils/string_extensions.dart';
 import '../widgets/inventory_action_sheet.dart';
 import '../../../../../shared/widgets/sort_selector.dart';
 import '../../../../../shared/widgets/custom_extended_fab.dart';
 import '../../../../../shared/widgets/empty_list_state.dart';
+import '../../../../../shared/widgets/paginated_list_view.dart';
 
 class OwnInventoryScreen extends ConsumerStatefulWidget {
   const OwnInventoryScreen({super.key});
@@ -20,36 +20,15 @@ class OwnInventoryScreen extends ConsumerStatefulWidget {
 }
 
 class _OwnInventoryScreenState extends ConsumerState<OwnInventoryScreen> {
-  final TextEditingController _searchController = TextEditingController();
-  String _searchQuery = '';
   SortOption _currentSort = SortOption.recent;
-
-  @override
-  void initState() {
-    super.initState();
-    _searchController.addListener(_onSearchChanged);
-  }
-
-  @override
-  void dispose() {
-    _searchController.removeListener(_onSearchChanged);
-    _searchController.dispose();
-    super.dispose();
-  }
-
-  void _onSearchChanged() {
-    setState(() {
-      _searchQuery = _searchController.text.toLowerCase();
-    });
-  }
 
   @override
   Widget build(BuildContext context) {
     final colors = Theme.of(context).colorScheme;
-    final productsAsync = ref.watch(productsProvider);
+    final paginatedStateAsync = ref.watch(paginatedProductsProvider);
     final userProfileAsync = ref.watch(userProfileProvider);
 
-    final isError = productsAsync.hasError || userProfileAsync.hasError;
+    final isError = paginatedStateAsync.hasError || userProfileAsync.hasError;
 
     return Scaffold(
       appBar: AppBar(
@@ -77,7 +56,6 @@ class _OwnInventoryScreenState extends ConsumerState<OwnInventoryScreen> {
                 vertical: 8.0,
               ),
               child: CustomSearchBar(
-                controller: _searchController,
                 hintText: 'Buscar...',
                 readOnly: true,
                 showFilterIcon: true,
@@ -110,7 +88,19 @@ class _OwnInventoryScreenState extends ConsumerState<OwnInventoryScreen> {
                 children: [
                   SortSelector(
                     currentSort: _currentSort,
-                    onSortChanged: (val) => setState(() => _currentSort = val),
+                    onSortChanged: (val) {
+                      setState(() => _currentSort = val);
+                      String orderBy = 'created_at';
+                      bool ascending = false;
+                      if (val == SortOption.nameAZ) {
+                        orderBy = 'name';
+                        ascending = true;
+                      } else if (val == SortOption.nameZA) {
+                        orderBy = 'name';
+                        ascending = false;
+                      }
+                      ref.read(paginatedProductsProvider.notifier).updateSort(orderBy, ascending);
+                    },
                     options: const [
                       SortOption.recent,
                       SortOption.nameAZ,
@@ -124,96 +114,82 @@ class _OwnInventoryScreenState extends ConsumerState<OwnInventoryScreen> {
 
           // Inventory List
           Expanded(
-            child: userProfileAsync.when(
-              loading: () => const Center(child: CircularProgressIndicator()),
-              error: (err, stack) => FriendlyErrorWidget(
-                error: err,
-                onRetry: () {
-                  ref.invalidate(userProfileProvider);
-                  ref.invalidate(productsProvider);
+            child: RefreshIndicator(
+              onRefresh: () async {
+                ref.invalidate(userProfileProvider);
+                await ref.read(paginatedProductsProvider.notifier).refresh();
+              },
+              child: userProfileAsync.when(
+                loading: () => const Center(child: CircularProgressIndicator()),
+                error: (err, stack) => FriendlyErrorWidget(
+                  error: err,
+                  onRetry: () {
+                    ref.invalidate(userProfileProvider);
+                    ref.invalidate(productsProvider);
+                  },
+                ),
+                data: (_) {
+                  final paginatedState = paginatedStateAsync.valueOrNull;
+                  if (paginatedState == null || paginatedState.isInitialLoading) {
+                    return const Center(child: CircularProgressIndicator());
+                  }
+
+                  if (paginatedStateAsync.hasError && paginatedState.items.isEmpty) {
+                    return FriendlyErrorWidget(
+                      error: paginatedStateAsync.error!,
+                      onRetry: () => ref.read(paginatedProductsProvider.notifier).refresh(),
+                    );
+                  }
+
+                  if (paginatedState.items.isEmpty) {
+                    return SingleChildScrollView(
+                      physics: const AlwaysScrollableScrollPhysics(),
+                      child: SizedBox(
+                        height: MediaQuery.of(context).size.height * 0.5,
+                        child: EmptyListState(
+                          icon: Icons.inventory_2_outlined,
+                          message: 'No hay productos agregados a tu inventario',
+                        ),
+                      ),
+                    );
+                  }
+
+                  return PaginatedListView(
+                    items: paginatedState.items,
+                    isLoadingMore: paginatedState.isLoadingMore,
+                    hasReachedEnd: paginatedState.hasReachedEnd,
+                    onLoadMore: () => ref.read(paginatedProductsProvider.notifier).loadMore(),
+                    padding: const EdgeInsets.fromLTRB(16, 16, 16, 120),
+                    separatorBuilder: (context, index) =>
+                        const Divider(height: 1, color: Colors.transparent),
+                    itemBuilder: (context, index, product) {
+
+                      return InventoryItemCard(
+                        name: product.name,
+                        brand: product.brand?.name ?? 'Sin marca',
+                        model: product.model ?? 'Sin modelo',
+                        stock: product.inventoryQuantity,
+                        price: product.averageCost,
+                        unit: product.uom,
+                        uomIconName: product.uomModel?.iconName,
+                        imageUrl: product.imageUrl,
+                        onTap: () {
+                          InventoryActionSheet.show(
+                            context: context,
+                            ref: ref,
+                            product: product,
+                            currentPrice: product.averageCost,
+                            currentStock: product.inventoryQuantity,
+                          );
+                        },
+                      );
+                    },
+                  );
                 },
               ),
-              data: (_) => productsAsync.when(
-                loading: () =>
-                    const Center(child: CircularProgressIndicator()),
-                error: (error, stack) => FriendlyErrorWidget(
-                  error: error,
-                  onRetry: () => ref.invalidate(productsProvider),
-                ),
-                data: (products) {
-                // Filter List
-                var filteredList = products.where((product) {
-                  final normalizedQuery = _searchQuery.normalizeFingerprint;
-                  final name = product.name.normalizeFingerprint;
-                  final brand =
-                      (product.brand?.name ?? '').normalizeFingerprint;
-                  final model = (product.model ?? '').normalizeFingerprint;
-                  return name.contains(normalizedQuery) ||
-                      brand.contains(normalizedQuery) ||
-                      model.contains(normalizedQuery);
-                }).toList();
-
-                // Apply sort
-                filteredList.sort((a, b) {
-                  switch (_currentSort) {
-                    case SortOption.recent:
-                      return b.createdAt.compareTo(a.createdAt);
-                    case SortOption.nameAZ:
-                      return a.name.toLowerCase().compareTo(
-                        b.name.toLowerCase(),
-                      );
-                    case SortOption.nameZA:
-                      return b.name.toLowerCase().compareTo(
-                        a.name.toLowerCase(),
-                      );
-                    default:
-                      return 0;
-                  }
-                });
-
-                if (filteredList.isEmpty) {
-                  return EmptyListState(
-                    icon: Icons.inventory_2_outlined,
-                    message: 'No hay productos agregados a tu inventario',
-                    searchQuery: _searchQuery,
-                  );
-                }
-
-                return ListView.separated(
-                  padding: const EdgeInsets.fromLTRB(16, 16, 16, 120),
-                  itemCount: filteredList.length,
-                  separatorBuilder: (context, index) =>
-                      //const SizedBox(height: 12),
-                      const Divider(height: 1, color: Colors.transparent),
-                  itemBuilder: (context, index) {
-                    final product = filteredList[index];
-
-                    return InventoryItemCard(
-                      name: product.name,
-                      brand: product.brand?.name ?? 'Sin marca',
-                      model: product.model ?? 'Sin modelo',
-                      stock: product.inventoryQuantity,
-                      price: product.averageCost,
-                      unit: product.uom,
-                      uomIconName: product.uomModel?.iconName,
-                      imageUrl: product.imageUrl,
-                      onTap: () {
-                        InventoryActionSheet.show(
-                          context: context,
-                          ref: ref,
-                          product: product,
-                          currentPrice: product.averageCost,
-                          currentStock: product.inventoryQuantity,
-                        );
-                      },
-                    );
-                  },
-                );
-              },
             ),
           ),
-        ),
-      ],
+        ],
       ),
       floatingActionButton: isError
           ? null

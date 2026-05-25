@@ -37,9 +37,9 @@ class PortfolioScreen extends ConsumerWidget {
                   Text(
                     'Portafolio',
                     style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                          fontSize: 22,
-                          fontWeight: FontWeight.w500,
-                        ),
+                      fontSize: 22,
+                      fontWeight: FontWeight.w500,
+                    ),
                   ),
                   UserProfileAvatar(enabled: !isError),
                 ],
@@ -55,7 +55,7 @@ class PortfolioScreen extends ConsumerWidget {
                   children: [
                     // Section 1: Inventarios
                     Text(
-                      'Inventarios',
+                      'Productos',
                       style: Theme.of(context).textTheme.titleLarge?.copyWith(
                         fontWeight: FontWeight.bold,
                         fontSize: 20,
@@ -63,7 +63,7 @@ class PortfolioScreen extends ConsumerWidget {
                     ),
                     const SizedBox(height: 16),
                     DashboardCard(
-                      title: 'Propio',
+                      title: 'Propios',
                       subtitle: 'Los productos de mi inventario',
                       icon: const Icon(Symbols.inventory_2, weight: 100),
                       backgroundColor: colors.primary,

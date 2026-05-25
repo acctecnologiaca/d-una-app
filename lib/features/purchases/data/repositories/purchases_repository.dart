@@ -40,6 +40,65 @@ class PurchasesRepository {
     }).toList();
   }
 
+  Future<List<Purchase>> getPurchasesPaginated({
+    required int offset,
+    required int limit,
+    String? searchQuery,
+    String? statusFilter,
+    String orderBy = 'date',
+    bool ascending = false,
+  }) async {
+    final currentUserId = _supabase.auth.currentUser?.id;
+    if (currentUserId == null) throw Exception('User not authenticated');
+
+    var query = _supabase.from('purchases').select('''
+          *,
+          suppliers(name, legal_name)
+        ''').eq('user_id', currentUserId);
+
+    if (searchQuery != null && searchQuery.trim().isNotEmpty) {
+      final searchClean = searchQuery.trim();
+      List<String> matchingSupplierIds = [];
+      try {
+        final supplierResponse = await _supabase
+            .from('suppliers')
+            .select('id')
+            .or('name.ilike.%$searchClean%,legal_name.ilike.%$searchClean%');
+        matchingSupplierIds = (supplierResponse as List).map((e) => e['id'].toString()).toList();
+      } catch (e) {
+        // ignore
+      }
+
+      if (matchingSupplierIds.isNotEmpty) {
+        final idsStr = matchingSupplierIds.join(',');
+        query = query.or('document_number.ilike.%$searchClean%,supplier_id.in.($idsStr)');
+      } else {
+        query = query.or('document_number.ilike.%$searchClean%');
+      }
+    }
+
+    if (statusFilter != null) {
+      query = query.eq('status', statusFilter);
+    }
+
+    final response = await query
+        .order(orderBy, ascending: ascending)
+        .range(offset, offset + limit - 1);
+
+    return (response as List<dynamic>).map((json) {
+      String? supplierName;
+      if (json['suppliers'] != null) {
+        final supplier = json['suppliers'] as Map<String, dynamic>;
+        supplierName =
+            (supplier['legal_name'] as String?) ??
+            (supplier['name'] as String?);
+      }
+
+      json['supplier_name'] = supplierName ?? 'Desconocido';
+      return Purchase.fromJson(json as Map<String, dynamic>);
+    }).toList();
+  }
+
   Future<void> createPurchase(
     Purchase purchase,
     List<PurchaseItem> items,

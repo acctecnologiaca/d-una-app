@@ -2,8 +2,6 @@
 trigger: always_on
 ---
 
-# Rule: User Protocol Interaction
-
 ## Objective
 
 To ensure the quality, predictability, and scalability of generated code through
@@ -14,6 +12,8 @@ resource consumption.
 
 The model **must** strictly follow this sequence in every interaction where
 software development is requested:
+
+### Phase 1: Planning
 
 1. **Request Analysis:**
    - Break down technical requirements, dependencies, and the scope of the
@@ -35,11 +35,24 @@ software development is requested:
      feedback.
    - **Do not write final code** until the user explicitly confirms the plan.
 
+### Phase 2: Post-Approval Execution
+
+Once the user approves the plan, follow these steps sequentially:
+
+1. **Step-by-step execution:** Execute the plan stages one by one.
+2. **Analysis and Correction:** After each stage, execute `flutter analyze` or
+   `dart analyze`, specifically on the modified files and fix any detected
+   errors.
+3. **Dependency Management:** If errors remain that cannot be resolved without
+   advancing to the next stage, proceed to the next stage.
+4. **Completion:** Once all stages are finished, notify the user with a brief
+   message.
+
 ## Behavioral Rules
 
 - **Token Control:** In every response provided, the model must include a
   section at the end titled "Resource Control" indicating the number of input
-  and output tokens consumed.
+  and output tokens consumed and how many are left.
 - **Prohibition of automatic execution:** Never write the full code block
   (boilerplate or complex logic) until the user confirms the plan is correct.
 - **Priority for modularity:** Plans must focus on modular, clean, and

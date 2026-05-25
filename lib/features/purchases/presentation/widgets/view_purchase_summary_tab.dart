@@ -217,13 +217,13 @@ class ViewPurchaseSummaryTab extends StatelessWidget {
             }),
 
             // "Ver todos..." only if more than 3
-            if (totalItemsCount > 3)
+            if (totalItemsCount > 0)
               Align(
                 alignment: Alignment.centerRight,
                 child: TextButton.icon(
                   onPressed: () => onNavigateToTab(1),
                   icon: const Icon(Icons.arrow_forward_ios, size: 14),
-                  label: const Text('Ver todos...'),
+                  label: const Text('Ir a productos'),
                   style: TextButton.styleFrom(
                     padding: const EdgeInsets.symmetric(
                       horizontal: 8,

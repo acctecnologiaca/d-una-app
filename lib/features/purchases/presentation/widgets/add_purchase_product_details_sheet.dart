@@ -14,7 +14,6 @@ import 'package:d_una_app/shared/widgets/product_image_avatar.dart';
 import 'package:d_una_app/shared/widgets/uom_status_badge.dart';
 import 'package:d_una_app/shared/widgets/custom_action_sheet.dart';
 import 'package:d_una_app/shared/utils/currency_formatter.dart';
-import 'package:d_una_app/features/purchases/presentation/widgets/register_serials_dialog.dart';
 
 class AddPurchaseProductDetailsSheet extends ConsumerStatefulWidget {
   final Product product;
@@ -70,11 +69,11 @@ class _AddPurchaseProductDetailsSheetState
   final _formKey = GlobalKey<FormState>();
   final _quantityController = TextEditingController(text: '1');
   final _costController = TextEditingController();
-  final _warrantyQtyController = TextEditingController(text: '1');
+  final _warrantyQtyController = TextEditingController(text: '12');
 
   Uom? _selectedUom;
   bool _noWarranty = false;
-  String _warrantyPeriod = 'Años';
+  String _warrantyPeriod = 'Meses';
   bool _noSerials = false;
 
   @override
@@ -152,29 +151,12 @@ class _AddPurchaseProductDetailsSheetState
     final wPeriod = _noWarranty ? 'Días' : _warrantyPeriod;
 
     bool finalUsesSerials = !_noSerials;
-    bool registerSerialsNow = false;
+    bool needsToAskSerials = false;
 
     if (finalUsesSerials &&
         (widget.existingItem == null ||
             !widget.existingItem!.requiresSerials)) {
-      final result = await RegisterSerialsDialog.show(context);
-
-      if (result == null) {
-        return; // User dismissed
-      }
-
-      switch (result) {
-        case RegisterSerialsResult.now:
-          registerSerialsNow = true;
-          break;
-        case RegisterSerialsResult.later:
-          registerSerialsNow = false;
-          break;
-        case RegisterSerialsResult.never:
-          finalUsesSerials = false;
-          registerSerialsNow = false;
-          break;
-      }
+      needsToAskSerials = true;
     }
 
     if (mounted) {
@@ -187,7 +169,7 @@ class _AddPurchaseProductDetailsSheetState
         'warranty_duration': wQty,
         'warranty_period': wPeriod,
         'uses_serials': finalUsesSerials,
-        'register_serials_now': registerSerialsNow,
+        'needs_to_ask_serials': needsToAskSerials,
       });
     }
   }

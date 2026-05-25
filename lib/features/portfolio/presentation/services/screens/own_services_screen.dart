@@ -11,6 +11,7 @@ import '../../providers/services_provider.dart';
 import '../../../../../shared/widgets/service_list_item.dart';
 import '../widgets/service_action_sheet.dart';
 import '../../../../../shared/widgets/empty_list_state.dart';
+import '../../../../../shared/widgets/paginated_list_view.dart';
 
 class OwnServicesScreen extends ConsumerStatefulWidget {
   const OwnServicesScreen({super.key});
@@ -20,25 +21,14 @@ class OwnServicesScreen extends ConsumerStatefulWidget {
 }
 
 class _OwnServicesScreenState extends ConsumerState<OwnServicesScreen> {
-  final TextEditingController _searchController = TextEditingController();
-
   SortOption _currentSort = SortOption.recent;
-
-  @override
-  void dispose() {
-    _searchController.dispose();
-    super.dispose();
-  }
 
   @override
   Widget build(BuildContext context) {
     final colors = Theme.of(context).colorScheme;
-    final servicesAsync = ref.watch(servicesProvider);
+    final paginatedAsync = ref.watch(paginatedServicesProvider);
 
-    final isError = servicesAsync.maybeWhen(
-      error: (error, stack) => true,
-      orElse: () => false,
-    );
+    final isError = paginatedAsync.hasError;
 
     return Scaffold(
       appBar: AppBar(
@@ -66,7 +56,6 @@ class _OwnServicesScreenState extends ConsumerState<OwnServicesScreen> {
                 vertical: 8.0,
               ),
               child: CustomSearchBar(
-                controller: _searchController,
                 hintText: 'Buscar servicio...',
                 readOnly: true,
                 showFilterIcon: true,
@@ -99,7 +88,19 @@ class _OwnServicesScreenState extends ConsumerState<OwnServicesScreen> {
                 children: [
                   SortSelector(
                     currentSort: _currentSort,
-                    onSortChanged: (val) => setState(() => _currentSort = val),
+                    onSortChanged: (val) {
+                      setState(() => _currentSort = val);
+                      String orderBy = 'created_at';
+                      bool ascending = false;
+                      if (val == SortOption.nameAZ) {
+                        orderBy = 'name';
+                        ascending = true;
+                      } else if (val == SortOption.nameZA) {
+                        orderBy = 'name';
+                        ascending = false;
+                      }
+                      ref.read(paginatedServicesProvider.notifier).updateSort(orderBy, ascending);
+                    },
                     options: const [
                       SortOption.recent,
                       SortOption.nameAZ,
@@ -112,62 +113,58 @@ class _OwnServicesScreenState extends ConsumerState<OwnServicesScreen> {
           ],
 
           Expanded(
-            child: servicesAsync.when(
-              loading: () => const Center(child: CircularProgressIndicator()),
-              error: (err, stack) => FriendlyErrorWidget(
-                error: err,
-                onRetry: () => ref.invalidate(
-                  servicesAsync.asData == null
-                      ? servicesProvider
-                      : servicesProvider,
-                ), // Force refresh
-              ),
-              data: (services) {
-                if (services.isEmpty) {
-                  return EmptyListState(
-                    icon: Icons.handyman_outlined,
-                    message: 'No tienes servicios registrados',
-                    searchQuery: _searchController.text,
-                  );
-                }
+              child: RefreshIndicator(
+                onRefresh: () async {
+                  await ref.read(paginatedServicesProvider.notifier).refresh();
+                },
+                child: Builder(
+                  builder: (context) {
+                    final state = paginatedAsync.valueOrNull;
 
-                // Sorting
-                List<ServiceModel> finalServices = List.from(services);
-                finalServices.sort((a, b) {
-                  switch (_currentSort) {
-                    case SortOption.recent:
-                    case SortOption.frequency:
-                      return b.createdAt.compareTo(a.createdAt);
-                    case SortOption.nameAZ:
-                      return a.name.toLowerCase().compareTo(
-                        b.name.toLowerCase(),
-                      );
-                    case SortOption.nameZA:
-                      return b.name.toLowerCase().compareTo(
-                        a.name.toLowerCase(),
-                      );
-                    default:
-                      return 0;
-                  }
-                });
+                    if (state == null || state.isInitialLoading) {
+                      return const Center(child: CircularProgressIndicator());
+                    }
 
-                return ListView.separated(
-                  padding: const EdgeInsets.fromLTRB(16, 16, 16, 120),
-                  itemCount: finalServices.length,
-                  separatorBuilder: (context, index) =>
-                      const Divider(height: 1, color: Colors.transparent),
-                  itemBuilder: (context, index) {
-                    final service = finalServices[index];
-                    return ServiceListItem(
-                      service: service,
-                      onTap: () {
-                        _showServiceActionSheet(context, service);
+                    if (paginatedAsync.hasError && state.items.isEmpty) {
+                      return FriendlyErrorWidget(
+                        error: paginatedAsync.error!,
+                        onRetry: () => ref.read(paginatedServicesProvider.notifier).refresh(),
+                      );
+                    }
+
+                    if (state.items.isEmpty) {
+                      return SingleChildScrollView(
+                        physics: const AlwaysScrollableScrollPhysics(),
+                        child: SizedBox(
+                          height: MediaQuery.of(context).size.height * 0.5,
+                          child: const EmptyListState(
+                            icon: Icons.handyman_outlined,
+                            message: 'No tienes servicios registrados',
+                          ),
+                        ),
+                      );
+                    }
+
+                    return PaginatedListView(
+                      items: state.items,
+                      isLoadingMore: state.isLoadingMore,
+                      hasReachedEnd: state.hasReachedEnd,
+                      onLoadMore: () => ref.read(paginatedServicesProvider.notifier).loadMore(),
+                      padding: const EdgeInsets.fromLTRB(16, 16, 16, 120),
+                      separatorBuilder: (context, index) =>
+                          const Divider(height: 1, color: Colors.transparent),
+                      itemBuilder: (context, index, service) {
+                        return ServiceListItem(
+                          service: service,
+                          onTap: () {
+                            _showServiceActionSheet(context, service);
+                          },
+                        );
                       },
                     );
                   },
-                );
-              },
-            ),
+                ),
+              ),
           ),
         ],
       ),

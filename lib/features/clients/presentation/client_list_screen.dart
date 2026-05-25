@@ -1,18 +1,18 @@
 import 'package:flutter/material.dart';
-import 'package:d_una_app/shared/widgets/friendly_error_widget.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:material_symbols_icons/symbols.dart';
 import 'providers/clients_provider.dart';
 import 'package:d_una_app/features/profile/presentation/providers/profile_provider.dart';
 import 'providers/add_client_provider.dart';
-import 'package:d_una_app/core/utils/string_extensions.dart';
+import '../../../../shared/widgets/friendly_error_widget.dart';
 import '../../../../shared/widgets/custom_search_bar.dart';
 import '../../../../shared/widgets/sort_selector.dart';
 import '../../../shared/widgets/custom_extended_fab.dart';
 import '../../../shared/widgets/standard_list_item.dart';
 import '../../../shared/widgets/user_profile_avatar.dart';
 import '../../../../shared/widgets/empty_list_state.dart';
+import '../../../../shared/widgets/paginated_list_view.dart';
 
 class ClientListScreen extends ConsumerStatefulWidget {
   const ClientListScreen({super.key});
@@ -23,17 +23,11 @@ class ClientListScreen extends ConsumerStatefulWidget {
 
 class _ClientListScreenState extends ConsumerState<ClientListScreen> {
   final TextEditingController _searchController = TextEditingController();
-  String _searchQuery = '';
   SortOption _currentSort = SortOption.recent;
 
   @override
   void initState() {
     super.initState();
-    _searchController.addListener(() {
-      setState(() {
-        _searchQuery = _searchController.text.toLowerCase();
-      });
-    });
   }
 
   @override
@@ -44,11 +38,11 @@ class _ClientListScreenState extends ConsumerState<ClientListScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final clientsAsync = ref.watch(clientsProvider);
+    final paginatedStateAsync = ref.watch(paginatedClientsProvider);
     final userProfileAsync = ref.watch(userProfileProvider);
     final colors = Theme.of(context).colorScheme;
 
-    final isError = clientsAsync.hasError || userProfileAsync.hasError;
+    final isError = paginatedStateAsync.hasError || userProfileAsync.hasError;
 
     return Scaffold(
       backgroundColor: colors.surface,
@@ -119,8 +113,25 @@ class _ClientListScreenState extends ConsumerState<ClientListScreen> {
                         SortOption.nameZA,
                         SortOption.type,
                       ],
-                      onSortChanged: (val) =>
-                          setState(() => _currentSort = val),
+                      onSortChanged: (val) {
+                        setState(() => _currentSort = val);
+                        // Map SortOption to API fields
+                        String orderBy = 'created_at';
+                        bool ascending = false;
+                        if (val == SortOption.nameAZ) {
+                          orderBy = 'name';
+                          ascending = true;
+                        } else if (val == SortOption.nameZA) {
+                          orderBy = 'name';
+                          ascending = false;
+                        } else if (val == SortOption.type) {
+                          orderBy = 'type';
+                          ascending = true;
+                        }
+                        ref
+                            .read(paginatedClientsProvider.notifier)
+                            .updateSort(orderBy, ascending);
+                      },
                     ),
                   ],
                 ),
@@ -129,85 +140,66 @@ class _ClientListScreenState extends ConsumerState<ClientListScreen> {
 
             // Content
             Expanded(
-              child: userProfileAsync.when(
-                loading: () => const Center(child: CircularProgressIndicator()),
-                error: (err, stack) => FriendlyErrorWidget(
-                  error: err,
-                  onRetry: () {
-                    ref.invalidate(userProfileProvider);
-                    ref.invalidate(clientsProvider);
-                  },
-                ),
-                data: (_) => clientsAsync.when(
+              child: RefreshIndicator(
+                onRefresh: () async {
+                  ref.invalidate(userProfileProvider);
+                  await ref.read(paginatedClientsProvider.notifier).refresh();
+                },
+                child: userProfileAsync.when(
                   loading: () =>
                       const Center(child: CircularProgressIndicator()),
                   error: (err, stack) => FriendlyErrorWidget(
                     error: err,
-                    onRetry: () => ref.invalidate(clientsProvider),
+                    onRetry: () {
+                      ref.invalidate(userProfileProvider);
+                      ref.invalidate(clientsProvider);
+                    },
                   ),
-                  data: (clients) {
-                    // Filter Clients
-                    var filteredClients = clients.where((client) {
-                      final normalizedQuery = _searchQuery.normalized;
-                      final name = client.name.normalized;
-                      final id = (client.taxId ?? '').normalized;
-                      final email = (client.email ?? '').normalized;
-                      return name.contains(normalizedQuery) ||
-                          id.contains(normalizedQuery) ||
-                          email.contains(normalizedQuery);
-                    }).toList();
+                  data: (_) {
+                    final paginatedState = paginatedStateAsync.valueOrNull;
+                    if (paginatedState == null ||
+                        paginatedState.isInitialLoading) {
+                      return const Center(child: CircularProgressIndicator());
+                    }
 
-                    // Sort Clients
-                    filteredClients.sort((a, b) {
-                      switch (_currentSort) {
-                        case SortOption.recent:
-                        case SortOption.frequency:
-                          // Assuming createdAt exists and is DateTime.
-                          // If not, we might need another field or fallback.
-                          // Checked model: DateTime createdAt exists.
-                          return b.createdAt.compareTo(a.createdAt);
-                        case SortOption.nameAZ:
-                          return a.name.toLowerCase().compareTo(
-                            b.name.toLowerCase(),
-                          );
-                        case SortOption.nameZA:
-                          return b.name.toLowerCase().compareTo(
-                            a.name.toLowerCase(),
-                          );
-                        case SortOption.type:
-                          // Sort by type: company first, then person.
-                          // If same type, sort by name A-Z.
-                          if (a.type != b.type) {
-                            return a.type == 'company' ? -1 : 1;
-                          }
-                          return a.name.toLowerCase().compareTo(
-                            b.name.toLowerCase(),
-                          );
-                        default:
-                          return 0;
-                      }
-                    });
-
-                    if (filteredClients.isEmpty) {
-                      return EmptyListState(
-                        icon: Symbols.people,
-                        message: 'No hay clientes agregados',
-                        searchQuery: _searchQuery,
+                    if (paginatedStateAsync.hasError &&
+                        paginatedState.items.isEmpty) {
+                      return FriendlyErrorWidget(
+                        error: paginatedStateAsync.error!,
+                        onRetry: () => ref
+                            .read(paginatedClientsProvider.notifier)
+                            .refresh(),
                       );
                     }
 
-                    return ListView.separated(
-                      padding: const EdgeInsets.fromLTRB(0, 8, 0, 100),
-                      itemCount: filteredClients.length,
+                    if (paginatedState.items.isEmpty) {
+                      return SingleChildScrollView(
+                        physics: const AlwaysScrollableScrollPhysics(),
+                        child: SizedBox(
+                          height: MediaQuery.of(context).size.height * 0.5,
+                          child: EmptyListState(
+                            icon: Symbols.people,
+                            message: 'No hay clientes agregados',
+                          ),
+                        ),
+                      );
+                    }
+
+                    return PaginatedListView(
+                      items: paginatedState.items,
+                      isLoadingMore: paginatedState.isLoadingMore,
+                      hasReachedEnd: paginatedState.hasReachedEnd,
+                      onLoadMore: () => ref
+                          .read(paginatedClientsProvider.notifier)
+                          .loadMore(),
+                      padding: const EdgeInsets.fromLTRB(0, 8, 0, 90),
                       separatorBuilder: (context, index) => const Divider(
                         height: 1,
                         indent: 16,
                         endIndent: 16,
                         color: Colors.transparent,
                       ),
-                      itemBuilder: (context, index) {
-                        final client = filteredClients[index];
-
+                      itemBuilder: (context, index, client) {
                         return Padding(
                           padding: const EdgeInsets.symmetric(horizontal: 16.0),
                           child: StandardListItem(
@@ -221,7 +213,6 @@ class _ClientListScreenState extends ConsumerState<ClientListScreen> {
                             title: client.name,
                             subtitle: Text(client.taxId ?? 'Sin ID'),
                             onTap: () {
-                              // Navigate to details using ID
                               context.push(
                                 '/clients/${client.id}',
                                 extra: client,

@@ -11,6 +11,8 @@ import '../../../../../core/utils/string_extensions.dart';
 import '../../../domain/models/quote_model.dart'; // New Import
 import '../widgets/quote_card.dart';
 import '../providers/quotes_provider.dart';
+import '../quote_selection_actions.dart';
+import 'package:material_symbols_icons/symbols.dart';
 
 class QuotesSearchScreen extends ConsumerStatefulWidget {
   final bool selectionMode;
@@ -42,6 +44,17 @@ class _QuotesSearchScreenState extends ConsumerState<QuotesSearchScreen> {
 
   static const _archivedLabel = 'Archivadas';
 
+  @override
+  void dispose() {
+    // Clear selection when leaving this screen
+    // Use post-frame callback to avoid calling during build
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) return; // Already disposed
+      ref.read(quoteSelectionProvider.notifier).clearSelection();
+    });
+    super.dispose();
+  }
+
   void _showStatusFilter(List<Quote> quotes) {
     // Collect specific strings (labels) for the filter UI
     final queryNormalized = _searchQuery.normalized;
@@ -50,7 +63,8 @@ class _QuotesSearchScreenState extends ConsumerState<QuotesSearchScreen> {
             .where((q) {
               return queryNormalized.isEmpty ||
                   q.clientName.normalized.contains(queryNormalized) ||
-                  q.quoteNumber.normalized.contains(queryNormalized);
+                  q.quoteNumber.normalized.contains(queryNormalized) ||
+                  (q.quoteTag?.normalized.contains(queryNormalized) ?? false);
             })
             .where((q) => !q.isArchived)
             .map((e) => e.status.label)
@@ -81,8 +95,15 @@ class _QuotesSearchScreenState extends ConsumerState<QuotesSearchScreen> {
   }
 
   void _showCategoryFilter(List<Quote> quotes) {
+    final queryNormalized = _searchQuery.normalized;
     final availableCategories =
         quotes
+            .where((q) {
+              return queryNormalized.isEmpty ||
+                  q.clientName.normalized.contains(queryNormalized) ||
+                  q.quoteNumber.normalized.contains(queryNormalized) ||
+                  (q.quoteTag?.normalized.contains(queryNormalized) ?? false);
+            })
             .where(
               (q) =>
                   q.categoryName != null && q.categoryName!.trim().isNotEmpty,
@@ -155,22 +176,41 @@ class _QuotesSearchScreenState extends ConsumerState<QuotesSearchScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final dataAsync = ref.watch(quotesListProvider);
+    final paginatedAsync = ref.watch(paginatedQuoteSearchProvider);
+    final selection = ref.watch(quoteSelectionProvider);
 
     return GenericSearchScreen<Quote>(
-      title: widget.selectionMode ? 'Seleccionar cotización' : 'Buscar cotización',
+      title: widget.selectionMode
+          ? 'Seleccionar cotización'
+          : 'Buscar cotización',
       hintText: 'Cliente, número o etiqueta...',
       historyKey: 'quotes_search_history',
-      data: dataAsync,
+      isPaginatedMode: true,
+      paginatedDataAsync: paginatedAsync,
       showHistory: !widget.selectionMode,
+      appBarOverride: selection.isSelectionMode
+          ? _buildSelectionHeader(context, ref, selection)
+          : null,
       onResetFilters: () {
         setState(() {
           _selectedStatuses.clear();
           _selectedCategories.clear();
           _selectedDateRange = null;
-          _searchQuery = '';
           _currentSort = SortOption.recent;
         });
+        ref.read(paginatedQuoteSearchProvider.notifier).updateSearch(null);
+        ref
+            .read(paginatedQuoteSearchProvider.notifier)
+            .updateFilters(status: null, categoryId: null);
+        ref
+            .read(paginatedQuoteSearchProvider.notifier)
+            .updateSort('date_issued', false);
+      },
+      onServerSearch: (query) {
+        ref.read(paginatedQuoteSearchProvider.notifier).updateSearch(query);
+      },
+      onLoadMore: () {
+        ref.read(paginatedQuoteSearchProvider.notifier).loadMore();
       },
       onQueryChanged: (query) {
         setState(() {
@@ -188,35 +228,41 @@ class _QuotesSearchScreenState extends ConsumerState<QuotesSearchScreen> {
               SortOption.nameAZ,
               SortOption.nameZA,
             ],
-            onSortChanged: (val) => setState(() => _currentSort = val),
+            onSortChanged: (val) {
+              setState(() => _currentSort = val);
+              String orderBy = 'date_issued';
+              bool ascending = false;
+              if (val == SortOption.nameAZ) {
+                orderBy = 'clients(name)';
+                ascending = true;
+              } else if (val == SortOption.nameZA) {
+                orderBy = 'clients(name)';
+                ascending = false;
+              }
+              ref
+                  .read(paginatedQuoteSearchProvider.notifier)
+                  .updateSort(orderBy, ascending);
+            },
           ),
         ),
       ),
-      comparator: (a, b) {
-        switch (_currentSort) {
-          case SortOption.nameAZ:
-            return a.clientName.toLowerCase().compareTo(
-              b.clientName.toLowerCase(),
-            );
-          case SortOption.nameZA:
-            return b.clientName.toLowerCase().compareTo(
-              a.clientName.toLowerCase(),
-            );
-          case SortOption.recent:
-          default:
-            return b.date.compareTo(a.date);
-        }
-      },
+      comparator: null,
       itemBuilder: (context, quote) {
         return QuoteCard(
           quote: quote,
-          onTap: () {
-            if (widget.selectionMode) {
-              Navigator.of(context).pop(quote);
-            } else {
-              context.push('/quotes/view/${quote.id}');
-            }
-          },
+          isSelectionMode: selection.isSelectionMode,
+          isSelected: selection.isSelected(quote.id),
+          onLongPress: () =>
+              ref.read(quoteSelectionProvider.notifier).toggle(quote.id),
+          onTap: selection.isSelectionMode
+              ? () => ref.read(quoteSelectionProvider.notifier).toggle(quote.id)
+              : () {
+                  if (widget.selectionMode) {
+                    Navigator.of(context).pop(quote);
+                  } else {
+                    context.push('/quotes/view/${quote.id}');
+                  }
+                },
         );
       },
       filters: [
@@ -224,14 +270,16 @@ class _QuotesSearchScreenState extends ConsumerState<QuotesSearchScreen> {
           label: _getChipLabel(_selectedStatuses, 'Estatus'),
           isActive: _selectedStatuses.isNotEmpty,
           onTap: () {
-            dataAsync.whenData((quotes) => _showStatusFilter(quotes));
+            final items = paginatedAsync.valueOrNull?.items ?? [];
+            _showStatusFilter(items);
           },
         ),
         FilterChipData(
           label: _getChipLabel(_selectedCategories, 'Categoría'),
           isActive: _selectedCategories.isNotEmpty,
           onTap: () {
-            dataAsync.whenData((quotes) => _showCategoryFilter(quotes));
+            final items = paginatedAsync.valueOrNull?.items ?? [];
+            _showCategoryFilter(items);
           },
         ),
         FilterChipData(
@@ -310,6 +358,51 @@ class _QuotesSearchScreenState extends ConsumerState<QuotesSearchScreen> {
 
         return matchesText && matchesArchive && matchesCategory && matchesDate;
       },
+    );
+  }
+
+  PreferredSizeWidget _buildSelectionHeader(
+    BuildContext context,
+    WidgetRef ref,
+    QuoteSelectionState selection,
+  ) {
+    final colors = Theme.of(context).colorScheme;
+    return AppBar(
+      backgroundColor: colors.surface,
+      elevation: 0,
+      centerTitle: false,
+      leading: IconButton(
+        icon: Icon(Icons.close, color: colors.onSurface),
+        onPressed: () =>
+            ref.read(quoteSelectionProvider.notifier).clearSelection(),
+      ),
+      title: Text(
+        '${selection.count} Ítem${selection.count > 1 ? 's' : ''}',
+        style: Theme.of(context).textTheme.titleLarge?.copyWith(
+          fontSize: 22,
+          fontWeight: FontWeight.w500,
+          color: colors.onSurface,
+        ),
+      ),
+      actions: [
+        IconButton(
+          icon: Icon(Icons.archive_outlined, color: colors.onSurface),
+          tooltip: 'Archivar',
+          onPressed: () =>
+              QuoteSelectionActions.handleBatchArchive(context, ref, selection),
+        ),
+        IconButton(
+          icon: Icon(Symbols.conversion_path, color: colors.onSurface),
+          tooltip: 'Cambiar estatus',
+          onPressed: () =>
+              QuoteSelectionActions.showStatusDialog(context, ref, selection),
+        ),
+        IconButton(
+          icon: Icon(Icons.more_vert, color: colors.onSurface),
+          onPressed: () =>
+              QuoteSelectionActions.showActionsSheet(context, ref, selection),
+        ),
+      ],
     );
   }
 }

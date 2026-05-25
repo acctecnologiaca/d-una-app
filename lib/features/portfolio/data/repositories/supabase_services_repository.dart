@@ -21,6 +21,42 @@ class SupabaseServicesRepository implements ServicesRepository {
   }
 
   @override
+  Future<List<ServiceModel>> getServicesPaginated({
+    required int offset,
+    required int limit,
+    String? searchQuery,
+    String? categoryId,
+    String? rateId,
+    String orderBy = 'created_at',
+    bool ascending = false,
+  }) async {
+    var query = _client
+        .from('services')
+        .select('*, service_rates(*), categories(*)')
+        .eq('user_id', _userId);
+
+    if (searchQuery != null && searchQuery.trim().isNotEmpty) {
+      query = query.or(
+        'name.ilike.%$searchQuery%,description.ilike.%$searchQuery%',
+      );
+    }
+
+    if (categoryId != null) {
+      query = query.eq('category_id', categoryId);
+    }
+
+    if (rateId != null) {
+      query = query.eq('service_rate_id', rateId);
+    }
+
+    final response = await query
+        .order(orderBy, ascending: ascending)
+        .range(offset, offset + limit - 1);
+
+    return (response as List).map((e) => ServiceModel.fromJson(e)).toList();
+  }
+
+  @override
   Future<List<ServiceModel>> searchServices(String query) async {
     final response = await _client
         .from('services')

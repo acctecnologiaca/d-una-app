@@ -76,15 +76,6 @@ class AggregatedProductCard extends StatelessWidget {
             ? Column(
                 crossAxisAlignment: CrossAxisAlignment.end,
                 children: [
-                  /* Text(
-                    'MPD',
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                      color: colors.onSurface,
-                    ),
-                  ),*/
-                  // Price
                   Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [

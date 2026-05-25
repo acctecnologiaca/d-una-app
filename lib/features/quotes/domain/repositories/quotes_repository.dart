@@ -1,9 +1,11 @@
+import 'package:flutter/material.dart';
 import '../../data/models/quote.dart';
 import '../../data/models/delivery_time.dart';
 import '../../data/models/commercial_condition.dart';
 import '../../data/models/financial_parameter.dart';
 import '../../data/models/quote_item_product.dart';
 import '../../data/models/quote_item_service.dart';
+import '../models/batch_update_result.dart';
 import '../../data/models/quote_condition.dart';
 
 abstract class QuotesRepository {
@@ -17,6 +19,18 @@ abstract class QuotesRepository {
   Future<List<Quote>> getQuotes({
     String? status,
     String? clientId,
+    bool includeArchived = false,
+  });
+  
+  Future<List<Quote>> getQuotesPaginated({
+    required int offset,
+    int limit = 25,
+    String orderBy = 'date_issued',
+    bool ascending = false,
+    String? searchQuery,
+    String? statusFilter,
+    String? categoryFilter,
+    DateTimeRange? dateRange,
     bool includeArchived = false,
   });
   Future<Quote> getQuoteById(String id);
@@ -39,7 +53,7 @@ abstract class QuotesRepository {
   Future<void> deleteQuote(String id);
 
   // Batch Operations
-  Future<void> batchUpdateStatus(List<String> ids, String status);
+  Future<BatchUpdateResult> batchUpdateStatus(List<String> ids, String status);
   Future<void> batchArchive(List<String> ids, bool isArchived);
 }
 

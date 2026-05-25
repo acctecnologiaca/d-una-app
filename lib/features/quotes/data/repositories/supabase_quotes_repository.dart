@@ -1,3 +1,4 @@
+import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../domain/repositories/quotes_repository.dart';
 import '../../data/models/quote.dart';
@@ -7,6 +8,7 @@ import '../../data/models/financial_parameter.dart';
 import '../../data/models/quote_item_product.dart';
 import '../../data/models/quote_item_service.dart';
 import '../../data/models/quote_condition.dart';
+import '../../domain/models/batch_update_result.dart';
 
 class SupabaseQuotesRepository implements QuotesRepository {
   final SupabaseClient _client;
@@ -118,6 +120,78 @@ class SupabaseQuotesRepository implements QuotesRepository {
 
     // Order by date issued descending
     final response = await query.order('date_issued', ascending: false);
+
+    return (response as List).map((e) => Quote.fromJson(e)).toList();
+  }
+
+  @override
+  Future<List<Quote>> getQuotesPaginated({
+    required int offset,
+    int limit = 25,
+    String orderBy = 'date_issued',
+    bool ascending = false,
+    String? searchQuery,
+    String? statusFilter,
+    String? categoryFilter,
+    DateTimeRange? dateRange,
+    bool includeArchived = false,
+  }) async {
+    final userId = _client.auth.currentUser?.id;
+    if (userId == null) throw Exception('Usuario no autenticado');
+
+    var query = _client
+        .from('quotes')
+        .select('''
+          *,
+          clients(name),
+          category:categories(name),
+          quote_items_products(*)
+        ''')
+        .eq('user_id', userId);
+
+    if (searchQuery != null && searchQuery.isNotEmpty) {
+      final searchQueryClean = searchQuery.trim();
+      List<String> matchingClientIds = [];
+      try {
+        final clientResponse = await _client
+            .from('clients')
+            .select('id')
+            .eq('user_id', userId)
+            .ilike('name', '%$searchQueryClean%');
+        matchingClientIds = (clientResponse as List).map((e) => e['id'].toString()).toList();
+      } catch (e) {
+        // ignore
+      }
+
+      if (matchingClientIds.isNotEmpty) {
+        final idsStr = matchingClientIds.join(',');
+        query = query.or('quote_number.ilike.%$searchQueryClean%,quote_tag.ilike.%$searchQueryClean%,client_id.in.($idsStr)');
+      } else {
+        query = query.or('quote_number.ilike.%$searchQueryClean%,quote_tag.ilike.%$searchQueryClean%');
+      }
+    }
+
+    if (statusFilter != null) {
+      query = query.eq('status', statusFilter);
+    }
+    
+    if (categoryFilter != null) {
+      query = query.eq('category_id', categoryFilter);
+    }
+
+    if (dateRange != null) {
+      query = query
+          .gte('date_issued', dateRange.start.toIso8601String())
+          .lte('date_issued', dateRange.end.toIso8601String());
+    }
+
+    if (!includeArchived) {
+      query = query.eq('is_archived', false);
+    }
+
+    final response = await query
+        .order(orderBy, ascending: ascending)
+        .range(offset, offset + limit - 1);
 
     return (response as List).map((e) => Quote.fromJson(e)).toList();
   }
@@ -413,9 +487,25 @@ class SupabaseQuotesRepository implements QuotesRepository {
       );
 
       if (insufficient.isNotEmpty) {
-        final names = insufficient
-            .map((item) => item['product_name'] as String)
+        final productIds = insufficient
+            .map((item) => item['product_id'] as String)
             .toList();
+
+        final itemsData = await _client
+            .from('quote_items_products')
+            .select('product_id, name, model')
+            .eq('quote_id', id)
+            .inFilter('product_id', productIds);
+
+        final names = itemsData.map((item) {
+          final name = item['name'] as String;
+          final model = item['model'] as String?;
+          if (model != null && model.isNotEmpty) {
+            return '$name ($model)';
+          }
+          return name;
+        }).toList();
+
         throw InsufficientStockException(names);
       }
     }
@@ -436,25 +526,27 @@ class SupabaseQuotesRepository implements QuotesRepository {
   }
 
   @override
-  Future<void> batchUpdateStatus(List<String> ids, String status) async {
-    if (status == 'approved') {
-      final List<String> allInsufficientNames = [];
-      for (final id in ids) {
-        final List<dynamic> insufficient = await _client.rpc(
-          'check_quote_insufficient_stock',
-          params: {'p_quote_id': id},
-        );
-        if (insufficient.isNotEmpty) {
-          allInsufficientNames.addAll(
-            insufficient.map((item) => item['product_name'] as String),
-          );
-        }
-      }
-      if (allInsufficientNames.isNotEmpty) {
-        throw InsufficientStockException(allInsufficientNames.toSet().toList());
+  Future<BatchUpdateResult> batchUpdateStatus(List<String> ids, String status) async {
+    final successfulIds = <String>[];
+    final stockErrors = <String, InsufficientStockException>{};
+    final generalErrors = <String, Exception>{};
+
+    for (final id in ids) {
+      try {
+        await updateQuoteStatus(id, status);
+        successfulIds.add(id);
+      } on InsufficientStockException catch (e) {
+        stockErrors[id] = e;
+      } catch (e) {
+        generalErrors[id] = Exception(e.toString());
       }
     }
-    await _client.from('quotes').update({'status': status}).inFilter('id', ids);
+
+    return BatchUpdateResult(
+      successfulIds: successfulIds,
+      stockErrors: stockErrors,
+      generalErrors: generalErrors,
+    );
   }
 
   @override

@@ -105,7 +105,7 @@ class ViewQuoteSummaryTab extends ConsumerWidget {
           _buildSectionHeader(context, Icons.calculate, 'Cotización'),
           _buildQuoteCard(
             context,
-            state.products.length,
+            groupedProducts.length,
             state.services.length,
             productsSubtotal,
             servicesSubtotal,
@@ -389,13 +389,13 @@ class ViewQuoteSummaryTab extends ConsumerWidget {
                 ),
               );
             }),
-            if (productsCount > 3)
+            if (productsCount > 0)
               Align(
                 alignment: Alignment.centerRight,
                 child: TextButton.icon(
                   onPressed: () => onNavigateToTab(0),
                   icon: const Icon(Icons.arrow_forward_ios, size: 14),
-                  label: const Text('Ver todos...'),
+                  label: const Text('Ir a productos'),
                   style: TextButton.styleFrom(
                     padding: const EdgeInsets.symmetric(horizontal: 8),
                   ),
@@ -433,13 +433,13 @@ class ViewQuoteSummaryTab extends ConsumerWidget {
                 ),
               );
             }),
-            if (servicesCount > 3)
+            if (servicesCount > 0)
               Align(
                 alignment: Alignment.centerRight,
                 child: TextButton.icon(
                   onPressed: () => onNavigateToTab(1),
                   icon: const Icon(Icons.arrow_forward_ios, size: 14),
-                  label: const Text('Ver todos...'),
+                  label: const Text('Ir a servicios'),
                   style: TextButton.styleFrom(
                     padding: const EdgeInsets.symmetric(horizontal: 8),
                   ),

@@ -257,7 +257,7 @@ class AddPurchaseSummaryTab extends ConsumerWidget {
                 child: TextButton.icon(
                   onPressed: () => onNavigateToTab(1),
                   icon: const Icon(Icons.arrow_forward_ios, size: 14),
-                  label: const Text('Ver todos...'),
+                  label: const Text('Ir a productos'),
                   style: TextButton.styleFrom(
                     padding: const EdgeInsets.symmetric(
                       horizontal: 8,

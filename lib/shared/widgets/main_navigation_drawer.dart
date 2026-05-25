@@ -8,6 +8,7 @@ class MainNavigationDrawer extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colors = Theme.of(context).colorScheme;
+    //final textTheme = Theme.of(context).textTheme;
     final String currentRoute = GoRouterState.of(context).uri.path;
 
     return Drawer(
@@ -41,20 +42,6 @@ class MainNavigationDrawer extends StatelessWidget {
                 children: [
                   _buildMenuItem(
                     context: context,
-                    icon: Symbols.shopping_cart,
-                    label: 'Pedidos a proveedores',
-                    route: '/supplier-orders', // Placeholder route
-                    currentRoute: currentRoute,
-                  ),
-                  _buildMenuItem(
-                    context: context,
-                    icon: Symbols.receipt_long,
-                    label: 'Mis compras',
-                    route: '/my-purchases', // Placeholder route
-                    currentRoute: currentRoute,
-                  ),
-                  _buildMenuItem(
-                    context: context,
                     icon: Symbols.list_alt,
                     label: 'Notas de entrega',
                     route: '/delivery-notes', // Placeholder route
@@ -65,6 +52,37 @@ class MainNavigationDrawer extends StatelessWidget {
                     icon: Symbols.receipt,
                     label: 'Recibos',
                     route: '/receipts', // Placeholder route
+                    currentRoute: currentRoute,
+                  ),
+                  const Padding(
+                    padding: EdgeInsets.symmetric(vertical: 8.0),
+                    child: Divider(height: 1),
+                  ),
+                  /* Padding(
+                    padding: EdgeInsets.symmetric(
+                      vertical: 8.0,
+                      horizontal: 16.0,
+                    ),
+                    child: Text(
+                      'Proveedores',
+                      style: textTheme.titleMedium?.copyWith(
+                        color: colors.onSurfaceVariant,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),*/
+                  _buildMenuItem(
+                    context: context,
+                    icon: Symbols.shopping_cart,
+                    label: 'Ordenes de compra',
+                    route: '/supplier-orders', // Placeholder route
+                    currentRoute: currentRoute,
+                  ),
+                  _buildMenuItem(
+                    context: context,
+                    icon: Symbols.receipt_long,
+                    label: 'Registro de compras',
+                    route: '/my-purchases', // Placeholder route
                     currentRoute: currentRoute,
                   ),
                   const Padding(

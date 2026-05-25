@@ -15,7 +15,7 @@ class RegisterSerialsDialog {
         actions: [
           OutlinedButton(
             onPressed: () =>
-                Navigator.of(context).pop(RegisterSerialsResult.now),
+                Navigator.of(context, rootNavigator: true).pop(RegisterSerialsResult.now),
             style: OutlinedButton.styleFrom(
               foregroundColor: colors.primary,
               side: BorderSide(color: colors.primary.withValues(alpha: 0.5)),
@@ -31,7 +31,7 @@ class RegisterSerialsDialog {
           ),
           TextButton(
             onPressed: () =>
-                Navigator.of(context).pop(RegisterSerialsResult.later),
+                Navigator.of(context, rootNavigator: true).pop(RegisterSerialsResult.later),
             style: TextButton.styleFrom(
               foregroundColor: colors.primary,
               padding: const EdgeInsets.symmetric(vertical: 12),
@@ -46,7 +46,7 @@ class RegisterSerialsDialog {
           ),
           TextButton(
             onPressed: () =>
-                Navigator.of(context).pop(RegisterSerialsResult.never),
+                Navigator.of(context, rootNavigator: true).pop(RegisterSerialsResult.never),
             style: TextButton.styleFrom(
               foregroundColor: colors.primary,
               padding: const EdgeInsets.symmetric(vertical: 12),

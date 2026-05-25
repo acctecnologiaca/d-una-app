@@ -14,6 +14,7 @@ class PurchaseAddedProductCard extends StatelessWidget {
   final ValueChanged<double> onQuantityChanged;
   final bool isReadOnly;
   final bool hasError;
+  final Color? backgroundColor;
 
   const PurchaseAddedProductCard({
     super.key,
@@ -24,6 +25,7 @@ class PurchaseAddedProductCard extends StatelessWidget {
     required this.onQuantityChanged,
     this.isReadOnly = false,
     this.hasError = false,
+    this.backgroundColor,
   });
 
   @override
@@ -33,9 +35,9 @@ class PurchaseAddedProductCard extends StatelessWidget {
     return ExpandableActionCard(
       padding: const EdgeInsets.symmetric(horizontal: 0, vertical: 8),
       isExpandable: !isReadOnly,
-      backgroundColor: hasError
+      backgroundColor: backgroundColor ?? (hasError
           ? colors.errorContainer.withValues(alpha: 0.8)
-          : null,
+          : null),
       overline: item.brand != null ? Text(item.brand!.toTitleCase) : null,
       title: item.name.toTitleCase,
       subtitle: (item.model != null && item.model!.isNotEmpty)
@@ -52,7 +54,11 @@ class PurchaseAddedProductCard extends StatelessWidget {
               color: colors.onSurface,
             ),
           ),
-          const SizedBox(height: 8),
+          Text(
+            "(${CurrencyFormatter.format(item.subtotal / item.quantity)}/${item.uom})",
+            style: TextStyle(fontSize: 12, color: colors.onSurface),
+          ),
+          const SizedBox(height: 4),
           Row(
             mainAxisSize: MainAxisSize.min,
             children: [

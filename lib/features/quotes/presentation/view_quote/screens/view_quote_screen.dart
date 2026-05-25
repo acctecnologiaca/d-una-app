@@ -162,7 +162,10 @@ class _ViewQuoteScreenState extends ConsumerState<ViewQuoteScreen>
                                   'No se puede aprobar la cotización porque no hay suficiente stock disponible en el inventario propio de los siguientes productos:\n\n${e.productNames.map((name) => '• $name').join('\n')}\n\nPor favor, agregue más stock para poder aprobarla.',
                               actions: [
                                 TextButton(
-                                  onPressed: () => Navigator.of(context, rootNavigator: true).pop(),
+                                  onPressed: () => Navigator.of(
+                                    context,
+                                    rootNavigator: true,
+                                  ).pop(),
                                   child: const Text('Entendido'),
                                 ),
                               ],
@@ -228,7 +231,7 @@ class _ViewQuoteScreenState extends ConsumerState<ViewQuoteScreen>
                   const Divider(height: 1, indent: 16, endIndent: 16),
                   BottomSheetActionItem(
                     icon: Icons.shopping_cart_outlined,
-                    label: 'Realizar pedido',
+                    label: 'Generar orden de compra',
                     onTap: () {
                       context.pop();
                     },

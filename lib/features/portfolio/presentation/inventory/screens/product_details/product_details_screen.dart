@@ -212,49 +212,52 @@ class _ProductDetailsScreenState extends ConsumerState<ProductDetailsScreen> {
 
                   if (currentProduct.specs != null &&
                       currentProduct.specs!.isNotEmpty)
-                    InfoBlock(
-                      icon: Symbols.description,
-                      label: 'Características',
-                      content: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            currentProduct.specs ?? '',
-                            style: textTheme.bodyLarge?.copyWith(
-                              // Match InfoBlock.text value style
-                              color: colors.onSurface,
-                            ),
-                            maxLines: _showAllSpecs ? null : 2,
-                            overflow: _showAllSpecs
-                                ? null
-                                : TextOverflow.ellipsis,
-                          ),
-                        ],
-                      ),
-                    ),
-                  if ((currentProduct.specs?.length ?? 0) > 110)
                     Column(
                       children: [
-                        Align(
-                          alignment: Alignment.centerRight,
-                          child: TextButton(
-                            onPressed: () {
-                              setState(() {
-                                _showAllSpecs = !_showAllSpecs;
-                              });
-                            },
-                            child: Text(
-                              _showAllSpecs ? 'Ver menos' : 'Ver más',
-                              style: TextStyle(
-                                fontWeight: FontWeight.bold,
-                                color: colors.primary,
+                        InfoBlock(
+                          icon: Symbols.description,
+                          label: 'Características',
+                          content: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                currentProduct.specs ?? '',
+                                style: textTheme.bodyLarge?.copyWith(
+                                  color: colors.onSurface,
+                                ),
+                                maxLines: _showAllSpecs ? null : 2,
+                                overflow: _showAllSpecs
+                                    ? null
+                                    : TextOverflow.ellipsis,
                               ),
-                            ),
+                            ],
                           ),
                         ),
+                        if ((currentProduct.specs?.length ?? 0) > 110)
+                          Column(
+                            children: [
+                              Align(
+                                alignment: Alignment.centerRight,
+                                child: TextButton(
+                                  onPressed: () {
+                                    setState(() {
+                                      _showAllSpecs = !_showAllSpecs;
+                                    });
+                                  },
+                                  child: Text(
+                                    _showAllSpecs ? 'Ver menos' : 'Ver más',
+                                    style: TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                      color: colors.primary,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        const SizedBox(height: 24),
                       ],
                     ),
-                  const SizedBox(height: 24),
 
                   InfoBlock(
                     iconWidget:
@@ -273,28 +276,30 @@ class _ProductDetailsScreenState extends ConsumerState<ProductDetailsScreen> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          '${UomStatusBadge.formatQuantity(currentProduct.availableQuantity)} ${currentProduct.uomModel?.name ?? 'Unidades'} (${currentProduct.uom ?? 'ud.'}) disponibles',
-                          style: textTheme.bodyLarge?.copyWith(
-                            color: colors.onSurface,
+                          'Disponibles: ${UomStatusBadge.formatQuantity(currentProduct.availableQuantity)} ${currentProduct.uom ?? 'ud.'}',
+                          style: textTheme.bodyMedium?.copyWith(
+                            color: Colors.green.shade700,
                             fontWeight: FontWeight.bold,
                           ),
                         ),
-                        const SizedBox(height: 4),
+
+                        const SizedBox(height: 2),
                         Text(
-                          'Total físico: ${UomStatusBadge.formatQuantity(currentProduct.inventoryQuantity)}',
+                          'Reservadas: ${UomStatusBadge.formatQuantity(currentProduct.reservedQuantity)} ${currentProduct.uom ?? 'ud.'}',
                           style: textTheme.bodyMedium?.copyWith(
-                            color: colors.onSurfaceVariant,
+                            color: Colors.orange.shade800,
+                            fontWeight: FontWeight.bold,
                           ),
                         ),
-                        if (currentProduct.reservedQuantity > 0) ...[
-                          const SizedBox(height: 2),
-                          Text(
-                            'Apartado para cotizaciones aprobadas: ${UomStatusBadge.formatQuantity(currentProduct.reservedQuantity)}',
-                            style: textTheme.bodyMedium?.copyWith(
-                              color: Colors.orange.shade800,
-                            ),
+
+                        const SizedBox(height: 4),
+                        Text(
+                          'Total: ${UomStatusBadge.formatQuantity(currentProduct.inventoryQuantity)} ${currentProduct.uom ?? 'ud.'}',
+                          style: textTheme.bodyLarge?.copyWith(
+                            color: colors.onSurfaceVariant,
+                            fontWeight: FontWeight.bold,
                           ),
-                        ],
+                        ),
                       ],
                     ),
                   ),

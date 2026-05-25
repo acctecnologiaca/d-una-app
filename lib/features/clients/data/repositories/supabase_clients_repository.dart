@@ -22,6 +22,42 @@ class SupabaseClientsRepository {
     return data.map((json) => Client.fromJson(json)).toList();
   }
 
+  Future<List<Client>> getClientsPaginated({
+    required int offset,
+    int limit = 25,
+    String orderBy = 'created_at',
+    bool ascending = false,
+    String? searchQuery,
+    String? typeFilter,
+  }) async {
+    final userId = _supabase.auth.currentUser?.id;
+    if (userId == null) return [];
+
+    var query = _supabase
+        .from('clients')
+        .select('*, contacts(*)')
+        .eq('user_id', userId);
+
+    if (searchQuery != null && searchQuery.trim().isNotEmpty) {
+      final normalizedQuery = searchQuery.trim();
+      query = query.or(
+          'name.ilike.%$normalizedQuery%,'
+          'tax_id.ilike.%$normalizedQuery%,'
+          'email.ilike.%$normalizedQuery%');
+    }
+
+    if (typeFilter != null && typeFilter.isNotEmpty) {
+      query = query.eq('type', typeFilter);
+    }
+
+    final response = await query
+        .order(orderBy, ascending: ascending)
+        .range(offset, offset + limit - 1);
+
+    final data = response as List<dynamic>;
+    return data.map((json) => Client.fromJson(json)).toList();
+  }
+
   Future<Client?> getClient(String id) async {
     final response = await _supabase
         .from('clients')

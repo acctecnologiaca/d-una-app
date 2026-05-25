@@ -34,6 +34,51 @@ class SupabaseProductsRepository {
     }
   }
 
+  Future<List<Product>> getProductsPaginated({
+    required int offset,
+    String orderBy = 'created_at',
+    bool ascending = false,
+    String? searchQuery,
+    String? categoryId,
+    String? brandId,
+    int limit = 25,
+  }) async {
+    final userId = _supabase.auth.currentUser?.id;
+    if (userId == null) throw Exception('User not logged in');
+
+    try {
+      var query = _supabase.from('products').select('''
+      *,
+      brands (*),
+      categories (*),
+      uoms (*),
+      inventory_quantity,
+      average_cost,
+      purchase_count
+      ''').eq('user_id', userId);
+
+      if (categoryId != null && categoryId.isNotEmpty) {
+        query = query.eq('category_id', categoryId);
+      }
+      if (brandId != null && brandId.isNotEmpty) {
+        query = query.eq('brand_id', brandId);
+      }
+
+      if (searchQuery != null && searchQuery.isNotEmpty) {
+        final queryClean = searchQuery.trim().toLowerCase();
+        query = query.or('name.ilike.%$queryClean%, model.ilike.%$queryClean%');
+      }
+
+      final response = await query
+          .order(orderBy, ascending: ascending)
+          .range(offset, offset + limit - 1);
+
+      return (response as List).map((e) => Product.fromJson(e)).toList();
+    } catch (e) {
+      throw Exception('Error fetching paginated products: $e');
+    }
+  }
+
   Future<Product?> getProduct(String id) async {
     try {
       final response = await _supabase

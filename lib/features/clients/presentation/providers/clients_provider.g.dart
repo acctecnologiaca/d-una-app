@@ -41,5 +41,45 @@ final clientsProvider =
     );
 
 typedef _$Clients = AutoDisposeAsyncNotifier<List<Client>>;
+String _$paginatedClientsHash() => r'94e10024f0682729227dd64e7af82a76bf15e7b5';
+
+/// See also [PaginatedClients].
+@ProviderFor(PaginatedClients)
+final paginatedClientsProvider =
+    AutoDisposeAsyncNotifierProvider<
+      PaginatedClients,
+      PaginatedState<Client>
+    >.internal(
+      PaginatedClients.new,
+      name: r'paginatedClientsProvider',
+      debugGetCreateSourceHash: const bool.fromEnvironment('dart.vm.product')
+          ? null
+          : _$paginatedClientsHash,
+      dependencies: null,
+      allTransitiveDependencies: null,
+    );
+
+typedef _$PaginatedClients = AutoDisposeAsyncNotifier<PaginatedState<Client>>;
+String _$paginatedClientSearchHash() =>
+    r'5b03f86e1aca918477eae70a616297a592836137';
+
+/// See also [PaginatedClientSearch].
+@ProviderFor(PaginatedClientSearch)
+final paginatedClientSearchProvider =
+    AutoDisposeAsyncNotifierProvider<
+      PaginatedClientSearch,
+      PaginatedState<Client>
+    >.internal(
+      PaginatedClientSearch.new,
+      name: r'paginatedClientSearchProvider',
+      debugGetCreateSourceHash: const bool.fromEnvironment('dart.vm.product')
+          ? null
+          : _$paginatedClientSearchHash,
+      dependencies: null,
+      allTransitiveDependencies: null,
+    );
+
+typedef _$PaginatedClientSearch =
+    AutoDisposeAsyncNotifier<PaginatedState<Client>>;
 // ignore_for_file: type=lint
 // ignore_for_file: subtype_of_sealed_class, invalid_use_of_internal_member, invalid_use_of_visible_for_testing_member, deprecated_member_use_from_same_package

@@ -63,139 +63,153 @@ class SuppliersDirectoryScreen extends ConsumerWidget {
             ),
 
           Expanded(
-            child: suppliersAsync.when(
-              loading: () => const Center(child: CircularProgressIndicator()),
-              error: (err, stack) => FriendlyErrorWidget(
-                error: err,
-                onRetry: () => ref.invalidate(suppliersProvider),
-              ),
-              data: (suppliers) {
-                if (suppliers.isEmpty) {
-                  return const Center(
-                    child: Text(
-                      'No hay proveedores disponibles para tu rubro.',
-                      textAlign: TextAlign.center,
+            child: RefreshIndicator(
+              onRefresh: () async {
+                ref.invalidate(suppliersProvider);
+                ref.invalidate(userProfileProvider);
+                await ref.read(suppliersProvider.future);
+              },
+              child: suppliersAsync.when(
+                loading: () => const Center(child: CircularProgressIndicator()),
+                error: (err, stack) => FriendlyErrorWidget(
+                  error: err,
+                  onRetry: () => ref.invalidate(suppliersProvider),
+                ),
+                data: (suppliers) {
+                  if (suppliers.isEmpty) {
+                    return SingleChildScrollView(
+                      physics: const AlwaysScrollableScrollPhysics(),
+                      child: SizedBox(
+                        height: MediaQuery.of(context).size.height * 0.5,
+                        child: const Center(
+                          child: Text(
+                            'No hay proveedores disponibles para tu rubro.',
+                            textAlign: TextAlign.center,
+                          ),
+                        ),
+                      ),
+                    );
+                  }
+
+                  return ListView.separated(
+                    physics: const AlwaysScrollableScrollPhysics(),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 8,
                     ),
-                  );
-                }
+                    itemCount: suppliers.length,
+                    separatorBuilder: (_, _) => const SizedBox(height: 16),
+                    itemBuilder: (context, index) {
+                      final supplier = suppliers[index];
 
-                return ListView.separated(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 16,
-                    vertical: 8,
-                  ),
-                  itemCount: suppliers.length,
-                  separatorBuilder: (_, _) => const SizedBox(height: 16),
-                  itemBuilder: (context, index) {
-                    final supplier = suppliers[index];
+                      // Logic: Is this supplier locked for this user?
+                      // Logic: Is this supplier locked for this user?
 
-                    // Logic: Is this supplier locked for this user?
-                    // Logic: Is this supplier locked for this user?
+                      final isRetail =
+                          supplier.tradeType == 'RETAIL' ||
+                          supplier.tradeType == 'BOTH';
 
-                    final isRetail =
-                        supplier.tradeType == 'RETAIL' ||
-                        supplier.tradeType == 'BOTH';
+                      bool isLocked = false;
+                      String lockMessage = '';
 
-                    bool isLocked = false;
-                    String lockMessage = '';
-
-                    if (isRetail) {
-                      // Retail is always open
-                      isLocked = false;
-                    } else {
-                      // WHOLESALE
-                      // Logic:
-                      // 1. Unverified -> Locked (Restricted).
-                      //    Note: "Denied" suppliers (Wholesale Business) are filtered out by Backend.
-                      //    So any Wholesale supplier appearing here for Unverified is "Restricted".
-                      if (!isVerified) {
-                        isLocked = true;
-                        // Generic message for restricted access
-                        lockMessage =
-                            "Para acceder a los productos de este proveedor debes estar verificado.";
-                      } else {
-                        // Verified User (Individual or Business)
-                        // 2. Verified Individual ->
-                        //    - Wholesale (Individual) -> Full -> Open
-                        //    - Wholesale (Business) -> Partial -> Open (Blur inside)
-                        // 3. Verified Business -> Full -> Open
-
-                        // Therefore, for Verified users, the Card is ALWAYS Open in the directory.
-                        // The restriction (Partial) is handled inside the details screen.
+                      if (isRetail) {
+                        // Retail is always open
                         isLocked = false;
-                      }
-                    }
+                      } else {
+                        // WHOLESALE
+                        // Logic:
+                        // 1. Unverified -> Locked (Restricted).
+                        //    Note: "Denied" suppliers (Wholesale Business) are filtered out by Backend.
+                        //    So any Wholesale supplier appearing here for Unverified is "Restricted".
+                        if (!isVerified) {
+                          isLocked = true;
+                          // Generic message for restricted access
+                          lockMessage =
+                              "Para acceder a los productos de este proveedor debes estar verificado.";
+                        } else {
+                          // Verified User (Individual or Business)
+                          // 2. Verified Individual ->
+                          //    - Wholesale (Individual) -> Full -> Open
+                          //    - Wholesale (Business) -> Partial -> Open (Blur inside)
+                          // 3. Verified Business -> Full -> Open
 
-                    return SupplierCard(
-                      supplier: supplier,
-                      isLocked: isLocked, // Pass lock status
-                      onTap: () {
-                        if (isLocked) {
-                          ScaffoldMessenger.of(context).hideCurrentSnackBar();
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(
-                              duration: const Duration(seconds: 5),
-                              content: Row(
-                                children: [
-                                  Expanded(
-                                    child: Text(
-                                      lockMessage,
-                                      style: const TextStyle(fontSize: 13),
-                                    ),
-                                  ),
-                                  TextButton(
-                                    onPressed: () {
-                                      ScaffoldMessenger.of(
-                                        context,
-                                      ).hideCurrentSnackBar();
-                                      Navigator.of(context).push(
-                                        MaterialPageRoute(
-                                          builder: (context) =>
-                                              const VerificationScreen(),
-                                        ),
-                                      );
-                                    },
-                                    child: const Text(
-                                      'Verificar',
-                                      style: TextStyle(
-                                        color: Colors.blueAccent,
-                                        fontWeight: FontWeight.bold,
+                          // Therefore, for Verified users, the Card is ALWAYS Open in the directory.
+                          // The restriction (Partial) is handled inside the details screen.
+                          isLocked = false;
+                        }
+                      }
+
+                      return SupplierCard(
+                        supplier: supplier,
+                        isLocked: isLocked, // Pass lock status
+                        onTap: () {
+                          if (isLocked) {
+                            ScaffoldMessenger.of(context).hideCurrentSnackBar();
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                duration: const Duration(seconds: 5),
+                                content: Row(
+                                  children: [
+                                    Expanded(
+                                      child: Text(
+                                        lockMessage,
+                                        style: const TextStyle(fontSize: 13),
                                       ),
                                     ),
-                                  ),
-                                  IconButton(
-                                    icon: const Icon(
-                                      Icons.close,
-                                      color: Colors.white,
-                                      size: 20,
+                                    TextButton(
+                                      onPressed: () {
+                                        ScaffoldMessenger.of(
+                                          context,
+                                        ).hideCurrentSnackBar();
+                                        Navigator.of(context).push(
+                                          MaterialPageRoute(
+                                            builder: (context) =>
+                                                const VerificationScreen(),
+                                          ),
+                                        );
+                                      },
+                                      child: const Text(
+                                        'Verificar',
+                                        style: TextStyle(
+                                          color: Colors.blueAccent,
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                      ),
                                     ),
-                                    padding: EdgeInsets.zero,
-                                    constraints: const BoxConstraints(),
-                                    onPressed: () {
-                                      ScaffoldMessenger.of(
-                                        context,
-                                      ).hideCurrentSnackBar();
-                                    },
-                                  ),
-                                ],
+                                    IconButton(
+                                      icon: const Icon(
+                                        Icons.close,
+                                        color: Colors.white,
+                                        size: 20,
+                                      ),
+                                      padding: EdgeInsets.zero,
+                                      constraints: const BoxConstraints(),
+                                      onPressed: () {
+                                        ScaffoldMessenger.of(
+                                          context,
+                                        ).hideCurrentSnackBar();
+                                      },
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            );
+                            return;
+                          }
+
+                          Navigator.of(context).push(
+                            MaterialPageRoute(
+                              builder: (context) => SupplierSearchScreen(
+                                initialSupplierId: supplier.id,
                               ),
                             ),
                           );
-                          return;
-                        }
-
-                        Navigator.of(context).push(
-                          MaterialPageRoute(
-                            builder: (context) => SupplierSearchScreen(
-                              initialSupplierId: supplier.id,
-                            ),
-                          ),
-                        );
-                      },
-                    );
-                  },
-                );
-              },
+                        },
+                      );
+                    },
+                  );
+                },
+              ),
             ),
           ),
         ],

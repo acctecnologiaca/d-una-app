@@ -1,4 +1,3 @@
-import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -7,7 +6,6 @@ import '../../../../../shared/widgets/filter_bottom_sheet.dart';
 import '../../../../../shared/widgets/horizontal_filter_bar.dart';
 import '../../../../../shared/widgets/price_filter_sheet.dart';
 import '../../../../../shared/widgets/sort_selector.dart';
-import '../../../../../core/utils/search_utils.dart';
 import '../../../../portfolio/data/models/service_model.dart';
 import '../providers/quote_service_selection_provider.dart';
 import '../providers/create_quote_provider.dart';
@@ -24,7 +22,6 @@ class QuoteServiceSearchScreen extends ConsumerStatefulWidget {
 
 class _QuoteServiceSearchScreenState
     extends ConsumerState<QuoteServiceSearchScreen> {
-  String _currentQuery = '';
   SortOption _currentSort = SortOption.lowestPrice;
 
   // Filters State
@@ -33,23 +30,9 @@ class _QuoteServiceSearchScreenState
   double? _minPrice;
   double? _maxPrice;
 
-  Timer? _debounce;
-
   @override
   void dispose() {
-    _debounce?.cancel();
     super.dispose();
-  }
-
-  void _onQueryChanged(String query) {
-    if (_debounce?.isActive ?? false) _debounce!.cancel();
-    _debounce = Timer(const Duration(milliseconds: 300), () {
-      if (mounted) {
-        setState(() {
-          _currentQuery = query;
-        });
-      }
-    });
   }
 
   void _resetFilters() {
@@ -60,6 +43,9 @@ class _QuoteServiceSearchScreenState
       _maxPrice = null;
       _currentSort = SortOption.lowestPrice;
     });
+    ref.read(paginatedQuoteServiceSearchProvider.notifier).updateSearch(null);
+    ref.read(paginatedQuoteServiceSearchProvider.notifier).updateFilters(categoryId: null, rateId: null);
+    ref.read(paginatedQuoteServiceSearchProvider.notifier).updateSort('created_at', false);
   }
 
   // --- Dynamic Label Helpers ---
@@ -101,6 +87,7 @@ class _QuoteServiceSearchScreenState
         setState(() {
           _selectedCategories = selected.toSet();
         });
+        _applyFiltersToServer();
       },
     );
   }
@@ -126,6 +113,7 @@ class _QuoteServiceSearchScreenState
         setState(() {
           _selectedRates = selected.toSet();
         });
+        _applyFiltersToServer();
       },
     );
   }
@@ -142,82 +130,45 @@ class _QuoteServiceSearchScreenState
             _minPrice = min;
             _maxPrice = max;
           });
+          // Min/Max price filtering not yet fully supported on server for services (only products).
+          // But kept in state for future.
         },
       ),
     );
   }
 
+  void _applyFiltersToServer() {
+    ref.read(paginatedQuoteServiceSearchProvider.notifier).updateFilters(
+      categoryId: _selectedCategories.isNotEmpty ? _selectedCategories.first : null, // Assuming singles or you can map names to IDs
+      rateId: _selectedRates.isNotEmpty ? _selectedRates.first : null,
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
+    // 1. Unpaginated data for facets
     final suggestionsAsync = ref.watch(quoteServiceSuggestionsProvider);
+    
+    // 2. Paginated data for list
+    final paginatedAsync = ref.watch(paginatedQuoteServiceSearchProvider);
+    
     final quoteServices = ref.watch(createQuoteProvider).services;
     final colors = Theme.of(context).colorScheme;
 
     final originalItems = suggestionsAsync.valueOrNull ?? [];
-    var filteredServices = <ServiceModel>[];
-
-    for (final s in originalItems) {
-      // 1. Query Match
-      if (_currentQuery.isNotEmpty) {
-        final matches = SearchUtils.matchesCombo(_currentQuery, [
-          s.name,
-          s.category?.name,
-          s.description,
-        ]);
-        if (!matches) continue;
-      }
-
-      // 2. User Filters
-      if (_selectedCategories.isNotEmpty) {
-        final catName = s.category?.name ?? '';
-        if (!_selectedCategories.contains(catName)) {
-          continue;
-        }
-      }
-
-      if (_selectedRates.isNotEmpty) {
-        final rateName = s.serviceRate?.name ?? '';
-        if (!_selectedRates.contains(rateName)) {
-          continue;
-        }
-      }
-
-      // 3. Price Filters
-      if (_minPrice != null && s.price < _minPrice!) continue;
-      if (_maxPrice != null && s.price > _maxPrice!) continue;
-
-      filteredServices.add(s);
-    }
-
-    // Sort Logic
-    filteredServices.sort((a, b) {
-      switch (_currentSort) {
-        case SortOption.lowestPrice:
-          return a.price.compareTo(b.price);
-        case SortOption.highestPrice:
-          return b.price.compareTo(a.price);
-        case SortOption.nameAZ:
-          return a.name.toLowerCase().compareTo(b.name.toLowerCase());
-        case SortOption.nameZA:
-          return b.name.toLowerCase().compareTo(a.name.toLowerCase());
-        default:
-          return 0;
-      }
-    });
-
-    final AsyncValue<List<ServiceModel>> processedAsyncValue = suggestionsAsync
-        .when(
-          data: (_) => AsyncValue.data(filteredServices),
-          loading: () => const AsyncValue.loading(),
-          error: (e, s) => AsyncValue.error(e, s),
-        );
 
     return GenericSearchScreen<ServiceModel>(
       title: 'Buscar Servicio',
       hintText: 'Buscar servicio, categoría...',
       historyKey: 'quote_service_search_history',
-      data: processedAsyncValue,
-      onQueryChanged: _onQueryChanged,
+      isPaginatedMode: true,
+      paginatedDataAsync: paginatedAsync,
+      onServerSearch: (query) {
+        ref.read(paginatedQuoteServiceSearchProvider.notifier).updateSearch(query);
+      },
+      onLoadMore: () {
+        ref.read(paginatedQuoteServiceSearchProvider.notifier).loadMore();
+      },
       onResetFilters: _resetFilters,
 
       // Filter Chips Configuration
@@ -269,7 +220,25 @@ class _QuoteServiceSearchScreenState
                   SortOption.highestPrice,
                   SortOption.lowestPrice,
                 ],
-                onSortChanged: (val) => setState(() => _currentSort = val),
+                onSortChanged: (val) {
+                  setState(() => _currentSort = val);
+                  String orderBy = 'created_at';
+                  bool ascending = false;
+                  if (val == SortOption.nameAZ) {
+                    orderBy = 'name';
+                    ascending = true;
+                  } else if (val == SortOption.nameZA) {
+                    orderBy = 'name';
+                    ascending = false;
+                  } else if (val == SortOption.highestPrice) {
+                    orderBy = 'price';
+                    ascending = false;
+                  } else if (val == SortOption.lowestPrice) {
+                    orderBy = 'price';
+                    ascending = true;
+                  }
+                  ref.read(paginatedQuoteServiceSearchProvider.notifier).updateSort(orderBy, ascending);
+                },
               ),
             ),
           ],

@@ -10,6 +10,13 @@ import '../../../../quotes/domain/models/quote_model.dart';
 import '../../../../quotes/presentation/create_quote/providers/create_quote_provider.dart';
 import '../../../../quotes/presentation/create_quote/widgets/quote_product_sale_details_sheet.dart';
 import '../../../../quotes/data/repositories/warranty_repository.dart';
+import '../../../../purchases/presentation/providers/add_purchase_provider.dart';
+import '../../../../purchases/presentation/widgets/add_purchase_product_details_sheet.dart';
+import '../../../../purchases/presentation/widgets/register_serials_dialog.dart';
+import '../../../../purchases/data/models/purchase_item_product.dart';
+import '../../../../purchases/domain/models/purchase_model.dart';
+import '../../../../purchases/presentation/providers/purchases_providers.dart';
+import '../../../../purchases/presentation/providers/purchase_details_provider.dart';
 import 'inventory_item_card.dart';
 import '../../widgets/estimate_price_sheet.dart';
 
@@ -99,6 +106,35 @@ class InventoryActionSheet {
           },
         ),
         BottomSheetActionItem(
+          icon: Icons.receipt_long_outlined,
+          label: 'Agregar a registro de compra nuevo',
+          onTap: () async {
+            context.pop();
+            await _addProductToNewPurchase(context, ref, product, currentPrice);
+          },
+        ),
+        BottomSheetActionItem(
+          icon: 'assets/icons/receipt_long_add.png',
+          label: 'Agregar a registro de compra existente',
+          onTap: () async {
+            context.pop();
+            // 1. Navigate to purchase selection screen
+            final selectedPurchase = await context.push<Purchase>(
+              '/my-purchases/select',
+            );
+            if (selectedPurchase == null || !context.mounted) return;
+
+            // 2. Add product to selected purchase
+            await _addProductToExistingPurchase(
+              context,
+              ref,
+              product,
+              currentPrice,
+              selectedPurchase,
+            );
+          },
+        ),
+        BottomSheetActionItem(
           icon: Icons.info_outline,
           label: 'Detalles del producto',
           onTap: () {
@@ -147,8 +183,7 @@ class InventoryActionSheet {
       suggestedTime = res.time;
       suggestedUnit = res.unit;
       isExpired = res.isExpired;
-      label =
-          'Garantía residual (Inventario propio): ${res.time} ${_unitLabel(res.unit)}';
+      label = 'Garantía restante: ${res.time} ${_unitLabel(res.unit)}';
     }
 
     if (!context.mounted) return;
@@ -323,8 +358,7 @@ class InventoryActionSheet {
       suggestedTime = res.time;
       suggestedUnit = res.unit;
       isExpired = res.isExpired;
-      label =
-          'Garantía residual (Inventario propio): ${res.time} ${_unitLabel(res.unit)}';
+      label = 'Garantía restante: ${res.time} ${_unitLabel(res.unit)}';
     }
 
     if (!context.mounted) return;
@@ -397,5 +431,245 @@ class InventoryActionSheet {
       'years' => 'Años',
       _ => unit,
     };
+  }
+
+  static Future<void> _addProductToNewPurchase(
+    BuildContext context,
+    WidgetRef ref,
+    Product product,
+    double costPrice,
+  ) async {
+    if (!context.mounted) return;
+
+    final result = await AddPurchaseProductDetailsSheet.show(
+      context,
+      product: product,
+    );
+
+    if (result == null) return; // User cancelled
+
+    final double quantity = result['quantity'];
+    final double cost = result['cost_price'];
+    final int warrantyDuration = result['warranty_duration'];
+    final String wPeriodStr = result['warranty_period'];
+
+    final wUnit = wPeriodStr == 'Días'
+        ? 'days'
+        : (wPeriodStr == 'Meses' ? 'months' : 'years');
+
+    bool usesSerials = result['uses_serials'];
+    final bool needsToAsk = result['needs_to_ask_serials'] == true;
+    bool registerSerialsNow = false;
+
+    if (needsToAsk && context.mounted) {
+      final dialogResult = await RegisterSerialsDialog.show(context);
+      if (dialogResult == null) return; // User dismissed
+      switch (dialogResult) {
+        case RegisterSerialsResult.now:
+          registerSerialsNow = true;
+          break;
+        case RegisterSerialsResult.later:
+          registerSerialsNow = false;
+          break;
+        case RegisterSerialsResult.never:
+          usesSerials = false;
+          registerSerialsNow = false;
+          break;
+      }
+    }
+
+    final purchaseItem = PurchaseItemProduct(
+      id: const Uuid().v4(),
+      productId: product.id,
+      name: product.name,
+      model: product.model,
+      brand: product.brand?.name,
+      uom: product.uom ?? 'ud.',
+      quantity: quantity,
+      unitPrice: cost,
+      warrantyTime: warrantyDuration,
+      warrantyUnit: wUnit,
+      requiresSerials: usesSerials,
+    );
+
+    ref.read(addPurchaseProvider.notifier).reset();
+    ref.read(addPurchaseProvider.notifier).addProduct(purchaseItem);
+
+    if (context.mounted) {
+      context.push('/my-purchases/add', extra: {'initialTabIndex': 1});
+
+      if (registerSerialsNow) {
+        Future.delayed(const Duration(milliseconds: 300), () {
+          if (context.mounted) {
+            context.push(
+              '/my-purchases/add/select-product/manage-serials',
+              extra: <String, dynamic>{
+                'product': product,
+                'quantity': quantity.toInt(),
+                'purchaseItemId': purchaseItem.id,
+              },
+            );
+          }
+        });
+      }
+    }
+  }
+
+  static Future<void> _addProductToExistingPurchase(
+    BuildContext context,
+    WidgetRef ref,
+    Product product,
+    double costPrice,
+    Purchase selectedPurchase,
+  ) async {
+    final colors = Theme.of(context).colorScheme;
+
+    // Show loading indicator while fetching purchase details
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => const Center(child: CircularProgressIndicator()),
+    );
+
+    PurchaseDetailsData details;
+    try {
+      details = await ref
+          .read(purchasesRepositoryProvider)
+          .getPurchaseDetails(selectedPurchase.id);
+      if (context.mounted) {
+        Navigator.of(
+          context,
+          rootNavigator: true,
+        ).pop(); // Close loading dialog
+      }
+    } catch (e) {
+      if (context.mounted) {
+        Navigator.of(
+          context,
+          rootNavigator: true,
+        ).pop(); // Close loading dialog
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error al cargar la compra: $e'),
+            backgroundColor: colors.error,
+          ),
+        );
+      }
+      return;
+    }
+
+    if (!context.mounted) return;
+
+    // Check if product already exists in this purchase
+    final exists = details.items.any((item) => item.productId == product.id);
+    if (exists) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: const Text('Este producto ya se encuentra en la compra.'),
+          backgroundColor: colors.error,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+      context.push(
+        '/my-purchases/view/${selectedPurchase.id}',
+        extra: {'highlightProductId': product.id},
+      );
+      return;
+    }
+
+    // Load purchase details into the provider edit state
+    ref
+        .read(addPurchaseProvider.notifier)
+        .loadFromDetails(
+          details.purchase,
+          details.items,
+          details.serials,
+          details.supplierTaxId,
+        );
+
+    // Show details sheet for the product to be added
+    final result = await AddPurchaseProductDetailsSheet.show(
+      context,
+      product: product,
+    );
+
+    if (result == null) {
+      // Reset the provider if cancelled so we don't keep dirty state
+      ref.read(addPurchaseProvider.notifier).reset();
+      return;
+    }
+
+    final double quantity = result['quantity'];
+    final double cost = result['cost_price'];
+    final int warrantyDuration = result['warranty_duration'];
+    final String wPeriodStr = result['warranty_period'];
+
+    final wUnit = wPeriodStr == 'Días'
+        ? 'days'
+        : (wPeriodStr == 'Meses' ? 'months' : 'years');
+
+    bool usesSerials = result['uses_serials'];
+    final bool needsToAsk = result['needs_to_ask_serials'] == true;
+    bool registerSerialsNow = false;
+
+    if (needsToAsk && context.mounted) {
+      final dialogResult = await RegisterSerialsDialog.show(context);
+      if (dialogResult == null) {
+        ref.read(addPurchaseProvider.notifier).reset();
+        return;
+      }
+      switch (dialogResult) {
+        case RegisterSerialsResult.now:
+          registerSerialsNow = true;
+          break;
+        case RegisterSerialsResult.later:
+          registerSerialsNow = false;
+          break;
+        case RegisterSerialsResult.never:
+          usesSerials = false;
+          registerSerialsNow = false;
+          break;
+      }
+    }
+
+    final purchaseItem = PurchaseItemProduct(
+      id: const Uuid().v4(),
+      productId: product.id,
+      name: product.name,
+      model: product.model,
+      brand: product.brand?.name,
+      uom: product.uom ?? 'ud.',
+      quantity: quantity,
+      unitPrice: cost,
+      warrantyTime: warrantyDuration,
+      warrantyUnit: wUnit,
+      requiresSerials: usesSerials,
+    );
+
+    // Add to existing purchase products
+    ref.read(addPurchaseProvider.notifier).addProduct(purchaseItem);
+
+    if (context.mounted) {
+      // Navigate to the purchase view in EDIT mode
+      context.push(
+        '/my-purchases/view/${selectedPurchase.id}',
+        extra: {'editMode': true},
+      );
+
+      if (registerSerialsNow) {
+        Future.delayed(const Duration(milliseconds: 300), () {
+          if (context.mounted) {
+            context.push(
+              '/my-purchases/add/select-product/manage-serials',
+              extra: <String, dynamic>{
+                'product': product,
+                'quantity': quantity.toInt(),
+                'purchaseItemId': purchaseItem.id,
+              },
+            );
+          }
+        });
+      }
+    }
   }
 }

@@ -311,6 +311,7 @@ class _ProductSuppliersScreenState
                     }
 
                     final item = items[index];
+                    final supplierBranchStockId = item['supplier_branch_stock_id'] as String;
                     final supplierName = item['supplier_name'] as String;
                     final tradeType =
                         item['supplier_trade_type'] as String? ?? 'RETAIL';
@@ -402,6 +403,8 @@ class _ProductSuppliersScreenState
                         // Show Action Sheet for valid selection
                         ProductActionSheet.show(
                           context,
+                          ref: ref,
+                          supplierBranchStockId: supplierBranchStockId,
                           supplierName: supplierName,
                           productName: widget.product.name,
                           price: price,

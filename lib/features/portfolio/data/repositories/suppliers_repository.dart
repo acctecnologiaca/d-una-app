@@ -34,6 +34,8 @@ class SuppliersRepository {
     List<String>? supplierIds,
     double? minPrice,
     double? maxPrice,
+    int? offset,
+    int? limit,
   }) async {
     try {
       final response = await _supabase.rpc(
@@ -50,6 +52,22 @@ class SuppliersRepository {
           'max_price_filter': maxPrice,
         },
       );
+
+      if (offset != null && limit != null) {
+        final paginatedResponse = await _supabase.rpc(
+          'search_supplier_products',
+          params: {
+            'query_text': query,
+            'brand_filter': brands?.isNotEmpty == true ? brands : null,
+            'category_filter': categories?.isNotEmpty == true ? categories : null,
+            'supplier_filter': supplierIds?.isNotEmpty == true ? supplierIds : null,
+            'min_price_filter': minPrice,
+            'max_price_filter': maxPrice,
+          },
+        ).range(offset, offset + limit - 1);
+        return List<Map<String, dynamic>>.from(paginatedResponse);
+      }
+
       return List<Map<String, dynamic>>.from(response);
     } catch (e) {
       throw Exception('Error searching products: $e');

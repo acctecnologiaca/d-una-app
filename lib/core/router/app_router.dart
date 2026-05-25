@@ -110,9 +110,9 @@ final routerProvider = Provider<GoRouter>((ref) {
         return '/login';
       }
 
-      // If logged in and on login/register pages, redirect to home (clients)
+      // If logged in and on login/register pages, redirect to home (portfolio)
       if (session != null && isLoggingIn) {
-        return '/clients';
+        return '/portfolio';
       }
 
       return null;
@@ -126,11 +126,6 @@ final routerProvider = Provider<GoRouter>((ref) {
         return HomeScreen(navigationShell: navigationShell);
       },
       branches: [
-        // Branch Clients
-        StatefulShellBranch(
-          navigatorKey: _shellNavigatorClientsKey,
-          routes: clientRoutes,
-        ),
         // Branch Portfolio
         StatefulShellBranch(
           navigatorKey: _shellNavigatorPortfolioKey,
@@ -391,6 +386,11 @@ final routerProvider = Provider<GoRouter>((ref) {
             ),
           ],
         ),
+        // Branch Clients
+        StatefulShellBranch(
+          navigatorKey: _shellNavigatorClientsKey,
+          routes: clientRoutes,
+        ),
       ],
     ),
 
@@ -488,16 +488,45 @@ final routerProvider = Provider<GoRouter>((ref) {
           builder: (context, state) => const PurchasesSearchScreen(),
         ),
         GoRoute(
+          path: 'select',
+          parentNavigatorKey: rootNavigatorKey,
+          builder: (context, state) => const PurchasesSearchScreen(
+            selectionMode: true,
+          ),
+        ),
+        GoRoute(
           path: 'view/:id',
           name: 'view_purchase',
           builder: (context, state) {
             final id = state.pathParameters['id']!;
-            return PurchaseDetailsScreen(purchaseId: id);
+            final extra = state.extra;
+            bool editMode = false;
+            String? highlightProductId;
+            if (extra is Map<String, dynamic>) {
+              if (extra.containsKey('editMode')) {
+                editMode = extra['editMode'] as bool;
+              }
+              if (extra.containsKey('highlightProductId')) {
+                highlightProductId = extra['highlightProductId'] as String;
+              }
+            }
+            return PurchaseDetailsScreen(
+              purchaseId: id,
+              startInEditMode: editMode,
+              highlightProductId: highlightProductId,
+            );
           },
         ),
         GoRoute(
           path: 'add',
-          builder: (context, state) => const AddPurchaseScreen(),
+          builder: (context, state) {
+            final extra = state.extra;
+            int tabIndex = 0;
+            if (extra is Map<String, dynamic> && extra.containsKey('initialTabIndex')) {
+              tabIndex = extra['initialTabIndex'] as int;
+            }
+            return AddPurchaseScreen(initialTabIndex: tabIndex);
+          },
           routes: [
             GoRoute(
               path: 'select-product',

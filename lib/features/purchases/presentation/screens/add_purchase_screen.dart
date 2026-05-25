@@ -7,10 +7,11 @@ import 'package:d_una_app/features/purchases/presentation/widgets/add_purchase_d
 import 'package:d_una_app/features/purchases/presentation/widgets/add_purchase_products_tab.dart';
 import 'package:d_una_app/features/purchases/presentation/widgets/add_purchase_summary_tab.dart';
 import 'package:d_una_app/features/purchases/presentation/providers/add_purchase_provider.dart';
-import 'package:d_una_app/features/purchases/presentation/widgets/save_changes_dialog.dart';
+import 'package:d_una_app/shared/widgets/custom_dialog.dart';
 
 class AddPurchaseScreen extends ConsumerStatefulWidget {
-  const AddPurchaseScreen({super.key});
+  final int initialTabIndex;
+  const AddPurchaseScreen({super.key, this.initialTabIndex = 0});
 
   @override
   ConsumerState<AddPurchaseScreen> createState() => _AddPurchaseScreenState();
@@ -23,7 +24,11 @@ class _AddPurchaseScreenState extends ConsumerState<AddPurchaseScreen>
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 3, vsync: this);
+    _tabController = TabController(
+      length: 3,
+      vsync: this,
+      initialIndex: widget.initialTabIndex,
+    );
     _tabController.addListener(() {
       if (!_tabController.indexIsChanging) {
         setState(() {});
@@ -48,21 +53,30 @@ class _AddPurchaseScreenState extends ConsumerState<AddPurchaseScreen>
       onPopInvokedWithResult: (didPop, result) async {
         if (didPop) return;
 
-        final shouldPop = await SaveChangesDialog.show<bool>(
-          context,
-          onSave: () async {
-            final success = await notifier.createPurchase();
-            if (success && context.mounted) {
-              Navigator.of(context).pop(true); // Close dialog with true
-            }
-          },
-          onDiscard: () {
-            notifier.reset(); // clear state if discarded
-            Navigator.of(context).pop(true); // Close dialog with true
-          },
-          onContinue: () {
-            Navigator.of(context).pop(false); // Close dialog with false
-          },
+        final shouldPop = await CustomDialog.show<bool>(
+          context: context,
+          dialog: CustomDialog.destructive(
+            title: '¿Descartar registro?',
+            contentText:
+                'Se perderán todos los datos y productos ingresados en este registro de compra.',
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(false),
+                child: const Text('Continuar editando'),
+              ),
+              FilledButton(
+                onPressed: () {
+                  notifier.reset(); // clear state if discarded
+                  Navigator.of(context).pop(true);
+                },
+                style: FilledButton.styleFrom(
+                  backgroundColor: colors.error,
+                  foregroundColor: colors.onError,
+                ),
+                child: const Text('Descartar'),
+              ),
+            ],
+          ),
         );
 
         if (shouldPop == true && context.mounted) {
