@@ -50,9 +50,9 @@ Once the user approves the plan, follow these steps sequentially:
 
 ## Behavioral Rules
 
-- **Token Control:** In every response provided, the model must include a
+- **Quota Control:** In every response provided, the model must include a
   section at the end titled "Resource Control" indicating the number of input
-  and output tokens consumed and how many are left.
+  and output quota consumed and how many are left.
 - **Prohibition of automatic execution:** Never write the full code block
   (boilerplate or complex logic) until the user confirms the plan is correct.
 - **Priority for modularity:** Plans must focus on modular, clean, and

@@ -185,6 +185,6 @@ class _OwnServicesScreenState extends ConsumerState<OwnServicesScreen> {
   }
 
   void _showServiceActionSheet(BuildContext context, ServiceModel service) {
-    ServiceActionSheet.show(context, service);
+    ServiceActionSheet.show(context, ref, service);
   }
 }

@@ -73,6 +73,9 @@ import '../../features/purchases/presentation/screens/purchases_search_screen.da
 import '../../features/settings/presentation/screens/email_templates_list_screen.dart';
 import '../../features/settings/presentation/screens/edit_email_template_screen.dart';
 import '../../features/settings/data/models/email_template.dart';
+import '../../features/supplier_orders/presentation/screens/supplier_orders_list_screen.dart';
+import '../../features/supplier_orders/presentation/screens/supplier_order_details_screen.dart';
+import '../../features/supplier_orders/presentation/screens/create_supplier_order_screen.dart';
 
 import '../router/router_notifier.dart';
 import '../../shared/screens/pdf_preview_screen.dart';
@@ -238,7 +241,10 @@ final routerProvider = Provider<GoRouter>((ref) {
               routes: [
                 GoRoute(
                   path: 'search',
-                  builder: (context, state) => const QuotesSearchScreen(),
+                  builder: (context, state) {
+                    final productId = state.uri.queryParameters['productId'];
+                    return QuotesSearchScreen(productId: productId);
+                  },
                 ),
                 GoRoute(
                   path: 'select',
@@ -485,7 +491,10 @@ final routerProvider = Provider<GoRouter>((ref) {
       routes: [
         GoRoute(
           path: 'search',
-          builder: (context, state) => const PurchasesSearchScreen(),
+          builder: (context, state) {
+            final productId = state.uri.queryParameters['productId'];
+            return PurchasesSearchScreen(productId: productId);
+          },
         ),
         GoRoute(
           path: 'select',
@@ -561,6 +570,27 @@ final routerProvider = Provider<GoRouter>((ref) {
               ],
             ),
           ],
+        ),
+      ],
+    ),
+    GoRoute(
+      path: '/supplier-orders',
+      builder: (context, state) => const SupplierOrdersListScreen(),
+      routes: [
+        GoRoute(
+          path: 'create',
+          builder: (context, state) => const CreateSupplierOrderScreen(),
+        ),
+        GoRoute(
+          path: 'edit/:id',
+          builder: (context, state) => const CreateSupplierOrderScreen(editMode: true),
+        ),
+        GoRoute(
+          path: 'view/:id',
+          builder: (context, state) {
+            final id = state.pathParameters['id']!;
+            return SupplierOrderDetailsScreen(orderId: id);
+          },
         ),
       ],
     ),

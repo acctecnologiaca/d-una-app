@@ -100,11 +100,11 @@ class PaginatedPurchasesList
 
 // --- Paginated Purchase Search (AutoDispose) ---
 final paginatedPurchaseSearchProvider =
-    AutoDisposeAsyncNotifierProvider<PaginatedPurchaseSearch, PaginatedState<Purchase>>(
+    AutoDisposeAsyncNotifierProviderFamily<PaginatedPurchaseSearch, PaginatedState<Purchase>, String?>(
   () => PaginatedPurchaseSearch(),
 );
 
-class PaginatedPurchaseSearch extends AutoDisposeAsyncNotifier<PaginatedState<Purchase>> {
+class PaginatedPurchaseSearch extends AutoDisposeFamilyAsyncNotifier<PaginatedState<Purchase>, String?> {
   static const int _limit = 25;
 
   String? _searchQuery;
@@ -113,7 +113,7 @@ class PaginatedPurchaseSearch extends AutoDisposeAsyncNotifier<PaginatedState<Pu
   bool _ascending = false;
 
   @override
-  FutureOr<PaginatedState<Purchase>> build() async {
+  FutureOr<PaginatedState<Purchase>> build(String? arg) async {
     return _fetchPage(0);
   }
 
@@ -127,6 +127,7 @@ class PaginatedPurchaseSearch extends AutoDisposeAsyncNotifier<PaginatedState<Pu
       statusFilter: _statusFilter,
       orderBy: _orderBy,
       ascending: _ascending,
+      productId: arg,
     );
 
     return PaginatedState(

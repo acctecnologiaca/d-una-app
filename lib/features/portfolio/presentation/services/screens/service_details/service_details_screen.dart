@@ -104,6 +104,42 @@ class ServiceDetailsScreen extends ConsumerWidget {
           crossAxisAlignment: CrossAxisAlignment.center,
           children: [
             const SizedBox(height: 24),
+            Center(
+              child: Container(
+                width: 128,
+                height: 128,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: colors.surfaceContainerHighest,
+                  border: Border.all(
+                    color: colors.outlineVariant.withValues(alpha: 0.2),
+                    width: 1,
+                  ),
+                ),
+                clipBehavior: Clip.antiAlias,
+                child:
+                    /*(currentProduct.imageUrl != null &&
+                              currentProduct.imageUrl!.isNotEmpty)
+                          ? CachedNetworkImage(
+                              imageUrl: currentProduct.imageUrl!,
+                              fit: BoxFit.cover,
+                              placeholder: (context, url) => const Center(
+                                child: CircularProgressIndicator(),
+                              ),
+                              errorWidget: (context, url, error) => Icon(
+                                Icons.image_not_supported_outlined,
+                                size: 48,
+                                color: colors.onSurfaceVariant,
+                              ),
+                            ):*/
+                    Icon(
+                      Icons.handyman_outlined,
+                      size: 48,
+                      color: colors.onSurfaceVariant,
+                    ),
+              ),
+            ),
+            const SizedBox(height: 16),
             Text(
               latestService.name,
               style: textTheme.titleLarge?.copyWith(

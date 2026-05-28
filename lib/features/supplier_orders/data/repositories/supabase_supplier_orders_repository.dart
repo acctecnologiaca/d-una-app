@@ -1,0 +1,524 @@
+import 'dart:io';
+import 'package:supabase_flutter/supabase_flutter.dart';
+import '../../domain/models/supplier_order.dart';
+import '../../domain/models/supplier_order_item.dart';
+import '../../domain/models/supplier_order_status.dart';
+import '../../domain/repositories/supplier_orders_repository.dart';
+import '../models/supplier_order_dto.dart';
+
+class SupabaseSupplierOrdersRepository implements SupplierOrdersRepository {
+  final SupabaseClient _supabase;
+
+  SupabaseSupplierOrdersRepository(this._supabase);
+
+  @override
+  Future<List<SupplierOrder>> getSupplierOrders() async {
+    final currentUserId = _supabase.auth.currentUser?.id;
+    if (currentUserId == null) throw Exception('Usuario no autenticado');
+
+    final response = await _supabase.from('supplier_orders').select('''
+      *,
+      suppliers(name, legal_name),
+      supplier_branches(name),
+      shipping_methods(label),
+      collaborators(full_name)
+    ''').eq('user_id', currentUserId).order('date', ascending: false).order('created_at', ascending: false);
+
+    return (response as List).map((json) => SupplierOrderDto.fromJson(json)).toList();
+  }
+
+  @override
+  Future<List<SupplierOrder>> getSupplierOrdersPaginated({
+    required int offset,
+    int limit = 25,
+    String? searchQuery,
+    String? statusFilter,
+  }) async {
+    final currentUserId = _supabase.auth.currentUser?.id;
+    if (currentUserId == null) throw Exception('Usuario no autenticado');
+
+    var query = _supabase.from('supplier_orders').select('''
+      *,
+      suppliers(name, legal_name),
+      supplier_branches(name),
+      shipping_methods(label),
+      collaborators(full_name)
+    ''').eq('user_id', currentUserId);
+
+    if (statusFilter != null && statusFilter.isNotEmpty) {
+      query = query.eq('status', statusFilter);
+    }
+
+    if (searchQuery != null && searchQuery.trim().isNotEmpty) {
+      final cleanSearch = searchQuery.trim();
+      List<String> matchingSupplierIds = [];
+      try {
+        final supplierResponse = await _supabase
+            .from('suppliers')
+            .select('id')
+            .or('name.ilike.%$cleanSearch%,legal_name.ilike.%$cleanSearch%');
+        matchingSupplierIds = (supplierResponse as List).map((e) => e['id'].toString()).toList();
+      } catch (_) {}
+
+      if (matchingSupplierIds.isNotEmpty) {
+        final idsStr = matchingSupplierIds.join(',');
+        query = query.or('order_number.ilike.%$cleanSearch%,supplier_id.in.($idsStr)');
+      } else {
+        query = query.or('order_number.ilike.%$cleanSearch%');
+      }
+    }
+
+    final response = await query
+        .order('date', ascending: false)
+        .order('created_at', ascending: false)
+        .range(offset, offset + limit - 1);
+
+    return (response as List).map((json) => SupplierOrderDto.fromJson(json)).toList();
+  }
+
+  @override
+  Future<({SupplierOrder order, List<SupplierOrderItem> items})> getSupplierOrderDetails(String id) async {
+    final currentUserId = _supabase.auth.currentUser?.id;
+    if (currentUserId == null) throw Exception('Usuario no autenticado');
+
+    // 1. Fetch header
+    final headerResponse = await _supabase.from('supplier_orders').select('''
+      *,
+      suppliers(name, legal_name),
+      supplier_branches(name),
+      shipping_methods(label),
+      collaborators(full_name)
+    ''').eq('id', id).eq('user_id', currentUserId).single();
+
+    final order = SupplierOrderDto.fromJson(headerResponse);
+
+    // 2. Fetch items
+    final itemsResponse = await _supabase.from('supplier_order_items').select().eq('supplier_order_id', id);
+
+    var itemsList = (itemsResponse as List).map((json) {
+      return SupplierOrderItem(
+        id: json['id'],
+        supplierOrderId: json['supplier_order_id'],
+        productId: json['product_id'],
+        name: json['name'],
+        brand: json['brand'],
+        model: json['model'],
+        uom: json['uom'] ?? 'Ud',
+        quantity: (json['quantity'] ?? 0.0).toDouble(),
+        unitPrice: (json['unit_price'] ?? 0.0).toDouble(),
+      );
+    }).toList();
+
+    // 3. Live check stock & price if status is sent or resent and supplierBranchId is not null
+    if ((order.status == SupplierOrderStatus.sent || order.status == SupplierOrderStatus.resent) && order.supplierBranchId != null) {
+      final models = itemsList.map((e) => e.model).whereType<String>().toList();
+      if (models.isNotEmpty) {
+        try {
+          final stockResponse = await _supabase.from('supplier_branch_stock').select('''
+            quantity,
+            price,
+            supplier_products!inner(model)
+          ''')
+          .eq('branch_id', order.supplierBranchId!)
+          .inFilter('supplier_products.model', models);
+
+          final stockMap = <String, ({double price, double quantity})>{};
+          for (final row in (stockResponse as List)) {
+            final sp = row['supplier_products'] as Map<String, dynamic>?;
+            final model = sp?['model'] as String?;
+            if (model != null) {
+              final price = (row['price'] ?? 0.0).toDouble();
+              final quantity = (row['quantity'] ?? 0.0).toDouble();
+              stockMap[model] = (price: price, quantity: quantity);
+            }
+          }
+
+          itemsList = itemsList.map((item) {
+            if (item.model != null && stockMap.containsKey(item.model)) {
+              final match = stockMap[item.model]!;
+              return SupplierOrderItem(
+                id: item.id,
+                supplierOrderId: item.supplierOrderId,
+                productId: item.productId,
+                name: item.name,
+                brand: item.brand,
+                model: item.model,
+                uom: item.uom,
+                quantity: item.quantity,
+                unitPrice: item.unitPrice,
+                currentSupplierPrice: match.price,
+                currentSupplierStock: match.quantity,
+              );
+            }
+            return item;
+          }).toList();
+        } catch (_) {
+          // Silently catch and proceed if live check fails
+        }
+      }
+    }
+
+    return (order: order, items: itemsList);
+  }
+
+  @override
+  Future<void> createSupplierOrder(SupplierOrder order, List<SupplierOrderItem> items) async {
+    final currentUserId = _supabase.auth.currentUser?.id;
+    if (currentUserId == null) throw Exception('Usuario no autenticado');
+
+    final headerResponse = await _supabase.from('supplier_orders').insert({
+      ...SupplierOrderDto.toJson(order),
+      'user_id': currentUserId,
+    }).select('id').single();
+
+    final orderId = headerResponse['id'] as String;
+
+    if (items.isNotEmpty) {
+      final itemsToInsert = items.map((item) => {
+        'supplier_order_id': orderId,
+        'product_id': item.productId,
+        'name': item.name,
+        'brand': item.brand,
+        'model': item.model,
+        'uom': item.uom,
+        'quantity': item.quantity,
+        'unit_price': item.unitPrice,
+      }).toList();
+      await _supabase.from('supplier_order_items').insert(itemsToInsert);
+    }
+  }
+
+  @override
+  Future<void> updateSupplierOrder(SupplierOrder order, List<SupplierOrderItem> items) async {
+    final currentUserId = _supabase.auth.currentUser?.id;
+    if (currentUserId == null) throw Exception('Usuario no autenticado');
+
+    final headerMap = SupplierOrderDto.toJson(order);
+    headerMap.remove('id');
+    headerMap.remove('user_id');
+    await _supabase.from('supplier_orders').update(headerMap).eq('id', order.id);
+
+    await _supabase.from('supplier_order_items').delete().eq('supplier_order_id', order.id);
+
+    if (items.isNotEmpty) {
+      final itemsToInsert = items.map((item) => {
+        'supplier_order_id': order.id,
+        'product_id': item.productId,
+        'name': item.name,
+        'brand': item.brand,
+        'model': item.model,
+        'uom': item.uom,
+        'quantity': item.quantity,
+        'unit_price': item.unitPrice,
+      }).toList();
+      await _supabase.from('supplier_order_items').insert(itemsToInsert);
+    }
+  }
+
+  @override
+  Future<void> deleteSupplierOrder(String id) async {
+    final currentUserId = _supabase.auth.currentUser?.id;
+    if (currentUserId == null) throw Exception('Usuario no autenticado');
+    await _supabase.from('supplier_orders').delete().eq('id', id).eq('user_id', currentUserId);
+  }
+
+  @override
+  Future<void> finalizeSupplierOrder({
+    required String orderId,
+    required File photoFile,
+    required String documentType,
+    required bool createPurchaseRecord,
+  }) async {
+    final currentUserId = _supabase.auth.currentUser?.id;
+    if (currentUserId == null) throw Exception('Usuario no autenticado');
+
+    // 1. Upload invoice photo
+    final path = '$currentUserId/${orderId}_invoice.jpg';
+    await _supabase.storage.from('supplier_orders_invoices').upload(
+      path,
+      photoFile,
+      fileOptions: const FileOptions(cacheControl: '3600', upsert: true),
+    );
+    final publicUrl = _supabase.storage.from('supplier_orders_invoices').getPublicUrl(path);
+
+    // 2. Update order header
+    await _supabase.from('supplier_orders').update({
+      'status': SupplierOrderStatus.finalized.dbValue,
+      'invoice_photo_url': publicUrl,
+    }).eq('id', orderId);
+
+    // 3. Optional purchase record logic
+    if (createPurchaseRecord) {
+      final orderData = await getSupplierOrderDetails(orderId);
+      final order = orderData.order;
+      final items = orderData.items;
+
+      final List<Map<String, dynamic>> purchaseItemsToInsert = [];
+
+      for (final item in items) {
+        String? resolvedProductId = item.productId;
+
+        String? brandId;
+        if (item.brand != null && item.brand!.isNotEmpty) {
+          final brandResult = await _supabase.from('brands')
+              .select('id')
+              .ilike('name', item.brand!.trim())
+              .maybeSingle();
+
+          if (brandResult != null) {
+            brandId = brandResult['id'] as String;
+          } else {
+            final newBrand = await _supabase.from('brands').insert({
+              'name': item.brand!.trim(),
+              'user_id': currentUserId,
+            }).select('id').single();
+            brandId = newBrand['id'] as String;
+          }
+        }
+
+        String? uomId;
+        if (item.uom.isNotEmpty) {
+          final uomResult = await _supabase.from('uoms')
+              .select('id')
+              .ilike('symbol', item.uom.trim())
+              .maybeSingle();
+
+          if (uomResult != null) {
+            uomId = uomResult['id'] as String;
+          } else {
+            final newUom = await _supabase.from('uoms').insert({
+              'name': item.uom.trim(),
+              'symbol': item.uom.trim(),
+              'user_id': currentUserId,
+            }).select('id').single();
+            uomId = newUom['id'] as String;
+          }
+        }
+
+        // Search products comparing model, brand_id and uom_id within user scope or common
+        if (item.model != null && item.model!.isNotEmpty) {
+          var query = _supabase.from('products').select('id');
+          query = query.or('user_id.eq.$currentUserId,user_id.is.null');
+          query = query.eq('model', item.model!.trim());
+          if (brandId != null) {
+            query = query.eq('brand_id', brandId);
+          } else {
+            query = query.isFilter('brand_id', null);
+          }
+          if (uomId != null) {
+            query = query.eq('uom_id', uomId);
+          } else {
+            query = query.isFilter('uom_id', null);
+          }
+
+          final productResults = await query;
+          if ((productResults as List).isNotEmpty) {
+            resolvedProductId = productResults.first['id'] as String;
+          } else {
+            final newProduct = await _supabase.from('products').insert({
+              'name': item.name.trim(),
+              'model': item.model!.trim(),
+              'brand_id': brandId,
+              'uom_id': uomId,
+              'user_id': currentUserId,
+            }).select('id').single();
+            resolvedProductId = newProduct['id'] as String;
+          }
+        } else {
+          final nameResult = await _supabase.from('products')
+              .select('id')
+              .or('user_id.eq.$currentUserId,user_id.is.null')
+              .eq('name', item.name.trim())
+              .maybeSingle();
+
+          if (nameResult != null) {
+            resolvedProductId = nameResult['id'] as String;
+          } else {
+            final newProduct = await _supabase.from('products').insert({
+              'name': item.name.trim(),
+              'brand_id': brandId,
+              'uom_id': uomId,
+              'user_id': currentUserId,
+            }).select('id').single();
+            resolvedProductId = newProduct['id'] as String;
+          }
+        }
+
+        purchaseItemsToInsert.add({
+          'product_id': resolvedProductId,
+          'quantity': item.quantity,
+          'unit_price': item.unitPrice,
+        });
+      }
+
+      final purchaseHeader = await _supabase.from('purchases').insert({
+        'user_id': currentUserId,
+        'supplier_id': order.supplierId,
+        'document_type': documentType,
+        'document_number': order.orderNumber,
+        'date': DateTime.now().toIso8601String().split('T')[0],
+        'subtotal': order.subtotal,
+        'tax': order.tax,
+        'total': order.total,
+        'has_missing_serials': false,
+      }).select('id').single();
+
+      final purchaseId = purchaseHeader['id'] as String;
+
+      if (purchaseItemsToInsert.isNotEmpty) {
+        final itemsWithPurchaseId = purchaseItemsToInsert.map((e) => {
+          ...e,
+          'purchase_id': purchaseId,
+        }).toList();
+        await _supabase.from('purchase_items').insert(itemsWithPurchaseId);
+      }
+    }
+  }
+
+  @override
+  Future<Map<String, dynamic>> batchGenerateFromQuote(String quoteId) async {
+    final currentUserId = _supabase.auth.currentUser?.id;
+    if (currentUserId == null) throw Exception('Usuario no autenticado');
+
+    final quoteItemsResponse = await _supabase.from('quote_items_products').select('''
+      *,
+      supplier_branch_stock(branch_id, supplier_branches(supplier_id, suppliers(name, legal_name)))
+    ''').eq('quote_id', quoteId);
+
+    final primaryShippingResult = await _supabase.from('shipping_methods')
+        .select('id')
+        .eq('user_id', currentUserId)
+        .eq('is_primary', true)
+        .maybeSingle();
+    final primaryShippingId = primaryShippingResult?['id'] as String?;
+
+    final receiverCollaboratorResult = await _supabase.from('collaborators')
+        .select('id')
+        .eq('user_id', currentUserId)
+        .eq('is_user_record', true)
+        .maybeSingle();
+    final receiverCollaboratorId = receiverCollaboratorResult?['id'] as String?;
+
+    final Map<String, List<Map<String, dynamic>>> itemsBySupplier = {};
+    final List<String> skippedSuppliers = [];
+
+    for (final qi in (quoteItemsResponse as List)) {
+      final name = qi['name'] as String;
+      final brand = qi['brand'] as String?;
+      final model = qi['model'] as String?;
+      final uom = qi['uom'] as String? ?? 'Ud';
+      final quantity = (qi['quantity'] ?? 0.0).toDouble();
+      final costPrice = (qi['cost_price'] ?? 0.0).toDouble();
+      final productId = qi['product_id'] as String?;
+
+      final sbs = qi['supplier_branch_stock'];
+      String? supplierId;
+      String? branchId;
+      String? supplierName;
+
+      if (sbs != null) {
+        branchId = sbs['branch_id'] as String?;
+        final sb = sbs['supplier_branches'];
+        if (sb != null) {
+          supplierId = sb['supplier_id'] as String?;
+          final supplier = sb['suppliers'];
+          if (supplier != null) {
+            supplierName = (supplier['legal_name'] as String?) ?? (supplier['name'] as String?);
+          }
+        }
+      }
+
+      if (supplierId == null && qi['external_provider_name'] != null) {
+        final extName = qi['external_provider_name'] as String;
+        final registeredSupplier = await _supabase.from('suppliers')
+            .select('id, name, legal_name')
+            .or('name.ilike."$extName",legal_name.ilike."$extName"')
+            .maybeSingle();
+
+        if (registeredSupplier != null) {
+          supplierId = registeredSupplier['id'] as String;
+          supplierName = (registeredSupplier['legal_name'] as String?) ?? (registeredSupplier['name'] as String?);
+        } else {
+          if (!skippedSuppliers.contains(extName)) {
+            skippedSuppliers.add(extName);
+          }
+          continue;
+        }
+      }
+
+      if (supplierId == null && supplierName != null) {
+        if (!skippedSuppliers.contains(supplierName)) {
+          skippedSuppliers.add(supplierName);
+        }
+        continue;
+      }
+
+      if (supplierId == null) {
+        continue;
+      }
+
+      if (!itemsBySupplier.containsKey(supplierId)) {
+        itemsBySupplier[supplierId] = [];
+      }
+
+      itemsBySupplier[supplierId]!.add({
+        'product_id': productId,
+        'name': name,
+        'brand': brand,
+        'model': model,
+        'uom': uom,
+        'quantity': quantity,
+        'unit_price': costPrice,
+        'branch_id': branchId,
+      });
+    }
+
+    int generatedCount = 0;
+
+    for (final entry in itemsBySupplier.entries) {
+      final sId = entry.key;
+      final itemsGroup = entry.value;
+
+      final bId = itemsGroup.first['branch_id'] as String?;
+
+      double subtotal = 0.0;
+      for (final item in itemsGroup) {
+        subtotal += (item['quantity'] as double) * (item['unit_price'] as double);
+      }
+
+      final newOrderResponse = await _supabase.from('supplier_orders').insert({
+        'user_id': currentUserId,
+        'supplier_id': sId,
+        'supplier_branch_id': bId,
+        'shipping_method_id': primaryShippingId,
+        'receiver_collaborator_id': receiverCollaboratorId,
+        'date': DateTime.now().toIso8601String().split('T')[0],
+        'status': SupplierOrderStatus.draft.dbValue,
+        'subtotal': subtotal,
+        'tax': 0.0,
+        'total': subtotal,
+      }).select('id').single();
+
+      final newOrderId = newOrderResponse['id'] as String;
+
+      final itemsToInsert = itemsGroup.map((item) => {
+        'supplier_order_id': newOrderId,
+        'product_id': item['product_id'],
+        'name': item['name'],
+        'brand': item['brand'],
+        'model': item['model'],
+        'uom': item['uom'],
+        'quantity': item['quantity'],
+        'unit_price': item['unit_price'],
+      }).toList();
+
+      await _supabase.from('supplier_order_items').insert(itemsToInsert);
+      generatedCount++;
+    }
+
+    return {
+      'generatedCount': generatedCount,
+      'skippedSuppliers': skippedSuppliers,
+    };
+  }
+}

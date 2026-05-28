@@ -14,10 +14,12 @@ import '../../domain/models/purchase_model.dart';
 
 class PurchasesSearchScreen extends ConsumerStatefulWidget {
   final bool selectionMode;
+  final String? productId;
 
   const PurchasesSearchScreen({
     super.key,
     this.selectionMode = false,
+    this.productId,
   });
 
   @override
@@ -47,7 +49,7 @@ class _PurchasesSearchScreenState extends ConsumerState<PurchasesSearchScreen> {
     final affiliatedSuppliers = await ref.read(suppliersProvider.future);
     final unaffiliatedSuppliers = await ref.read(allSuppliersProvider.future);
     final currentPurchases =
-        ref.read(paginatedPurchaseSearchProvider).valueOrNull?.items ?? [];
+        ref.read(paginatedPurchaseSearchProvider(widget.productId)).valueOrNull?.items ?? [];
 
     Set<String> availableOptions = {};
     availableOptions.addAll(affiliatedSuppliers.map((s) => s.name));
@@ -96,7 +98,7 @@ class _PurchasesSearchScreenState extends ConsumerState<PurchasesSearchScreen> {
   void _showTypeFilter() {
     final allOptions = {'invoice': 'Factura', 'delivery_note': 'Nota de Entrega'};
     final currentPurchases =
-        ref.read(paginatedPurchaseSearchProvider).valueOrNull?.items ?? [];
+        ref.read(paginatedPurchaseSearchProvider(widget.productId)).valueOrNull?.items ?? [];
 
     Map<String, String> availableOptions = Map.from(allOptions);
 
@@ -156,7 +158,7 @@ class _PurchasesSearchScreenState extends ConsumerState<PurchasesSearchScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final paginatedAsync = ref.watch(paginatedPurchaseSearchProvider);
+    final paginatedAsync = ref.watch(paginatedPurchaseSearchProvider(widget.productId));
     final dateFormat = DateFormat('dd/MM/yyyy');
 
     return GenericSearchScreen<Purchase>(
@@ -165,7 +167,7 @@ class _PurchasesSearchScreenState extends ConsumerState<PurchasesSearchScreen> {
       historyKey: 'purchases_search_history',
       isPaginatedMode: true,
       paginatedDataAsync: paginatedAsync,
-      showHistory: !widget.selectionMode,
+      showHistory: !widget.selectionMode && widget.productId == null,
       onResetFilters: () {
         setState(() {
           _selectedSupplierNames.clear();
@@ -173,13 +175,13 @@ class _PurchasesSearchScreenState extends ConsumerState<PurchasesSearchScreen> {
           _dateRange = null;
           _missingSerialsOnly = false;
         });
-        ref.read(paginatedPurchaseSearchProvider.notifier).updateSearch(null);
+        ref.read(paginatedPurchaseSearchProvider(widget.productId).notifier).updateSearch(null);
       },
       onServerSearch: (query) {
-        ref.read(paginatedPurchaseSearchProvider.notifier).updateSearch(query);
+        ref.read(paginatedPurchaseSearchProvider(widget.productId).notifier).updateSearch(query);
       },
       onLoadMore: () {
-        ref.read(paginatedPurchaseSearchProvider.notifier).loadMore();
+        ref.read(paginatedPurchaseSearchProvider(widget.productId).notifier).loadMore();
       },
       onQueryChanged: (query) {
         // Handled by onServerSearch

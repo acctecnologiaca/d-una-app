@@ -162,7 +162,8 @@ class MainNavigationDrawer extends StatelessWidget {
 
         if (route == '/settings' ||
             route == '/collaborators' ||
-            route == '/my-purchases') {
+            route == '/my-purchases' ||
+            route == '/supplier-orders') {
           context.push(route);
         } else {
           // Disable navigation if route is placeholder and doesn't exist yet,

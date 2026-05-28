@@ -135,19 +135,23 @@ class SupabaseQuotesRepository implements QuotesRepository {
     String? categoryFilter,
     DateTimeRange? dateRange,
     bool includeArchived = false,
+    String? productId,
   }) async {
     final userId = _client.auth.currentUser?.id;
     if (userId == null) throw Exception('Usuario no autenticado');
 
+    final selectQuery = productId != null
+        ? '*, clients(name), category:categories(name), quote_items_products!inner(*)'
+        : '*, clients(name), category:categories(name), quote_items_products(*)';
+
     var query = _client
         .from('quotes')
-        .select('''
-          *,
-          clients(name),
-          category:categories(name),
-          quote_items_products(*)
-        ''')
+        .select(selectQuery)
         .eq('user_id', userId);
+
+    if (productId != null) {
+      query = query.eq('quote_items_products.product_id', productId);
+    }
 
     if (searchQuery != null && searchQuery.isNotEmpty) {
       final searchQueryClean = searchQuery.trim();
@@ -201,7 +205,7 @@ class SupabaseQuotesRepository implements QuotesRepository {
     final response = await _client
         .from('quotes')
         .select(
-          '*, clients(name), category:categories(name), quote_items_products(*, supplier_branch_stock(supplier_branches(suppliers(name)))), quote_items_services(*), quote_conditions(*)',
+          '*, clients(name), category:categories(name), quote_items_products(*, supplier_branch_stock(supplier_branches(suppliers(name, minimum_purchase_amount)))), quote_items_services(*), quote_conditions(*)',
         )
         .eq('id', id)
         .single();
@@ -214,7 +218,7 @@ class SupabaseQuotesRepository implements QuotesRepository {
     final response = await _client
         .from('quotes')
         .select(
-          '*, clients(*), contacts(*), advisor:collaborators!advisor_id(full_name), category:categories(name), quote_items_products(*, supplier_branch_stock(supplier_branches(suppliers(name)))), quote_items_services(*), quote_conditions(*)',
+          '*, clients(*), contacts(*), advisor:collaborators!advisor_id(full_name), category:categories(name), quote_items_products(*, supplier_branch_stock(supplier_branches(suppliers(name, minimum_purchase_amount)))), quote_items_services(*), quote_conditions(*)',
         )
         .eq('id', id)
         .single();

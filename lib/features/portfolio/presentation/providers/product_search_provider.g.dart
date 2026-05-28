@@ -151,7 +151,7 @@ class _ProductSearchProviderElement
 }
 
 String _$paginatedQuoteProductSearchHash() =>
-    r'9f31097040a34c0dd8b022c98f95ac58825b496c';
+    r'9cd6d93478110e4922df015abe47bd76408fdccd';
 
 /// See also [PaginatedQuoteProductSearch].
 @ProviderFor(PaginatedQuoteProductSearch)

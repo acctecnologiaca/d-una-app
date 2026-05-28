@@ -323,6 +323,7 @@ class _ProductSuppliersScreenState
                         item['uom'] as String? ??
                         'Unidad';
                     final uomIconName = item['uom_icon_name'] as String?;
+                    final minimumPurchaseAmount = parseDouble(item['minimum_purchase_amount']);
 
                     // Parse Access Level from Backend
                     final isRestricted =
@@ -345,6 +346,7 @@ class _ProductSuppliersScreenState
                       isWholesale: tradeType == 'WHOLESALE',
                       isLocked: isRestricted,
                       isPartial: isPartial,
+                      minimumPurchaseAmount: minimumPurchaseAmount,
                       onTap: () {
                         if (shouldShowSnackBar) {
                           ScaffoldMessenger.of(context).hideCurrentSnackBar();

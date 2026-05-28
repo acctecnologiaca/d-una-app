@@ -10,6 +10,11 @@ import '../../../../quotes/presentation/create_quote/providers/create_quote_prov
 import '../../../../quotes/presentation/create_quote/widgets/quote_product_sale_details_sheet.dart';
 import 'supplier_product_row.dart';
 import '../../widgets/estimate_price_sheet.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
+import '../../../../supplier_orders/presentation/providers/create_supplier_order_provider.dart';
+import '../../../../supplier_orders/presentation/providers/supplier_orders_providers.dart';
+import '../../../../supplier_orders/domain/models/supplier_order.dart';
+import '../../../../supplier_orders/domain/models/supplier_order_status.dart';
 
 class ProductActionSheet {
   static void show(
@@ -58,17 +63,105 @@ class ProductActionSheet {
         BottomSheetActionItem(
           icon: Icons.shopping_cart_outlined,
           label: 'Agregar a orden de compra nueva',
-          onTap: () {
+          onTap: () async {
             context.pop();
-            // Implementation pending
+            // Initialize new draft order with this supplier
+            final response = await Supabase.instance.client
+                .from('suppliers')
+                .select('id, name')
+                .eq('name', supplierName)
+                .maybeSingle();
+
+            final String supplierId = response != null ? response['id'] as String : '';
+
+            ref.read(createSupplierOrderProvider.notifier).initializeNew(
+                  supplierId: supplierId,
+                  supplierName: supplierName,
+                );
+
+            // Add the product directly
+            ref.read(createSupplierOrderProvider.notifier).addItem(
+                  name: productName,
+                  brand: brand,
+                  model: model,
+                  uom: uom,
+                  quantity: 1.0,
+                  unitPrice: price,
+                );
+
+            if (context.mounted) {
+              context.push('/supplier-orders/create');
+            }
           },
         ),
         BottomSheetActionItem(
           icon: Icons.add_shopping_cart,
           label: 'Agregar a orden de compra existente',
-          onTap: () {
+          onTap: () async {
             context.pop();
-            // Implementation pending
+            
+            // Show list dialog of existing drafts
+            final repo = ref.read(supplierOrdersRepositoryProvider);
+            final drafts = await repo.getSupplierOrders();
+            final filteredDrafts = drafts.where((o) => o.status == SupplierOrderStatus.draft && o.supplierName == supplierName).toList();
+
+            if (!context.mounted) return;
+
+            if (filteredDrafts.isEmpty) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(content: Text('No se encontraron órdenes en borrador para $supplierName')),
+              );
+              return;
+            }
+
+            final selectedOrder = await showDialog<SupplierOrder>(
+              context: context,
+              builder: (ctx) {
+                return AlertDialog(
+                  title: const Text('Seleccionar orden de compra'),
+                  content: SizedBox(
+                    width: double.maxFinite,
+                    child: ListView.builder(
+                      shrinkWrap: true,
+                      itemCount: filteredDrafts.length,
+                      itemBuilder: (ctx, index) {
+                        final order = filteredDrafts[index];
+                        return ListTile(
+                          title: Text(order.orderNumber),
+                          subtitle: Text('Total: \$${order.total.toStringAsFixed(2)}'),
+                          onTap: () => Navigator.pop(ctx, order),
+                        );
+                      },
+                    ),
+                  ),
+                  actions: [
+                    TextButton(
+                      onPressed: () => Navigator.pop(ctx),
+                      child: const Text('Cancelar'),
+                    ),
+                  ],
+                );
+              },
+            );
+
+            if (selectedOrder != null && context.mounted) {
+              final details = await repo.getSupplierOrderDetails(selectedOrder.id);
+              ref.read(createSupplierOrderProvider.notifier).loadFromExisting(details.order, details.items);
+              
+              // Add product to loaded state
+              ref.read(createSupplierOrderProvider.notifier).addItem(
+                name: productName,
+                brand: brand,
+                model: model,
+                uom: uom,
+                quantity: 1.0,
+                unitPrice: price,
+              );
+
+              if (context.mounted) {
+                context.push('/supplier-orders/edit/${selectedOrder.id}');
+              }
+            }
           },
         ),
         BottomSheetActionItem(

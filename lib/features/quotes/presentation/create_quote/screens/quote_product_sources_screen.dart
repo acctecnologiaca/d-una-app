@@ -620,6 +620,9 @@ class _QuoteProductSourcesScreenState
                     : (source.sourceType == ProductSourceType.own
                           ? QuoteItemSourceType.own
                           : QuoteItemSourceType.affiliated),
+                supplierMinPurchase: (source.sourceType == ProductSourceType.supplier)
+                    ? source.minimumPurchaseAmount
+                    : 0.0,
               );
 
               createQuoteNotifier.addProduct(quoteItem);

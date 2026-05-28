@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
+//import '../../../../../shared/utils/currency_formatter.dart';
 import '../../../domain/models/supplier_model.dart';
 // import 'package:go_router/go_router.dart'; // Uncomment if navigation is needed inside the card or passed as callback
 
@@ -73,6 +74,14 @@ class SupplierCard extends StatelessWidget {
                 child: _TradeTypeChip(tradeType: supplier.tradeType!),
               ),
 
+            // Minimum Purchase amount warning chip
+            /*  if (supplier.minimumPurchaseAmount > 0)
+              Positioned(
+                bottom: 12,
+                left: 12,
+                child: _MinimumPurchaseChip(amount: supplier.minimumPurchaseAmount),
+              ), */
+
             // Lock Icon - Center (if locked)
             if (isLocked)
               const Positioned.fill(
@@ -90,6 +99,40 @@ class SupplierCard extends StatelessWidget {
     );
   }
 }
+
+/* class _MinimumPurchaseChip extends StatelessWidget {
+  final double amount;
+
+  const _MinimumPurchaseChip({required this.amount});
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: colors.errorContainer,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: colors.error.withValues(alpha: 0.3)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(Icons.info_outline, size: 14, color: colors.onErrorContainer),
+          const SizedBox(width: 4),
+          Text(
+            'Compra mín: ${CurrencyFormatter.format(amount)}',
+            style: TextStyle(
+              color: colors.onErrorContainer,
+              fontSize: 12,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+} */
 
 class _TradeTypeChip extends StatelessWidget {
   final String tradeType;

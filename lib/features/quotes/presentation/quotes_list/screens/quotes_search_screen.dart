@@ -17,11 +17,13 @@ import 'package:material_symbols_icons/symbols.dart';
 class QuotesSearchScreen extends ConsumerStatefulWidget {
   final bool selectionMode;
   final Set<String>? excludeStatuses;
+  final String? productId;
 
   const QuotesSearchScreen({
     super.key,
     this.selectionMode = false,
     this.excludeStatuses,
+    this.productId,
   });
 
   @override
@@ -176,7 +178,7 @@ class _QuotesSearchScreenState extends ConsumerState<QuotesSearchScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final paginatedAsync = ref.watch(paginatedQuoteSearchProvider);
+    final paginatedAsync = ref.watch(paginatedQuoteSearchProvider(widget.productId));
     final selection = ref.watch(quoteSelectionProvider);
 
     return GenericSearchScreen<Quote>(
@@ -187,7 +189,7 @@ class _QuotesSearchScreenState extends ConsumerState<QuotesSearchScreen> {
       historyKey: 'quotes_search_history',
       isPaginatedMode: true,
       paginatedDataAsync: paginatedAsync,
-      showHistory: !widget.selectionMode,
+      showHistory: !widget.selectionMode && widget.productId == null,
       appBarOverride: selection.isSelectionMode
           ? _buildSelectionHeader(context, ref, selection)
           : null,
@@ -198,19 +200,19 @@ class _QuotesSearchScreenState extends ConsumerState<QuotesSearchScreen> {
           _selectedDateRange = null;
           _currentSort = SortOption.recent;
         });
-        ref.read(paginatedQuoteSearchProvider.notifier).updateSearch(null);
+        ref.read(paginatedQuoteSearchProvider(widget.productId).notifier).updateSearch(null);
         ref
-            .read(paginatedQuoteSearchProvider.notifier)
+            .read(paginatedQuoteSearchProvider(widget.productId).notifier)
             .updateFilters(status: null, categoryId: null);
         ref
-            .read(paginatedQuoteSearchProvider.notifier)
+            .read(paginatedQuoteSearchProvider(widget.productId).notifier)
             .updateSort('date_issued', false);
       },
       onServerSearch: (query) {
-        ref.read(paginatedQuoteSearchProvider.notifier).updateSearch(query);
+        ref.read(paginatedQuoteSearchProvider(widget.productId).notifier).updateSearch(query);
       },
       onLoadMore: () {
-        ref.read(paginatedQuoteSearchProvider.notifier).loadMore();
+        ref.read(paginatedQuoteSearchProvider(widget.productId).notifier).loadMore();
       },
       onQueryChanged: (query) {
         setState(() {
@@ -240,7 +242,7 @@ class _QuotesSearchScreenState extends ConsumerState<QuotesSearchScreen> {
                 ascending = false;
               }
               ref
-                  .read(paginatedQuoteSearchProvider.notifier)
+                  .read(paginatedQuoteSearchProvider(widget.productId).notifier)
                   .updateSort(orderBy, ascending);
             },
           ),

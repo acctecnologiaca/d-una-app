@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import '../../domain/models/aggregated_product.dart';
 import '../../../quotes/domain/models/quote_aggregated_product.dart';
+import '../../../quotes/presentation/create_quote/providers/quote_product_selection_provider.dart';
 import 'suppliers_provider.dart';
 import 'package:equatable/equatable.dart';
 
@@ -52,19 +53,15 @@ class PaginatedQuoteProductSearch extends _$PaginatedQuoteProductSearch {
       );
     }
 
-    final repository = ref.read(suppliersRepositoryProvider);
-    final result = await repository.searchAggregatedProducts(
-      queryText,
-      brands: _filters.brands,
-      categories: _filters.categories,
-      supplierIds: _filters.supplierIds,
-      minPrice: _filters.minPrice,
-      maxPrice: _filters.maxPrice,
+    final repository = ref.read(quoteProductSelectionRepositoryProvider);
+    final items = await repository.getQuoteProducts(
+      params: ProductSearchParams(
+        query: queryText,
+        filters: _filters,
+      ),
       offset: offset,
       limit: _limit,
     );
-
-    final items = result.map((json) => QuoteAggregatedProduct.fromMap(json)).toList();
 
     return PaginatedState<QuoteAggregatedProduct>(
       items: items,

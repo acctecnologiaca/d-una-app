@@ -47,14 +47,20 @@ class PurchasesRepository {
     String? statusFilter,
     String orderBy = 'date',
     bool ascending = false,
+    String? productId,
   }) async {
     final currentUserId = _supabase.auth.currentUser?.id;
     if (currentUserId == null) throw Exception('User not authenticated');
 
-    var query = _supabase.from('purchases').select('''
-          *,
-          suppliers(name, legal_name)
-        ''').eq('user_id', currentUserId);
+    final selectQuery = productId != null
+        ? '*, suppliers(name, legal_name), purchase_items!inner(product_id)'
+        : '*, suppliers(name, legal_name)';
+
+    var query = _supabase.from('purchases').select(selectQuery).eq('user_id', currentUserId);
+
+    if (productId != null) {
+      query = query.eq('purchase_items.product_id', productId);
+    }
 
     if (searchQuery != null && searchQuery.trim().isNotEmpty) {
       final searchClean = searchQuery.trim();

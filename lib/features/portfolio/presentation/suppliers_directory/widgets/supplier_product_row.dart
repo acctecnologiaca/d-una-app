@@ -16,6 +16,7 @@ class SupplierProductRow extends StatelessWidget {
   final bool isWholesale;
   final bool isLocked; // Fully restricted (Start with this)
   final bool isPartial; // Access allowed but price hidden/blurred
+  final double minimumPurchaseAmount;
   final VoidCallback? onTap;
 
   const SupplierProductRow({
@@ -29,6 +30,7 @@ class SupplierProductRow extends StatelessWidget {
     required this.isWholesale,
     this.isLocked = false,
     this.isPartial = false,
+    this.minimumPurchaseAmount = 0.0,
     this.onTap,
   });
 
@@ -88,6 +90,38 @@ class SupplierProductRow extends StatelessWidget {
                   ),
                 ),
               ],
+            ),
+          ],
+          if (minimumPurchaseAmount > 0) ...[
+            const SizedBox(height: 4),
+            Container(
+              padding: const EdgeInsets.symmetric(
+                horizontal: 8,
+                vertical: 2,
+              ),
+              decoration: BoxDecoration(
+                color: colors.errorContainer,
+                borderRadius: BorderRadius.circular(4),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(
+                    Icons.info_outline,
+                    size: 12,
+                    color: colors.onErrorContainer,
+                  ),
+                  const SizedBox(width: 4),
+                  Text(
+                    'Compra mín: ${CurrencyFormatter.format(minimumPurchaseAmount)}',
+                    style: textTheme.bodySmall?.copyWith(
+                      fontSize: 11,
+                      fontWeight: FontWeight.bold,
+                      color: colors.onErrorContainer,
+                    ),
+                  ),
+                ],
+              ),
             ),
           ],
         ],

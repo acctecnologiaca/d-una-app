@@ -39,7 +39,7 @@ class ViewPurchaseSummaryTab extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             // 1. Proveedor Section
-            _buildSectionHeader(context, Icons.groups_outlined, 'Proveedor'),
+            _buildSectionHeader(context, Icons.warehouse_outlined, 'Proveedor'),
             _buildSupplierCard(
               context,
               colors,

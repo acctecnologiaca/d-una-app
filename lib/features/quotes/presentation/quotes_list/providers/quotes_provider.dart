@@ -378,11 +378,11 @@ class PaginatedQuotesList extends AsyncNotifier<PaginatedState<domain.Quote>> {
 }
 
 // --- Paginated Quote Search (AutoDispose) ---
-final paginatedQuoteSearchProvider = AutoDisposeAsyncNotifierProvider<PaginatedQuoteSearch, PaginatedState<domain.Quote>>(() {
+final paginatedQuoteSearchProvider = AutoDisposeAsyncNotifierProviderFamily<PaginatedQuoteSearch, PaginatedState<domain.Quote>, String?>(() {
   return PaginatedQuoteSearch();
 });
 
-class PaginatedQuoteSearch extends AutoDisposeAsyncNotifier<PaginatedState<domain.Quote>> {
+class PaginatedQuoteSearch extends AutoDisposeFamilyAsyncNotifier<PaginatedState<domain.Quote>, String?> {
   static const int _limit = 25;
   String? _searchQuery;
   String? _statusFilter;
@@ -392,7 +392,7 @@ class PaginatedQuoteSearch extends AutoDisposeAsyncNotifier<PaginatedState<domai
   bool _includeArchived = false;
 
   @override
-  FutureOr<PaginatedState<domain.Quote>> build() async {
+  FutureOr<PaginatedState<domain.Quote>> build(String? arg) async {
     return _fetchPage(0);
   }
 
@@ -409,6 +409,7 @@ class PaginatedQuoteSearch extends AutoDisposeAsyncNotifier<PaginatedState<domai
       statusFilter: _statusFilter,
       categoryFilter: _categoryFilter,
       includeArchived: _includeArchived,
+      productId: arg,
     );
 
     if (quotesDtos.isEmpty) {

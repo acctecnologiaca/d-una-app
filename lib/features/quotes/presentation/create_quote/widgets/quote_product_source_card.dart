@@ -245,7 +245,7 @@ class _QuoteProductSourceCardState
               child: Row(
                 crossAxisAlignment: isOwn
                     ? CrossAxisAlignment.center
-                    : CrossAxisAlignment.start,
+                    : CrossAxisAlignment.center,
                 children: [
                   Expanded(
                     child: Column(
@@ -328,7 +328,41 @@ class _QuoteProductSourceCardState
                             ),
                           ],
                         ),
-                        //],
+                        if (!isOwn &&
+                            !isExternal &&
+                            widget.source.minimumPurchaseAmount > 0) ...[
+                          const SizedBox(height: 6),
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 8,
+                              vertical: 2,
+                            ),
+                            decoration: BoxDecoration(
+                              color: colors.errorContainer,
+                              borderRadius: BorderRadius.circular(4),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(
+                                  Icons.info_outline,
+                                  size: 12,
+                                  color: colors.onErrorContainer,
+                                ),
+                                const SizedBox(width: 4),
+                                Text(
+                                  'Compra mín: ${CurrencyFormatter.format(widget.source.minimumPurchaseAmount)}',
+                                  style: Theme.of(context).textTheme.bodySmall
+                                      ?.copyWith(
+                                        fontSize: 11,
+                                        fontWeight: FontWeight.bold,
+                                        color: colors.onErrorContainer,
+                                      ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
                       ],
                     ),
                   ),
@@ -338,7 +372,7 @@ class _QuoteProductSourceCardState
                       crossAxisAlignment: CrossAxisAlignment.end,
                       mainAxisAlignment: isOwn
                           ? MainAxisAlignment.center
-                          : MainAxisAlignment.start,
+                          : MainAxisAlignment.center,
                       children: [
                         Row(
                           children: [

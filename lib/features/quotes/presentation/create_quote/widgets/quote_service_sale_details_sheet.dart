@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:d_una_app/core/utils/string_extensions.dart';
 import 'package:d_una_app/shared/widgets/friendly_error_widget.dart';
 import '../../../../../shared/widgets/custom_button.dart';
 import '../../../../../shared/widgets/custom_text_field.dart';
@@ -151,21 +152,16 @@ class _QuoteServiceSaleDetailsSheetState
   }
 
   String _getRateLabel() {
-    final name = widget.service.serviceRate?.name.toLowerCase() ?? '';
-    final symbol = widget.service.serviceRate?.symbol.toLowerCase() ?? '';
+    final rate = widget.service.serviceRate;
+    if (rate != null && rate.name.isNotEmpty) {
+      return rate.name.toTitleCase;
+    }
 
-    if (name.contains('hora') || symbol == 'h' || symbol == 'hr') {
-      return 'Horas';
+    final existingSymbol = widget.existingItem?.rateSymbol;
+    if (existingSymbol != null && existingSymbol.isNotEmpty) {
+      return existingSymbol.toTitleCase;
     }
-    if (name.contains('día') || name.contains('dia')) {
-      return 'Días';
-    }
-    if (name.contains('mes')) {
-      return 'Meses';
-    }
-    if (name.contains('serv')) {
-      return 'Serv.';
-    }
+
     return 'Ud.';
   }
 
@@ -251,12 +247,23 @@ class _QuoteServiceSaleDetailsSheetState
   }
 
   String _warrantyUnitToDisplay(String? dbUnit) {
-    return switch (dbUnit) {
-      'days' => 'Días',
-      'months' => 'Meses',
-      'years' => 'Años',
-      _ => 'Meses',
-    };
+    if (dbUnit == null) return 'Meses';
+    final normalized = dbUnit.toLowerCase().trim();
+    if (normalized == 'days' ||
+        normalized == 'días' ||
+        normalized == 'dias' ||
+        normalized == 'dia') {
+      return 'Días';
+    }
+    if (normalized == 'months' ||
+        normalized == 'meses' ||
+        normalized == 'mes') {
+      return 'Meses';
+    }
+    if (normalized == 'years' || normalized == 'años' || normalized == 'año') {
+      return 'Años';
+    }
+    return 'Meses';
   }
 
   @override

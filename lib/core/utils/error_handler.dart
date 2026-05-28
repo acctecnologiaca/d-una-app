@@ -41,7 +41,7 @@ class ErrorHandler {
 
     // 4. Fallback (Error no manejado, se esconde la info técnica)
     // Descomentar la siguiente línea para debug en desarrollo en paralelo
-    // debugPrint('Unhandled Raw Error: $error');
+    debugPrint('Unhandled Raw Error: $error');
     return 'Ha ocurrido un error inesperado al procesar tu solicitud.';
   }
 

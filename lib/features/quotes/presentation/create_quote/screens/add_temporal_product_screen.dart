@@ -546,7 +546,7 @@ class _AddTemporalProductScreenState
     try {
       final repository = ref.read(quoteProductSelectionRepositoryProvider);
       final results = await repository.getQuoteProducts(
-        ProductSearchParams(query: searchTerm),
+        params: ProductSearchParams(query: searchTerm),
       );
 
       // --- BLOQUE DE DEBUG RESTAURADO ---

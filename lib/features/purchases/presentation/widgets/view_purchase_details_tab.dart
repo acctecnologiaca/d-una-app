@@ -32,7 +32,7 @@ class ViewPurchaseDetailsTab extends StatelessWidget {
             ),
             const SizedBox(height: 24),
             InfoBlock.text(
-              icon: Icons.groups_outlined,
+              icon: Icons.warehouse_outlined,
               label: 'Proveedor',
               value: purchase.supplierName ?? 'Desconocido',
             ),

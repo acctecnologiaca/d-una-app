@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
+//import '../../../../../shared/utils/currency_formatter.dart';
 import '../../../domain/models/supplier_model.dart';
 // To reuse _TradeTypeChip logic if possible, or duplicate/move it
 
@@ -89,6 +90,39 @@ class CompactSupplierCard extends StatelessWidget {
                       const SizedBox(height: 4),
                       _CompactTradeTypeChip(tradeType: supplier.tradeType!),
                     ],
+                    /*  if (supplier.minimumPurchaseAmount > 0) ...[
+                      const SizedBox(height: 4),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 8,
+                          vertical: 2,
+                        ),
+                        decoration: BoxDecoration(
+                          color: colors.errorContainer,
+                          borderRadius: BorderRadius.circular(4),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(
+                              Icons.info_outline,
+                              size: 12,
+                              color: colors.onErrorContainer,
+                            ),
+                            const SizedBox(width: 4),
+                            Text(
+                              'Compra mín: ${CurrencyFormatter.format(supplier.minimumPurchaseAmount)}',
+                              style: Theme.of(context).textTheme.bodySmall
+                                  ?.copyWith(
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.bold,
+                                    color: colors.onErrorContainer,
+                                  ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ], */
                   ],
                 ),
               ),

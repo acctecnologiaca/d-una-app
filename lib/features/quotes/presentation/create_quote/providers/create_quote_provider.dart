@@ -162,6 +162,43 @@ class QuoteState {
   double get totalCosts => productsCost + servicesCost;
   double get estimatedProfit => totalSales - totalCosts;
 
+  Map<String, ({double currentTotal, double minimumRequired, bool met})> get supplierCostBreakdown {
+    final breakdown = <String, ({double currentTotal, double minimumRequired, bool met})>{};
+    for (var p in products) {
+      if (p.sourceType == QuoteItemSourceType.affiliated && p.supplierName != null) {
+        final name = p.supplierName!;
+        final cost = p.costPrice * p.quantity;
+        final min = p.supplierMinPurchase;
+        final existing = breakdown[name];
+        if (existing == null) {
+          breakdown[name] = (
+            currentTotal: cost,
+            minimumRequired: min,
+            met: false, // Calculated after loop
+          );
+        } else {
+          breakdown[name] = (
+            currentTotal: existing.currentTotal + cost,
+            minimumRequired: existing.minimumRequired > 0 ? existing.minimumRequired : min,
+            met: false,
+          );
+        }
+      }
+    }
+
+    // Finalize the record with met check
+    final finalizedBreakdown = <String, ({double currentTotal, double minimumRequired, bool met})>{};
+    breakdown.forEach((key, val) {
+      finalizedBreakdown[key] = (
+        currentTotal: val.currentTotal,
+        minimumRequired: val.minimumRequired,
+        met: val.minimumRequired <= 0 || val.currentTotal >= val.minimumRequired,
+      );
+    });
+
+    return finalizedBreakdown;
+  }
+
   int get nextGroupIndex {
     if (products.isEmpty) return 1;
     final maxIndex = products.fold<int>(

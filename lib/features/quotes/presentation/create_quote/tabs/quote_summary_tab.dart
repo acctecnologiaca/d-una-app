@@ -80,20 +80,21 @@ class QuoteSummaryTab extends ConsumerWidget {
             const SizedBox(height: 16),
           ],
 
-          // 1. Utilidad Section
-          _buildSectionHeader(context, Icons.bar_chart, 'Rentabilidad'),
-          _buildUtilityCard(
-            context,
-            state.totalSales,
-            state.totalCosts,
-            state.estimatedProfit,
-          ),
-          const SizedBox(height: 16),
-
-          // 2. Cliente Section
+          // 1. Cliente Section
           _buildSectionHeader(context, Icons.people, 'Cliente'),
           _buildClientCard(context, state),
           const SizedBox(height: 16),
+
+          // 2. Desglose por Proveedor Section
+          if (state.supplierCostBreakdown.isNotEmpty) ...[
+            _buildSectionHeader(
+              context,
+              Icons.warehouse_outlined,
+              'Desglose por proveedor',
+            ),
+            _buildSupplierBreakdownCard(context, state.supplierCostBreakdown),
+            const SizedBox(height: 16),
+          ],
 
           // 3. Cotización Section
           _buildSectionHeader(context, Icons.calculate, 'Cotización'),
@@ -110,7 +111,122 @@ class QuoteSummaryTab extends ConsumerWidget {
             finalDisplayServices,
             totalGroupedProducts,
           ),
+          const SizedBox(height: 16),
+
+          // 4. Rentabilidad Section
+          _buildSectionHeader(context, Icons.bar_chart, 'Rentabilidad'),
+          _buildUtilityCard(
+            context,
+            state.totalSales,
+            state.totalCosts,
+            state.estimatedProfit,
+          ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildSupplierBreakdownCard(
+    BuildContext context,
+    Map<String, ({double currentTotal, double minimumRequired, bool met})>
+    breakdown,
+  ) {
+    final colors = Theme.of(context).colorScheme;
+    return Card(
+      elevation: 0,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(8),
+        side: BorderSide(color: colors.outlineVariant),
+      ),
+      color: colors.surface,
+      child: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: breakdown.entries.map((entry) {
+            final name = entry.key;
+            final data = entry.value;
+            final isWarning = !data.met && data.minimumRequired > 0;
+            return Padding(
+              padding: const EdgeInsets.only(bottom: 12.0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Expanded(
+                        child: Text(
+                          name,
+                          style: const TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 14,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                      Text(
+                        CurrencyFormatter.format(data.currentTotal),
+                        style: const TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 14,
+                        ),
+                      ),
+                    ],
+                  ),
+                  if (data.minimumRequired > 0) ...[
+                    const SizedBox(height: 4),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(
+                          'Compra mínima: ${CurrencyFormatter.format(data.minimumRequired)}',
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: isWarning
+                                ? colors.error
+                                : colors.onSurfaceVariant,
+                          ),
+                        ),
+                        if (isWarning)
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 6,
+                              vertical: 2,
+                            ),
+                            decoration: BoxDecoration(
+                              color: colors.errorContainer,
+                              borderRadius: BorderRadius.circular(4),
+                            ),
+                            child: Text(
+                              'Faltan ${CurrencyFormatter.format(data.minimumRequired - data.currentTotal)}',
+                              style: TextStyle(
+                                fontSize: 10,
+                                fontWeight: FontWeight.bold,
+                                color: colors.onErrorContainer,
+                              ),
+                            ),
+                          )
+                        else
+                          Text(
+                            '¡Cubierta!',
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: colors.primary,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                      ],
+                    ),
+                  ],
+                  const SizedBox(height: 8),
+                  const Divider(height: 1),
+                ],
+              ),
+            );
+          }).toList(),
+        ),
       ),
     );
   }

@@ -23,6 +23,7 @@ import 'package:d_una_app/core/pdf/templates/quote_pdf_template.dart';
 import 'package:d_una_app/features/profile/presentation/providers/profile_provider.dart';
 import 'package:pdf/pdf.dart';
 import '../../../../../shared/utils/string_utils.dart';
+import '../../../../supplier_orders/presentation/providers/supplier_orders_providers.dart';
 import '../widgets/send_email_bottom_sheet.dart';
 import '../widgets/send_whatsapp_bottom_sheet.dart';
 
@@ -232,8 +233,67 @@ class _ViewQuoteScreenState extends ConsumerState<ViewQuoteScreen>
                   BottomSheetActionItem(
                     icon: Icons.shopping_cart_outlined,
                     label: 'Generar orden de compra',
-                    onTap: () {
+                    onTap: () async {
                       context.pop();
+                      
+                      final quote = state.quote;
+                      if (quote == null) return;
+                      
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text('Generando órdenes de compra...'),
+                          duration: Duration(seconds: 1),
+                        ),
+                      );
+
+                      try {
+                        final repo = ref.read(supplierOrdersRepositoryProvider);
+                        final result = await repo.batchGenerateFromQuote(quote.id);
+                        
+                        if (!context.mounted) return;
+
+                        final skipped = result['skippedSuppliers'] as List<dynamic>? ?? [];
+                        final generatedCount = result['generatedCount'] as int? ?? 0;
+
+                        if (skipped.isNotEmpty) {
+                          // Show warning dialog about skipped suppliers
+                          await CustomDialog.show(
+                            context: context,
+                            dialog: CustomDialog.confirmation(
+                              icon: Icons.warning_amber_rounded,
+                              iconColor: Colors.amber.shade800,
+                              title: 'Órdenes Generadas con Advertencias',
+                              contentText: 'Se generaron $generatedCount órdenes de compra.\n\nNo se pudieron generar órdenes para los siguientes proveedores porque no están registrados en la tabla de proveedores:\n\n${skipped.map((s) => '• $s').join('\n')}',
+                              actions: [
+                                TextButton(
+                                  onPressed: () => Navigator.of(context, rootNavigator: true).pop(),
+                                  child: const Text('Entendido'),
+                                ),
+                              ],
+                            ),
+                          );
+                        } else {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text('Se generaron $generatedCount órdenes de compra exitosamente.'),
+                            ),
+                          );
+                        }
+
+                        // Navigate to supplier orders list
+                        if (context.mounted) {
+                          context.push('/supplier-orders');
+                        }
+                      } catch (e) {
+                        if (context.mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text('Error al generar órdenes: $e'),
+                              backgroundColor: Colors.red,
+                            ),
+                          );
+                        }
+                      }
                     },
                   ),
                   BottomSheetActionItem(

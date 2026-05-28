@@ -198,7 +198,7 @@ class _ServiceSearchScreenState extends ConsumerState<ServiceSearchScreen> {
             child: ServiceListItem(
               service: service,
               onTap: () {
-                ServiceActionSheet.show(context, service);
+                ServiceActionSheet.show(context, ref, service);
               },
             ),
           ),

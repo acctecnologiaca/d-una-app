@@ -90,16 +90,27 @@ class QuoteAggregatedProduct {
       description: map['description'] ?? map['product_description'] ?? '',
       imageUrl: map['image_url'] ?? map['product_image_url'],
 
-      suppliersInfo:
-          ((map['supplier_ids'] ?? map['suppliers_info']) as List<dynamic>?)
-              ?.map(
-                (item) => {
-                  'id': item['id'].toString(),
-                  'name': item['name'].toString(),
-                },
-              )
-              .toList() ??
-          [],
+      suppliersInfo: () {
+        final rawInfo = map['supplier_ids'] ?? map['suppliers_info'];
+        if (rawInfo is List) {
+          return List<Map<String, String>>.from(
+            rawInfo.map((item) {
+              if (item is Map) {
+                return {
+                  'id': (item['id'] ?? '').toString(),
+                  'name': (item['name'] ?? '').toString(),
+                };
+              }
+              // If it's a list of ID strings (like ['uuid1', 'uuid2'])
+              return {
+                'id': item.toString(),
+                'name': '',
+              };
+            }),
+          );
+        }
+        return <Map<String, String>>[];
+      }(),
 
       sources:
           (map['sources'] as List<dynamic>?)

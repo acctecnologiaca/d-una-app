@@ -119,6 +119,66 @@ class _ProductDetailsScreenState extends ConsumerState<ProductDetailsScreen> {
           children: [
             const SizedBox(height: 24),
 
+            // Top Action Bar
+            SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              padding: const EdgeInsets.symmetric(horizontal: 16.0),
+              child: Row(
+                children: [
+                  OutlinedButton.icon(
+                    onPressed: () {
+                      context.push(
+                        '/my-purchases/search?productId=${currentProduct.id}',
+                      );
+                    },
+                    icon: const Icon(Icons.receipt_long_outlined, size: 18),
+                    label: const Text('Registro de compras'),
+                  ),
+                  const SizedBox(width: 12),
+                  OutlinedButton.icon(
+                    onPressed: () {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text(
+                            'El módulo de Órdenes de compra estará disponible próximamente',
+                          ),
+                          behavior: SnackBarBehavior.floating,
+                        ),
+                      );
+                    },
+                    icon: const Icon(Icons.shopping_bag_outlined, size: 18),
+                    label: const Text('Ordenes de compra'),
+                  ),
+                  const SizedBox(width: 12),
+                  OutlinedButton.icon(
+                    onPressed: () {
+                      context.push(
+                        '/quotes/search?productId=${currentProduct.id}',
+                      );
+                    },
+                    icon: const Icon(Icons.description_outlined, size: 18),
+                    label: const Text('Cotizaciones'),
+                  ),
+                  const SizedBox(width: 12),
+                  OutlinedButton.icon(
+                    onPressed: () {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text(
+                            'El módulo de Reportes estará disponible próximamente',
+                          ),
+                          behavior: SnackBarBehavior.floating,
+                        ),
+                      );
+                    },
+                    icon: const Icon(Icons.analytics_outlined, size: 18),
+                    label: const Text('Reportes'),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 32),
+
             // Main Content Padding
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16.0),
@@ -287,7 +347,7 @@ class _ProductDetailsScreenState extends ConsumerState<ProductDetailsScreen> {
                         Text(
                           'Reservadas: ${UomStatusBadge.formatQuantity(currentProduct.reservedQuantity)} ${currentProduct.uom ?? 'ud.'}',
                           style: textTheme.bodyMedium?.copyWith(
-                            color: Colors.orange.shade800,
+                            color: Colors.deepPurple.shade400,
                             fontWeight: FontWeight.bold,
                           ),
                         ),
@@ -332,30 +392,6 @@ class _ProductDetailsScreenState extends ConsumerState<ProductDetailsScreen> {
                       ],
                     ),
                   ),
-
-                  const SizedBox(height: 32),
-
-                  // "Mis compras" Button
-                  Center(
-                    child: TextButton(
-                      onPressed: currentProduct.purchaseCount > 0
-                          ? () => context.push(
-                              '/my-purchases?productId=${currentProduct.id}',
-                            )
-                          : null,
-                      child: Text(
-                        'Mis compras',
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w600,
-                          color: currentProduct.purchaseCount > 0
-                              ? colors.primary
-                              : colors.outline,
-                        ),
-                      ),
-                    ),
-                  ),
-
                   const SizedBox(height: 80),
                 ],
               ),

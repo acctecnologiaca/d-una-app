@@ -32,6 +32,7 @@ class QuoteItemProduct {
   final String? warrantyUnit;
 
   final QuoteItemSourceType sourceType;
+  final double supplierMinPurchase;
 
   QuoteItemProduct({
     required this.id,
@@ -60,6 +61,7 @@ class QuoteItemProduct {
     this.supplierName,
     required this.sourceType,
     required this.groupIndex,
+    this.supplierMinPurchase = 0.0,
   });
 
   factory QuoteItemProduct.fromJson(Map<String, dynamic> json) {
@@ -108,7 +110,22 @@ class QuoteItemProduct {
       supplierName: _extractSupplierName(json),
       sourceType: determineSourceType(),
       groupIndex: json['group_index'] as int? ?? 0,
+      supplierMinPurchase: _extractSupplierMinPurchase(json),
     );
+  }
+
+  static double _extractSupplierMinPurchase(Map<String, dynamic> json) {
+    final sbs = json['supplier_branch_stock'];
+    if (sbs is Map<String, dynamic>) {
+      final sb = sbs['supplier_branches'];
+      if (sb is Map<String, dynamic>) {
+        final supplier = sb['suppliers'];
+        if (supplier is Map<String, dynamic>) {
+          return (supplier['minimum_purchase_amount'] as num?)?.toDouble() ?? 0.0;
+        }
+      }
+    }
+    return 0.0;
   }
 
   static String? _extractSupplierName(Map<String, dynamic> json) {
@@ -194,6 +211,7 @@ class QuoteItemProduct {
     String? supplierName,
     QuoteItemSourceType? sourceType,
     int? groupIndex,
+    double? supplierMinPurchase,
   }) {
     return QuoteItemProduct(
       id: id ?? this.id,
@@ -229,6 +247,7 @@ class QuoteItemProduct {
       supplierName: supplierName ?? this.supplierName,
       sourceType: sourceType ?? this.sourceType,
       groupIndex: groupIndex ?? this.groupIndex,
+      supplierMinPurchase: supplierMinPurchase ?? this.supplierMinPurchase,
     );
   }
 }

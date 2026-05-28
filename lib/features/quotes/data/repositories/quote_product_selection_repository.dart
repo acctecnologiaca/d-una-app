@@ -9,9 +9,11 @@ class QuoteProductSelectionRepository {
 
   QuoteProductSelectionRepository(this._supabase);
 
-  Future<List<QuoteAggregatedProduct>> getQuoteProducts([
+  Future<List<QuoteAggregatedProduct>> getQuoteProducts({
     ProductSearchParams? params,
-  ]) async {
+    int? offset,
+    int? limit,
+  }) async {
     final Map<String, dynamic> rpcParams = {};
 
     if (params != null) {
@@ -33,10 +35,15 @@ class QuoteProductSelectionRepository {
       }
     }
 
-    final response = await _supabase.rpc(
+    final query = _supabase.rpc(
       'get_quote_products',
       params: rpcParams.isNotEmpty ? rpcParams : null,
     );
+
+    final response = (offset != null && limit != null)
+        ? await query.range(offset, offset + limit - 1)
+        : await query;
+
     return (response as List)
         .map((item) => QuoteAggregatedProduct.fromMap(item))
         .toList();
