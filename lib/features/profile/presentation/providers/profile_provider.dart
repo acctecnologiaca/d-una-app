@@ -125,6 +125,16 @@ final shippingMethodsProvider =
         }
 
         try {
+          // Fetch global (system) methods once
+          final globalMethods = await supabase
+              .from('shipping_methods')
+              .select()
+              .isFilter('user_id', null)
+              .order('created_at', ascending: true);
+          final globalList = globalMethods
+              .map((json) => ShippingMethod.fromJson(json))
+              .toList();
+
           final stream = supabase
               .from('shipping_methods')
               .stream(primaryKey: ['id'])
@@ -133,7 +143,9 @@ final shippingMethodsProvider =
               .order('created_at', ascending: true);
 
           await for (final data in stream) {
-            yield data.map((json) => ShippingMethod.fromJson(json)).toList();
+            final userList = data.map((json) => ShippingMethod.fromJson(json)).toList();
+            // Yield user methods first, then system methods at the end
+            yield [...userList, ...globalList];
           }
           break;
         } on RealtimeSubscribeException catch (e) {

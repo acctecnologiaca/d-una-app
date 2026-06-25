@@ -73,9 +73,14 @@ import '../../features/purchases/presentation/screens/purchases_search_screen.da
 import '../../features/settings/presentation/screens/email_templates_list_screen.dart';
 import '../../features/settings/presentation/screens/edit_email_template_screen.dart';
 import '../../features/settings/data/models/email_template.dart';
-import '../../features/supplier_orders/presentation/screens/supplier_orders_list_screen.dart';
-import '../../features/supplier_orders/presentation/screens/supplier_order_details_screen.dart';
-import '../../features/supplier_orders/presentation/screens/create_supplier_order_screen.dart';
+import '../../features/supplier_orders/presentation/supplier_orders_list/screens/supplier_orders_list_screen.dart';
+import '../../features/supplier_orders/presentation/view_supplier_order/screens/supplier_order_details_screen.dart';
+import '../../features/supplier_orders/presentation/create_supplier_order/screens/create_supplier_order_screen.dart';
+import '../../features/supplier_orders/presentation/supplier_orders_list/screens/supplier_orders_search_screen.dart';
+import '../../features/supplier_orders/presentation/create_supplier_order/screens/select_supplier_order_product_screen.dart';
+import '../../features/supplier_orders/presentation/create_supplier_order/screens/supplier_order_product_search_screen.dart';
+import '../../features/supplier_orders/presentation/create_supplier_order/screens/supplier_order_product_branches_screen.dart';
+import '../../features/portfolio/domain/models/aggregated_product.dart';
 
 import '../router/router_notifier.dart';
 import '../../shared/screens/pdf_preview_screen.dart';
@@ -578,8 +583,50 @@ final routerProvider = Provider<GoRouter>((ref) {
       builder: (context, state) => const SupplierOrdersListScreen(),
       routes: [
         GoRoute(
+          path: 'search',
+          builder: (context, state) => const SupplierOrdersSearchScreen(),
+        ),
+        GoRoute(
           path: 'create',
           builder: (context, state) => const CreateSupplierOrderScreen(),
+          routes: [
+            GoRoute(
+              path: 'select-product',
+              parentNavigatorKey: rootNavigatorKey,
+              builder: (context, state) => const SelectSupplierOrderProductScreen(),
+              routes: [
+                GoRoute(
+                  path: 'search',
+                  parentNavigatorKey: rootNavigatorKey,
+                  builder: (context, state) {
+                    final initialQuery = state.extra as String?;
+                    return SupplierOrderProductSearchScreen(
+                      initialQuery: initialQuery,
+                    );
+                  },
+                ),
+                GoRoute(
+                  path: 'branches',
+                  parentNavigatorKey: rootNavigatorKey,
+                  builder: (context, state) {
+                    if (state.extra is AggregatedProduct) {
+                      return SupplierOrderProductBranchesScreen(
+                        product: state.extra as AggregatedProduct,
+                      );
+                    } else if (state.extra is Map<String, dynamic>) {
+                      final map = state.extra as Map<String, dynamic>;
+                      return SupplierOrderProductBranchesScreen(
+                        product: map['product'] as AggregatedProduct,
+                        initialSelections: map['initialSelections'] as Map<String, double>?,
+                        isEditing: map['isEditing'] as bool? ?? false,
+                      );
+                    }
+                    return const SizedBox.shrink();
+                  },
+                ),
+              ],
+            ),
+          ],
         ),
         GoRoute(
           path: 'edit/:id',

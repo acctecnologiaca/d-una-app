@@ -10,6 +10,7 @@ class Supplier extends Equatable {
   final List<String> allowedVerificationTypes;
   final Map<String, dynamic> contactInfo;
   final double minimumPurchaseAmount;
+  final String? legalName;
 
   const Supplier({
     required this.id,
@@ -21,9 +22,16 @@ class Supplier extends Equatable {
     this.allowedVerificationTypes = const [],
     this.contactInfo = const {},
     this.minimumPurchaseAmount = 0.0,
+    this.legalName,
   });
 
   factory Supplier.fromJson(Map<String, dynamic> json) {
+    double parseDouble(dynamic value) {
+      if (value is num) return value.toDouble();
+      if (value is String) return double.tryParse(value) ?? 0.0;
+      return 0.0;
+    }
+
     return Supplier(
       id: json['id'],
       name: json['name'],
@@ -37,7 +45,8 @@ class Supplier extends Equatable {
               .toList() ??
           const [],
       contactInfo: json['contact_info'] ?? {},
-      minimumPurchaseAmount: (json['minimum_purchase_amount'] as num?)?.toDouble() ?? 0.0,
+      minimumPurchaseAmount: parseDouble(json['minimum_purchase_amount']),
+      legalName: json['legal_name'],
     );
   }
 
@@ -56,5 +65,6 @@ class Supplier extends Equatable {
     allowedVerificationTypes,
     contactInfo,
     minimumPurchaseAmount,
+    legalName,
   ];
 }

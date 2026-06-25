@@ -96,59 +96,95 @@ class _ShippingMethodsScreenState extends ConsumerState<ShippingMethodsScreen> {
           emptyListMessage: 'No hay método de envío agregado',
           itemBuilder: (context, method) {
             final isPrimary = method.isPrimary;
+            final isSystemMethod = method.isSystem;
 
             final company = companies
                 .where((c) => c.id == method.companyId)
                 .firstOrNull;
-            final companyName = company?.displayName ?? 'Desconocida';
+            final companyName = isSystemMethod 
+                ? 'Método del sistema'
+                : (company?.displayName ?? 'Desconocida');
 
-            return StandardListItem(
-              onTap: () async {
-                await context.push(
-                  '/settings/shipping-methods/edit',
-                  extra: method,
-                );
-              },
-              title: method.label,
-              titleTrailing: isPrimary
-                  ? Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 8,
-                        vertical: 2,
-                      ),
-                      decoration: BoxDecoration(
-                        color: Colors.orange.withValues(alpha: 0.2),
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: Text(
-                        'P',
-                        style: TextStyle(
-                          color: Colors.orange.shade800,
-                          fontSize: 12,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    )
-                  : null,
-              subtitle: Text(
-                companyName,
-                style: textTheme.bodyMedium?.copyWith(
-                  color: colors.onSurfaceVariant,
-                ),
-                overflow: TextOverflow.ellipsis,
-              ),
-              trailing: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  IconButton(
-                    icon: const Icon(Icons.close, size: 20),
+            return Opacity(
+              opacity: isSystemMethod ? 0.5 : 1.0,
+              child: StandardListItem(
+                onTap: isSystemMethod
+                    ? () {
+                        ScaffoldMessenger.of(context)
+                          ..hideCurrentSnackBar()
+                          ..showSnackBar(
+                            SnackBar(
+                              duration: const Duration(seconds: 5),
+                              content: Row(
+                                children: [
+                                  const Expanded(
+                                    child: Text(
+                                      'Este es un método del sistema y no puede ser modificado ni eliminado.',
+                                      style: TextStyle(fontSize: 13),
+                                    ),
+                                  ),
+                                  IconButton(
+                                    icon: const Icon(Icons.close, color: Colors.white),
+                                    padding: EdgeInsets.zero,
+                                    constraints: const BoxConstraints(),
+                                    onPressed: () => ScaffoldMessenger.of(context).hideCurrentSnackBar(),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          );
+                      }
+                    : () async {
+                        await context.push(
+                          '/settings/shipping-methods/edit',
+                          extra: method,
+                        );
+                      },
+                title: method.label,
+                titleTrailing: isSystemMethod
+                    ? Icon(Icons.lock_outline, color: colors.primary, size: 20)
+                    : (isPrimary
+                        ? Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 8,
+                              vertical: 2,
+                            ),
+                            decoration: BoxDecoration(
+                              color: Colors.orange.withValues(alpha: 0.2),
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: Text(
+                              'P',
+                              style: TextStyle(
+                                color: Colors.orange.shade800,
+                                fontSize: 12,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          )
+                        : null),
+                subtitle: Text(
+                  companyName,
+                  style: textTheme.bodyMedium?.copyWith(
                     color: colors.onSurfaceVariant,
-                    onPressed: () => _removeMethod(method),
-                    splashRadius: 20,
-                    padding: EdgeInsets.zero,
-                    constraints: const BoxConstraints(),
                   ),
-                ],
+                  overflow: TextOverflow.ellipsis,
+                ),
+                trailing: isSystemMethod
+                    ? null
+                    : Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          IconButton(
+                            icon: const Icon(Icons.close, size: 20),
+                            color: colors.onSurfaceVariant,
+                            onPressed: () => _removeMethod(method),
+                            splashRadius: 20,
+                            padding: EdgeInsets.zero,
+                            constraints: const BoxConstraints(),
+                          ),
+                        ],
+                      ),
               ),
             );
           },

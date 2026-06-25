@@ -2,9 +2,9 @@ import 'shipping_company.dart';
 
 class ShippingMethod {
   final String id;
-  final String userId;
+  final String? userId;
   final String label;
-  final String companyId;
+  final String? companyId;
   final ShippingCompany? company;
   final String deliveryOption;
   final String? branchCode;
@@ -18,9 +18,9 @@ class ShippingMethod {
 
   ShippingMethod({
     required this.id,
-    required this.userId,
+    this.userId,
     required this.label,
-    required this.companyId,
+    this.companyId,
     this.company,
     required this.deliveryOption,
     this.branchCode,
@@ -33,20 +33,25 @@ class ShippingMethod {
     this.createdAt,
   });
 
+  /// A system-level method (e.g. "Retiro en persona") has no user owner.
+  bool get isSystem => userId == null;
+
   factory ShippingMethod.fromJson(Map<String, dynamic> json) {
     return ShippingMethod(
       id: json['id'] as String,
-      userId: json['user_id'] as String,
+      userId: json['user_id'] as String?,
       label: json['label'] as String,
-      companyId: json['company_id'] as String,
+      companyId: json['company_id'] as String?,
       company: json['company'] != null
           ? (json['company'] is String
-                ? ShippingCompany(
-                    id: json['company_id'],
-                    legalName: json['company'],
-                    taxId: 'N/A',
-                    name: json['company'],
-                  ) // Handles legacy data during migration if needed
+                ? (json['company_id'] != null 
+                    ? ShippingCompany(
+                        id: json['company_id'],
+                        legalName: json['company'],
+                        taxId: 'N/A',
+                        name: json['company'],
+                      )
+                    : null) // Handles legacy data during migration if needed
                 : ShippingCompany.fromJson(
                     json['company'] as Map<String, dynamic>,
                   ))

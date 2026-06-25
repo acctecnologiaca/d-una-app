@@ -23,7 +23,7 @@ import 'package:d_una_app/core/pdf/templates/quote_pdf_template.dart';
 import 'package:d_una_app/features/profile/presentation/providers/profile_provider.dart';
 import 'package:pdf/pdf.dart';
 import '../../../../../shared/utils/string_utils.dart';
-import '../../../../supplier_orders/presentation/providers/supplier_orders_providers.dart';
+import '../../../../supplier_orders/presentation/supplier_orders_list/providers/supplier_orders_providers.dart';
 import '../widgets/send_email_bottom_sheet.dart';
 import '../widgets/send_whatsapp_bottom_sheet.dart';
 

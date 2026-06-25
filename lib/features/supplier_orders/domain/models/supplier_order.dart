@@ -16,6 +16,7 @@ class SupplierOrder extends Equatable {
   final double tax;
   final double total;
   final String? invoicePhotoUrl;
+  final bool isArchived;
   final DateTime createdAt;
   final DateTime updatedAt;
 
@@ -40,6 +41,7 @@ class SupplierOrder extends Equatable {
     this.tax = 0.0,
     this.total = 0.0,
     this.invoicePhotoUrl,
+    this.isArchived = false,
     required this.createdAt,
     required this.updatedAt,
     this.supplierName = 'Desconocido',
@@ -64,6 +66,7 @@ class SupplierOrder extends Equatable {
     tax,
     total,
     invoicePhotoUrl,
+    isArchived,
     createdAt,
     updatedAt,
     supplierName,

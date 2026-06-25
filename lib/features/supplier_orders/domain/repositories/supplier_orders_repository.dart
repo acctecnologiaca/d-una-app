@@ -9,6 +9,7 @@ abstract class SupplierOrdersRepository {
     int limit = 25,
     String? searchQuery,
     String? statusFilter,
+    bool includeArchived = false,
   });
   Future<({SupplierOrder order, List<SupplierOrderItem> items})> getSupplierOrderDetails(String id);
   Future<void> createSupplierOrder(SupplierOrder order, List<SupplierOrderItem> items);
@@ -25,4 +26,10 @@ abstract class SupplierOrdersRepository {
 
   // Batch generation from quote. Returns map with 'generatedCount' and 'skippedSuppliers'
   Future<Map<String, dynamic>> batchGenerateFromQuote(String quoteId);
+
+  /// Returns the last order number for the current user, or null if none.
+  Future<String?> getLastOrderNumber();
+
+  Future<void> archiveSupplierOrder(String id, bool isArchived);
+  Future<void> updateSupplierOrderStatus(String id, String status);
 }

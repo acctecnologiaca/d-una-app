@@ -8,12 +8,14 @@ class SupplierOrderItem extends Equatable {
   final String? brand;
   final String? model;
   final String uom;
+  final String? uomIconName;
   final double quantity;
   final double unitPrice;
 
   // Real-time validation fields (calculated on the fly for warnings)
   final double? currentSupplierPrice;
   final double? currentSupplierStock;
+  final String? supplierBranchStockId;
 
   const SupplierOrderItem({
     required this.id,
@@ -23,10 +25,12 @@ class SupplierOrderItem extends Equatable {
     this.brand,
     this.model,
     required this.uom,
+    this.uomIconName,
     required this.quantity,
     required this.unitPrice,
     this.currentSupplierPrice,
     this.currentSupplierStock,
+    this.supplierBranchStockId,
   });
 
   double get total => quantity * unitPrice;
@@ -50,9 +54,11 @@ class SupplierOrderItem extends Equatable {
     brand,
     model,
     uom,
+    uomIconName,
     quantity,
     unitPrice,
     currentSupplierPrice,
     currentSupplierStock,
+    supplierBranchStockId,
   ];
 }

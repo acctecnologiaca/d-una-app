@@ -85,18 +85,7 @@ class QuoteSummaryTab extends ConsumerWidget {
           _buildClientCard(context, state),
           const SizedBox(height: 16),
 
-          // 2. Desglose por Proveedor Section
-          if (state.supplierCostBreakdown.isNotEmpty) ...[
-            _buildSectionHeader(
-              context,
-              Icons.warehouse_outlined,
-              'Desglose por proveedor',
-            ),
-            _buildSupplierBreakdownCard(context, state.supplierCostBreakdown),
-            const SizedBox(height: 16),
-          ],
-
-          // 3. Cotización Section
+          // 2. Cotización Section
           _buildSectionHeader(context, Icons.calculate, 'Cotización'),
           _buildQuoteCard(
             context,
@@ -112,6 +101,13 @@ class QuoteSummaryTab extends ConsumerWidget {
             totalGroupedProducts,
           ),
           const SizedBox(height: 16),
+
+          // 3. Desglose por Proveedor Section
+          if (state.supplierCostBreakdown.isNotEmpty) ...[
+            _buildSectionHeader(context, Icons.warehouse, 'Proveedores'),
+            _buildSupplierBreakdownCard(context, state.supplierCostBreakdown),
+            const SizedBox(height: 16),
+          ],
 
           // 4. Rentabilidad Section
           _buildSectionHeader(context, Icons.bar_chart, 'Rentabilidad'),
@@ -500,7 +496,7 @@ class QuoteSummaryTab extends ConsumerWidget {
                 child: TextButton.icon(
                   onPressed: () => onNavigateToTab(0), // Products Tab
                   icon: const Icon(Icons.arrow_forward_ios, size: 14),
-                  label: const Text('Ver todos...'),
+                  label: const Text('Ir a productos'),
                   style: TextButton.styleFrom(
                     padding: const EdgeInsets.symmetric(
                       horizontal: 8,
@@ -549,7 +545,7 @@ class QuoteSummaryTab extends ConsumerWidget {
                 child: TextButton.icon(
                   onPressed: () => onNavigateToTab(1), // Services Tab
                   icon: const Icon(Icons.arrow_forward_ios, size: 14),
-                  label: const Text('Ver todos...'),
+                  label: const Text('Ir a servicios'),
                   style: TextButton.styleFrom(
                     padding: const EdgeInsets.symmetric(
                       horizontal: 8,
@@ -606,6 +602,7 @@ class QuoteSummaryTab extends ConsumerWidget {
                   CurrencyFormatter.format(finalTotal),
                   style: textTheme.headlineSmall?.copyWith(
                     fontWeight: FontWeight.w900,
+                    color: colors.primary,
                   ),
                 ),
               ],

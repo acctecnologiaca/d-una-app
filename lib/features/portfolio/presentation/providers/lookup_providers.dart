@@ -85,6 +85,12 @@ final allSuppliersProvider = FutureProvider<List<UnaffiliatedSupplier>>((
   return ref.watch(lookupRepositoryProvider).getAllSuppliers();
 });
 
+final affiliatedSuppliersProvider = FutureProvider<List<UnaffiliatedSupplier>>((
+  ref,
+) async {
+  return ref.watch(lookupRepositoryProvider).getAffiliatedSuppliers();
+});
+
 final commercialConditionsProvider = FutureProvider<List<CommercialCondition>>((
   ref,
 ) async {
@@ -134,4 +140,8 @@ final deliveryTimesForExecutionProvider = FutureProvider<List<DeliveryTime>>((
   return allTimes
       .where((dt) => dt.type == 'execution' || dt.type == 'both')
       .toList();
+});
+
+final paymentMethodsProvider = FutureProvider<List<String>>((ref) async {
+  return ref.watch(lookupRepositoryProvider).getPaymentMethods();
 });

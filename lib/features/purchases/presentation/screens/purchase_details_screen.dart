@@ -47,7 +47,8 @@ class _PurchaseDetailsScreenState extends ConsumerState<PurchaseDetailsScreen>
     // de lo contrario en "Resúmen" (index 2)
     _tabController = TabController(
       length: 3,
-      initialIndex: (widget.startInEditMode || widget.highlightProductId != null) ? 1 : 2,
+      initialIndex:
+          (widget.startInEditMode || widget.highlightProductId != null) ? 1 : 2,
       vsync: this,
     );
     _tabController.addListener(() {
@@ -90,12 +91,12 @@ class _PurchaseDetailsScreenState extends ConsumerState<PurchaseDetailsScreen>
 
     return asyncData.when(
       loading: () => Scaffold(
-        appBar: const StandardAppBar(title: 'Cargando compra...'),
+        appBar: const StandardAppBar(title: 'Compra', subtitle: 'Cargando...'),
         body: const Center(child: CircularProgressIndicator()),
       ),
       error: (error, stack) => Scaffold(
-        appBar: const StandardAppBar(title: 'Error'),
-        body: Center(child: Text('Error: $error')),
+        appBar: const StandardAppBar(title: 'Compra'),
+        body: Center(child: Text('Error al cargar los detalles: $error')),
       ),
       data: (data) {
         final purchase = data.purchase;
@@ -107,7 +108,9 @@ class _PurchaseDetailsScreenState extends ConsumerState<PurchaseDetailsScreen>
           final editState = ref.read(addPurchaseProvider);
           if (editState.purchaseId != widget.purchaseId) {
             WidgetsBinding.instance.addPostFrameCallback((_) {
-              ref.read(addPurchaseProvider.notifier).loadFromDetails(
+              ref
+                  .read(addPurchaseProvider.notifier)
+                  .loadFromDetails(
                     data.purchase,
                     data.items,
                     data.serials,
@@ -179,7 +182,8 @@ class _PurchaseDetailsScreenState extends ConsumerState<PurchaseDetailsScreen>
                                 'Se perderán todos los cambios realizados en esta compra.',
                             actions: [
                               TextButton(
-                                onPressed: () => Navigator.of(context).pop(false),
+                                onPressed: () =>
+                                    Navigator.of(context).pop(false),
                                 child: const Text('Continuar editando'),
                               ),
                               FilledButton(
@@ -241,7 +245,9 @@ class _PurchaseDetailsScreenState extends ConsumerState<PurchaseDetailsScreen>
               children: _isEditing
                   ? [
                       const AddPurchaseDetailsTab(),
-                      AddPurchaseProductsTab(highlightProductId: widget.highlightProductId),
+                      AddPurchaseProductsTab(
+                        highlightProductId: widget.highlightProductId,
+                      ),
                       AddPurchaseSummaryTab(
                         onNavigateToTab: (index) =>
                             _tabController.animateTo(index),

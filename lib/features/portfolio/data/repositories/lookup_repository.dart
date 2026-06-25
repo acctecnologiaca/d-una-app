@@ -240,8 +240,21 @@ class LookupRepository {
     final response = await _client
         .from('suppliers')
         .select(
-          'id, name, legal_name, phone, email, tax_id, user_id, is_verified',
+          'id, name, legal_name, phone, email, tax_id, user_id, is_verified, minimum_purchase_amount',
         )
+        .order('name');
+    return (response as List)
+        .map((json) => UnaffiliatedSupplier.fromJson(json))
+        .toList();
+  }
+
+  Future<List<UnaffiliatedSupplier>> getAffiliatedSuppliers() async {
+    final response = await _client
+        .from('suppliers')
+        .select(
+          'id, name, legal_name, phone, email, tax_id, user_id, is_verified, minimum_purchase_amount',
+        )
+        .eq('is_affiliated', true)
         .order('name');
     return (response as List)
         .map((json) => UnaffiliatedSupplier.fromJson(json))
@@ -252,7 +265,7 @@ class LookupRepository {
     final response = await _client
         .from('suppliers')
         .select(
-          'id, name, legal_name, phone, email, tax_id, user_id, is_verified',
+          'id, name, legal_name, phone, email, tax_id, user_id, is_verified, minimum_purchase_amount',
         )
         .eq('is_affiliated', false)
         .order('name');
@@ -507,5 +520,13 @@ class LookupRepository {
         'La observación no pudo ser eliminada (posible bloqueo por permisos RLS o uso en otros registros).',
       );
     }
+  }
+
+  Future<List<String>> getPaymentMethods() async {
+    final response = await _client
+        .from('payment_methods')
+        .select('name')
+        .order('name', ascending: true);
+    return (response as List).map((e) => e['name'] as String).toList();
   }
 }

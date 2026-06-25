@@ -96,18 +96,7 @@ class ViewQuoteSummaryTab extends ConsumerWidget {
           _buildClientCard(context, quote.clientName, quote.contactName),
           const SizedBox(height: 16),
 
-          // 2. Desglose por Proveedor Section
-          if (state.supplierCostBreakdown.isNotEmpty) ...[
-            _buildSectionHeader(
-              context,
-              Icons.warehouse_outlined,
-              'Desglose por proveedor',
-            ),
-            _buildSupplierBreakdownCard(context, state.supplierCostBreakdown),
-            const SizedBox(height: 16),
-          ],
-
-          // 3. Cotización Section
+          // 2. Cotización Section
           _buildSectionHeader(context, Icons.calculate, 'Cotización'),
           _buildQuoteCard(
             context,
@@ -123,6 +112,13 @@ class ViewQuoteSummaryTab extends ConsumerWidget {
             displayServices,
           ),
           const SizedBox(height: 16),
+
+          // 3. Desglose por Proveedor Section
+          if (state.supplierCostBreakdown.isNotEmpty) ...[
+            _buildSectionHeader(context, Icons.warehouse, 'Proveedores'),
+            _buildSupplierBreakdownCard(context, state.supplierCostBreakdown),
+            const SizedBox(height: 16),
+          ],
 
           // 4. Rentabilidad Section
           _buildSectionHeader(context, Icons.bar_chart, 'Rentabilidad'),
@@ -607,6 +603,7 @@ class ViewQuoteSummaryTab extends ConsumerWidget {
                   CurrencyFormatter.format(finalTotal),
                   style: textTheme.headlineSmall?.copyWith(
                     fontWeight: FontWeight.w900,
+                    color: colors.primary,
                   ),
                 ),
               ],

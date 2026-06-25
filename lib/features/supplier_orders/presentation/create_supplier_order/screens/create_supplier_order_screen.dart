@@ -3,23 +3,23 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../../../shared/widgets/standard_app_bar.dart';
 import '../../../../../shared/widgets/custom_dialog.dart';
-import '../widgets/create_supplier_order_details_tab.dart';
-import '../widgets/create_supplier_order_products_tab.dart';
-import '../widgets/create_supplier_order_summary_tab.dart';
+import '../providers/create_supplier_order_provider.dart';
+import '../tabs/create_supplier_order_details_tab.dart';
+import '../tabs/create_supplier_order_products_tab.dart';
+import '../tabs/create_supplier_order_summary_tab.dart';
 
 class CreateSupplierOrderScreen extends ConsumerStatefulWidget {
   final bool editMode;
 
-  const CreateSupplierOrderScreen({
-    super.key,
-    this.editMode = false,
-  });
+  const CreateSupplierOrderScreen({super.key, this.editMode = false});
 
   @override
-  ConsumerState<CreateSupplierOrderScreen> createState() => _CreateSupplierOrderScreenState();
+  ConsumerState<CreateSupplierOrderScreen> createState() =>
+      _CreateSupplierOrderScreenState();
 }
 
-class _CreateSupplierOrderScreenState extends ConsumerState<CreateSupplierOrderScreen>
+class _CreateSupplierOrderScreenState
+    extends ConsumerState<CreateSupplierOrderScreen>
     with SingleTickerProviderStateMixin {
   late TabController _tabController;
 
@@ -43,6 +43,7 @@ class _CreateSupplierOrderScreenState extends ConsumerState<CreateSupplierOrderS
   @override
   Widget build(BuildContext context) {
     final colors = Theme.of(context).colorScheme;
+    final state = ref.watch(createSupplierOrderProvider);
 
     return PopScope(
       canPop: false,
@@ -53,7 +54,8 @@ class _CreateSupplierOrderScreenState extends ConsumerState<CreateSupplierOrderS
           context: context,
           dialog: CustomDialog.destructive(
             title: '¿Descartar cambios?',
-            contentText: 'Se perderán todos los datos y productos ingresados en este borrador.',
+            contentText:
+                'Se perderán todos los datos y productos ingresados en este borrador.',
             actions: [
               TextButton(
                 onPressed: () => Navigator.of(context).pop(false),
@@ -78,7 +80,12 @@ class _CreateSupplierOrderScreenState extends ConsumerState<CreateSupplierOrderS
       child: Scaffold(
         backgroundColor: colors.surface,
         appBar: StandardAppBar(
-          title: widget.editMode ? 'Modificar Orden' : 'Nueva Orden de Compra',
+          title: widget.editMode ? 'Modificar orden' : 'Nueva orden de compra',
+          subtitle: state.supplierName != null
+              ? '#${state.currentOrderNumber} (${state.supplierName})'
+              : (state.currentOrderNumber != null
+                  ? '#${state.currentOrderNumber}'
+                  : 'Cargando...'),
           bottom: TabBar(
             controller: _tabController,
             labelColor: colors.primary,
@@ -88,7 +95,7 @@ class _CreateSupplierOrderScreenState extends ConsumerState<CreateSupplierOrderS
             tabs: const [
               Tab(text: 'Detalles'),
               Tab(text: 'Productos'),
-              Tab(text: 'Resumen'),
+              Tab(text: 'Resúmen'),
             ],
           ),
         ),

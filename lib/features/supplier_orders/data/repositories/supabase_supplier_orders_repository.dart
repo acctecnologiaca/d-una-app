@@ -22,7 +22,7 @@ class SupabaseSupplierOrdersRepository implements SupplierOrdersRepository {
       supplier_branches(name),
       shipping_methods(label),
       collaborators(full_name)
-    ''').eq('user_id', currentUserId).order('date', ascending: false).order('created_at', ascending: false);
+    ''').eq('user_id', currentUserId).eq('is_archived', false).order('date', ascending: false).order('created_at', ascending: false);
 
     return (response as List).map((json) => SupplierOrderDto.fromJson(json)).toList();
   }
@@ -33,6 +33,7 @@ class SupabaseSupplierOrdersRepository implements SupplierOrdersRepository {
     int limit = 25,
     String? searchQuery,
     String? statusFilter,
+    bool includeArchived = false,
   }) async {
     final currentUserId = _supabase.auth.currentUser?.id;
     if (currentUserId == null) throw Exception('Usuario no autenticado');
@@ -68,12 +69,38 @@ class SupabaseSupplierOrdersRepository implements SupplierOrdersRepository {
       }
     }
 
+    if (!includeArchived) {
+      query = query.eq('is_archived', false);
+    }
+
     final response = await query
         .order('date', ascending: false)
         .order('created_at', ascending: false)
         .range(offset, offset + limit - 1);
 
     return (response as List).map((json) => SupplierOrderDto.fromJson(json)).toList();
+  }
+
+  @override
+  Future<void> archiveSupplierOrder(String id, bool isArchived) async {
+    final currentUserId = _supabase.auth.currentUser?.id;
+    if (currentUserId == null) throw Exception('Usuario no autenticado');
+    await _supabase
+        .from('supplier_orders')
+        .update({'is_archived': isArchived})
+        .eq('id', id)
+        .eq('user_id', currentUserId);
+  }
+
+  @override
+  Future<void> updateSupplierOrderStatus(String id, String status) async {
+    final currentUserId = _supabase.auth.currentUser?.id;
+    if (currentUserId == null) throw Exception('Usuario no autenticado');
+    await _supabase
+        .from('supplier_orders')
+        .update({'status': status})
+        .eq('id', id)
+        .eq('user_id', currentUserId);
   }
 
   @override
@@ -104,13 +131,17 @@ class SupabaseSupplierOrdersRepository implements SupplierOrdersRepository {
         brand: json['brand'],
         model: json['model'],
         uom: json['uom'] ?? 'Ud',
+        uomIconName: json['uom_icon_name'],
         quantity: (json['quantity'] ?? 0.0).toDouble(),
         unitPrice: (json['unit_price'] ?? 0.0).toDouble(),
+        supplierBranchStockId: json['supplier_branch_stock_id'],
       );
     }).toList();
 
-    // 3. Live check stock & price if status is sent or resent and supplierBranchId is not null
-    if ((order.status == SupplierOrderStatus.sent || order.status == SupplierOrderStatus.resent) && order.supplierBranchId != null) {
+    // 3. Live check stock & price if status is not finalized/cancelled and supplierBranchId is not null
+    if (order.status != SupplierOrderStatus.finalized &&
+        order.status != SupplierOrderStatus.cancelled &&
+        order.supplierBranchId != null) {
       final models = itemsList.map((e) => e.model).whereType<String>().toList();
       if (models.isNotEmpty) {
         try {
@@ -144,10 +175,12 @@ class SupabaseSupplierOrdersRepository implements SupplierOrdersRepository {
                 brand: item.brand,
                 model: item.model,
                 uom: item.uom,
+                uomIconName: item.uomIconName,
                 quantity: item.quantity,
                 unitPrice: item.unitPrice,
                 currentSupplierPrice: match.price,
                 currentSupplierStock: match.quantity,
+                supplierBranchStockId: item.supplierBranchStockId,
               );
             }
             return item;
@@ -181,8 +214,10 @@ class SupabaseSupplierOrdersRepository implements SupplierOrdersRepository {
         'brand': item.brand,
         'model': item.model,
         'uom': item.uom,
+        'uom_icon_name': item.uomIconName,
         'quantity': item.quantity,
         'unit_price': item.unitPrice,
+        'supplier_branch_stock_id': item.supplierBranchStockId,
       }).toList();
       await _supabase.from('supplier_order_items').insert(itemsToInsert);
     }
@@ -208,8 +243,10 @@ class SupabaseSupplierOrdersRepository implements SupplierOrdersRepository {
         'brand': item.brand,
         'model': item.model,
         'uom': item.uom,
+        'uom_icon_name': item.uomIconName,
         'quantity': item.quantity,
         'unit_price': item.unitPrice,
+        'supplier_branch_stock_id': item.supplierBranchStockId,
       }).toList();
       await _supabase.from('supplier_order_items').insert(itemsToInsert);
     }
@@ -380,6 +417,19 @@ class SupabaseSupplierOrdersRepository implements SupplierOrdersRepository {
     final currentUserId = _supabase.auth.currentUser?.id;
     if (currentUserId == null) throw Exception('Usuario no autenticado');
 
+    // Get user's configured tax rate (VAT/IVA) from financial_parameters
+    double taxRate = 0.0;
+    try {
+      final paramsRes = await _supabase
+          .from('financial_parameters')
+          .select('tax_rate')
+          .eq('user_id', currentUserId)
+          .maybeSingle();
+      if (paramsRes != null) {
+        taxRate = (paramsRes['tax_rate'] as num).toDouble();
+      }
+    } catch (_) {}
+
     final quoteItemsResponse = await _supabase.from('quote_items_products').select('''
       *,
       supplier_branch_stock(branch_id, supplier_branches(supplier_id, suppliers(name, legal_name)))
@@ -407,6 +457,7 @@ class SupabaseSupplierOrdersRepository implements SupplierOrdersRepository {
       final brand = qi['brand'] as String?;
       final model = qi['model'] as String?;
       final uom = qi['uom'] as String? ?? 'Ud';
+      final uomIconName = qi['uom_icon_name'] as String?;
       final quantity = (qi['quantity'] ?? 0.0).toDouble();
       final costPrice = (qi['cost_price'] ?? 0.0).toDouble();
       final productId = qi['product_id'] as String?;
@@ -467,9 +518,11 @@ class SupabaseSupplierOrdersRepository implements SupplierOrdersRepository {
         'brand': brand,
         'model': model,
         'uom': uom,
+        'uom_icon_name': uomIconName,
         'quantity': quantity,
         'unit_price': costPrice,
         'branch_id': branchId,
+        'supplier_branch_stock_id': qi['supplier_branch_stock_id'],
       });
     }
 
@@ -486,6 +539,9 @@ class SupabaseSupplierOrdersRepository implements SupplierOrdersRepository {
         subtotal += (item['quantity'] as double) * (item['unit_price'] as double);
       }
 
+      final tax = subtotal * (taxRate / 100);
+      final total = subtotal + tax;
+
       final newOrderResponse = await _supabase.from('supplier_orders').insert({
         'user_id': currentUserId,
         'supplier_id': sId,
@@ -495,8 +551,8 @@ class SupabaseSupplierOrdersRepository implements SupplierOrdersRepository {
         'date': DateTime.now().toIso8601String().split('T')[0],
         'status': SupplierOrderStatus.draft.dbValue,
         'subtotal': subtotal,
-        'tax': 0.0,
-        'total': subtotal,
+        'tax': tax,
+        'total': total,
       }).select('id').single();
 
       final newOrderId = newOrderResponse['id'] as String;
@@ -508,8 +564,10 @@ class SupabaseSupplierOrdersRepository implements SupplierOrdersRepository {
         'brand': item['brand'],
         'model': item['model'],
         'uom': item['uom'],
+        'uom_icon_name': item['uom_icon_name'],
         'quantity': item['quantity'],
         'unit_price': item['unit_price'],
+        'supplier_branch_stock_id': item['supplier_branch_stock_id'],
       }).toList();
 
       await _supabase.from('supplier_order_items').insert(itemsToInsert);
@@ -520,5 +578,21 @@ class SupabaseSupplierOrdersRepository implements SupplierOrdersRepository {
       'generatedCount': generatedCount,
       'skippedSuppliers': skippedSuppliers,
     };
+  }
+
+  @override
+  Future<String?> getLastOrderNumber() async {
+    final currentUserId = _supabase.auth.currentUser?.id;
+    if (currentUserId == null) return null;
+
+    final response = await _supabase
+        .from('supplier_orders')
+        .select('order_number')
+        .eq('user_id', currentUserId)
+        .order('created_at', ascending: false)
+        .limit(1)
+        .maybeSingle();
+
+    return response?['order_number'] as String?;
   }
 }

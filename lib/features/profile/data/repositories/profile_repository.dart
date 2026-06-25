@@ -67,7 +67,7 @@ class ProfileRepository {
         await _supabase
             .from('shipping_methods')
             .update({'is_primary': false})
-            .eq('user_id', method.userId);
+            .eq('user_id', method.userId!);
       }
 
       final json = method.toJson();
@@ -86,7 +86,7 @@ class ProfileRepository {
         await _supabase
             .from('shipping_methods')
             .update({'is_primary': false})
-            .eq('user_id', method.userId);
+            .eq('user_id', method.userId!);
       }
 
       await _supabase

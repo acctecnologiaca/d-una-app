@@ -15,7 +15,7 @@ import '../../../../../core/pdf/templates/quote_pdf_template.dart';
 import '../../domain/models/quote_model.dart';
 import 'providers/quotes_provider.dart';
 import '../create_quote/providers/create_quote_provider.dart';
-import '../../../supplier_orders/presentation/providers/supplier_orders_providers.dart';
+import '../../../supplier_orders/presentation/supplier_orders_list/providers/supplier_orders_providers.dart';
 
 /// Shared action methods for quote multi-selection, used in both
 /// QuotesListScreen and QuotesSearchScreen.

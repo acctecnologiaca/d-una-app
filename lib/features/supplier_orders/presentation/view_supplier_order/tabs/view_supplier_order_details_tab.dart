@@ -1,16 +1,34 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import '../../../../../shared/widgets/info_block.dart';
-import '../../domain/models/supplier_order.dart';
+import '../../../domain/models/supplier_order.dart';
+import 'package:d_una_app/features/portfolio/presentation/providers/suppliers_provider.dart';
+import 'package:d_una_app/features/portfolio/domain/models/supplier_model.dart';
 
-class ViewSupplierOrderDetailsTab extends StatelessWidget {
+class ViewSupplierOrderDetailsTab extends ConsumerWidget {
   final SupplierOrder order;
 
   const ViewSupplierOrderDetailsTab({super.key, required this.order});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final dateFormat = DateFormat('dd/MM/yyyy');
+
+    // Obtener proveedores y resolver nombre formateado
+    final suppliers = ref.watch(suppliersProvider).valueOrNull ?? [];
+    Supplier? matchedSupplier;
+    for (final s in suppliers) {
+      if (s.id == order.supplierId) {
+        matchedSupplier = s;
+        break;
+      }
+    }
+    final supplierDisplayName = matchedSupplier != null
+        ? (matchedSupplier.legalName != null && matchedSupplier.legalName!.isNotEmpty
+            ? '${matchedSupplier.name} (${matchedSupplier.legalName})'
+            : matchedSupplier.name)
+        : order.supplierName;
 
     return Scaffold(
       backgroundColor: Colors.transparent,
@@ -27,7 +45,7 @@ class ViewSupplierOrderDetailsTab extends StatelessWidget {
             InfoBlock.text(
               icon: Icons.warehouse_outlined,
               label: 'Proveedor',
-              value: order.supplierName,
+              value: supplierDisplayName,
             ),
             if (order.branchName != null) ...[
               const SizedBox(height: 24),

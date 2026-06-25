@@ -11,8 +11,8 @@ import '../../../../quotes/presentation/create_quote/widgets/quote_product_sale_
 import 'supplier_product_row.dart';
 import '../../widgets/estimate_price_sheet.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import '../../../../supplier_orders/presentation/providers/create_supplier_order_provider.dart';
-import '../../../../supplier_orders/presentation/providers/supplier_orders_providers.dart';
+import '../../../../supplier_orders/presentation/create_supplier_order/providers/create_supplier_order_provider.dart';
+import '../../../../supplier_orders/presentation/supplier_orders_list/providers/supplier_orders_providers.dart';
 import '../../../../supplier_orders/domain/models/supplier_order.dart';
 import '../../../../supplier_orders/domain/models/supplier_order_status.dart';
 

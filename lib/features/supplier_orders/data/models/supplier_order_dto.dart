@@ -26,6 +26,7 @@ class SupplierOrderDto {
       tax: (json['tax'] ?? 0).toDouble(),
       total: (json['total'] ?? 0).toDouble(),
       invoicePhotoUrl: json['invoice_photo_url'],
+      isArchived: json['is_archived'] as bool? ?? false,
       createdAt: DateTime.parse(json['created_at']),
       updatedAt: DateTime.parse(json['updated_at']),
       supplierName: supplierName ?? 'Desconocido',
@@ -48,6 +49,7 @@ class SupplierOrderDto {
       'tax': order.tax,
       'total': order.total,
       'invoice_photo_url': order.invoicePhotoUrl,
+      'is_archived': order.isArchived,
     };
   }
 }

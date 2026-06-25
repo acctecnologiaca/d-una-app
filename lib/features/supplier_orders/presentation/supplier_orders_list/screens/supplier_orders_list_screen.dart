@@ -9,7 +9,7 @@ import 'package:d_una_app/shared/widgets/empty_list_state.dart';
 import 'package:d_una_app/shared/widgets/paginated_list_view.dart';
 import 'package:d_una_app/shared/widgets/friendly_error_widget.dart';
 import '../providers/supplier_orders_providers.dart';
-import '../providers/create_supplier_order_provider.dart';
+import '../../create_supplier_order/providers/create_supplier_order_provider.dart';
 import '../widgets/supplier_order_card.dart';
 
 class SupplierOrdersListScreen extends ConsumerStatefulWidget {
@@ -38,7 +38,7 @@ class _SupplierOrdersListScreenState
 
     return Scaffold(
       backgroundColor: colors.surface,
-      appBar: const StandardAppBar(title: 'Órdenes de Compra'),
+      appBar: const StandardAppBar(title: 'Órdenes de compra'),
       body: Column(
         children: [
           const SizedBox(height: 12),
@@ -50,7 +50,7 @@ class _SupplierOrdersListScreenState
             ),
             child: CustomSearchBar(
               controller: _searchController,
-              hintText: 'Buscar órdenes...',
+              hintText: 'Buscar...',
               readOnly: true,
               showFilterIcon: true,
               onTap: () {
@@ -72,7 +72,11 @@ class _SupplierOrdersListScreenState
                   onSortChanged: (val) {
                     setState(() => _currentSort = val);
                   },
-                  options: const [SortOption.recent],
+                  options: const [
+                    SortOption.recent,
+                    SortOption.nameAZ,
+                    SortOption.nameZA,
+                  ],
                 ),
               ],
             ),
@@ -104,11 +108,20 @@ class _SupplierOrdersListScreenState
                   }
 
                   var items = state.items;
-                  // Local sorting just in case we add more sorting options
+                  // Local sorting according to selected option
                   if (_currentSort == SortOption.recent) {
-                    // Ordered by date desc (already handled in Supabase mostly, but safe backup)
                     items = List.from(items)
                       ..sort((a, b) => b.date.compareTo(a.date));
+                  } else if (_currentSort == SortOption.nameAZ) {
+                    items = List.from(items)
+                      ..sort((a, b) => a.supplierName
+                          .toLowerCase()
+                          .compareTo(b.supplierName.toLowerCase()));
+                  } else if (_currentSort == SortOption.nameZA) {
+                    items = List.from(items)
+                      ..sort((a, b) => b.supplierName
+                          .toLowerCase()
+                          .compareTo(a.supplierName.toLowerCase()));
                   }
 
                   if (items.isEmpty) {

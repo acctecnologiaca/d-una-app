@@ -11,6 +11,7 @@ class UnaffiliatedSupplier extends Equatable {
   final String? taxId;
   final String? userId;
   final bool isVerified;
+  final double minimumPurchaseAmount;
 
   const UnaffiliatedSupplier({
     required this.id,
@@ -21,9 +22,16 @@ class UnaffiliatedSupplier extends Equatable {
     this.taxId,
     this.userId,
     this.isVerified = false,
+    this.minimumPurchaseAmount = 0.0,
   });
 
   factory UnaffiliatedSupplier.fromJson(Map<String, dynamic> json) {
+    double parseDouble(dynamic value) {
+      if (value is num) return value.toDouble();
+      if (value is String) return double.tryParse(value) ?? 0.0;
+      return 0.0;
+    }
+
     return UnaffiliatedSupplier(
       id: json['id'],
       name: json['name'],
@@ -33,6 +41,7 @@ class UnaffiliatedSupplier extends Equatable {
       taxId: json['tax_id'],
       userId: json['user_id'],
       isVerified: json['is_verified'] ?? false,
+      minimumPurchaseAmount: parseDouble(json['minimum_purchase_amount']),
     );
   }
 
@@ -50,13 +59,14 @@ class UnaffiliatedSupplier extends Equatable {
 
   @override
   List<Object?> get props => [
-    id,
-    name,
-    legalName,
-    phone,
-    email,
-    taxId,
-    userId,
-    isVerified,
-  ];
+        id,
+        name,
+        legalName,
+        phone,
+        email,
+        taxId,
+        userId,
+        isVerified,
+        minimumPurchaseAmount,
+      ];
 }
