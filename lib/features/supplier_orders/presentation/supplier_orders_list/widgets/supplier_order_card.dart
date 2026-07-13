@@ -58,7 +58,7 @@ class SupplierOrderCard extends ConsumerWidget {
       padding: const EdgeInsets.symmetric(vertical: 12.0, horizontal: 16.0),
       onTap: onTap,
       overline: Text(
-        '#${order.orderNumber} (${dateFormat.format(order.date)})',
+        '${order.shortOrderNumber} (${dateFormat.format(order.date)})',
       ),
       title: supplierDisplayName,
       subtitle: order.branchName != null

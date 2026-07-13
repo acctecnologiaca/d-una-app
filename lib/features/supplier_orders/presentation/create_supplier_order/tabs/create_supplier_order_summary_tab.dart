@@ -7,6 +7,8 @@ import '../../../domain/models/supplier_order_item.dart';
 import '../providers/create_supplier_order_provider.dart';
 import 'package:d_una_app/features/portfolio/presentation/providers/suppliers_provider.dart';
 import 'package:d_una_app/features/portfolio/domain/models/supplier_model.dart';
+import '../../../../../shared/widgets/custom_action_sheet.dart';
+import '../../../../../shared/widgets/bottom_sheet_action_item.dart';
 
 class CreateSupplierOrderSummaryTab extends ConsumerWidget {
   final Function(int) onNavigateToTab;
@@ -89,6 +91,36 @@ class CreateSupplierOrderSummaryTab extends ConsumerWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
+            if (matchedSupplier != null && matchedSupplier.minimumPurchaseAmount > 0 && state.subtotal < matchedSupplier.minimumPurchaseAmount) ...[
+              Card(
+                color: colors.errorContainer,
+                elevation: 0,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8),
+                  side: BorderSide(color: colors.error),
+                ),
+                child: Padding(
+                  padding: const EdgeInsets.all(12.0),
+                  child: Row(
+                    children: [
+                      Icon(Icons.warning_amber_rounded, color: colors.onErrorContainer),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          'El subtotal de esta orden (${CurrencyFormatter.format(state.subtotal)} USD) no alcanza el monto mínimo de compra exigido por el proveedor (${CurrencyFormatter.format(matchedSupplier.minimumPurchaseAmount)} USD).\n\n'
+                          'Faltan ${CurrencyFormatter.format(matchedSupplier.minimumPurchaseAmount - state.subtotal)} USD.',
+                          style: TextStyle(
+                            color: colors.onErrorContainer,
+                            fontSize: 12,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              const SizedBox(height: 16),
+            ],
             // 1. Proveedor Section
             _buildSectionHeader(context, Icons.warehouse, 'Proveedor'),
             Card(
@@ -121,7 +153,6 @@ class CreateSupplierOrderSummaryTab extends ConsumerWidget {
                 ),
               ),
             ),
-            const SizedBox(height: 16),
 
             // 4. Pedido Section
             _buildSectionHeader(context, Icons.shopping_cart, 'Pedido'),
@@ -324,17 +355,12 @@ class CreateSupplierOrderSummaryTab extends ConsumerWidget {
               state.items.isNotEmpty &&
               state.supplierId != null,
           onPressed: () async {
-            final success = await ref
+            final createdOrderId = await ref
                 .read(createSupplierOrderProvider.notifier)
                 .saveOrder();
             if (!context.mounted) return;
-            if (success) {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text('Orden de compra guardada exitosamente'),
-                ),
-              );
-              context.pop();
+            if (createdOrderId != null) {
+              _showPostSaveOptions(context, ref, createdOrderId);
             } else {
               ScaffoldMessenger.of(context).showSnackBar(
                 SnackBar(
@@ -346,6 +372,42 @@ class CreateSupplierOrderSummaryTab extends ConsumerWidget {
           },
         ),
       ),
+    );
+  }
+
+  void _showPostSaveOptions(
+    BuildContext context,
+    WidgetRef ref,
+    String createdOrderId,
+  ) {
+    CustomActionSheet.show(
+      context: context,
+      title: 'Orden de compra guardada',
+      actions: [
+        BottomSheetActionItem(
+          icon: Icons.send_outlined,
+          label: 'Enviar ahora',
+          onTap: () {
+            Navigator.pop(context); // Close action sheet
+            ref.invalidate(createSupplierOrderProvider);
+            context.pushReplacement('/supplier-orders/view/$createdOrderId?triggerSend=true');
+          },
+        ),
+        BottomSheetActionItem(
+          icon: Icons.history_outlined,
+          label: 'Enviar más tarde',
+          onTap: () {
+            Navigator.pop(context); // Close action sheet
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('Orden de compra guardada exitosamente'),
+              ),
+            );
+            ref.invalidate(createSupplierOrderProvider);
+            context.pop(); // Back to list
+          },
+        ),
+      ],
     );
   }
 

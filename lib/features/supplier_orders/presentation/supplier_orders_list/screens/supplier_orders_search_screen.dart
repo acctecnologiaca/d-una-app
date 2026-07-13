@@ -118,15 +118,25 @@ class _SupplierOrdersSearchScreenState
     };
     allStatuses['archived'] = 'Archivada';
 
+    final orderedLabels = [
+      'Borrador',
+      'Enviada',
+      'Reenviada',
+      'Finalizada',
+      'Cancelada',
+      'Archivada',
+    ];
+
     FilterBottomSheet.showMulti(
       context: context,
       title: 'Estatus',
-      options: allStatuses.values.toList(),
+      options: orderedLabels,
       selectedValues: _selectedStatuses
           .map((s) => allStatuses[s] ?? s)
           .where((label) => label.isNotEmpty)
           .toSet(),
       leadingBuilder: (value) => _buildStatusLeading(value, Theme.of(context).colorScheme),
+      sortOptions: false,
       onApply: (selectedLabels) {
         setState(() {
           _selectedStatuses.clear();

@@ -50,6 +50,7 @@ class SupplierOrderDto {
       'total': order.total,
       'invoice_photo_url': order.invoicePhotoUrl,
       'is_archived': order.isArchived,
+      'order_number': order.orderNumber,
     };
   }
 }

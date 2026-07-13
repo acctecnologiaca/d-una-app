@@ -6,6 +6,8 @@ import '../../../domain/models/supplier_order_item.dart';
 import '../../../domain/models/supplier_order_status.dart';
 import '../../supplier_orders_list/providers/supplier_orders_providers.dart';
 import 'package:d_una_app/features/quotes/presentation/quotes_list/providers/quotes_provider.dart';
+import 'package:d_una_app/features/profile/presentation/providers/profile_provider.dart';
+import 'package:d_una_app/core/utils/country_iso_codes.dart';
 
 part 'create_supplier_order_provider.g.dart';
 
@@ -132,16 +134,50 @@ class CreateSupplierOrder extends _$CreateSupplierOrder {
     }
   }
 
+  /// Builds the user code: ISO country (2 chars) + hex user number (4 chars, zero-padded).
+  /// Example: VE000A (Venezuela, user #10)
+  String _getUserCode() {
+    final profile = ref.read(userProfileProvider).value;
+    if (profile == null) return 'XX0000';
+
+    final countryCode = CountryIsoCodes.getCode(profile.mainCountry);
+    final userNum = profile.userNumber ?? 0;
+    final hexPart = userNum.toRadixString(16).toUpperCase().padLeft(4, '0');
+    return '$countryCode$hexPart';
+  }
+
+  /// Generates the next order number in format: DU-[USER_CODE]-[YY][SEQ]
+  /// Generates the next order number in format: OC-[USER_CODE]-[YY][SEQ]
+  /// Example: OC-VE000A-26005
   String _generateNextOrderNumber(String? lastNumber) {
-    if (lastNumber == null) return 'OC-000001';
+    final userCode = _getUserCode();
+    final currentYear = DateTime.now().year % 100; // e.g. 26 for 2026
+    final yearPrefix = currentYear.toString().padLeft(2, '0');
 
-    final digitsMatch = RegExp(r'\d+').firstMatch(lastNumber);
-    if (digitsMatch == null) return 'OC-000001';
+    int nextSeq = 1;
 
-    final numericPart = digitsMatch.group(0)!;
-    final nextInt = int.parse(numericPart) + 1;
+    if (lastNumber != null) {
+      // Format: OC-XXXXXX-YYSEQ
+      // Extract the last segment after the final '-'
+      final parts = lastNumber.split('-');
+      if (parts.length >= 3) {
+        final ocPart = parts.last; // e.g. "26005"
+        if (ocPart.length == 5) {
+          final yearInLast = ocPart.substring(0, 2); // e.g. "26"
+          final seqInLast = ocPart.substring(2);     // e.g. "005"
+          if (yearInLast == yearPrefix) {
+            final parsed = int.tryParse(seqInLast);
+            if (parsed != null) {
+              nextSeq = parsed + 1;
+            }
+          }
+          // If year is different, nextSeq stays at 1 (new year reset)
+        }
+      }
+    }
 
-    return 'OC-${nextInt.toString().padLeft(6, '0')}';
+    final seqFormatted = nextSeq.toString().padLeft(3, '0');
+    return 'OC-$userCode-$yearPrefix$seqFormatted';
   }
 
   Future<void> loadFinancialParameters() async {
@@ -429,14 +465,14 @@ class CreateSupplierOrder extends _$CreateSupplierOrder {
     );
   }
 
-  Future<bool> saveOrder() async {
+  Future<String?> saveOrder() async {
     if (state.supplierId == null) {
       state = state.copyWith(error: 'Debe seleccionar un proveedor');
-      return false;
+      return null;
     }
     if (state.items.isEmpty) {
       state = state.copyWith(error: 'Debe agregar al menos un producto');
-      return false;
+      return null;
     }
 
     state = state.copyWith(isLoading: true, error: null);
@@ -454,7 +490,7 @@ class CreateSupplierOrder extends _$CreateSupplierOrder {
         supplierBranchId: state.supplierBranchId,
         shippingMethodId: state.shippingMethodId,
         receiverCollaboratorId: state.receiverCollaboratorId,
-        orderNumber: '', // auto-generated
+        orderNumber: state.currentOrderNumber ?? '',
         date: state.date,
         paymentMethod: state.paymentMethod,
         status: SupplierOrderStatus.draft,
@@ -465,10 +501,12 @@ class CreateSupplierOrder extends _$CreateSupplierOrder {
         updatedAt: DateTime.now(),
       );
 
+      String orderId;
       if (state.id == null) {
-        await repo.createSupplierOrder(order, state.items);
+        orderId = await repo.createSupplierOrder(order, state.items);
       } else {
         await repo.updateSupplierOrder(order, state.items);
+        orderId = state.id!;
       }
 
       ref.invalidate(paginatedSupplierOrdersProvider);
@@ -477,10 +515,10 @@ class CreateSupplierOrder extends _$CreateSupplierOrder {
         ref.invalidate(supplierOrderDetailProvider(state.id!));
       }
       state = state.copyWith(isLoading: false);
-      return true;
+      return orderId;
     } catch (e) {
       state = state.copyWith(isLoading: false, error: e.toString());
-      return false;
+      return null;
     }
   }
 }

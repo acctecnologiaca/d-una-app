@@ -12,7 +12,7 @@ abstract class SupplierOrdersRepository {
     bool includeArchived = false,
   });
   Future<({SupplierOrder order, List<SupplierOrderItem> items})> getSupplierOrderDetails(String id);
-  Future<void> createSupplierOrder(SupplierOrder order, List<SupplierOrderItem> items);
+  Future<String> createSupplierOrder(SupplierOrder order, List<SupplierOrderItem> items);
   Future<void> updateSupplierOrder(SupplierOrder order, List<SupplierOrderItem> items);
   Future<void> deleteSupplierOrder(String id);
   

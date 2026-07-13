@@ -18,6 +18,7 @@ class FilterBottomSheet extends StatefulWidget {
   final ValueChanged<Set<String>>? onApply;
   final ValueChanged<String>? onSelect;
   final Widget Function(String value)? leadingBuilder;
+  final bool sortOptions;
 
   const FilterBottomSheet._({
     required this.title,
@@ -27,6 +28,7 @@ class FilterBottomSheet extends StatefulWidget {
     this.onApply,
     this.onSelect,
     this.leadingBuilder,
+    this.sortOptions = true,
   });
 
   static Future<void> showMulti<T>({
@@ -37,6 +39,7 @@ class FilterBottomSheet extends StatefulWidget {
     required ValueChanged<Set<String>> onApply,
     String Function(String)? labelBuilder,
     Widget Function(String value)? leadingBuilder,
+    bool sortOptions = true,
   }) {
     return showModalBottomSheet(
       context: context,
@@ -55,6 +58,7 @@ class FilterBottomSheet extends StatefulWidget {
         selectedValues: selectedValues,
         onApply: onApply,
         leadingBuilder: leadingBuilder,
+        sortOptions: sortOptions,
       ),
     );
   }
@@ -95,9 +99,12 @@ class _FilterBottomSheetState extends State<FilterBottomSheet> {
   void initState() {
     super.initState();
     _tempSelected = Set.from(widget.selectedValues);
-    // Sort options by label
-    _sortedOptions = List.from(widget.options)
-      ..sort((a, b) => a.label.compareTo(b.label));
+    if (widget.sortOptions) {
+      _sortedOptions = List.from(widget.options)
+        ..sort((a, b) => a.label.compareTo(b.label));
+    } else {
+      _sortedOptions = List.from(widget.options);
+    }
   }
 
   @override

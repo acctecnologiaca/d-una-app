@@ -50,6 +50,14 @@ class SupplierOrder extends Equatable {
     this.receiverName,
   });
 
+  String get shortOrderNumber {
+    final parts = orderNumber.split('-');
+    if (parts.length >= 3) {
+      return parts.last;
+    }
+    return orderNumber;
+  }
+
   @override
   List<Object?> get props => [
     id,

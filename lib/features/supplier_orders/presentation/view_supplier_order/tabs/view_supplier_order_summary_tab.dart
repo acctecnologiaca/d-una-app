@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:material_symbols_icons/symbols.dart';
 import 'package:intl/intl.dart';
@@ -36,9 +37,10 @@ class ViewSupplierOrderSummaryTab extends ConsumerWidget {
       }
     }
     final supplierDisplayName = matchedSupplier != null
-        ? (matchedSupplier.legalName != null && matchedSupplier.legalName!.isNotEmpty
-            ? '${matchedSupplier.name} (${matchedSupplier.legalName})'
-            : matchedSupplier.name)
+        ? (matchedSupplier.legalName != null &&
+                  matchedSupplier.legalName!.isNotEmpty
+              ? '${matchedSupplier.name} (${matchedSupplier.legalName})'
+              : matchedSupplier.name)
         : order.supplierName;
 
     // Group items by product key
@@ -69,6 +71,41 @@ class ViewSupplierOrderSummaryTab extends ConsumerWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
+            if (matchedSupplier != null &&
+                matchedSupplier.minimumPurchaseAmount > 0 &&
+                order.subtotal < matchedSupplier.minimumPurchaseAmount) ...[
+              Card(
+                color: colors.errorContainer,
+                elevation: 0,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8),
+                  side: BorderSide(color: colors.error),
+                ),
+                child: Padding(
+                  padding: const EdgeInsets.all(12.0),
+                  child: Row(
+                    children: [
+                      Icon(
+                        Icons.warning_amber_rounded,
+                        color: colors.onErrorContainer,
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          'El subtotal de esta orden (${CurrencyFormatter.format(order.subtotal)} USD) no alcanza el monto mínimo de compra exigido por el proveedor (${CurrencyFormatter.format(matchedSupplier.minimumPurchaseAmount)} USD).\n\n'
+                          'Faltan ${CurrencyFormatter.format(matchedSupplier.minimumPurchaseAmount - order.subtotal)} USD.',
+                          style: TextStyle(
+                            color: colors.onErrorContainer,
+                            fontSize: 12,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              const SizedBox(height: 16),
+            ],
             // 0. Status & Last Mod Card
             _buildInfoCard(context, order),
             const SizedBox(height: 16),
@@ -89,7 +126,7 @@ class ViewSupplierOrderSummaryTab extends ConsumerWidget {
                     _buildSummaryRow(
                       context,
                       Icons.business,
-                      'Razón social',
+                      'Nombre',
                       supplierDisplayName,
                       isTextValue: true,
                     ),
@@ -339,9 +376,48 @@ class ViewSupplierOrderSummaryTab extends ConsumerWidget {
       ),
       color: colors.surface,
       child: Padding(
-        padding: const EdgeInsets.all(16.0),
+        padding: const EdgeInsets.fromLTRB(16, 4, 16, 16),
         child: Column(
           children: [
+            Row(
+              children: [
+                Icon(Icons.tag, size: 20, color: colors.onSurfaceVariant),
+                const SizedBox(width: 8),
+                Text(
+                  'Orden:',
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    color: colors.onSurface,
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    order.orderNumber,
+                    style: TextStyle(
+                      color: colors.onSurfaceVariant,
+                      //fontSize: 13,
+                    ),
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+                IconButton(
+                  icon: const Icon(Icons.copy_rounded, size: 18),
+                  constraints: const BoxConstraints(),
+                  padding: EdgeInsets.zero,
+                  color: colors.primary,
+                  onPressed: () {
+                    Clipboard.setData(ClipboardData(text: order.orderNumber));
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('ID de orden copiado al portapapeles'),
+                      ),
+                    );
+                  },
+                ),
+              ],
+            ),
+            //const SizedBox(height: 0),
             Row(
               children: [
                 Icon(

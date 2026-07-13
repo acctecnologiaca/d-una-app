@@ -25,15 +25,21 @@ class ViewSupplierOrderDetailsTab extends ConsumerWidget {
       }
     }
     final supplierDisplayName = matchedSupplier != null
-        ? (matchedSupplier.legalName != null && matchedSupplier.legalName!.isNotEmpty
-            ? '${matchedSupplier.name} (${matchedSupplier.legalName})'
-            : matchedSupplier.name)
+        ? (matchedSupplier.legalName != null &&
+                  matchedSupplier.legalName!.isNotEmpty
+              ? '${matchedSupplier.name} (${matchedSupplier.legalName})'
+              : matchedSupplier.name)
         : order.supplierName;
 
     return Scaffold(
       backgroundColor: Colors.transparent,
       body: SingleChildScrollView(
-        padding: const EdgeInsets.only(left: 16, right: 16, top: 24, bottom: 100),
+        padding: const EdgeInsets.only(
+          left: 16,
+          right: 16,
+          top: 24,
+          bottom: 100,
+        ),
         child: Column(
           children: [
             InfoBlock.text(
@@ -51,7 +57,7 @@ class ViewSupplierOrderDetailsTab extends ConsumerWidget {
               const SizedBox(height: 24),
               InfoBlock.text(
                 icon: Icons.location_on_outlined,
-                label: 'Sucursal del Proveedor',
+                label: 'Sucursal de canalización',
                 value: order.branchName!,
               ),
             ],
@@ -71,7 +77,8 @@ class ViewSupplierOrderDetailsTab extends ConsumerWidget {
                 value: order.receiverName!,
               ),
             ],
-            if (order.paymentMethod != null && order.paymentMethod!.isNotEmpty) ...[
+            if (order.paymentMethod != null &&
+                order.paymentMethod!.isNotEmpty) ...[
               const SizedBox(height: 24),
               InfoBlock.text(
                 icon: Icons.payment,

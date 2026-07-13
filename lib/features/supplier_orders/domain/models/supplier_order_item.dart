@@ -16,6 +16,7 @@ class SupplierOrderItem extends Equatable {
   final double? currentSupplierPrice;
   final double? currentSupplierStock;
   final String? supplierBranchStockId;
+  final String? branchName;
 
   const SupplierOrderItem({
     required this.id,
@@ -31,6 +32,7 @@ class SupplierOrderItem extends Equatable {
     this.currentSupplierPrice,
     this.currentSupplierStock,
     this.supplierBranchStockId,
+    this.branchName,
   });
 
   double get total => quantity * unitPrice;
@@ -60,5 +62,6 @@ class SupplierOrderItem extends Equatable {
     currentSupplierPrice,
     currentSupplierStock,
     supplierBranchStockId,
+    branchName,
   ];
 }

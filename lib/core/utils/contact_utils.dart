@@ -22,7 +22,7 @@ class ContactUtils {
     }
   }
 
-  static Future<void> launchWhatsApp(String? phone) async {
+  static Future<void> launchWhatsApp(String? phone, {String? message}) async {
     if (phone == null || phone.isEmpty) return;
 
     // Cleanup - remove + and non-digits
@@ -37,9 +37,15 @@ class ContactUtils {
       cleanedPhone = '58$cleanedPhone';
     }
 
+    String url = 'https://wa.me/$cleanedPhone';
+    if (message != null && message.trim().isNotEmpty) {
+      final encodedMessage = Uri.encodeComponent(message.trim());
+      url += '?text=$encodedMessage';
+    }
+
     // Using wa.me link
     // Note: wa.me often redirects to different schemes, external app mode is best.
-    final Uri launchUri = Uri.parse('https://wa.me/$cleanedPhone');
+    final Uri launchUri = Uri.parse(url);
 
     try {
       if (await canLaunchUrl(launchUri)) {

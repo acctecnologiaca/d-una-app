@@ -313,6 +313,137 @@ class _SupplierBranchesProviderElement
   String get supplierId => (origin as SupplierBranchesProvider).supplierId;
 }
 
+String _$supplierBranchContactInfoHash() =>
+    r'd0db69d21e5a24135a4a4b7007aaa974c48022ad';
+
+/// See also [supplierBranchContactInfo].
+@ProviderFor(supplierBranchContactInfo)
+const supplierBranchContactInfoProvider = SupplierBranchContactInfoFamily();
+
+/// See also [supplierBranchContactInfo].
+class SupplierBranchContactInfoFamily
+    extends Family<AsyncValue<Map<String, dynamic>?>> {
+  /// See also [supplierBranchContactInfo].
+  const SupplierBranchContactInfoFamily();
+
+  /// See also [supplierBranchContactInfo].
+  SupplierBranchContactInfoProvider call(String branchId) {
+    return SupplierBranchContactInfoProvider(branchId);
+  }
+
+  @override
+  SupplierBranchContactInfoProvider getProviderOverride(
+    covariant SupplierBranchContactInfoProvider provider,
+  ) {
+    return call(provider.branchId);
+  }
+
+  static const Iterable<ProviderOrFamily>? _dependencies = null;
+
+  @override
+  Iterable<ProviderOrFamily>? get dependencies => _dependencies;
+
+  static const Iterable<ProviderOrFamily>? _allTransitiveDependencies = null;
+
+  @override
+  Iterable<ProviderOrFamily>? get allTransitiveDependencies =>
+      _allTransitiveDependencies;
+
+  @override
+  String? get name => r'supplierBranchContactInfoProvider';
+}
+
+/// See also [supplierBranchContactInfo].
+class SupplierBranchContactInfoProvider
+    extends AutoDisposeFutureProvider<Map<String, dynamic>?> {
+  /// See also [supplierBranchContactInfo].
+  SupplierBranchContactInfoProvider(String branchId)
+    : this._internal(
+        (ref) => supplierBranchContactInfo(
+          ref as SupplierBranchContactInfoRef,
+          branchId,
+        ),
+        from: supplierBranchContactInfoProvider,
+        name: r'supplierBranchContactInfoProvider',
+        debugGetCreateSourceHash: const bool.fromEnvironment('dart.vm.product')
+            ? null
+            : _$supplierBranchContactInfoHash,
+        dependencies: SupplierBranchContactInfoFamily._dependencies,
+        allTransitiveDependencies:
+            SupplierBranchContactInfoFamily._allTransitiveDependencies,
+        branchId: branchId,
+      );
+
+  SupplierBranchContactInfoProvider._internal(
+    super._createNotifier, {
+    required super.name,
+    required super.dependencies,
+    required super.allTransitiveDependencies,
+    required super.debugGetCreateSourceHash,
+    required super.from,
+    required this.branchId,
+  }) : super.internal();
+
+  final String branchId;
+
+  @override
+  Override overrideWith(
+    FutureOr<Map<String, dynamic>?> Function(
+      SupplierBranchContactInfoRef provider,
+    )
+    create,
+  ) {
+    return ProviderOverride(
+      origin: this,
+      override: SupplierBranchContactInfoProvider._internal(
+        (ref) => create(ref as SupplierBranchContactInfoRef),
+        from: from,
+        name: null,
+        dependencies: null,
+        allTransitiveDependencies: null,
+        debugGetCreateSourceHash: null,
+        branchId: branchId,
+      ),
+    );
+  }
+
+  @override
+  AutoDisposeFutureProviderElement<Map<String, dynamic>?> createElement() {
+    return _SupplierBranchContactInfoProviderElement(this);
+  }
+
+  @override
+  bool operator ==(Object other) {
+    return other is SupplierBranchContactInfoProvider &&
+        other.branchId == branchId;
+  }
+
+  @override
+  int get hashCode {
+    var hash = _SystemHash.combine(0, runtimeType.hashCode);
+    hash = _SystemHash.combine(hash, branchId.hashCode);
+
+    return _SystemHash.finish(hash);
+  }
+}
+
+@Deprecated('Will be removed in 3.0. Use Ref instead')
+// ignore: unused_element
+mixin SupplierBranchContactInfoRef
+    on AutoDisposeFutureProviderRef<Map<String, dynamic>?> {
+  /// The parameter `branchId` of this provider.
+  String get branchId;
+}
+
+class _SupplierBranchContactInfoProviderElement
+    extends AutoDisposeFutureProviderElement<Map<String, dynamic>?>
+    with SupplierBranchContactInfoRef {
+  _SupplierBranchContactInfoProviderElement(super.provider);
+
+  @override
+  String get branchId => (origin as SupplierBranchContactInfoProvider).branchId;
+}
+
 String _$paginatedSupplierOrdersHash() =>
     r'a0777aa0b5ae4e7ae90528c9c42b55c44c0c4124';
 

@@ -7,6 +7,8 @@ import '../../../../collaborators/data/repositories/collaborators_repository.dar
 import '../../../../collaborators/presentation/providers/collaborators_providers.dart';
 import '../../../../portfolio/data/repositories/lookup_repository.dart';
 import '../../../../portfolio/presentation/providers/lookup_providers.dart';
+import 'package:d_una_app/features/profile/presentation/providers/profile_provider.dart';
+import 'package:d_una_app/core/utils/country_iso_codes.dart';
 
 class QuoteState {
   final Quote? quote; // The final object being built
@@ -435,16 +437,43 @@ class CreateQuoteNotifier extends StateNotifier<QuoteState> {
     }
   }
 
+  String _getUserCode() {
+    final profile = _ref.read(userProfileProvider).value;
+    if (profile == null) return 'XX0000';
+
+    final countryCode = CountryIsoCodes.getCode(profile.mainCountry);
+    final userNum = profile.userNumber ?? 0;
+    final hexPart = userNum.toRadixString(16).toUpperCase().padLeft(4, '0');
+    return '$countryCode$hexPart';
+  }
+
   String _generateNextQuoteNumber(String? lastNumber) {
-    if (lastNumber == null) return 'COT-000001';
+    final userCode = _getUserCode();
+    final currentYear = DateTime.now().year % 100; // e.g. 26 for 2026
+    final yearPrefix = currentYear.toString().padLeft(2, '0');
 
-    final digitsMatch = RegExp(r'\d+').firstMatch(lastNumber);
-    if (digitsMatch == null) return 'COT-000001';
+    int nextSeq = 1;
 
-    final numericPart = digitsMatch.group(0)!;
-    final nextInt = int.parse(numericPart) + 1;
+    if (lastNumber != null) {
+      // Format: CT-XXXXXX-YYSEQ
+      final parts = lastNumber.split('-');
+      if (parts.length >= 3) {
+        final cotPart = parts.last; // e.g. "26001"
+        if (cotPart.length == 5) {
+          final yearInLast = cotPart.substring(0, 2); // e.g. "26"
+          final seqInLast = cotPart.substring(2);     // e.g. "001"
+          if (yearInLast == yearPrefix) {
+            final parsed = int.tryParse(seqInLast);
+            if (parsed != null) {
+              nextSeq = parsed + 1;
+            }
+          }
+        }
+      }
+    }
 
-    return 'COT-${nextInt.toString().padLeft(6, '0')}';
+    final seqFormatted = nextSeq.toString().padLeft(3, '0');
+    return 'CT-$userCode-$yearPrefix$seqFormatted';
   }
 
   Future<void> loadDefaultConditions() async {

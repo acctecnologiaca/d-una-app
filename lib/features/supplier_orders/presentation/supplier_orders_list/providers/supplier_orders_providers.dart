@@ -184,3 +184,17 @@ Future<List<Map<String, dynamic>>> supplierBranches(Ref ref, String supplierId) 
       .eq('supplier_id', supplierId);
   return List<Map<String, dynamic>>.from(response);
 }
+
+@riverpod
+Future<Map<String, dynamic>?> supplierBranchContactInfo(
+  Ref ref,
+  String branchId,
+) async {
+  final response = await Supabase.instance.client
+      .from('supplier_branches')
+      .select('id, email, phone')
+      .eq('id', branchId)
+      .maybeSingle();
+  return response;
+}
+

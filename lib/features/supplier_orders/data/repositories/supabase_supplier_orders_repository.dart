@@ -120,9 +120,18 @@ class SupabaseSupplierOrdersRepository implements SupplierOrdersRepository {
     final order = SupplierOrderDto.fromJson(headerResponse);
 
     // 2. Fetch items
-    final itemsResponse = await _supabase.from('supplier_order_items').select().eq('supplier_order_id', id);
+    final itemsResponse = await _supabase.from('supplier_order_items').select('''
+      *,
+      supplier_branch_stock(
+        supplier_branches(name)
+      )
+    ''').eq('supplier_order_id', id);
 
     var itemsList = (itemsResponse as List).map((json) {
+      final branchStock = json['supplier_branch_stock'] as Map<String, dynamic>?;
+      final branch = branchStock?['supplier_branches'] as Map<String, dynamic>?;
+      final branchName = branch?['name'] as String?;
+
       return SupplierOrderItem(
         id: json['id'],
         supplierOrderId: json['supplier_order_id'],
@@ -135,6 +144,7 @@ class SupabaseSupplierOrdersRepository implements SupplierOrdersRepository {
         quantity: (json['quantity'] ?? 0.0).toDouble(),
         unitPrice: (json['unit_price'] ?? 0.0).toDouble(),
         supplierBranchStockId: json['supplier_branch_stock_id'],
+        branchName: branchName,
       );
     }).toList();
 
@@ -181,6 +191,7 @@ class SupabaseSupplierOrdersRepository implements SupplierOrdersRepository {
                 currentSupplierPrice: match.price,
                 currentSupplierStock: match.quantity,
                 supplierBranchStockId: item.supplierBranchStockId,
+                branchName: item.branchName,
               );
             }
             return item;
@@ -195,7 +206,7 @@ class SupabaseSupplierOrdersRepository implements SupplierOrdersRepository {
   }
 
   @override
-  Future<void> createSupplierOrder(SupplierOrder order, List<SupplierOrderItem> items) async {
+  Future<String> createSupplierOrder(SupplierOrder order, List<SupplierOrderItem> items) async {
     final currentUserId = _supabase.auth.currentUser?.id;
     if (currentUserId == null) throw Exception('Usuario no autenticado');
 
@@ -221,6 +232,7 @@ class SupabaseSupplierOrdersRepository implements SupplierOrdersRepository {
       }).toList();
       await _supabase.from('supplier_order_items').insert(itemsToInsert);
     }
+    return orderId;
   }
 
   @override

@@ -636,7 +636,8 @@ final routerProvider = Provider<GoRouter>((ref) {
           path: 'view/:id',
           builder: (context, state) {
             final id = state.pathParameters['id']!;
-            return SupplierOrderDetailsScreen(orderId: id);
+            final triggerSend = state.uri.queryParameters['triggerSend'] == 'true';
+            return SupplierOrderDetailsScreen(orderId: id, triggerSend: triggerSend);
           },
         ),
       ],
