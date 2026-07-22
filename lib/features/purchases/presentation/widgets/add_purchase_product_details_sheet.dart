@@ -18,17 +18,20 @@ import 'package:d_una_app/shared/utils/currency_formatter.dart';
 class AddPurchaseProductDetailsSheet extends ConsumerStatefulWidget {
   final Product product;
   final PurchaseItemProduct? existingItem;
+  final bool isLinkedToOrder;
 
   const AddPurchaseProductDetailsSheet({
     super.key,
     required this.product,
     this.existingItem,
+    this.isLinkedToOrder = false,
   });
 
   static Future<Map<String, dynamic>?> show(
     BuildContext context, {
     required Product product,
     PurchaseItemProduct? existingItem,
+    bool isLinkedToOrder = false,
   }) {
     final sheetKey = GlobalKey<_AddPurchaseProductDetailsSheetState>();
 
@@ -40,6 +43,7 @@ class AddPurchaseProductDetailsSheet extends ConsumerStatefulWidget {
         key: sheetKey,
         product: product,
         existingItem: existingItem,
+        isLinkedToOrder: isLinkedToOrder,
       ),
       actions: [
         Padding(
@@ -96,6 +100,10 @@ class _AddPurchaseProductDetailsSheetState
       }
 
       _noSerials = !item.requiresSerials;
+    } else {
+      // Default to inverted values from product catalog settings
+      _noWarranty = !widget.product.hasWarranty;
+      _noSerials = !widget.product.requiresSerials;
     }
     _selectedUom = widget.product.uomModel;
   }
@@ -231,11 +239,17 @@ class _AddPurchaseProductDetailsSheetState
             children: [
               Expanded(
                 flex: 3,
-                child: CustomStepper(
-                  label: 'Cantidad*',
-                  controller: _quantityController,
-                  onIncrement: _incrementQuantity,
-                  onDecrement: _decrementQuantity,
+                child: IgnorePointer(
+                  ignoring: widget.isLinkedToOrder,
+                  child: Opacity(
+                    opacity: widget.isLinkedToOrder ? 0.6 : 1.0,
+                    child: CustomStepper(
+                      label: 'Cantidad*',
+                      controller: _quantityController,
+                      onIncrement: _incrementQuantity,
+                      onDecrement: _decrementQuantity,
+                    ),
+                  ),
                 ),
               ),
               const SizedBox(width: 8),
@@ -284,6 +298,7 @@ class _AddPurchaseProductDetailsSheetState
             prefixText: '\$   ',
             helperText: 'Sin impuesto',
             inputFormatters: [CurrencyInputFormatter()],
+            enabled: !widget.isLinkedToOrder,
             validator: (value) {
               if (value == null || value.isEmpty) {
                 return 'El costo es obligatorio';

@@ -13,6 +13,7 @@ class PurchaseAddedProductCard extends StatelessWidget {
   final VoidCallback onAddSerials;
   final ValueChanged<double> onQuantityChanged;
   final bool isReadOnly;
+  final bool isEditable;
   final bool hasError;
   final Color? backgroundColor;
 
@@ -24,6 +25,7 @@ class PurchaseAddedProductCard extends StatelessWidget {
     required this.onAddSerials,
     required this.onQuantityChanged,
     this.isReadOnly = false,
+    this.isEditable = true,
     this.hasError = false,
     this.backgroundColor,
   });
@@ -83,12 +85,13 @@ class PurchaseAddedProductCard extends StatelessWidget {
         ],
       ),
       actions: [
-        IconButton(
-          icon: const Icon(Symbols.delete, fontWeight: FontWeight.w500),
-          color: colors.onSurfaceVariant,
-          onPressed: onDelete,
-          tooltip: 'Eliminar producto',
-        ),
+        if (isEditable)
+          IconButton(
+            icon: const Icon(Symbols.delete, fontWeight: FontWeight.w500),
+            color: colors.onSurfaceVariant,
+            onPressed: onDelete,
+            tooltip: 'Eliminar producto',
+          ),
         IconButton(
           icon: Image.asset(
             'assets/icons/package_edit.png',

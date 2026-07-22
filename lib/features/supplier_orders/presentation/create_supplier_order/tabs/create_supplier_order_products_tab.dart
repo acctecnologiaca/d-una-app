@@ -80,7 +80,7 @@ class CreateSupplierOrderProductsTab extends ConsumerWidget {
               ? totalCost / totalQuantity
               : 0.0;
 
-          final double? totalAvailableStock = groupItems.any((item) => item.currentSupplierStock == null)
+          final double? totalAvailableStock = groupItems.every((item) => item.currentSupplierStock == null)
               ? null
               : groupItems.fold<double>(
                   0.0,

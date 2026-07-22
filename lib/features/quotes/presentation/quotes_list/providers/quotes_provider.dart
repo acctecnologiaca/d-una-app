@@ -185,25 +185,31 @@ class QuotesListNotifier extends AsyncNotifier<List<domain.Quote>> {
     state = await AsyncValue.guard(() => build());
   }
 
+  Future<void> _refreshAll() async {
+    await refresh();
+    ref.invalidate(paginatedQuotesListProvider);
+    ref.invalidate(paginatedQuoteSearchProvider);
+  }
+
   Future<void> archiveQuote(String id, {required bool archive}) async {
     await ref.read(quotesRepositoryProvider).archiveQuote(id, archive);
-    await refresh();
+    await _refreshAll();
   }
 
   Future<void> updateQuoteStatus(String id, String status) async {
     await ref.read(quotesRepositoryProvider).updateQuoteStatus(id, status);
-    await refresh();
+    await _refreshAll();
   }
 
   Future<BatchUpdateResult> batchUpdateStatus(List<String> ids, String status) async {
     final result = await ref.read(quotesRepositoryProvider).batchUpdateStatus(ids, status);
-    await refresh();
+    await _refreshAll();
     return result;
   }
 
   Future<void> batchArchive(List<String> ids, {required bool archive}) async {
     await ref.read(quotesRepositoryProvider).batchArchive(ids, archive);
-    await refresh();
+    await _refreshAll();
   }
 }
 
@@ -389,7 +395,7 @@ class PaginatedQuoteSearch extends AutoDisposeFamilyAsyncNotifier<PaginatedState
   String? _categoryFilter;
   String _orderBy = 'date_issued';
   bool _ascending = false;
-  bool _includeArchived = false;
+  bool _includeArchived = true;
 
   @override
   FutureOr<PaginatedState<domain.Quote>> build(String? arg) async {

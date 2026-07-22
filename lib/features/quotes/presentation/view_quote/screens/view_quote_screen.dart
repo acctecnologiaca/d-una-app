@@ -69,6 +69,11 @@ class _ViewQuoteScreenState extends ConsumerState<ViewQuoteScreen>
   Widget build(BuildContext context) {
     final colors = Theme.of(context).colorScheme;
     final state = ref.watch(viewQuoteProvider(widget.quoteId));
+    final quote = state.quote;
+    final isSentOrResent =
+        quote != null &&
+        (quote.status == QuoteStatus.sent.dbValue ||
+            quote.status == QuoteStatus.resent.dbValue);
 
     return Scaffold(
       appBar: StandardAppBar(
@@ -79,32 +84,42 @@ class _ViewQuoteScreenState extends ConsumerState<ViewQuoteScreen>
         actions: [
           IconButton(
             onPressed: () async {
-              if (state.quote == null) return;
+              if (quote == null) return;
 
               CustomActionSheet.show(
                 context: context,
-                title: 'Enviar cotización',
+                title: isSentOrResent
+                    ? 'Reenviar cotización'
+                    : 'Enviar cotización',
                 actions: [
                   BottomSheetActionItem(
                     icon: Icons.email_outlined,
-                    label: 'Enviar por correo electrónico',
+                    label: isSentOrResent
+                        ? 'Reenviar por correo electrónico'
+                        : 'Enviar por correo electrónico',
                     onTap: () {
                       Navigator.of(context).pop();
-                      SendEmailBottomSheet.show(context, state.quote!);
+                      SendEmailBottomSheet.show(context, quote);
                     },
                   ),
                   BottomSheetActionItem(
                     icon: 'assets/icons/whatsapp_icon.png',
-                    label: 'Enviar por WhatsApp',
+                    label: isSentOrResent
+                        ? 'Reenviar por WhatsApp'
+                        : 'Enviar por WhatsApp',
                     onTap: () {
                       Navigator.of(context).pop();
-                      SendWhatsAppBottomSheet.show(context, state.quote!);
+                      SendWhatsAppBottomSheet.show(context, quote);
                     },
                   ),
                 ],
               );
             },
-            icon: Icon(Icons.send, color: colors.onSurfaceVariant),
+            icon: Icon(
+              isSentOrResent ? Symbols.forward : Icons.send,
+              color: colors.onSurfaceVariant,
+            ),
+            tooltip: isSentOrResent ? 'Reenviar' : 'Enviar',
           ),
           IconButton(
             onPressed: () {
@@ -112,6 +127,53 @@ class _ViewQuoteScreenState extends ConsumerState<ViewQuoteScreen>
                 context: context,
                 title: 'Opciones',
                 actions: [
+                  BottomSheetActionItem(
+                    icon: Icons.picture_as_pdf_outlined,
+                    label: 'Descargar PDF',
+                    onTap: () {
+                      final quote = state.quote;
+                      if (quote == null) return;
+
+                      final userProfile = ref.read(userProfileProvider).value;
+                      final userEmail =
+                          Supabase.instance.client.auth.currentUser?.email;
+
+                      if (userProfile == null) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text(
+                              'Cargando perfil de usuario... Por favor espere.',
+                            ),
+                          ),
+                        );
+                        return;
+                      }
+
+                      context.pop(); // Cerrar action sheet
+
+                      context.push(
+                        '/pdf-preview',
+                        extra: {
+                          'title': 'Previsualizar Cotización',
+                          'subtitle':
+                              ' ${quote.quoteNumber} (${quote.clientName})',
+                          'fileName': StringUtils.sanitizeForFileName(
+                            '${quote.dateIssued.toIso8601String().substring(0, 10)}_${quote.clientName ?? ''}_${quote.quoteNumber ?? quote.id}_${quote.quoteTag ?? ''}.pdf',
+                          ),
+                          'buildPdf': (PdfPageFormat format) =>
+                              QuotePdfTemplate(
+                                quote: quote,
+                                products: quote.products ?? [],
+                                services: quote.services ?? [],
+                                conditions: quote.conditions ?? [],
+                                userProfile: userProfile,
+                                userEmail: userEmail,
+                              ).generate(format),
+                        },
+                      );
+                    },
+                  ),
+                  const Divider(height: 1, indent: 16, endIndent: 16),
                   BottomSheetActionItem(
                     icon: Symbols.conversion_path,
                     label: 'Cambiar estatus',
@@ -184,61 +246,14 @@ class _ViewQuoteScreenState extends ConsumerState<ViewQuoteScreen>
                     },
                   ),
                   BottomSheetActionItem(
-                    icon: Icons.picture_as_pdf_outlined,
-                    label: 'Descargar PDF',
-                    onTap: () {
-                      final quote = state.quote;
-                      if (quote == null) return;
-
-                      final userProfile = ref.read(userProfileProvider).value;
-                      final userEmail =
-                          Supabase.instance.client.auth.currentUser?.email;
-
-                      if (userProfile == null) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: Text(
-                              'Cargando perfil de usuario... Por favor espere.',
-                            ),
-                          ),
-                        );
-                        return;
-                      }
-
-                      context.pop(); // Cerrar action sheet
-
-                      context.push(
-                        '/pdf-preview',
-                        extra: {
-                          'title': 'Previsualizar Cotización',
-                          'subtitle':
-                              ' ${quote.quoteNumber} (${quote.clientName})',
-                          'fileName': StringUtils.sanitizeForFileName(
-                            '${quote.dateIssued.toIso8601String().substring(0, 10)}_${quote.clientName ?? ''}_${quote.quoteNumber ?? quote.id}_${quote.quoteTag ?? ''}.pdf',
-                          ),
-                          'buildPdf': (PdfPageFormat format) =>
-                              QuotePdfTemplate(
-                                quote: quote,
-                                products: quote.products ?? [],
-                                services: quote.services ?? [],
-                                conditions: quote.conditions ?? [],
-                                userProfile: userProfile,
-                                userEmail: userEmail,
-                              ).generate(format),
-                        },
-                      );
-                    },
-                  ),
-                  const Divider(height: 1, indent: 16, endIndent: 16),
-                  BottomSheetActionItem(
                     icon: Icons.shopping_cart_outlined,
                     label: 'Generar orden de compra',
                     onTap: () async {
                       context.pop();
-                      
+
                       final quote = state.quote;
                       if (quote == null) return;
-                      
+
                       ScaffoldMessenger.of(context).showSnackBar(
                         const SnackBar(
                           content: Text('Generando órdenes de compra...'),
@@ -248,12 +263,16 @@ class _ViewQuoteScreenState extends ConsumerState<ViewQuoteScreen>
 
                       try {
                         final repo = ref.read(supplierOrdersRepositoryProvider);
-                        final result = await repo.batchGenerateFromQuote(quote.id);
-                        
+                        final result = await repo.batchGenerateFromQuote(
+                          quote.id,
+                        );
+
                         if (!context.mounted) return;
 
-                        final skipped = result['skippedSuppliers'] as List<dynamic>? ?? [];
-                        final generatedCount = result['generatedCount'] as int? ?? 0;
+                        final skipped =
+                            result['skippedSuppliers'] as List<dynamic>? ?? [];
+                        final generatedCount =
+                            result['generatedCount'] as int? ?? 0;
 
                         if (skipped.isNotEmpty) {
                           // Show warning dialog about skipped suppliers
@@ -263,10 +282,14 @@ class _ViewQuoteScreenState extends ConsumerState<ViewQuoteScreen>
                               icon: Icons.warning_amber_rounded,
                               iconColor: Colors.amber.shade800,
                               title: 'Órdenes Generadas con Advertencias',
-                              contentText: 'Se generaron $generatedCount órdenes de compra.\n\nNo se pudieron generar órdenes para los siguientes proveedores porque no están registrados en la tabla de proveedores:\n\n${skipped.map((s) => '• $s').join('\n')}',
+                              contentText:
+                                  'Se generaron $generatedCount órdenes de compra.\n\nNo se pudieron generar órdenes para los siguientes proveedores porque no están registrados en la tabla de proveedores:\n\n${skipped.map((s) => '• $s').join('\n')}',
                               actions: [
                                 TextButton(
-                                  onPressed: () => Navigator.of(context, rootNavigator: true).pop(),
+                                  onPressed: () => Navigator.of(
+                                    context,
+                                    rootNavigator: true,
+                                  ).pop(),
                                   child: const Text('Entendido'),
                                 ),
                               ],
@@ -275,7 +298,9 @@ class _ViewQuoteScreenState extends ConsumerState<ViewQuoteScreen>
                         } else {
                           ScaffoldMessenger.of(context).showSnackBar(
                             SnackBar(
-                              content: Text('Se generaron $generatedCount órdenes de compra exitosamente.'),
+                              content: Text(
+                                'Se generaron $generatedCount órdenes de compra exitosamente.',
+                              ),
                             ),
                           );
                         }

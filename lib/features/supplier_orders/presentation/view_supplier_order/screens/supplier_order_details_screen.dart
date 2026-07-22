@@ -5,9 +5,11 @@ import '../../../../../shared/widgets/standard_app_bar.dart';
 import '../../../../../shared/utils/currency_formatter.dart';
 import '../../supplier_orders_list/providers/supplier_orders_providers.dart';
 import '../../create_supplier_order/providers/create_supplier_order_provider.dart';
+import 'dart:io';
 import '../tabs/view_supplier_order_details_tab.dart';
 import '../tabs/view_supplier_order_products_tab.dart';
 import '../tabs/view_supplier_order_summary_tab.dart';
+import '../widgets/finalize_supplier_order_sheet.dart';
 import '../../../domain/models/supplier_order_status.dart';
 import '../../../domain/models/supplier_order.dart';
 import '../../../domain/models/supplier_order_item.dart';
@@ -23,6 +25,8 @@ import 'package:d_una_app/features/profile/presentation/providers/profile_provid
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'dart:convert';
 import 'package:d_una_app/core/utils/contact_utils.dart';
+import 'package:d_una_app/features/quotes/domain/models/quote_model.dart' show StockStatus;
+import '../../create_supplier_order/providers/supplier_order_validation_provider.dart';
 
 class SupplierOrderDetailsScreen extends ConsumerStatefulWidget {
   final String orderId;
@@ -49,7 +53,7 @@ class _SupplierOrderDetailsScreenState
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 3, vsync: this);
+    _tabController = TabController(length: 3, vsync: this, initialIndex: 2);
   }
 
   @override
@@ -71,6 +75,9 @@ class _SupplierOrderDetailsScreenState
         final canEdit =
             order.status != SupplierOrderStatus.finalized &&
             order.status != SupplierOrderStatus.cancelled;
+        final isSentOrResent =
+            order.status == SupplierOrderStatus.sent ||
+            order.status == SupplierOrderStatus.resent;
 
         if (widget.triggerSend && !_hasTriggeredSend) {
           _hasTriggeredSend = true;
@@ -86,24 +93,31 @@ class _SupplierOrderDetailsScreenState
             break;
           }
         }
-        final supplierDisplayName = matchedSupplier != null
-            ? (matchedSupplier.legalName != null &&
-                      matchedSupplier.legalName!.isNotEmpty
-                  ? '${matchedSupplier.name} (${matchedSupplier.legalName})'
-                  : matchedSupplier.name)
-            : order.supplierName;
+
+        final supplierDisplayName = /*matchedSupplier != null
+        ? (matchedSupplier.legalName != null && matchedSupplier.legalName!.isNotEmpty
+            ? '${matchedSupplier.name} (${matchedSupplier.legalName})'
+            :*/
+            matchedSupplier!.name; /*)*/
+        /*: 
+        order.supplierName;*/
 
         return Scaffold(
           appBar: StandardAppBar(
             title: 'Orden de compra',
-            subtitle: '${order.shortOrderNumber} ($supplierDisplayName)',
+            subtitle: '${order.orderNumber} ($supplierDisplayName)',
             actions: [
               IconButton(
-                icon: const Icon(Icons.send),
-                color: colors.onSurfaceVariant,
-                onPressed: () {
-                  _checkAndSendOrder(context, order, items);
-                },
+                icon: Icon(isSentOrResent ? Symbols.forward : Icons.send),
+                color: canEdit
+                    ? colors.onSurfaceVariant
+                    : colors.onSurfaceVariant.withValues(alpha: 0.38),
+                tooltip: isSentOrResent ? 'Reenviar' : 'Enviar',
+                onPressed: canEdit
+                    ? () {
+                        _checkAndSendOrder(context, order, items);
+                      }
+                    : null,
               ),
               IconButton(
                 icon: const Icon(Icons.more_vert),
@@ -113,88 +127,97 @@ class _SupplierOrderDetailsScreenState
                     context: context,
                     title: 'Opciones',
                     actions: [
-                      BottomSheetActionItem(
-                        icon: Symbols.conversion_path,
-                        label: 'Cambiar estatus',
-                        onTap: () async {
-                          final messenger = ScaffoldMessenger.of(context);
-                          context.pop(); // Close the action sheet
-
-                          final selectedStatus = await _showStatusDialog(
-                            context,
-                            order.status,
-                          );
-
-                          if (selectedStatus != null &&
-                              selectedStatus != order.status) {
-                            try {
-                              await ref
-                                  .read(
-                                    paginatedSupplierOrdersProvider.notifier,
-                                  )
-                                  .updateSupplierOrderStatus(
-                                    order.id,
-                                    selectedStatus.dbValue,
-                                  );
-
-                              ref.invalidate(
-                                supplierOrderDetailProvider(order.id),
-                              );
-
-                              messenger.showSnackBar(
-                                SnackBar(
-                                  content: Text(
-                                    'Estatus cambiado a "${selectedStatus.label}"',
+                      if (canEdit)
+                        BottomSheetActionItem(
+                          icon: Icons.edit_outlined,
+                          label: 'Modificar',
+                          onTap: () {
+                            context.pop();
+                            ref
+                                .read(createSupplierOrderProvider.notifier)
+                                .loadFromExisting(order, []);
+                            context.push('/supplier-orders/edit/${order.id}');
+                          },
+                        ),
+                      if (isSentOrResent) ...[
+                        BottomSheetActionItem(
+                          icon: Symbols.forward,
+                          label: 'Reenviar',
+                          onTap: () {
+                            context.pop();
+                            _checkAndSendOrder(context, order, items);
+                          },
+                        ),
+                        BottomSheetActionItem(
+                          icon: Icons.check_circle_outline,
+                          label: 'Finalizar',
+                          onTap: () {
+                            context.pop();
+                            _finalizeOrderFlow(context, order, items);
+                          },
+                        ),
+                      ],
+                      if (canEdit)
+                        BottomSheetActionItem(
+                          icon: Icons.cancel_outlined,
+                          label: 'Cancelar',
+                          onTap: () async {
+                            final messenger = ScaffoldMessenger.of(context);
+                            context.pop();
+                            final confirm = await CustomDialog.show<bool>(
+                              context: context,
+                              dialog: CustomDialog.destructive(
+                                title: '¿Cancelar orden de compra?',
+                                contentText:
+                                    'La orden pasará a estatus Cancelada y no podrá modificarse.',
+                                actions: [
+                                  TextButton(
+                                    onPressed: () =>
+                                        Navigator.pop(context, false),
+                                    child: const Text('Volver'),
                                   ),
-                                ),
-                              );
-                            } catch (e) {
-                              messenger.showSnackBar(
-                                SnackBar(
-                                  content: Text('Error al cambiar estatus: $e'),
-                                ),
-                              );
-                            }
-                          }
-                        },
-                      ),
-                      /*     BottomSheetActionItem(
-                        icon: Icons.picture_as_pdf_outlined,
-                        label: 'Descargar PDF',
-                        onTap: () {
-                          final userProfile = ref.read(userProfileProvider).value;
-                          final userEmail = Supabase.instance.client.auth.currentUser?.email;
-
-                          if (userProfile == null) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(
-                                content: Text('Cargando perfil de usuario... Por favor espere.'),
+                                  FilledButton(
+                                    onPressed: () =>
+                                        Navigator.pop(context, true),
+                                    child: const Text('Confirmar'),
+                                  ),
+                                ],
                               ),
                             );
-                            return;
-                          }
 
-                          context.pop(); // Close action sheet
+                            if (confirm == true) {
+                              try {
+                                await ref
+                                    .read(
+                                      paginatedSupplierOrdersProvider.notifier,
+                                    )
+                                    .updateSupplierOrderStatus(
+                                      order.id,
+                                      SupplierOrderStatus.cancelled.dbValue,
+                                    );
 
-                          context.push(
-                            '/pdf-preview',
-                            extra: {
-                              'title': 'Previsualizar Orden de Compra',
-                              'subtitle': '#${order.orderNumber} (${order.supplierName})',
-                              'fileName': StringUtils.sanitizeForFileName(
-                                '${order.date.toIso8601String().substring(0, 10)}_${order.supplierName}_${order.orderNumber}.pdf',
-                              ),
-                              'buildPdf': (PdfPageFormat format) =>
-                                  SupplierOrderPdfTemplate(
-                                    order: order,
-                                    items: items,
-                                    userProfile: userProfile,
-                                    userEmail: userEmail,
-                                  ).generate(format),
-                            },
-                          );
-                        },
-                      ), */
+                                ref.invalidate(
+                                  supplierOrderDetailProvider(order.id),
+                                );
+
+                                messenger.showSnackBar(
+                                  const SnackBar(
+                                    content: Text('Orden de compra cancelada.'),
+                                  ),
+                                );
+                              } catch (e) {
+                                messenger.showSnackBar(
+                                  SnackBar(
+                                    content: Text(
+                                      'Error al cancelar orden: $e',
+                                    ),
+                                  ),
+                                );
+                              }
+                            }
+                          },
+                        ),
+
                       const Divider(height: 1, indent: 16, endIndent: 16),
                       BottomSheetActionItem(
                         icon: Icons.content_copy_outlined,
@@ -248,10 +271,34 @@ class _SupplierOrderDetailsScreenState
               unselectedLabelColor: colors.onSurfaceVariant,
               indicatorColor: colors.primary,
               labelStyle: TextStyle(fontWeight: FontWeight.bold),
-              tabs: const [
-                Tab(text: 'Detalles'),
-                Tab(text: 'Productos'),
-                Tab(text: 'Resumen'),
+              tabs: [
+                const Tab(text: 'Detalles'),
+                Tab(
+                  child: Consumer(
+                    builder: (context, ref, _) {
+                      final canShowAlerts = order.canShowAlerts;
+                      final validationState = ref.watch(
+                        supplierOrderValidationProvider(items),
+                      );
+                      final hasAlerts = canShowAlerts && (
+                        order.hasPriceIncrease ||
+                        order.stockStatus != StockStatus.available ||
+                        validationState.items.values.any((item) => item.statuses.isNotEmpty)
+                      );
+                      return Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Text('Productos'),
+                          if (hasAlerts) ...[
+                            const SizedBox(width: 6),
+                            Badge(backgroundColor: colors.error, smallSize: 8),
+                          ],
+                        ],
+                      );
+                    },
+                  ),
+                ),
+                const Tab(text: 'Resumen'),
               ],
             ),
           ),
@@ -270,16 +317,57 @@ class _SupplierOrderDetailsScreenState
           floatingActionButton: canEdit
               ? Padding(
                   padding: const EdgeInsets.only(bottom: 40.0),
-                  child: FloatingActionButton(
-                    onPressed: () {
-                      ref
-                          .read(createSupplierOrderProvider.notifier)
-                          .loadFromExisting(order, items);
-                      context.push(
-                        '/supplier-orders/edit/${order.id}?tab=${_tabController.index}',
+                  child: Builder(
+                    builder: (context) {
+                      final showFinalizeFab =
+                          order.status == SupplierOrderStatus.sent ||
+                          order.status == SupplierOrderStatus.resent;
+
+                      if (showFinalizeFab) {
+                        return Column(
+                          mainAxisSize: MainAxisSize.min,
+                          crossAxisAlignment: CrossAxisAlignment.end,
+                          children: [
+                            FloatingActionButton(
+                              heroTag: 'finalize_order_fab',
+                              onPressed: () {
+                                _finalizeOrderFlow(context, order, items);
+                              },
+                              backgroundColor: colors.secondaryContainer,
+                              foregroundColor: colors.onSecondaryContainer,
+                              tooltip: 'Finalizar orden',
+                              child: const Icon(Icons.check_circle_outline),
+                            ),
+                            const SizedBox(height: 16),
+                            FloatingActionButton(
+                              heroTag: 'edit_order_fab',
+                              onPressed: () {
+                                ref
+                                    .read(createSupplierOrderProvider.notifier)
+                                    .loadFromExisting(order, items);
+                                context.push(
+                                  '/supplier-orders/edit/${order.id}?tab=${_tabController.index}',
+                                );
+                              },
+                              child: const Icon(Icons.edit_outlined),
+                            ),
+                          ],
+                        );
+                      }
+
+                      return FloatingActionButton(
+                        heroTag: 'edit_order_fab',
+                        onPressed: () {
+                          ref
+                              .read(createSupplierOrderProvider.notifier)
+                              .loadFromExisting(order, items);
+                          context.push(
+                            '/supplier-orders/edit/${order.id}?tab=${_tabController.index}',
+                          );
+                        },
+                        child: const Icon(Icons.edit_outlined),
                       );
                     },
-                    child: const Icon(Icons.edit_outlined),
                   ),
                 )
               : null,
@@ -295,48 +383,6 @@ class _SupplierOrderDetailsScreenState
       error: (e, s) => Scaffold(
         appBar: const StandardAppBar(title: 'Orden de compra'),
         body: Center(child: Text('Error al cargar detalles: $e')),
-      ),
-    );
-  }
-
-  Future<SupplierOrderStatus?> _showStatusDialog(
-    BuildContext context,
-    SupplierOrderStatus currentStatus,
-  ) async {
-    final colors = Theme.of(context).colorScheme;
-
-    return CustomDialog.show<SupplierOrderStatus>(
-      context: context,
-      dialog: CustomDialog.vertical(
-        icon: Symbols.conversion_path,
-        title: 'Cambiar estatus',
-        contentWidget: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: SupplierOrderStatus.values.map((status) {
-            final isSelected = status == currentStatus;
-            return ListTile(
-              leading: Image.asset(status.iconPath, width: 24, height: 24),
-              title: Text(
-                status.label,
-                style: TextStyle(
-                  fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-                  color: isSelected ? colors.primary : colors.onSurface,
-                ),
-              ),
-              trailing: isSelected
-                  ? Icon(Icons.check, color: colors.primary, size: 20)
-                  : null,
-              onTap: () =>
-                  Navigator.of(context, rootNavigator: true).pop(status),
-            );
-          }).toList(),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context, rootNavigator: true).pop(),
-            child: const Text('Cancelar'),
-          ),
-        ],
       ),
     );
   }
@@ -681,11 +727,53 @@ class _SupplierOrderDetailsScreenState
     );
   }
 
+  bool _hasActiveAlerts(SupplierOrder order, List<SupplierOrderItem> items) {
+    if (!order.canShowAlerts) return false;
+
+    final validationState = ref.read(supplierOrderValidationProvider(items));
+    final hasValidationAlerts =
+        validationState.items.values.any((item) => item.statuses.isNotEmpty);
+
+    return order.hasPriceIncrease ||
+        order.stockStatus != StockStatus.available ||
+        hasValidationAlerts ||
+        items.any((item) => item.hasPriceIncrease || item.isOutOfStock || item.hasLowStock);
+  }
+
   Future<void> _checkAndSendOrder(
     BuildContext context,
     SupplierOrder order,
     List<SupplierOrderItem> items,
   ) async {
+    if (_hasActiveAlerts(order, items)) {
+      final isResend =
+          order.status == SupplierOrderStatus.sent ||
+          order.status == SupplierOrderStatus.resent;
+      CustomDialog.show(
+        context: context,
+        dialog: CustomDialog.confirmation(
+          title: isResend
+              ? 'No se puede reenviar la orden'
+              : 'No se puede enviar la orden',
+          icon: Symbols.warning,
+          iconColor: Colors.amber.shade800,
+          contentWidget: Text(
+            isResend
+                ? 'Esta orden de compra contiene productos con alza de costo o problemas de disponibilidad de stock. No es posible reenviarla mientras las alertas persistan.'
+                : 'Esta orden de compra contiene productos con alza de costo o problemas de disponibilidad de stock. Debes resolver las alertas antes de enviarla al proveedor.',
+            style: Theme.of(context).textTheme.bodyMedium,
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Entendido'),
+            ),
+          ],
+        ),
+      );
+      return;
+    }
+
     final suppliers = ref.read(suppliersProvider).valueOrNull ?? [];
     Supplier? matchedSupplier;
     for (final s in suppliers) {
@@ -740,9 +828,15 @@ class _SupplierOrderDetailsScreenState
       return;
     }
 
+    final isResend =
+        order.status == SupplierOrderStatus.sent ||
+        order.status == SupplierOrderStatus.resent;
+
     final confirm = await _showSendConfirmationDialog(
       context,
-      orderNumber: order.shortOrderNumber,
+      orderNumber: order.orderNumber,
+      supplierName: matchedSupplier?.name ?? '',
+      isResend: isResend,
     );
     if (confirm && context.mounted) {
       _handleSendFlow(context, order, items);
@@ -752,14 +846,19 @@ class _SupplierOrderDetailsScreenState
   Future<bool> _showSendConfirmationDialog(
     BuildContext context, {
     required String orderNumber,
+    required String supplierName,
+    required bool isResend,
   }) async {
     return await CustomDialog.show<bool>(
           context: context,
           dialog: CustomDialog.confirmation(
-            title: '¿Enviar orden de compra?',
-            icon: Symbols.send,
-            contentText:
-                '¿Estás seguro de que deseas enviar la orden de compra #$orderNumber ahora?',
+            title: isResend
+                ? '¿Reenviar orden de compra?'
+                : '¿Enviar orden de compra?',
+            icon: isResend ? Symbols.forward : Symbols.send,
+            contentText: isResend
+                ? '¿Estás seguro de que deseas reenviar esta orden de compra ahora?\n\n$orderNumber ($supplierName)'
+                : '¿Estás seguro de que deseas enviar la orden de compra ahora?\n\n$orderNumber ($supplierName)',
             actions: [
               TextButton(
                 onPressed: () => Navigator.pop(context, false),
@@ -767,11 +866,117 @@ class _SupplierOrderDetailsScreenState
               ),
               FilledButton(
                 onPressed: () => Navigator.pop(context, true),
-                child: const Text('Enviar'),
+                child: Text(isResend ? 'Reenviar' : 'Enviar'),
               ),
             ],
           ),
         ) ??
         false;
+  }
+
+  Future<void> _finalizeOrderFlow(
+    BuildContext context,
+    SupplierOrder order,
+    List<SupplierOrderItem> items,
+  ) async {
+    if (_hasActiveAlerts(order, items)) {
+      CustomDialog.show(
+        context: context,
+        dialog: CustomDialog.confirmation(
+          title: 'No se puede finalizar la orden',
+          icon: Symbols.warning,
+          iconColor: Colors.amber.shade800,
+          contentWidget: Text(
+            'Esta orden de compra contiene productos con alza de costo o problemas de disponibilidad de stock. No es posible finalizarla mientras las alertas persistan.',
+            style: Theme.of(context).textTheme.bodyMedium,
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Entendido'),
+            ),
+          ],
+        ),
+      );
+      return;
+    }
+
+    final messenger = ScaffoldMessenger.of(context);
+    final result = await showModalBottomSheet<Map<String, dynamic>>(
+      context: context,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
+      builder: (context) => FinalizeSupplierOrderSheet(orderId: order.id),
+    );
+
+    if (result != null) {
+      if (!context.mounted) return;
+      final confirm = await CustomDialog.show<bool>(
+        context: context,
+        dialog: CustomDialog.destructive(
+          title: '¿Finalizar Orden de Compra?',
+          contentText:
+              'Una vez finalizada, esta orden no podrá ser modificada ni cancelada. '
+              'El documento cargado debe coincidir plenamente con la Orden de Compra. '
+              'De lo contrario, los créditos otorgados serán revertidos y su cuenta puede ser suspendida.',
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context, false),
+              child: const Text('Cancelar'),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.pop(context, true),
+              style: FilledButton.styleFrom(
+                backgroundColor: Theme.of(context).colorScheme.error,
+                foregroundColor: Theme.of(context).colorScheme.onError,
+              ),
+              child: const Text('Finalizar'),
+            ),
+          ],
+        ),
+      );
+
+      if (confirm == true) {
+        if (!context.mounted) return;
+        showDialog(
+          context: context,
+          barrierDismissible: false,
+          builder: (context) =>
+              const Center(child: CircularProgressIndicator()),
+        );
+
+        try {
+          await ref
+              .read(paginatedSupplierOrdersProvider.notifier)
+              .finalizeSupplierOrder(
+                orderId: order.id,
+                photoFile: result['photoFile'] as File,
+                documentType: result['documentType'] as String,
+                documentNumber: result['documentNumber'] as String,
+                createPurchaseRecord: result['createPurchaseRecord'] as bool,
+              );
+
+          if (context.mounted) {
+            Navigator.pop(context); // Dismiss loading dialog
+          }
+
+          ref.invalidate(supplierOrderDetailProvider(order.id));
+          messenger.showSnackBar(
+            const SnackBar(
+              content: Text('Orden de compra finalizada con éxito.'),
+            ),
+          );
+        } catch (e) {
+          if (context.mounted) {
+            Navigator.pop(context); // Dismiss loading dialog
+          }
+          messenger.showSnackBar(
+            SnackBar(content: Text('Error al finalizar orden: $e')),
+          );
+        }
+      }
+    }
   }
 }

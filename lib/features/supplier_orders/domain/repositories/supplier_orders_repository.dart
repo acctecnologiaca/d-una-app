@@ -16,11 +16,11 @@ abstract class SupplierOrdersRepository {
   Future<void> updateSupplierOrder(SupplierOrder order, List<SupplierOrderItem> items);
   Future<void> deleteSupplierOrder(String id);
   
-  // Transition status to finalized (requires photo upload + optional purchase record insertion)
   Future<void> finalizeSupplierOrder({
     required String orderId,
     required File photoFile,
     required String documentType, // 'invoice' or 'delivery_note'
+    required String documentNumber,
     required bool createPurchaseRecord,
   });
 
@@ -32,4 +32,8 @@ abstract class SupplierOrdersRepository {
 
   Future<void> archiveSupplierOrder(String id, bool isArchived);
   Future<void> updateSupplierOrderStatus(String id, String status);
+
+  Future<Map<String, ({double price, double quantity})>> validateSupplierOrderItems({
+    required List<String> stockIds,
+  });
 }

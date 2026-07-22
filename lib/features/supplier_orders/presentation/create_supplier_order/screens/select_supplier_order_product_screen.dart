@@ -134,7 +134,7 @@ class _SelectSupplierOrderProductScreenState
                 }
 
                 return ListView.separated(
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  padding: const EdgeInsets.fromLTRB(16, 8, 16, 40),
                   itemCount: sortedProducts.length,
                   separatorBuilder: (_, _) =>
                       const Divider(height: 1, color: Colors.transparent),

@@ -6,7 +6,10 @@ import 'package:d_una_app/shared/widgets/generic_search_screen.dart';
 import 'package:d_una_app/shared/widgets/filter_bottom_sheet.dart';
 import 'package:d_una_app/shared/widgets/horizontal_filter_bar.dart';
 import 'package:d_una_app/shared/widgets/sort_selector.dart';
+import 'package:material_symbols_icons/symbols.dart';
 import '../providers/supplier_orders_providers.dart';
+import '../providers/supplier_orders_selection_provider.dart';
+import '../supplier_order_selection_actions.dart';
 import '../../../domain/models/supplier_order.dart';
 import '../../../domain/models/supplier_order_status.dart';
 import 'package:d_una_app/features/portfolio/presentation/providers/suppliers_provider.dart';
@@ -37,6 +40,15 @@ class _SupplierOrdersSearchScreenState
   // Sort state
   SortOption _currentSort = SortOption.recent;
 
+  @override
+  void dispose() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) return;
+      ref.read(supplierOrderSelectionProvider.notifier).clearSelection();
+    });
+    super.dispose();
+  }
+
   /// Returns a formatted chip label based on selected values.
   String _getChipLabel(Set<String> selected, String defaultLabel) {
     if (selected.isEmpty) return defaultLabel;
@@ -52,12 +64,9 @@ class _SupplierOrdersSearchScreenState
   ) {
     Set<String> availableOptions = {};
 
-    // Add formatted active suppliers
+    // Add active suppliers
     for (final s in selectableSuppliers) {
-      final fName = s.legalName != null && s.legalName!.isNotEmpty
-          ? '${s.name} (${s.legalName})'
-          : s.name;
-      availableOptions.add(fName);
+      availableOptions.add(s.name);
     }
 
     // Include supplier names from current orders mapped correctly
@@ -135,19 +144,23 @@ class _SupplierOrdersSearchScreenState
           .map((s) => allStatuses[s] ?? s)
           .where((label) => label.isNotEmpty)
           .toSet(),
-      leadingBuilder: (value) => _buildStatusLeading(value, Theme.of(context).colorScheme),
+      leadingBuilder: (value) =>
+          _buildStatusLeading(value, Theme.of(context).colorScheme),
       sortOptions: false,
       onApply: (selectedLabels) {
         setState(() {
           _selectedStatuses.clear();
           for (final label in selectedLabels) {
-            final key =
-                allStatuses.entries.firstWhere((e) => e.value == label).key;
+            final key = allStatuses.entries
+                .firstWhere((e) => e.value == label)
+                .key;
             _selectedStatuses.add(key);
           }
         });
         final wantsArchived = _selectedStatuses.contains('archived');
-        ref.read(paginatedSupplierOrderSearchProvider.notifier).updateIncludeArchived(wantsArchived);
+        ref
+            .read(paginatedSupplierOrderSearchProvider.notifier)
+            .updateIncludeArchived(wantsArchived);
       },
     );
   }
@@ -187,11 +200,13 @@ class _SupplierOrdersSearchScreenState
       case SortOption.recent:
         return (a, b) => b.date.compareTo(a.date);
       case SortOption.nameAZ:
-        return (a, b) =>
-            a.supplierName.toLowerCase().compareTo(b.supplierName.toLowerCase());
+        return (a, b) => a.supplierName.toLowerCase().compareTo(
+          b.supplierName.toLowerCase(),
+        );
       case SortOption.nameZA:
-        return (a, b) =>
-            b.supplierName.toLowerCase().compareTo(a.supplierName.toLowerCase());
+        return (a, b) => b.supplierName.toLowerCase().compareTo(
+          a.supplierName.toLowerCase(),
+        );
       default:
         return null;
     }
@@ -202,9 +217,30 @@ class _SupplierOrdersSearchScreenState
     final paginatedAsync = ref.watch(paginatedSupplierOrderSearchProvider);
     final suppliersAsync = ref.watch(suppliersProvider);
     final userProfile = ref.watch(userProfileProvider).valueOrNull;
+    final selection = ref.watch(supplierOrderSelectionProvider);
     final dateFormat = DateFormat('dd/MM/yyyy');
 
     final suppliers = suppliersAsync.valueOrNull ?? [];
+    final allOrders = paginatedAsync.valueOrNull?.items ?? [];
+    final selectedOrders = allOrders
+        .where((o) => selection.selectedIds.contains(o.id))
+        .toList();
+
+    final canSendBatch =
+        selection.count > 0 &&
+        selection.count <= 3 &&
+        selectedOrders.every(
+          (o) =>
+              o.status != SupplierOrderStatus.finalized &&
+              o.status != SupplierOrderStatus.cancelled,
+        );
+
+    final isSingleResend = selectedOrders.length == 1 &&
+        (selectedOrders.first.status == SupplierOrderStatus.sent ||
+            selectedOrders.first.status == SupplierOrderStatus.resent);
+
+    final isAllArchived = selectedOrders.isNotEmpty &&
+        selectedOrders.every((o) => o.isArchived);
 
     // Filter out suppliers that are locked for this user profile context
     final selectableSuppliers = suppliers.where((s) {
@@ -223,15 +259,12 @@ class _SupplierOrdersSearchScreenState
       return true;
     }).toList();
 
-    // Map names to full "Alias (Legal)" format
+    // Map names to commercial name to handle legacy orders with legalName
     final Map<String, String> nameToFormattedMap = {};
     for (final s in selectableSuppliers) {
-      final fName = s.legalName != null && s.legalName!.isNotEmpty
-          ? '${s.name} (${s.legalName})'
-          : s.name;
-      nameToFormattedMap[s.name] = fName;
+      nameToFormattedMap[s.name] = s.name;
       if (s.legalName != null && s.legalName!.isNotEmpty) {
-        nameToFormattedMap[s.legalName!] = fName;
+        nameToFormattedMap[s.legalName!] = s.name;
       }
     }
 
@@ -242,8 +275,9 @@ class _SupplierOrdersSearchScreenState
         for (final s in SupplierOrderStatus.values) s.dbValue: s.label,
       };
       allStatuses['archived'] = 'Archivada';
-      final selectedLabels =
-          _selectedStatuses.map((s) => allStatuses[s] ?? s).toSet();
+      final selectedLabels = _selectedStatuses
+          .map((s) => allStatuses[s] ?? s)
+          .toSet();
       statusChipLabel = _getChipLabel(selectedLabels, 'Estatus');
     }
 
@@ -253,6 +287,16 @@ class _SupplierOrdersSearchScreenState
       historyKey: 'supplier_orders_search_history',
       isPaginatedMode: true,
       paginatedDataAsync: paginatedAsync,
+      appBarOverride: selection.isSelectionMode
+          ? _buildSelectionHeader(
+              context,
+              ref,
+              selection,
+              canSendBatch,
+              isSingleResend,
+              isAllArchived,
+            )
+          : null,
       onResetFilters: () {
         setState(() {
           _selectedSupplierNames.clear();
@@ -260,11 +304,17 @@ class _SupplierOrdersSearchScreenState
           _dateRange = null;
           _currentSort = SortOption.recent;
         });
-        ref.read(paginatedSupplierOrderSearchProvider.notifier).updateSearch(null);
-        ref.read(paginatedSupplierOrderSearchProvider.notifier).updateIncludeArchived(false);
+        ref
+            .read(paginatedSupplierOrderSearchProvider.notifier)
+            .updateSearch(null);
+        ref
+            .read(paginatedSupplierOrderSearchProvider.notifier)
+            .updateIncludeArchived(false);
       },
       onServerSearch: (query) {
-        ref.read(paginatedSupplierOrderSearchProvider.notifier).updateSearch(query);
+        ref
+            .read(paginatedSupplierOrderSearchProvider.notifier)
+            .updateSearch(query);
       },
       onLoadMore: () {
         ref.read(paginatedSupplierOrderSearchProvider.notifier).loadMore();
@@ -293,9 +343,15 @@ class _SupplierOrdersSearchScreenState
       itemBuilder: (context, order) {
         return SupplierOrderCard(
           order: order,
-          onTap: () {
-            context.push('/supplier-orders/view/${order.id}');
-          },
+          isSelectionMode: selection.isSelectionMode,
+          isSelected: selection.isSelected(order.id),
+          onLongPress: () =>
+              ref.read(supplierOrderSelectionProvider.notifier).toggle(order.id),
+          onTap: selection.isSelectionMode
+              ? () => ref.read(supplierOrderSelectionProvider.notifier).toggle(order.id)
+              : () {
+                  context.push('/supplier-orders/view/${order.id}');
+                },
         );
       },
       filters: [
@@ -304,7 +360,11 @@ class _SupplierOrdersSearchScreenState
           isActive: _selectedSupplierNames.isNotEmpty,
           onTap: () {
             final currentOrders = paginatedAsync.valueOrNull?.items ?? [];
-            _showSupplierFilter(selectableSuppliers, currentOrders, nameToFormattedMap);
+            _showSupplierFilter(
+              selectableSuppliers,
+              currentOrders,
+              nameToFormattedMap,
+            );
           },
         ),
         FilterChipData(
@@ -323,7 +383,8 @@ class _SupplierOrdersSearchScreenState
       filter: (order, query) {
         // Client-side supplier name filter
         if (_selectedSupplierNames.isNotEmpty) {
-          final orderFormattedName = nameToFormattedMap[order.supplierName] ?? order.supplierName;
+          final orderFormattedName =
+              nameToFormattedMap[order.supplierName] ?? order.supplierName;
           if (!_selectedSupplierNames.contains(orderFormattedName)) {
             return false;
           }
@@ -365,6 +426,74 @@ class _SupplierOrdersSearchScreenState
         return true;
       },
       comparator: _getComparator(),
+    );
+  }
+
+  PreferredSizeWidget _buildSelectionHeader(
+    BuildContext context,
+    WidgetRef ref,
+    SupplierOrderSelectionState selection,
+    bool canSendBatch,
+    bool isSingleResend,
+    bool isAllArchived,
+  ) {
+    return PreferredSize(
+      preferredSize: const Size.fromHeight(kToolbarHeight),
+      child: SafeArea(
+        bottom: false,
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(4, 4, 16, 0),
+          child: Row(
+            children: [
+              IconButton(
+                icon: const Icon(Icons.close),
+                onPressed: () => ref
+                    .read(supplierOrderSelectionProvider.notifier)
+                    .clearSelection(),
+              ),
+              Text(
+                '${selection.count} Ítem${selection.count > 1 ? 's' : ''}',
+                style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                  fontSize: 22,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+              const Spacer(),
+              IconButton(
+                icon: Icon(
+                  isAllArchived ? Icons.unarchive_outlined : Icons.archive_outlined,
+                ),
+                tooltip: isAllArchived ? 'Desarchivar' : 'Archivar',
+                onPressed: () => SupplierOrderSelectionActions.handleBatchArchive(
+                  context,
+                  ref,
+                  selection,
+                  archive: !isAllArchived,
+                ),
+              ),
+              IconButton(
+                icon: Icon(isSingleResend ? Symbols.forward : Icons.send),
+                tooltip: isSingleResend ? 'Reenviar' : 'Enviar',
+                onPressed: canSendBatch
+                    ? () => SupplierOrderSelectionActions.handleBatchSend(
+                        context,
+                        ref,
+                        selection,
+                      )
+                    : null,
+              ),
+              IconButton(
+                icon: const Icon(Icons.more_vert),
+                onPressed: () => SupplierOrderSelectionActions.showActionsSheet(
+                  context,
+                  ref,
+                  selection,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 }

@@ -11,6 +11,7 @@ class Supplier extends Equatable {
   final Map<String, dynamic> contactInfo;
   final double minimumPurchaseAmount;
   final String? legalName;
+  final bool isRestricted;
 
   const Supplier({
     required this.id,
@@ -23,6 +24,7 @@ class Supplier extends Equatable {
     this.contactInfo = const {},
     this.minimumPurchaseAmount = 0.0,
     this.legalName,
+    this.isRestricted = false,
   });
 
   factory Supplier.fromJson(Map<String, dynamic> json) {
@@ -47,6 +49,7 @@ class Supplier extends Equatable {
       contactInfo: json['contact_info'] ?? {},
       minimumPurchaseAmount: parseDouble(json['minimum_purchase_amount']),
       legalName: json['legal_name'],
+      isRestricted: json['is_restricted'] ?? false,
     );
   }
 
@@ -66,5 +69,6 @@ class Supplier extends Equatable {
     contactInfo,
     minimumPurchaseAmount,
     legalName,
+    isRestricted,
   ];
 }

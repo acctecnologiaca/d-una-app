@@ -1,4 +1,5 @@
 import '../../domain/models/supplier_order.dart';
+import '../../domain/models/supplier_order_item.dart';
 import '../../domain/models/supplier_order_status.dart';
 
 class SupplierOrderDto {
@@ -10,6 +11,30 @@ class SupplierOrderDto {
     String? branchName = json['supplier_branches']?['name'] as String?;
     String? shippingLabel = json['shipping_methods']?['label'] as String?;
     String? receiverName = json['collaborators']?['full_name'] as String?;
+
+    List<SupplierOrderItem>? items;
+    if (json['supplier_order_items'] != null && json['supplier_order_items'] is List) {
+      items = (json['supplier_order_items'] as List).map((i) {
+        final branchStock = i['supplier_branch_stock'] as Map<String, dynamic>?;
+        final branch = branchStock?['supplier_branches'] as Map<String, dynamic>?;
+        final itemBranchName = branch?['name'] as String?;
+
+        return SupplierOrderItem(
+          id: i['id'],
+          supplierOrderId: i['supplier_order_id'],
+          productId: i['product_id'],
+          name: i['name'],
+          brand: i['brand'],
+          model: i['model'],
+          uom: i['uom'] ?? 'Ud',
+          uomIconName: i['uom_icon_name'],
+          quantity: (i['quantity'] ?? 0.0).toDouble(),
+          unitPrice: (i['unit_price'] ?? 0.0).toDouble(),
+          supplierBranchStockId: i['supplier_branch_stock_id'],
+          branchName: itemBranchName,
+        );
+      }).toList();
+    }
 
     return SupplierOrder(
       id: json['id'],
@@ -27,12 +52,14 @@ class SupplierOrderDto {
       total: (json['total'] ?? 0).toDouble(),
       invoicePhotoUrl: json['invoice_photo_url'],
       isArchived: json['is_archived'] as bool? ?? false,
-      createdAt: DateTime.parse(json['created_at']),
-      updatedAt: DateTime.parse(json['updated_at']),
+      verificationStatus: json['verification_status'] as String? ?? 'pending_review',
+      createdAt: DateTime.parse(json['created_at']).toLocal(),
+      updatedAt: DateTime.parse(json['updated_at']).toLocal(),
       supplierName: supplierName ?? 'Desconocido',
       branchName: branchName,
       shippingMethodLabel: shippingLabel,
       receiverName: receiverName,
+      items: items,
     );
   }
 
@@ -50,6 +77,7 @@ class SupplierOrderDto {
       'total': order.total,
       'invoice_photo_url': order.invoicePhotoUrl,
       'is_archived': order.isArchived,
+      'verification_status': order.verificationStatus,
       'order_number': order.orderNumber,
     };
   }

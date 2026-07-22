@@ -87,14 +87,6 @@ class _AddPurchaseScreenState extends ConsumerState<AddPurchaseScreen>
         backgroundColor: colors.surface,
         appBar: StandardAppBar(
           title: 'Registrar nueva compra',
-          actions: [
-            IconButton(
-              icon: Icon(Icons.more_vert, color: colors.onSurface),
-              onPressed: () {
-                // TODO: Additional actions
-              },
-            ),
-          ],
           bottom: TabBar(
             controller: _tabController,
             labelColor: colors.primary,

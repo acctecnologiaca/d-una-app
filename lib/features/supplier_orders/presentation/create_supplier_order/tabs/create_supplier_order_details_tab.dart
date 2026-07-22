@@ -137,10 +137,7 @@ class _CreateSupplierOrderDetailsTabState
                     value: selectedSupplier,
                     items: selectableSuppliers,
                     searchable: true,
-                    itemLabelBuilder: (s) =>
-                        s.legalName != null && s.legalName!.isNotEmpty
-                        ? '${s.name} (${s.legalName})'
-                        : s.name,
+                    itemLabelBuilder: (s) => s.name,
                     onChanged: (val) => _handleSupplierChange(val, state),
                   ),
                   if (selectedSupplier != null &&
@@ -152,13 +149,13 @@ class _CreateSupplierOrderDetailsTabState
                           Icon(
                             Icons.info_outline,
                             size: 14,
-                            color: theme.colorScheme.primary,
+                            color: theme.colorScheme.secondary,
                           ),
                           const SizedBox(width: 6),
                           Text(
                             'Compra mínima: ${CurrencyFormatter.format(selectedSupplier.minimumPurchaseAmount)}',
                             style: theme.textTheme.bodySmall?.copyWith(
-                              color: theme.colorScheme.error,
+                              color: theme.colorScheme.secondary,
                               fontWeight: FontWeight.w600,
                             ),
                           ),
@@ -191,11 +188,6 @@ class _CreateSupplierOrderDetailsTabState
                       children: [
                         CustomDropdown<Map<String, dynamic>>(
                           label: 'Sucursal del Proveedor',
-                          helperText:
-                              'El pedido se canalizará a través de esta sucursal',
-                          helperStyle: const TextStyle(
-                            fontWeight: FontWeight.bold,
-                          ),
                           value: selectedBranch,
                           items: branches,
                           itemLabelBuilder: (b) => b['name'] as String,
@@ -213,6 +205,26 @@ class _CreateSupplierOrderDetailsTabState
                                   .setBranch(null, null);
                             }
                           },
+                        ),
+                        Padding(
+                          padding: const EdgeInsets.only(top: 8, left: 12),
+                          child: Row(
+                            children: [
+                              Icon(
+                                Icons.info_outline,
+                                size: 14,
+                                color: theme.colorScheme.secondary,
+                              ),
+                              const SizedBox(width: 6),
+                              Text(
+                                'El pedido se canalizará a través de esta sucursal',
+                                style: theme.textTheme.bodySmall?.copyWith(
+                                  color: theme.colorScheme.secondary,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ],
+                          ),
                         ),
                         const SizedBox(height: 24),
                       ],

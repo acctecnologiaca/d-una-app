@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:d_una_app/features/quotes/domain/models/quote_model.dart' show StockStatus;
 import '../../../domain/repositories/supplier_orders_repository.dart';
 import '../../../data/repositories/supabase_supplier_orders_repository.dart';
 import '../../../domain/models/supplier_order.dart';
@@ -12,6 +13,88 @@ part 'supplier_orders_providers.g.dart';
 @riverpod
 SupplierOrdersRepository supplierOrdersRepository(Ref ref) {
   return SupabaseSupplierOrdersRepository(Supabase.instance.client);
+}
+
+Future<List<SupplierOrder>> _enrichOrdersWithValidation(
+  Ref ref,
+  List<SupplierOrder> orders,
+) async {
+  if (orders.isEmpty) return orders;
+
+  final activeOrders = orders.where((o) => o.canShowAlerts).toList();
+  if (activeOrders.isEmpty) return orders;
+
+  final stockIds = <String>{};
+  for (final order in activeOrders) {
+    if (order.items != null) {
+      for (final item in order.items!) {
+        if (item.supplierBranchStockId != null) {
+          stockIds.add(item.supplierBranchStockId!);
+        }
+      }
+    }
+  }
+
+  if (stockIds.isEmpty) return orders;
+
+  final stockMap = await ref
+      .read(supplierOrdersRepositoryProvider)
+      .validateSupplierOrderItems(stockIds: stockIds.toList());
+
+  return orders.map((order) {
+    if (!order.canShowAlerts || order.items == null || order.items!.isEmpty) {
+      return order;
+    }
+
+    bool hasPriceIncrease = false;
+    StockStatus stockStatus = StockStatus.available;
+
+    for (final item in order.items!) {
+      if (item.supplierBranchStockId == null) continue;
+      final currentData = stockMap[item.supplierBranchStockId];
+      if (currentData == null) continue;
+
+      if (currentData.price > (item.unitPrice + 0.01)) {
+        hasPriceIncrease = true;
+      }
+
+      if (currentData.quantity <= 0) {
+        stockStatus = StockStatus.unavailable;
+      } else if (currentData.quantity < item.quantity) {
+        if (stockStatus != StockStatus.unavailable) {
+          stockStatus = StockStatus.lowStock;
+        }
+      }
+    }
+
+    return SupplierOrder(
+      id: order.id,
+      userId: order.userId,
+      supplierId: order.supplierId,
+      supplierBranchId: order.supplierBranchId,
+      shippingMethodId: order.shippingMethodId,
+      receiverCollaboratorId: order.receiverCollaboratorId,
+      orderNumber: order.orderNumber,
+      date: order.date,
+      paymentMethod: order.paymentMethod,
+      status: order.status,
+      subtotal: order.subtotal,
+      tax: order.tax,
+      total: order.total,
+      invoicePhotoUrl: order.invoicePhotoUrl,
+      isArchived: order.isArchived,
+      verificationStatus: order.verificationStatus,
+      createdAt: order.createdAt,
+      updatedAt: order.updatedAt,
+      supplierName: order.supplierName,
+      branchName: order.branchName,
+      shippingMethodLabel: order.shippingMethodLabel,
+      receiverName: order.receiverName,
+      items: order.items,
+      stockStatus: stockStatus,
+      hasPriceIncrease: hasPriceIncrease,
+    );
+  }).toList();
 }
 
 @riverpod
@@ -26,13 +109,14 @@ class PaginatedSupplierOrders extends _$PaginatedSupplierOrders {
   }
 
   Future<PaginatedState<SupplierOrder>> _fetchPage(int offset) async {
-    final items = await ref.read(supplierOrdersRepositoryProvider).getSupplierOrdersPaginated(
+    final rawItems = await ref.read(supplierOrdersRepositoryProvider).getSupplierOrdersPaginated(
       offset: offset,
       limit: PaginatedState.pageSize,
       searchQuery: _searchQuery,
       statusFilter: _statusFilter,
       includeArchived: _includeArchived,
     );
+    final items = await _enrichOrdersWithValidation(ref, rawItems);
     return PaginatedState(
       items: items,
       currentOffset: offset,
@@ -93,6 +177,39 @@ class PaginatedSupplierOrders extends _$PaginatedSupplierOrders {
     await ref.read(supplierOrdersRepositoryProvider).updateSupplierOrderStatus(id, status);
     await refresh();
   }
+
+  Future<void> finalizeSupplierOrder({
+    required String orderId,
+    required String documentNumber,
+    required String documentType,
+    required dynamic photoFile, // Dynamic or File type. Let's import File from dart:io or use dynamic.
+    required bool createPurchaseRecord,
+  }) async {
+    await ref.read(supplierOrdersRepositoryProvider).finalizeSupplierOrder(
+      orderId: orderId,
+      photoFile: photoFile,
+      documentType: documentType,
+      documentNumber: documentNumber,
+      createPurchaseRecord: createPurchaseRecord,
+    );
+    await refresh();
+  }
+
+  Future<void> batchArchiveSupplierOrders(List<String> ids, {required bool archive}) async {
+    final repo = ref.read(supplierOrdersRepositoryProvider);
+    for (final id in ids) {
+      await repo.archiveSupplierOrder(id, archive);
+    }
+    await refresh();
+  }
+
+  Future<void> batchUpdateSupplierOrderStatus(List<String> ids, String status) async {
+    final repo = ref.read(supplierOrdersRepositoryProvider);
+    for (final id in ids) {
+      await repo.updateSupplierOrderStatus(id, status);
+    }
+    await refresh();
+  }
 }
 
 // --- Paginated Supplier Order Search (AutoDispose) ---
@@ -112,13 +229,14 @@ class PaginatedSupplierOrderSearch extends AutoDisposeAsyncNotifier<PaginatedSta
   }
 
   Future<PaginatedState<SupplierOrder>> _fetchPage(int offset) async {
-    final items = await ref.read(supplierOrdersRepositoryProvider).getSupplierOrdersPaginated(
+    final rawItems = await ref.read(supplierOrdersRepositoryProvider).getSupplierOrdersPaginated(
       offset: offset,
       limit: PaginatedState.pageSize,
       searchQuery: _searchQuery,
       statusFilter: _statusFilter,
       includeArchived: _includeArchived,
     );
+    final items = await _enrichOrdersWithValidation(ref, rawItems);
     return PaginatedState(
       items: items,
       currentOffset: offset,

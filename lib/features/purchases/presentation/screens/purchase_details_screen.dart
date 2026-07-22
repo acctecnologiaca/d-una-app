@@ -276,9 +276,8 @@ class _PurchaseDetailsScreenState extends ConsumerState<PurchaseDetailsScreen>
   Widget? _buildFab(PurchaseDetailsData data) {
     final colors = Theme.of(context).colorScheme;
     if (_isEditing) {
-      // Logic for editing mode FAB (delegated to inner screens if any, or managed here)
-      // AddPurchaseScreen handles its own "Agregar" FAB conditionally on index 1
-      if (_tabController.index == 1) {
+      // Hide the 'Agregar' button if the purchase is linked to a supplier order
+      if (_tabController.index == 1 && data.purchase.supplierOrderId == null) {
         return Padding(
           padding: const EdgeInsets.only(bottom: 40.0),
           child: CustomExtendedFab(
@@ -294,8 +293,6 @@ class _PurchaseDetailsScreenState extends ConsumerState<PurchaseDetailsScreen>
     }
 
     // View Mode FABs
-    // Edit FAB visible depending on tabs (User requested edit FAB on Productos and Resúmen,
-    // but also mentioned Detalles has its own. We can put it globally for all tabs).
     return Padding(
       padding: const EdgeInsets.only(bottom: 40.0),
       child: FloatingActionButton(
@@ -324,14 +321,15 @@ class _PurchaseDetailsScreenState extends ConsumerState<PurchaseDetailsScreen>
             );
           },
         ),
-        BottomSheetActionItem(
-          label: 'Eliminar',
-          icon: Icons.delete_outline,
-          onTap: () {
-            context.pop();
-            _confirmDelete(context);
-          },
-        ),
+        if (data.purchase.supplierOrderId == null)
+          BottomSheetActionItem(
+            label: 'Eliminar',
+            icon: Icons.delete_outline,
+            onTap: () {
+              context.pop();
+              _confirmDelete(context);
+            },
+          ),
       ],
     );
   }

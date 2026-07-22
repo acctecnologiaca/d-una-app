@@ -9,6 +9,7 @@ import '../../../../../shared/widgets/custom_dialog.dart';
 import '../../../../profile/presentation/providers/profile_provider.dart';
 import '../../../../../core/utils/phone_utils.dart';
 import '../../../../../core/services/whatsapp_repository.dart';
+import '../../../../../core/providers/credits_providers.dart';
 import '../../../../../shared/widgets/info_block.dart';
 import '../../../data/models/quote.dart';
 import 'package:d_una_app/core/pdf/templates/quote_pdf_template.dart';
@@ -124,13 +125,6 @@ class _SendWhatsAppBottomSheetState
           : '$userNote. $disclaimer';
 
       // 2. Send via Cloud API Repository
-      // Template: enviar_documento_pdf
-      // Variables:
-      // 1. Client/Contact name
-      // 2. Document type (Cotización)
-      // 3. User/Company name
-      // 4. User phone
-      // 5. Custom note
       await ref
           .read(whatsappRepositoryProvider)
           .sendDocument(
@@ -150,6 +144,16 @@ class _SendWhatsAppBottomSheetState
               _sanitizeParam(finalNote),
             ],
           );
+
+      // 3. Consumir crédito tras el envío exitoso
+      await ref
+          .read(creditsRepositoryProvider)
+          .consumeCredit(
+            documentType: 'quote',
+            channel: 'whatsapp',
+            referenceId: widget.quote.id,
+          );
+      ref.read(userCreditsStatusProvider.notifier).refreshStatus();
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -178,8 +182,42 @@ class _SendWhatsAppBottomSheetState
     }
   }
 
+  Widget _buildCreditsIndicatorWidget(int remaining) {
+    final colors = Theme.of(context).colorScheme;
+
+    final Color color = remaining > 0 ? colors.secondary : colors.error;
+    final IconData icon = remaining > 0
+        ? Icons.check_circle_outline
+        : Icons.error_outline;
+
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: Row(
+        children: [
+          Icon(Icons.star_border_outlined, size: 20, color: colors.secondary),
+          const SizedBox(width: 4),
+          Text(
+            remaining > 0
+                ? 'Créditos disponibles: $remaining'
+                : 'Créditos agotados (0 disponibles)',
+            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+              color: color,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          const SizedBox(width: 6),
+          Icon(icon, size: 16, color: color),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
+    final creditsAsync = ref.watch(userCreditsStatusProvider);
+    final remainingCredits = creditsAsync.valueOrNull?.remainingCredits ?? 0;
+    final isZeroCredits = remainingCredits <= 0;
+
     return CustomActionSheet(
       title: 'Enviar por WhatsApp',
       isContentScrollable: true,
@@ -187,7 +225,12 @@ class _SendWhatsAppBottomSheetState
       content: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const SizedBox(height: 16),
+          creditsAsync.when(
+            data: (status) =>
+                _buildCreditsIndicatorWidget(status.remainingCredits),
+            loading: () => const SizedBox.shrink(),
+            error: (_, _) => const SizedBox.shrink(),
+          ),
           InfoBlock.text(
             icon: Icons.person_outline,
             label: 'Destinatario',
@@ -214,10 +257,12 @@ class _SendWhatsAppBottomSheetState
             mainAxisAlignment: MainAxisAlignment.end,
             children: [
               CustomButton(
-                text: 'Enviar',
+                text: isZeroCredits ? 'Sin créditos' : 'Enviar',
                 isFullWidth: false,
                 isLoading: _isSending,
-                onPressed: _sendViaWhatsApp,
+                onPressed: (!isZeroCredits && !_isSending)
+                    ? _sendViaWhatsApp
+                    : null,
               ),
             ],
           ),

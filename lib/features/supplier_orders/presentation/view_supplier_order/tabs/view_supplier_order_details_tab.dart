@@ -25,10 +25,7 @@ class ViewSupplierOrderDetailsTab extends ConsumerWidget {
       }
     }
     final supplierDisplayName = matchedSupplier != null
-        ? (matchedSupplier.legalName != null &&
-                  matchedSupplier.legalName!.isNotEmpty
-              ? '${matchedSupplier.name} (${matchedSupplier.legalName})'
-              : matchedSupplier.name)
+        ? matchedSupplier.name
         : order.supplierName;
 
     return Scaffold(

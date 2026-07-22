@@ -4,6 +4,7 @@ class Purchase extends Equatable {
   final String id;
   final String userId;
   final String? supplierId;
+  final String? supplierOrderId;
   final String documentType; // 'invoice' | 'delivery_note'
   final String documentNumber;
   final DateTime date;
@@ -21,6 +22,7 @@ class Purchase extends Equatable {
     required this.id,
     required this.userId,
     this.supplierId,
+    this.supplierOrderId,
     required this.documentType,
     required this.documentNumber,
     required this.date,
@@ -38,6 +40,7 @@ class Purchase extends Equatable {
       id: json['id'],
       userId: json['user_id'],
       supplierId: json['supplier_id'],
+      supplierOrderId: json['supplier_order_id'],
       documentType: json['document_type'],
       documentNumber: json['document_number'],
       date: DateTime.parse(json['date']),
@@ -55,6 +58,7 @@ class Purchase extends Equatable {
     return {
       'user_id': userId,
       'supplier_id': supplierId,
+      'supplier_order_id': supplierOrderId,
       'document_type': documentType,
       'document_number': documentNumber,
       'date': date.toIso8601String().split('T')[0],
@@ -70,6 +74,7 @@ class Purchase extends Equatable {
     id,
     userId,
     supplierId,
+    supplierOrderId,
     documentType,
     documentNumber,
     date,

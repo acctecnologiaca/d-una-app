@@ -8,7 +8,7 @@ import '../../../../../shared/widgets/horizontal_filter_bar.dart';
 import '../../../../../shared/widgets/sort_selector.dart';
 import '../../../../../core/utils/search_utils.dart';
 import '../../../../../core/utils/string_extensions.dart';
-import '../../../domain/models/quote_model.dart'; // New Import
+import '../../../domain/models/quote_model.dart';
 import '../widgets/quote_card.dart';
 import '../providers/quotes_provider.dart';
 import '../quote_selection_actions.dart';
@@ -44,7 +44,7 @@ class _QuotesSearchScreenState extends ConsumerState<QuotesSearchScreen> {
     return '${selected.first}+${selected.length - 1}';
   }
 
-  static const _archivedLabel = 'Archivadas';
+  static const _archivedLabel = 'Archivada';
 
   @override
   void dispose() {
@@ -74,17 +74,16 @@ class _QuotesSearchScreenState extends ConsumerState<QuotesSearchScreen> {
             .toList()
           ..sort();
 
-    // Add 'Archivadas' option if any archived quotes exist
-    final hasArchived = quotes.any((q) => q.isArchived);
-    if (hasArchived) {
-      availableStatuses.add(_archivedLabel);
-    }
+    // Add 'Archivadas' option to allow filtering archived quotes, guaranteeing it is always at the end
+    availableStatuses.remove(_archivedLabel);
+    availableStatuses.add(_archivedLabel);
 
     FilterBottomSheet.showMulti(
       context: context,
       title: 'Estatus',
       options: availableStatuses,
       selectedValues: _selectedStatuses,
+      sortOptions: false,
       leadingBuilder: (value) =>
           _buildStatusLeading(value, Theme.of(context).colorScheme),
       onApply: (selected) {
@@ -178,8 +177,11 @@ class _QuotesSearchScreenState extends ConsumerState<QuotesSearchScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final paginatedAsync = ref.watch(paginatedQuoteSearchProvider(widget.productId));
+    final paginatedAsync = ref.watch(
+      paginatedQuoteSearchProvider(widget.productId),
+    );
     final selection = ref.watch(quoteSelectionProvider);
+    final allQuotes = paginatedAsync.valueOrNull?.items ?? [];
 
     return GenericSearchScreen<Quote>(
       title: widget.selectionMode
@@ -191,7 +193,7 @@ class _QuotesSearchScreenState extends ConsumerState<QuotesSearchScreen> {
       paginatedDataAsync: paginatedAsync,
       showHistory: !widget.selectionMode && widget.productId == null,
       appBarOverride: selection.isSelectionMode
-          ? _buildSelectionHeader(context, ref, selection)
+          ? _buildSelectionHeader(context, ref, selection, allQuotes)
           : null,
       onResetFilters: () {
         setState(() {
@@ -200,7 +202,9 @@ class _QuotesSearchScreenState extends ConsumerState<QuotesSearchScreen> {
           _selectedDateRange = null;
           _currentSort = SortOption.recent;
         });
-        ref.read(paginatedQuoteSearchProvider(widget.productId).notifier).updateSearch(null);
+        ref
+            .read(paginatedQuoteSearchProvider(widget.productId).notifier)
+            .updateSearch(null);
         ref
             .read(paginatedQuoteSearchProvider(widget.productId).notifier)
             .updateFilters(status: null, categoryId: null);
@@ -209,10 +213,14 @@ class _QuotesSearchScreenState extends ConsumerState<QuotesSearchScreen> {
             .updateSort('date_issued', false);
       },
       onServerSearch: (query) {
-        ref.read(paginatedQuoteSearchProvider(widget.productId).notifier).updateSearch(query);
+        ref
+            .read(paginatedQuoteSearchProvider(widget.productId).notifier)
+            .updateSearch(query);
       },
       onLoadMore: () {
-        ref.read(paginatedQuoteSearchProvider(widget.productId).notifier).loadMore();
+        ref
+            .read(paginatedQuoteSearchProvider(widget.productId).notifier)
+            .loadMore();
       },
       onQueryChanged: (query) {
         setState(() {
@@ -367,8 +375,15 @@ class _QuotesSearchScreenState extends ConsumerState<QuotesSearchScreen> {
     BuildContext context,
     WidgetRef ref,
     QuoteSelectionState selection,
+    List<Quote> allQuotes,
   ) {
     final colors = Theme.of(context).colorScheme;
+    final selectedQuotes = allQuotes
+        .where((q) => selection.selectedIds.contains(q.id))
+        .toList();
+    final isAllArchived =
+        selectedQuotes.isNotEmpty && selectedQuotes.every((q) => q.isArchived);
+
     return AppBar(
       backgroundColor: colors.surface,
       elevation: 0,
@@ -388,10 +403,17 @@ class _QuotesSearchScreenState extends ConsumerState<QuotesSearchScreen> {
       ),
       actions: [
         IconButton(
-          icon: Icon(Icons.archive_outlined, color: colors.onSurface),
-          tooltip: 'Archivar',
-          onPressed: () =>
-              QuoteSelectionActions.handleBatchArchive(context, ref, selection),
+          icon: Icon(
+            isAllArchived ? Icons.unarchive_outlined : Icons.archive_outlined,
+            color: colors.onSurface,
+          ),
+          tooltip: isAllArchived ? 'Desarchivar' : 'Archivar',
+          onPressed: () => QuoteSelectionActions.handleBatchArchive(
+            context,
+            ref,
+            selection,
+            archive: !isAllArchived,
+          ),
         ),
         IconButton(
           icon: Icon(Symbols.conversion_path, color: colors.onSurface),
@@ -401,8 +423,12 @@ class _QuotesSearchScreenState extends ConsumerState<QuotesSearchScreen> {
         ),
         IconButton(
           icon: Icon(Icons.more_vert, color: colors.onSurface),
-          onPressed: () =>
-              QuoteSelectionActions.showActionsSheet(context, ref, selection),
+          onPressed: () => QuoteSelectionActions.showActionsSheet(
+            context,
+            ref,
+            selection,
+            allQuotes,
+          ),
         ),
       ],
     );

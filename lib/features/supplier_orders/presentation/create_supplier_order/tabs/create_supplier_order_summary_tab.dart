@@ -9,6 +9,7 @@ import 'package:d_una_app/features/portfolio/presentation/providers/suppliers_pr
 import 'package:d_una_app/features/portfolio/domain/models/supplier_model.dart';
 import '../../../../../shared/widgets/custom_action_sheet.dart';
 import '../../../../../shared/widgets/bottom_sheet_action_item.dart';
+import 'package:d_una_app/features/supplier_orders/domain/utils/oc_credit_helper.dart';
 
 class CreateSupplierOrderSummaryTab extends ConsumerWidget {
   final Function(int) onNavigateToTab;
@@ -37,9 +38,7 @@ class CreateSupplierOrderSummaryTab extends ConsumerWidget {
       }
     }
     final supplierDisplayName = matchedSupplier != null
-        ? (matchedSupplier.legalName != null && matchedSupplier.legalName!.isNotEmpty
-            ? '${matchedSupplier.name} (${matchedSupplier.legalName})'
-            : matchedSupplier.name)
+        ? matchedSupplier.name
         : (state.supplierName ?? 'No seleccionado');
 
     // Check if empty
@@ -91,7 +90,9 @@ class CreateSupplierOrderSummaryTab extends ConsumerWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            if (matchedSupplier != null && matchedSupplier.minimumPurchaseAmount > 0 && state.subtotal < matchedSupplier.minimumPurchaseAmount) ...[
+            if (matchedSupplier != null &&
+                matchedSupplier.minimumPurchaseAmount > 0 &&
+                state.subtotal < matchedSupplier.minimumPurchaseAmount) ...[
               Card(
                 color: colors.errorContainer,
                 elevation: 0,
@@ -103,7 +104,10 @@ class CreateSupplierOrderSummaryTab extends ConsumerWidget {
                   padding: const EdgeInsets.all(12.0),
                   child: Row(
                     children: [
-                      Icon(Icons.warning_amber_rounded, color: colors.onErrorContainer),
+                      Icon(
+                        Icons.warning_amber_rounded,
+                        color: colors.onErrorContainer,
+                      ),
                       const SizedBox(width: 8),
                       Expanded(
                         child: Text(
@@ -121,6 +125,41 @@ class CreateSupplierOrderSummaryTab extends ConsumerWidget {
               ),
               const SizedBox(height: 16),
             ],
+            // Indicador de créditos generados por esta OC
+            Padding(
+              padding: const EdgeInsets.only(bottom: 8.0, top: 4.0),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+
+                children: [
+                  Icon(
+                    Icons.star_border_outlined,
+                    size: 20,
+                    color: colors.secondary,
+                  ),
+                  const SizedBox(width: 4),
+                  Text(
+                    'Créditos a recibir:',
+                    textAlign: TextAlign.center,
+                    style: textTheme.titleSmall?.copyWith(
+                      color: colors.secondary,
+                      fontSize: 14,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const SizedBox(width: 4),
+                  Text(
+                    '${OCCreditHelper.calculateEarnedCredits(state.total)}',
+                    textAlign: TextAlign.center,
+                    style: textTheme.titleSmall?.copyWith(
+                      color: colors.secondary,
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ],
+              ),
+            ),
             // 1. Proveedor Section
             _buildSectionHeader(context, Icons.warehouse, 'Proveedor'),
             Card(
@@ -137,7 +176,7 @@ class CreateSupplierOrderSummaryTab extends ConsumerWidget {
                     _buildSummaryRow(
                       context,
                       Icons.business,
-                      'Razón social',
+                      'Nombre',
                       supplierDisplayName,
                       isTextValue: true,
                     ),
@@ -390,7 +429,9 @@ class CreateSupplierOrderSummaryTab extends ConsumerWidget {
           onTap: () {
             Navigator.pop(context); // Close action sheet
             ref.invalidate(createSupplierOrderProvider);
-            context.pushReplacement('/supplier-orders/view/$createdOrderId?triggerSend=true');
+            context.pushReplacement(
+              '/supplier-orders/view/$createdOrderId?triggerSend=true',
+            );
           },
         ),
         BottomSheetActionItem(

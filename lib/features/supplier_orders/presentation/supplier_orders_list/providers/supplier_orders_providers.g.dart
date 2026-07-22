@@ -445,7 +445,7 @@ class _SupplierBranchContactInfoProviderElement
 }
 
 String _$paginatedSupplierOrdersHash() =>
-    r'a0777aa0b5ae4e7ae90528c9c42b55c44c0c4124';
+    r'871550e927d5a3d29fab1f6c3e562b6f8f47b3e3';
 
 /// See also [PaginatedSupplierOrders].
 @ProviderFor(PaginatedSupplierOrders)

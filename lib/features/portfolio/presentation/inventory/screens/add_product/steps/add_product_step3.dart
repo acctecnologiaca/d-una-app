@@ -15,6 +15,11 @@ class AddProductStep3 extends StatefulWidget {
   final List<Uom> uoms;
   final VoidCallback onAddUom;
 
+  final bool requiresSerials;
+  final ValueChanged<bool> onRequiresSerialsChanged;
+  final bool hasWarranty;
+  final ValueChanged<bool> onHasWarrantyChanged;
+
   final VoidCallback onNext;
   final VoidCallback onBack;
   final VoidCallback onCancel;
@@ -29,6 +34,10 @@ class AddProductStep3 extends StatefulWidget {
     required this.onUomChanged,
     required this.uoms,
     required this.onAddUom,
+    required this.requiresSerials,
+    required this.onRequiresSerialsChanged,
+    required this.hasWarranty,
+    required this.onHasWarrantyChanged,
     required this.onNext,
     required this.onBack,
     required this.onCancel,
@@ -128,6 +137,40 @@ class _AddProductStep3State extends State<AddProductStep3> {
                       }
                       return null;
                     },
+                  ),
+
+                  const SizedBox(height: 24),
+
+                  // Switch para seriales
+                  SwitchListTile(
+                    title: const Text(
+                      'Solicitar serial por defecto',
+                      style: TextStyle(fontWeight: FontWeight.w600),
+                    ),
+                    subtitle: const Text(
+                      'Activa por defecto la petición de números de serie al ingresar o vender el producto.',
+                    ),
+                    value: widget.requiresSerials,
+                    onChanged: widget.onRequiresSerialsChanged,
+                    contentPadding: EdgeInsets.zero,
+                    activeThumbColor: colors.primary,
+                  ),
+
+                  const SizedBox(height: 12),
+
+                  // Switch para garantía
+                  SwitchListTile(
+                    title: const Text(
+                      'Solicitar tiempo de garantía por defecto',
+                      style: TextStyle(fontWeight: FontWeight.w600),
+                    ),
+                    subtitle: const Text(
+                      'Sugiere por defecto la configuración de plazos de garantía para este producto.',
+                    ),
+                    value: widget.hasWarranty,
+                    onChanged: widget.onHasWarrantyChanged,
+                    contentPadding: EdgeInsets.zero,
+                    activeThumbColor: colors.primary,
                   ),
                 ],
               ),

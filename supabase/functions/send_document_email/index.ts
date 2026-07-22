@@ -59,63 +59,22 @@ Deno.serve(async (req) => {
     const MAX_RECIPIENTS_PER_SEND = 3;
     const COOLDOWN_SECONDS = 60;
 
-    // Read system default from env var
-    const systemDefault = parseInt(Deno.env.get('DEFAULT_DAILY_EMAIL_LIMIT') || '10');
+    // Check credits status via RPC
+    const { data: creditStatus, error: rpcError } = await supabaseAdmin
+      .rpc('get_user_credit_status', { p_user_id: userId });
 
-    // Read user's extra credits from profiles
-    const { data: profile, error: profileError } = await supabaseAdmin
-      .from('profiles')
-      .select('daily_extra_email_credits')
-      .eq('id', userId)
-      .single();
-
-    if (profileError) {
-      console.error('Error reading profile:', profileError);
+    if (rpcError || !creditStatus) {
+      console.error('Error checking credit status:', rpcError);
+      throw new Error('Could not verify credit status');
     }
 
-    const extraCredits = profile?.daily_extra_email_credits ?? 0;
-    const MAX_CREDITS_PER_DAY = systemDefault + extraCredits;
-
-    console.log(`Credits config: base=${systemDefault}, extra=${extraCredits}, total=${MAX_CREDITS_PER_DAY}`);
-
-    // 1. Validate max recipients per send
-    if (!Array.isArray(recipientEmails) || recipientEmails.length > MAX_RECIPIENTS_PER_SEND) {
+    const remainingCredits = creditStatus.remainingCredits || 0;
+    if (remainingCredits <= 0) {
       return new Response(JSON.stringify({ 
         success: false, 
-        error: `Máximo ${MAX_RECIPIENTS_PER_SEND} destinatarios por envío`,
-        errorCode: 'MAX_RECIPIENTS_EXCEEDED'
-      }), {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        status: 429,
-      });
-    }
-
-    // 2. Check daily credit usage (last 24 hours)
-    const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
-    
-    const { data: usageLogs, error: usageError } = await supabaseAdmin
-      .from('email_logs')
-      .select('recipient_count, created_at')
-      .eq('user_id', userId)
-      .gte('created_at', twentyFourHoursAgo)
-      .order('created_at', { ascending: false });
-
-    if (usageError) {
-      console.error('Error checking usage:', usageError);
-      throw new Error('Could not verify sending limits');
-    }
-
-    const usedCredits = (usageLogs || []).reduce((sum: number, log: { recipient_count: number }) => sum + log.recipient_count, 0);
-    const remainingCredits = MAX_CREDITS_PER_DAY - usedCredits;
-
-    console.log(`Rate limit check: used=${usedCredits}, remaining=${remainingCredits}, requested=${recipientEmails.length}`);
-
-    if (recipientEmails.length > remainingCredits) {
-      return new Response(JSON.stringify({ 
-        success: false, 
-        error: `Has alcanzado el límite de envíos diarios. Créditos restantes: ${remainingCredits}`,
+        error: `Has alcanzado el límite de envíos de tu ciclo. Créditos restantes: 0`,
         errorCode: 'DAILY_LIMIT_EXCEEDED',
-        remainingCredits: remainingCredits,
+        remainingCredits: 0,
       }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         status: 429,
@@ -276,28 +235,30 @@ Deno.serve(async (req) => {
     // ============================================================
     // LOG SUCCESSFUL SEND (after email is sent, before response)
     // ============================================================
-    const { error: logError } = await supabaseAdmin
-      .from('email_logs')
-      .insert({
-        user_id: userId,
-        recipient_count: recipientEmails.length,
-        document_type: body.documentType || null,
-      });
+    // ============================================================
+    // CONSUME CREDIT AFTER SUCCESSFUL SEND
+    // ============================================================
+    const { data: updatedStatus, error: consumeError } = await supabaseAdmin.rpc(
+      'consume_user_credit',
+      {
+        p_user_id: userId,
+        p_doc_type: body.documentType || 'quote',
+        p_channel: 'email',
+        p_ref_id: body.documentId || null,
+      }
+    );
 
-    if (logError) {
-      console.error('Warning: Failed to log email send:', logError);
-      // Don't fail the request - the email was already sent successfully
+    if (consumeError) {
+      console.error('Warning: Failed to consume credit:', consumeError);
     }
     // ============================================================
 
-    // Calculate remaining credits after this send
-    const updatedRemainingCredits = remainingCredits - recipientEmails.length;
+    const newRemaining = updatedStatus?.remainingCredits ?? (remainingCredits - 1);
 
     return new Response(JSON.stringify({
       success: true,
       message: 'Email sent successfully',
-      remainingCredits: updatedRemainingCredits,
-      totalCredits: MAX_CREDITS_PER_DAY,
+      remainingCredits: newRemaining,
     }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       status: 200,

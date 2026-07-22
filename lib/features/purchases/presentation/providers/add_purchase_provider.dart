@@ -13,6 +13,7 @@ class AddPurchaseState extends Equatable {
   final String? supplierId;
   final String? supplierName;
   final String? supplierTaxId;
+  final String? supplierOrderId;
   final String documentType; // 'Factura' or 'Nota de entrega'
   final String? documentNumber;
   final DateTime date;
@@ -29,6 +30,7 @@ class AddPurchaseState extends Equatable {
     this.supplierId,
     this.supplierName,
     this.supplierTaxId,
+    this.supplierOrderId,
     this.documentType = 'invoice',
     this.documentNumber,
     DateTime? date,
@@ -45,9 +47,10 @@ class AddPurchaseState extends Equatable {
     supplierId,
     supplierName,
     supplierTaxId,
+    supplierOrderId,
     documentType,
     documentNumber,
-    date.year, // Ignore time components if not strictly required, but let's keep full date if possible. We only set date ignoring time usually.
+    date.year,
     date.month,
     date.day,
     taxRate,
@@ -80,6 +83,7 @@ class AddPurchaseState extends Equatable {
     String? supplierId,
     String? supplierName,
     String? supplierTaxId,
+    String? supplierOrderId,
     String? documentType,
     String? documentNumber,
     DateTime? date,
@@ -94,6 +98,7 @@ class AddPurchaseState extends Equatable {
       supplierId: supplierId ?? this.supplierId,
       supplierName: supplierName ?? this.supplierName,
       supplierTaxId: supplierTaxId ?? this.supplierTaxId,
+      supplierOrderId: supplierOrderId ?? this.supplierOrderId,
       documentType: documentType ?? this.documentType,
       documentNumber: documentNumber ?? this.documentNumber,
       date: date ?? this.date,
@@ -150,10 +155,9 @@ class AddPurchaseNotifier extends StateNotifier<AddPurchaseState> {
       final quotesRepo = _ref.read(quotesRepositoryProvider);
       final params = await quotesRepo.getFinancialParameters();
       state = state.copyWith(taxRate: params.taxRate);
-      // Update baseline if taxRate changes so we don't accidentally detect it as a user change
       _baselineState = _baselineState?.copyWith(taxRate: params.taxRate) ?? state.copyWith(taxRate: params.taxRate);
     } catch (_) {
-      // Fallback to default 16% if fetch fails
+      // Fallback
     }
   }
 
@@ -171,18 +175,17 @@ class AddPurchaseNotifier extends StateNotifier<AddPurchaseState> {
     List<ProductSerial> serials,
     String? supplierTaxId,
   ) {
-    state = state.copyWith(
+    state = AddPurchaseState(
       purchaseId: purchase.id,
       supplierId: purchase.supplierId,
       supplierName: purchase.supplierName,
       supplierTaxId: supplierTaxId,
+      supplierOrderId: purchase.supplierOrderId,
       documentType: purchase.documentType,
       documentNumber: purchase.documentNumber,
       date: purchase.date,
       products: items,
       serials: serials,
-      // Note: taxRate is loaded implicitly if we keep _loadFinancialParameters()
-      // or we could calculate it from purchase if needed.
     );
     updateBaseline();
   }

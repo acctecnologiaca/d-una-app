@@ -21,6 +21,8 @@ class Product extends Equatable {
   final double reservedQuantity;
   final double averageCost;
   final int purchaseCount;
+  final bool requiresSerials;
+  final bool hasWarranty;
   final DateTime createdAt;
   final DateTime updatedAt;
 
@@ -44,6 +46,8 @@ class Product extends Equatable {
     this.reservedQuantity = 0.0,
     this.averageCost = 0.0,
     this.purchaseCount = 0,
+    this.requiresSerials = false,
+    this.hasWarranty = false,
     required this.createdAt,
     required this.updatedAt,
   });
@@ -71,6 +75,8 @@ class Product extends Equatable {
           (json['reserved_quantity'] as num?)?.toDouble() ?? 0.0,
       averageCost: (json['average_cost'] as num?)?.toDouble() ?? 0.0,
       purchaseCount: (json['purchase_count'] as num?)?.toInt() ?? 0,
+      requiresSerials: json['requires_serials'] == true,
+      hasWarranty: json['has_warranty'] == true,
       createdAt: DateTime.parse(json['created_at']),
       updatedAt: DateTime.parse(json['updated_at']),
     );
@@ -90,6 +96,8 @@ class Product extends Equatable {
       'uom_id': uomId,
       'image_url': imageUrl,
       'reserved_quantity': reservedQuantity,
+      'requires_serials': requiresSerials,
+      'has_warranty': hasWarranty,
       'created_at': createdAt.toIso8601String(),
       'updated_at': updatedAt.toIso8601String(),
     };
@@ -113,6 +121,8 @@ class Product extends Equatable {
     double? reservedQuantity,
     double? averageCost,
     int? purchaseCount,
+    bool? requiresSerials,
+    bool? hasWarranty,
     DateTime? createdAt,
     DateTime? updatedAt,
   }) {
@@ -134,6 +144,8 @@ class Product extends Equatable {
       reservedQuantity: reservedQuantity ?? this.reservedQuantity,
       averageCost: averageCost ?? this.averageCost,
       purchaseCount: purchaseCount ?? this.purchaseCount,
+      requiresSerials: requiresSerials ?? this.requiresSerials,
+      hasWarranty: hasWarranty ?? this.hasWarranty,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
     );
@@ -158,6 +170,8 @@ class Product extends Equatable {
     reservedQuantity,
     averageCost,
     purchaseCount,
+    requiresSerials,
+    hasWarranty,
     createdAt,
     updatedAt,
   ];

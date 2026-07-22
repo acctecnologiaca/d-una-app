@@ -45,6 +45,8 @@ class _EditProductScreenState extends ConsumerState<EditProductScreen> {
   Category? _selectedCategory;
   Uom? _selectedUom;
   File? _newImageFile;
+  bool _requiresSerials = false;
+  bool _hasWarranty = false;
 
   // Initial Values for Dirty Check
   late String _initialName;
@@ -53,6 +55,8 @@ class _EditProductScreenState extends ConsumerState<EditProductScreen> {
   late Brand? _initialBrand;
   late Category? _initialCategory;
   late Uom? _initialUom;
+  late bool _initialRequiresSerials;
+  late bool _initialHasWarranty;
 
   @override
   void initState() {
@@ -68,6 +72,8 @@ class _EditProductScreenState extends ConsumerState<EditProductScreen> {
     _selectedBrand = widget.product.brand;
     _selectedCategory = widget.product.category;
     _selectedUom = widget.product.uomModel;
+    _requiresSerials = widget.product.requiresSerials;
+    _hasWarranty = widget.product.hasWarranty;
 
     // Capture initial state
     _initialName = widget.product.name;
@@ -76,6 +82,8 @@ class _EditProductScreenState extends ConsumerState<EditProductScreen> {
     _initialBrand = widget.product.brand;
     _initialCategory = widget.product.category;
     _initialUom = widget.product.uomModel;
+    _initialRequiresSerials = widget.product.requiresSerials;
+    _initialHasWarranty = widget.product.hasWarranty;
 
     // Listeners for dirty check
     _nameController.addListener(_onFormChanged);
@@ -90,6 +98,8 @@ class _EditProductScreenState extends ConsumerState<EditProductScreen> {
         _selectedBrand != _initialBrand ||
         _selectedCategory != _initialCategory ||
         _selectedUom != _initialUom ||
+        _requiresSerials != _initialRequiresSerials ||
+        _hasWarranty != _initialHasWarranty ||
         _newImageFile != null;
   }
 
@@ -241,6 +251,8 @@ class _EditProductScreenState extends ConsumerState<EditProductScreen> {
       uomId: _selectedUom?.id,
       uom: _selectedUom?.symbol,
       uomModel: _selectedUom,
+      requiresSerials: _requiresSerials,
+      hasWarranty: _hasWarranty,
       updatedAt: DateTime.now(),
     );
 
@@ -532,6 +544,44 @@ class _EditProductScreenState extends ConsumerState<EditProductScreen> {
                   symbol: '',
                 ),
                 onAddPressed: _showAddUomDialog,
+              ),
+
+              const SizedBox(height: 24),
+
+              // Switch para seriales
+              SwitchListTile(
+                title: const Text(
+                  'Solicitar serial por defecto',
+                  style: TextStyle(fontWeight: FontWeight.w600),
+                ),
+                subtitle: const Text(
+                  'Activa por defecto la petición de números de serie al ingresar o vender el producto.',
+                ),
+                value: _requiresSerials,
+                onChanged: (val) {
+                  setState(() => _requiresSerials = val);
+                },
+                contentPadding: EdgeInsets.zero,
+                activeThumbColor: Theme.of(context).colorScheme.primary,
+              ),
+
+              const SizedBox(height: 12),
+
+              // Switch para garantía
+              SwitchListTile(
+                title: const Text(
+                  'Solicitar tiempo de garantía por defecto',
+                  style: TextStyle(fontWeight: FontWeight.w600),
+                ),
+                subtitle: const Text(
+                  'Sugiere por defecto la configuración de plazos de garantía para este producto.',
+                ),
+                value: _hasWarranty,
+                onChanged: (val) {
+                  setState(() => _hasWarranty = val);
+                },
+                contentPadding: EdgeInsets.zero,
+                activeThumbColor: Theme.of(context).colorScheme.primary,
               ),
 
               const SizedBox(height: 48),

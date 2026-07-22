@@ -48,6 +48,8 @@ class _AddProductScreenState extends ConsumerState<AddProductScreen> {
   // Step 3
   Category? _selectedCategory;
   Uom? _selectedUom;
+  bool _requiresSerials = false;
+  bool _hasWarranty = false;
 
   // Step 4
   File? _productImage;
@@ -321,6 +323,8 @@ class _AddProductScreenState extends ConsumerState<AddProductScreen> {
       category: _selectedCategory,
       uomId: _selectedUom?.id,
       uom: _selectedUom?.symbol,
+      requiresSerials: _requiresSerials,
+      hasWarranty: _hasWarranty,
       createdAt: DateTime.now(),
       updatedAt: DateTime.now(),
     );
@@ -568,6 +572,18 @@ class _AddProductScreenState extends ConsumerState<AddProductScreen> {
               onUomChanged: (val) {
                 setState(() {
                   _selectedUom = val;
+                });
+              },
+              requiresSerials: _requiresSerials,
+              onRequiresSerialsChanged: (val) {
+                setState(() {
+                  _requiresSerials = val;
+                });
+              },
+              hasWarranty: _hasWarranty,
+              onHasWarrantyChanged: (val) {
+                setState(() {
+                  _hasWarranty = val;
                 });
               },
 

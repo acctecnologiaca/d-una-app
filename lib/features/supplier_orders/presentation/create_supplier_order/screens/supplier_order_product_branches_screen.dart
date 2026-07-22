@@ -154,10 +154,7 @@ class _SupplierOrderProductBranchesScreenState
                         'Ciudad Desconocida';
 
                     return Padding(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 16,
-                        vertical: 4,
-                      ),
+                      padding: const EdgeInsets.symmetric(horizontal: 16),
                       child: SupplierOrderBranchCard(
                         branchCity: cityName,
                         price: price,
@@ -210,10 +207,9 @@ class _SupplierOrderProductBranchesScreenState
                   (b) => b['supplier_branch_stock_id'] == entry.key,
                 );
                 final price = (branch['price'] as num).toDouble();
-                final stock = ((branch['stock_quantity'] ??
-                            branch['stock'] ??
-                            0) as num)
-                    .toDouble();
+                final stock =
+                    ((branch['stock_quantity'] ?? branch['stock'] ?? 0) as num)
+                        .toDouble();
                 final supplierProductId = branch['product_id'] as String?;
 
                 newItems.add(

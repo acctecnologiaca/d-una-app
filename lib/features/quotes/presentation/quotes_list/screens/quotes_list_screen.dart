@@ -15,6 +15,7 @@ import '../../../../../shared/widgets/user_profile_avatar.dart';
 import '../../../../../shared/widgets/empty_list_state.dart';
 import '../../../../../shared/widgets/paginated_list_view.dart';
 import '../quote_selection_actions.dart';
+import '../../../domain/models/quote_model.dart';
 
 class QuotesListScreen extends ConsumerStatefulWidget {
   const QuotesListScreen({super.key});
@@ -33,6 +34,7 @@ class _QuotesListScreenState extends ConsumerState<QuotesListScreen> {
     final selection = ref.watch(quoteSelectionProvider);
     final paginatedStateAsync = ref.watch(paginatedQuotesListProvider);
 
+    final allQuotes = paginatedStateAsync.valueOrNull?.items ?? [];
     final isError = paginatedStateAsync.hasError || userProfileAsync.hasError;
 
     return Scaffold(
@@ -42,7 +44,7 @@ class _QuotesListScreenState extends ConsumerState<QuotesListScreen> {
           children: [
             // Header
             selection.isSelectionMode
-                ? _buildSelectionHeader(context, ref, selection)
+                ? _buildSelectionHeader(context, ref, selection, allQuotes)
                 : _buildNormalHeader(context, ref, userProfileAsync, isError),
             const SizedBox(height: 16),
 
@@ -236,7 +238,14 @@ class _QuotesListScreenState extends ConsumerState<QuotesListScreen> {
     BuildContext context,
     WidgetRef ref,
     QuoteSelectionState selection,
+    List<Quote> allQuotes,
   ) {
+    final selectedQuotes = allQuotes
+        .where((q) => selection.selectedIds.contains(q.id))
+        .toList();
+    final isAllArchived = selectedQuotes.isNotEmpty &&
+        selectedQuotes.every((q) => q.isArchived);
+
     return Padding(
       padding: const EdgeInsets.fromLTRB(4, 4, 16, 0),
       child: Row(
@@ -255,9 +264,14 @@ class _QuotesListScreenState extends ConsumerState<QuotesListScreen> {
           ),
           const Spacer(),
           IconButton(
-            icon: const Icon(Icons.archive_outlined),
-            tooltip: 'Archivar',
-            onPressed: () => _handleBatchArchive(context, ref, selection),
+            icon: Icon(isAllArchived ? Icons.unarchive_outlined : Icons.archive_outlined),
+            tooltip: isAllArchived ? 'Desarchivar' : 'Archivar',
+            onPressed: () => _handleBatchArchive(
+              context,
+              ref,
+              selection,
+              archive: !isAllArchived,
+            ),
           ),
           IconButton(
             icon: const Icon(Symbols.conversion_path),
@@ -266,7 +280,7 @@ class _QuotesListScreenState extends ConsumerState<QuotesListScreen> {
           ),
           IconButton(
             icon: const Icon(Icons.more_vert),
-            onPressed: () => _showActionsSheet(context, ref, selection),
+            onPressed: () => _showActionsSheet(context, ref, selection, allQuotes),
           ),
         ],
       ),
@@ -277,8 +291,9 @@ class _QuotesListScreenState extends ConsumerState<QuotesListScreen> {
     BuildContext context,
     WidgetRef ref,
     QuoteSelectionState selection,
+    List<Quote> allQuotes,
   ) {
-    QuoteSelectionActions.showActionsSheet(context, ref, selection);
+    QuoteSelectionActions.showActionsSheet(context, ref, selection, allQuotes);
   }
 
   Future<void> _showStatusDialog(
@@ -292,8 +307,14 @@ class _QuotesListScreenState extends ConsumerState<QuotesListScreen> {
   Future<void> _handleBatchArchive(
     BuildContext context,
     WidgetRef ref,
-    QuoteSelectionState selection,
-  ) async {
-    await QuoteSelectionActions.handleBatchArchive(context, ref, selection);
+    QuoteSelectionState selection, {
+    bool archive = true,
+  }) async {
+    await QuoteSelectionActions.handleBatchArchive(
+      context,
+      ref,
+      selection,
+      archive: archive,
+    );
   }
 }

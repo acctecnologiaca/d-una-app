@@ -62,6 +62,8 @@ class _AddPurchaseDetailsTabState extends ConsumerState<AddPurchaseDetailsTab> {
     final state = ref.watch(addPurchaseProvider);
     final suppliersAsync = ref.watch(allSuppliersProvider);
 
+    final isLinkedToOrder = state.supplierOrderId != null;
+
     return SingleChildScrollView(
       padding: const EdgeInsets.all(16.0),
       child: Column(
@@ -72,11 +74,12 @@ class _AddPurchaseDetailsTabState extends ConsumerState<AddPurchaseDetailsTab> {
             label: 'Fecha de compra*',
             controller: _dateController,
             readOnly: true,
-            onTap: () => _selectDate(context),
+            onTap: isLinkedToOrder ? null : () => _selectDate(context),
             suffixIcon: Icon(
               Icons.calendar_today_outlined,
               color: colors.onSurfaceVariant,
             ),
+            enabled: !isLinkedToOrder,
           ),
           const SizedBox(height: 24),
 
@@ -96,7 +99,7 @@ class _AddPurchaseDetailsTabState extends ConsumerState<AddPurchaseDetailsTab> {
                 value: selectedSupplier,
                 items: suppliers,
                 searchable: true,
-                showAddOption: true,
+                showAddOption: !isLinkedToOrder,
                 addOptionLabel: 'Agregar proveedor',
                 addOptionValue: UnaffiliatedSupplier(
                   id: '___ADD___',
@@ -104,6 +107,7 @@ class _AddPurchaseDetailsTabState extends ConsumerState<AddPurchaseDetailsTab> {
                 ),
                 itemLabelBuilder: (UnaffiliatedSupplier item) =>
                     item.legalName ?? item.name,
+                enabled: !isLinkedToOrder,
                 onAddPressed: () async {
                   final result =
                       await showModalBottomSheet<UnaffiliatedSupplier>(
@@ -154,6 +158,7 @@ class _AddPurchaseDetailsTabState extends ConsumerState<AddPurchaseDetailsTab> {
             label: 'Tipo de documento',
             value: state.documentType,
             items: _docTypes,
+            enabled: !isLinkedToOrder,
             itemLabelBuilder: (item) =>
                 item == 'invoice' ? 'Factura' : 'Nota de entrega',
             onChanged: (val) {
@@ -171,6 +176,8 @@ class _AddPurchaseDetailsTabState extends ConsumerState<AddPurchaseDetailsTab> {
             helperText: 'Nro. Factura o Nota de Entrega',
             prefixIcon: const Icon(Icons.numbers), // the '#' symbol
             keyboardType: TextInputType.text,
+            readOnly: isLinkedToOrder,
+            enabled: !isLinkedToOrder,
             onChanged: (val) {
               ref.read(addPurchaseProvider.notifier).setDocumentNumber(val);
             },

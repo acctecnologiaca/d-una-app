@@ -26,15 +26,15 @@ class QuoteSelectionActions {
     BuildContext context,
     WidgetRef ref,
     QuoteSelectionState selection,
+    List<Quote> allQuotes,
   ) {
     if (selection.isSingle) {
-      final allQuotes = ref.read(quotesListProvider).value ?? [];
       final quote = allQuotes.firstWhere(
         (q) => q.id == selection.selectedIds.first,
       );
       _showSingleActionsSheet(context, ref, selection, quote);
     } else {
-      _showMultiActionsSheet(context, ref, selection);
+      _showMultiActionsSheet(context, ref, selection, allQuotes);
     }
   }
 
@@ -46,24 +46,30 @@ class QuoteSelectionActions {
   ) {
     CustomActionSheet.show(
       context: context,
-      title: '${quote.clientName}\n#${quote.quoteNumber}',
+      title: '${quote.quoteNumber} (${quote.clientName})',
       actions: [
         BottomSheetActionItem(
-          icon: Icons.send,
-          label: 'Enviar',
+          icon: Icons.edit_outlined,
+          label: 'Modificar',
           onTap: () {
             context.pop();
-            showComingSoon(context, 'Enviar');
+            ref.read(quoteSelectionProvider.notifier).clearSelection();
+            context.push('/quotes/edit/${quote.id}');
           },
         ),
-        BottomSheetActionItem(
-          icon: Symbols.conversion_path,
-          label: 'Cambiar estatus',
-          onTap: () {
-            context.pop();
-            showStatusDialog(context, ref, selection);
-          },
-        ),
+        (() {
+          final isSentOrResent = quote.status == QuoteStatus.sent ||
+              quote.status == QuoteStatus.resent;
+          return BottomSheetActionItem(
+            icon: isSentOrResent ? Symbols.forward : Icons.send,
+            label: isSentOrResent ? 'Reenviar' : 'Enviar',
+            onTap: () {
+              context.pop();
+              showComingSoon(context, isSentOrResent ? 'Reenviar' : 'Enviar');
+            },
+          );
+        })(),
+
         BottomSheetActionItem(
           icon: Icons.picture_as_pdf_outlined,
           label: 'Descargar PDF',
@@ -132,11 +138,19 @@ class QuoteSelectionActions {
         ),
         const Divider(height: 1, indent: 16, endIndent: 16),
         BottomSheetActionItem(
+          icon: Symbols.conversion_path,
+          label: 'Cambiar estatus',
+          onTap: () {
+            context.pop();
+            showStatusDialog(context, ref, selection);
+          },
+        ),
+        BottomSheetActionItem(
           icon: Icons.shopping_cart_outlined,
           label: 'Generar orden de compra',
           onTap: () async {
             context.pop();
-            
+
             ScaffoldMessenger.of(context).showSnackBar(
               const SnackBar(
                 content: Text('Generando órdenes de compra...'),
@@ -147,10 +161,11 @@ class QuoteSelectionActions {
             try {
               final repo = ref.read(supplierOrdersRepositoryProvider);
               final result = await repo.batchGenerateFromQuote(quote.id);
-              
+
               if (!context.mounted) return;
 
-              final skipped = result['skippedSuppliers'] as List<dynamic>? ?? [];
+              final skipped =
+                  result['skippedSuppliers'] as List<dynamic>? ?? [];
               final generatedCount = result['generatedCount'] as int? ?? 0;
 
               if (skipped.isNotEmpty) {
@@ -161,10 +176,12 @@ class QuoteSelectionActions {
                     icon: Icons.warning_amber_rounded,
                     iconColor: Colors.amber.shade800,
                     title: 'Órdenes Generadas con Advertencias',
-                    contentText: 'Se generaron $generatedCount órdenes de compra.\n\nNo se pudieron generar órdenes para los siguientes proveedores porque no están registrados en la tabla de proveedores:\n\n${skipped.map((s) => '• $s').join('\n')}',
+                    contentText:
+                        'Se generaron $generatedCount órdenes de compra.\n\nNo se pudieron generar órdenes para los siguientes proveedores porque no están registrados en la tabla de proveedores:\n\n${skipped.map((s) => '• $s').join('\n')}',
                     actions: [
                       TextButton(
-                        onPressed: () => Navigator.of(context, rootNavigator: true).pop(),
+                        onPressed: () =>
+                            Navigator.of(context, rootNavigator: true).pop(),
                         child: const Text('Entendido'),
                       ),
                     ],
@@ -173,7 +190,9 @@ class QuoteSelectionActions {
               } else {
                 ScaffoldMessenger.of(context).showSnackBar(
                   SnackBar(
-                    content: Text('Se generaron $generatedCount órdenes de compra exitosamente.'),
+                    content: Text(
+                      'Se generaron $generatedCount órdenes de compra exitosamente.',
+                    ),
                   ),
                 );
               }
@@ -217,15 +236,7 @@ class QuoteSelectionActions {
             }
           },
         ),
-        BottomSheetActionItem(
-          icon: Icons.edit_outlined,
-          label: 'Modificar',
-          onTap: () {
-            context.pop();
-            ref.read(quoteSelectionProvider.notifier).clearSelection();
-            context.push('/quotes/edit/${quote.id}');
-          },
-        ),
+
         BottomSheetActionItem(
           icon: quote.isArchived
               ? Icons.unarchive_outlined
@@ -247,7 +258,14 @@ class QuoteSelectionActions {
     BuildContext context,
     WidgetRef ref,
     QuoteSelectionState selection,
+    List<Quote> allQuotes,
   ) {
+    final selectedQuotes = allQuotes
+        .where((q) => selection.selectedIds.contains(q.id))
+        .toList();
+    final isAllArchived = selectedQuotes.isNotEmpty &&
+        selectedQuotes.every((q) => q.isArchived);
+
     CustomActionSheet.show(
       context: context,
       title: '${selection.count} seleccionados',
@@ -262,11 +280,11 @@ class QuoteSelectionActions {
         ),
         const Divider(height: 1, indent: 16, endIndent: 16),
         BottomSheetActionItem(
-          icon: Icons.archive_outlined,
-          label: 'Archivar',
+          icon: isAllArchived ? Icons.unarchive_outlined : Icons.archive_outlined,
+          label: isAllArchived ? 'Desarchivar' : 'Archivar',
           onTap: () async {
             context.pop();
-            handleBatchArchive(context, ref, selection);
+            handleBatchArchive(context, ref, selection, archive: !isAllArchived);
           },
         ),
       ],
@@ -365,17 +383,20 @@ class QuoteSelectionActions {
   static Future<void> handleBatchArchive(
     BuildContext context,
     WidgetRef ref,
-    QuoteSelectionState selection,
-  ) async {
+    QuoteSelectionState selection, {
+    bool archive = true,
+  }) async {
     await ref
         .read(quotesListProvider.notifier)
-        .batchArchive(selection.selectedIds.toList(), archive: true);
+        .batchArchive(selection.selectedIds.toList(), archive: archive);
     ref.read(quoteSelectionProvider.notifier).clearSelection();
     if (context.mounted) {
+      final statusWord = archive ? 'archivada' : 'desarchivada';
+      final statusWordPlural = archive ? 'archivadas' : 'desarchivadas';
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
-            '${selection.count} cotización${selection.count > 1 ? 'es' : ''} archivada${selection.count > 1 ? 's' : ''}',
+            '${selection.count} cotización${selection.count > 1 ? 'es' : ''} ${selection.count > 1 ? statusWordPlural : statusWord}',
           ),
         ),
       );

@@ -370,15 +370,20 @@ class CreateSupplierOrder extends _$CreateSupplierOrder {
   }
 
   void replaceProductItems(String productKey, List<SupplierOrderItem> newItems) {
-    state = state.copyWith(
-      items: [
-        ...state.items.where((item) {
-          final key = "${item.name}|${item.brand ?? ''}|${item.model ?? ''}";
-          return key != productKey;
-        }),
-        ...newItems,
-      ],
-    );
+    final List<SupplierOrderItem> result = [];
+    bool inserted = false;
+    for (final item in state.items) {
+      final key = "${item.name}|${item.brand ?? ''}|${item.model ?? ''}";
+      if (key == productKey) {
+        if (!inserted) {
+          result.addAll(newItems);
+          inserted = true;
+        }
+      } else {
+        result.add(item);
+      }
+    }
+    state = state.copyWith(items: result);
   }
 
   void updateGroupQuantity(String productKey, double newTotalQty) {
@@ -454,15 +459,20 @@ class CreateSupplierOrder extends _$CreateSupplierOrder {
       updatedGroupItems = results;
     }
 
-    state = state.copyWith(
-      items: [
-        ...state.items.where((item) {
-          final key = "${item.name}|${item.brand ?? ''}|${item.model ?? ''}";
-          return key != productKey;
-        }),
-        ...updatedGroupItems,
-      ],
-    );
+    final List<SupplierOrderItem> result = [];
+    bool inserted = false;
+    for (final item in state.items) {
+      final key = "${item.name}|${item.brand ?? ''}|${item.model ?? ''}";
+      if (key == productKey) {
+        if (!inserted) {
+          result.addAll(updatedGroupItems);
+          inserted = true;
+        }
+      } else {
+        result.add(item);
+      }
+    }
+    state = state.copyWith(items: result);
   }
 
   Future<String?> saveOrder() async {

@@ -36,6 +36,7 @@ class ProductsNotifier extends AsyncNotifier<List<Product>> {
             imageBytes: imageBytes,
             imageExtension: imageExtension,
           );
+      ref.invalidate(paginatedProductsProvider);
       return ref.read(productsRepositoryProvider).getProducts();
     });
     if (state.hasError) throw state.error!;
@@ -55,6 +56,7 @@ class ProductsNotifier extends AsyncNotifier<List<Product>> {
             imageBytes: imageBytes,
             imageExtension: imageExtension,
           );
+      ref.invalidate(paginatedProductsProvider);
       return ref.read(productsRepositoryProvider).getProducts();
     });
     if (state.hasError) throw state.error!;
@@ -64,15 +66,17 @@ class ProductsNotifier extends AsyncNotifier<List<Product>> {
     state = const AsyncValue.loading();
     state = await AsyncValue.guard(() async {
       await ref.read(productsRepositoryProvider).deleteProduct(id);
+      ref.invalidate(paginatedProductsProvider);
       return ref.read(productsRepositoryProvider).getProducts();
     });
   }
 }
 
 // --- Paginated Products ---
-final paginatedProductsProvider = AsyncNotifierProvider<PaginatedProducts, PaginatedState<Product>>(
-  () => PaginatedProducts(),
-);
+final paginatedProductsProvider =
+    AsyncNotifierProvider<PaginatedProducts, PaginatedState<Product>>(
+      () => PaginatedProducts(),
+    );
 
 class PaginatedProducts extends AsyncNotifier<PaginatedState<Product>> {
   static const int _limit = 25;
@@ -88,7 +92,9 @@ class PaginatedProducts extends AsyncNotifier<PaginatedState<Product>> {
   }
 
   Future<PaginatedState<Product>> _fetchPage(int offset) async {
-    final products = await ref.read(productsRepositoryProvider).getProductsPaginated(
+    final products = await ref
+        .read(productsRepositoryProvider)
+        .getProductsPaginated(
           offset: offset,
           limit: _limit,
           searchQuery: _searchQuery,
@@ -107,7 +113,9 @@ class PaginatedProducts extends AsyncNotifier<PaginatedState<Product>> {
 
   Future<void> loadMore() async {
     final current = state.valueOrNull;
-    if (current == null || current.isLoadingMore || current.hasReachedEnd) return;
+    if (current == null || current.isLoadingMore || current.hasReachedEnd) {
+      return;
+    }
 
     state = AsyncData(current.copyWith(isLoadingMore: true));
 
@@ -115,12 +123,14 @@ class PaginatedProducts extends AsyncNotifier<PaginatedState<Product>> {
       final nextOffset = current.currentOffset + _limit;
       final newPage = await _fetchPage(nextOffset);
 
-      state = AsyncData(current.copyWith(
-        items: [...current.items, ...newPage.items],
-        currentOffset: nextOffset,
-        hasReachedEnd: newPage.hasReachedEnd,
-        isLoadingMore: false,
-      ));
+      state = AsyncData(
+        current.copyWith(
+          items: [...current.items, ...newPage.items],
+          currentOffset: nextOffset,
+          hasReachedEnd: newPage.hasReachedEnd,
+          isLoadingMore: false,
+        ),
+      );
     } catch (e) {
       state = AsyncData(current.copyWith(isLoadingMore: false, error: e));
     }
@@ -150,11 +160,14 @@ class PaginatedProducts extends AsyncNotifier<PaginatedState<Product>> {
 }
 
 // --- Paginated Product Search (AutoDispose) ---
-final paginatedProductSearchProvider = AutoDisposeAsyncNotifierProvider<PaginatedProductSearch, PaginatedState<Product>>(
-  () => PaginatedProductSearch(),
-);
+final paginatedProductSearchProvider =
+    AutoDisposeAsyncNotifierProvider<
+      PaginatedProductSearch,
+      PaginatedState<Product>
+    >(() => PaginatedProductSearch());
 
-class PaginatedProductSearch extends AutoDisposeAsyncNotifier<PaginatedState<Product>> {
+class PaginatedProductSearch
+    extends AutoDisposeAsyncNotifier<PaginatedState<Product>> {
   static const int _limit = 25;
   String? _searchQuery;
   String? _categoryId;
@@ -168,7 +181,9 @@ class PaginatedProductSearch extends AutoDisposeAsyncNotifier<PaginatedState<Pro
   }
 
   Future<PaginatedState<Product>> _fetchPage(int offset) async {
-    final products = await ref.read(productsRepositoryProvider).getProductsPaginated(
+    final products = await ref
+        .read(productsRepositoryProvider)
+        .getProductsPaginated(
           offset: offset,
           limit: _limit,
           searchQuery: _searchQuery,
@@ -187,7 +202,9 @@ class PaginatedProductSearch extends AutoDisposeAsyncNotifier<PaginatedState<Pro
 
   Future<void> loadMore() async {
     final current = state.valueOrNull;
-    if (current == null || current.isLoadingMore || current.hasReachedEnd) return;
+    if (current == null || current.isLoadingMore || current.hasReachedEnd) {
+      return;
+    }
 
     state = AsyncData(current.copyWith(isLoadingMore: true));
 
@@ -195,12 +212,14 @@ class PaginatedProductSearch extends AutoDisposeAsyncNotifier<PaginatedState<Pro
       final nextOffset = current.currentOffset + _limit;
       final newPage = await _fetchPage(nextOffset);
 
-      state = AsyncData(current.copyWith(
-        items: [...current.items, ...newPage.items],
-        currentOffset: nextOffset,
-        hasReachedEnd: newPage.hasReachedEnd,
-        isLoadingMore: false,
-      ));
+      state = AsyncData(
+        current.copyWith(
+          items: [...current.items, ...newPage.items],
+          currentOffset: nextOffset,
+          hasReachedEnd: newPage.hasReachedEnd,
+          isLoadingMore: false,
+        ),
+      );
     } catch (e) {
       state = AsyncData(current.copyWith(isLoadingMore: false, error: e));
     }

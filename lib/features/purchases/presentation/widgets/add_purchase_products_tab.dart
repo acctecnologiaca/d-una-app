@@ -69,12 +69,16 @@ class AddPurchaseProductsTab extends ConsumerWidget {
             state.serials.where((s) => s.productId == item.productId).length <
                 item.quantity;
 
+        final isLinkedToOrder = state.supplierOrderId != null;
+
         Widget buildCard(Color? highlightColor) {
           return PurchaseAddedProductCard(
             item: item,
             hasError: hasMissingSerials,
             backgroundColor: highlightColor,
+            isEditable: !isLinkedToOrder,
             onDelete: () {
+              if (isLinkedToOrder) return;
               ref
                   .read(addPurchaseProvider.notifier)
                   .removeProduct(item.productId);
@@ -84,6 +88,7 @@ class AddPurchaseProductsTab extends ConsumerWidget {
                 context,
                 product: product,
                 existingItem: item,
+                isLinkedToOrder: isLinkedToOrder,
               );
 
               if (result != null) {
@@ -154,6 +159,7 @@ class AddPurchaseProductsTab extends ConsumerWidget {
               );
             },
             onQuantityChanged: (newQty) {
+              if (isLinkedToOrder) return;
               ref
                   .read(addPurchaseProvider.notifier)
                   .updateProduct(item.copyWith(quantity: newQty));

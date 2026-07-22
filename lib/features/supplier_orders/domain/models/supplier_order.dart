@@ -1,5 +1,7 @@
 import 'package:equatable/equatable.dart';
+import 'package:d_una_app/features/quotes/domain/models/quote_model.dart' show StockStatus;
 import 'supplier_order_status.dart';
+import 'supplier_order_item.dart';
 
 class SupplierOrder extends Equatable {
   final String id;
@@ -17,6 +19,7 @@ class SupplierOrder extends Equatable {
   final double total;
   final String? invoicePhotoUrl;
   final bool isArchived;
+  final String verificationStatus; // 'pending_review' | 'approved' | 'rejected'
   final DateTime createdAt;
   final DateTime updatedAt;
 
@@ -25,6 +28,11 @@ class SupplierOrder extends Equatable {
   final String? branchName;
   final String? shippingMethodLabel;
   final String? receiverName;
+  final List<SupplierOrderItem>? items;
+
+  // Live stock & price alert validation fields
+  final StockStatus stockStatus;
+  final bool hasPriceIncrease;
 
   const SupplierOrder({
     required this.id,
@@ -42,13 +50,21 @@ class SupplierOrder extends Equatable {
     this.total = 0.0,
     this.invoicePhotoUrl,
     this.isArchived = false,
+    this.verificationStatus = 'pending_review',
     required this.createdAt,
     required this.updatedAt,
     this.supplierName = 'Desconocido',
     this.branchName,
     this.shippingMethodLabel,
     this.receiverName,
+    this.items,
+    this.stockStatus = StockStatus.available,
+    this.hasPriceIncrease = false,
   });
+
+  bool get canShowAlerts =>
+      status != SupplierOrderStatus.finalized &&
+      status != SupplierOrderStatus.cancelled;
 
   String get shortOrderNumber {
     final parts = orderNumber.split('-');
@@ -75,11 +91,15 @@ class SupplierOrder extends Equatable {
     total,
     invoicePhotoUrl,
     isArchived,
+    verificationStatus,
     createdAt,
     updatedAt,
     supplierName,
     branchName,
     shippingMethodLabel,
     receiverName,
+    items,
+    stockStatus,
+    hasPriceIncrease,
   ];
 }

@@ -11,6 +11,7 @@ import '../../../../../core/utils/email_content_generator.dart';
 import '../../../../profile/presentation/providers/profile_provider.dart';
 import '../../../data/models/quote.dart';
 import 'package:d_una_app/core/pdf/templates/quote_pdf_template.dart';
+import 'package:d_una_app/core/providers/credits_providers.dart';
 import 'package:pdf/pdf.dart';
 
 class SendEmailBottomSheet extends ConsumerStatefulWidget {
@@ -39,9 +40,6 @@ class _SendEmailBottomSheetState extends ConsumerState<SendEmailBottomSheet> {
   late TextEditingController _subjectController;
   late TextEditingController _bodyController;
   bool _isSending = false;
-  int? _remainingCredits;
-  int? _totalCredits;
-  bool _isLoadingCredits = true;
 
   @override
   void initState() {
@@ -54,9 +52,6 @@ class _SendEmailBottomSheetState extends ConsumerState<SendEmailBottomSheet> {
 
     // Cargar plantilla y generar contenido inicial
     _loadInitialContent();
-
-    // Cargar créditos disponibles
-    _loadCredits();
   }
 
   Future<void> _loadInitialContent() async {
@@ -97,30 +92,6 @@ class _SendEmailBottomSheetState extends ConsumerState<SendEmailBottomSheet> {
         _subjectController.text = subject;
         _bodyController.text = body;
       });
-    }
-  }
-
-  Future<void> _loadCredits() async {
-    try {
-      final response = await Supabase.instance.client.functions.invoke(
-        'get_email_credits',
-      );
-
-      if (response.status == 200 && response.data != null) {
-        if (mounted) {
-          setState(() {
-            _remainingCredits = response.data['remainingCredits'] as int?;
-            _totalCredits = response.data['totalCredits'] as int?;
-            _isLoadingCredits = false;
-          });
-        }
-      } else {
-        if (mounted) setState(() => _isLoadingCredits = false);
-      }
-    } catch (e) {
-      // Degradación elegante: si falla, no bloquear el envío
-      debugPrint('Error loading credits: $e');
-      if (mounted) setState(() => _isLoadingCredits = false);
     }
   }
 
@@ -276,50 +247,19 @@ class _SendEmailBottomSheetState extends ConsumerState<SendEmailBottomSheet> {
     }
   }
 
-  Widget _buildCreditsIndicator() {
-    if (_isLoadingCredits) {
-      return Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 4),
-        child: Row(
-          children: [
-            SizedBox(
-              width: 14,
-              height: 14,
-              child: CircularProgressIndicator(
-                strokeWidth: 2,
-                color: Theme.of(context).colorScheme.outline,
-              ),
-            ),
-            const SizedBox(width: 8),
-            Text(
-              'Consultando créditos...',
-              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                color: Theme.of(context).colorScheme.outline,
-              ),
-            ),
-          ],
-        ),
-      );
-    }
-
-    if (_remainingCredits == null || _totalCredits == null) {
-      return const SizedBox.shrink();
-    }
-
-    final remaining = _remainingCredits!;
-    final total = _totalCredits!;
-
-    // Color logic: green if > 50%, orange if 20-50%, red if < 20%
+  Widget _buildCreditsIndicatorWidget(int remaining) {
     final Color indicatorColor;
     final IconData indicatorIcon;
-    if (remaining > total * 0.5) {
-      indicatorColor = Colors.green;
+    final colors = Theme.of(context).colorScheme;
+
+    if (remaining > 5) {
+      indicatorColor = colors.secondary;
       indicatorIcon = Icons.check_circle_outline;
-    } else if (remaining > total * 0.2) {
+    } else if (remaining > 0) {
       indicatorColor = Colors.orange;
       indicatorIcon = Icons.warning_amber_rounded;
     } else {
-      indicatorColor = Theme.of(context).colorScheme.error;
+      indicatorColor = colors.error;
       indicatorIcon = Icons.error_outline;
     }
 
@@ -327,11 +267,15 @@ class _SendEmailBottomSheetState extends ConsumerState<SendEmailBottomSheet> {
       padding: const EdgeInsets.symmetric(horizontal: 4),
       child: Row(
         children: [
+          Icon(Icons.star_border_outlined, size: 20, color: colors.secondary),
+          const SizedBox(width: 4),
           Text(
-            'Disponibles para hoy: $remaining de $total créditos',
+            remaining > 0
+                ? 'Créditos disponibles: $remaining'
+                : 'Créditos agotados (0 disponibles)',
             style: Theme.of(context).textTheme.bodyMedium?.copyWith(
               color: indicatorColor,
-              fontWeight: FontWeight.w900,
+              fontWeight: FontWeight.bold,
             ),
           ),
           const SizedBox(width: 6),
@@ -343,6 +287,10 @@ class _SendEmailBottomSheetState extends ConsumerState<SendEmailBottomSheet> {
 
   @override
   Widget build(BuildContext context) {
+    final creditsAsync = ref.watch(userCreditsStatusProvider);
+    final remainingCredits = creditsAsync.valueOrNull?.remainingCredits ?? 0;
+    final isZeroCredits = remainingCredits <= 0;
+
     return CustomActionSheet(
       title: 'Enviar cotización por correo',
       isContentScrollable: true,
@@ -350,9 +298,12 @@ class _SendEmailBottomSheetState extends ConsumerState<SendEmailBottomSheet> {
       content: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          //const SizedBox(height: 12),
-          // Email credits indicator
-          _buildCreditsIndicator(),
+          creditsAsync.when(
+            data: (status) =>
+                _buildCreditsIndicatorWidget(status.remainingCredits),
+            loading: () => const SizedBox.shrink(),
+            error: (_, _) => const SizedBox.shrink(),
+          ),
           const SizedBox(height: 24),
           CustomTextField(
             label: 'Destinatarios (separados por coma)',
@@ -379,10 +330,10 @@ class _SendEmailBottomSheetState extends ConsumerState<SendEmailBottomSheet> {
             mainAxisAlignment: MainAxisAlignment.end,
             children: [
               CustomButton(
-                text: 'Enviar',
+                text: isZeroCredits ? 'Sin créditos' : 'Enviar',
                 isFullWidth: false,
                 isLoading: _isSending,
-                onPressed: _sendEmail,
+                onPressed: (!isZeroCredits && !_isSending) ? _sendEmail : null,
               ),
             ],
           ),
