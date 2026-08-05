@@ -23,7 +23,20 @@ import '../widgets/supplier_order_card.dart';
 /// supplier, status, and date range. Includes a [SortSelector] for
 /// "Más reciente", "Nombre (A-Z)", and "Nombre (Z-A)".
 class SupplierOrdersSearchScreen extends ConsumerStatefulWidget {
-  const SupplierOrdersSearchScreen({super.key});
+  final bool selectionMode;
+  final Set<SupplierOrderStatus>? allowedStatuses;
+  final String? supplierNameFilter;
+  final String? initialQuery;
+  final bool isSearchQueryReadOnly;
+
+  const SupplierOrdersSearchScreen({
+    super.key,
+    this.selectionMode = false,
+    this.allowedStatuses,
+    this.supplierNameFilter,
+    this.initialQuery,
+    this.isSearchQueryReadOnly = false,
+  });
 
   @override
   ConsumerState<SupplierOrdersSearchScreen> createState() =>
@@ -38,7 +51,27 @@ class _SupplierOrdersSearchScreenState
   DateTimeRange? _dateRange;
 
   // Sort state
-  SortOption _currentSort = SortOption.recent;
+  SortOption _currentSort = SortOption.orderNumberDesc;
+
+  @override
+  void initState() {
+    super.initState();
+    if (widget.supplierNameFilter != null &&
+        widget.supplierNameFilter!.isNotEmpty) {
+      _selectedSupplierNames.add(widget.supplierNameFilter!);
+    }
+    if (widget.allowedStatuses != null &&
+        widget.allowedStatuses!.isNotEmpty) {
+      _selectedStatuses.addAll(widget.allowedStatuses!.map((s) => s.dbValue));
+    }
+    if (widget.initialQuery != null && widget.initialQuery!.isNotEmpty) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        ref
+            .read(paginatedSupplierOrderSearchProvider.notifier)
+            .updateSearch(widget.initialQuery);
+      });
+    }
+  }
 
   @override
   void dispose() {
@@ -197,6 +230,10 @@ class _SupplierOrdersSearchScreenState
   /// Returns a comparator function based on the current sort option.
   int Function(SupplierOrder a, SupplierOrder b)? _getComparator() {
     switch (_currentSort) {
+      case SortOption.orderNumberDesc:
+        return (a, b) => b.orderNumber.compareTo(a.orderNumber);
+      case SortOption.orderNumberAsc:
+        return (a, b) => a.orderNumber.compareTo(b.orderNumber);
       case SortOption.recent:
         return (a, b) => b.date.compareTo(a.date);
       case SortOption.nameAZ:
@@ -231,8 +268,11 @@ class _SupplierOrdersSearchScreenState
         selection.count <= 3 &&
         selectedOrders.every(
           (o) =>
+              o.status != SupplierOrderStatus.approved &&
+              o.status != SupplierOrderStatus.rejected &&
               o.status != SupplierOrderStatus.finalized &&
-              o.status != SupplierOrderStatus.cancelled,
+              o.status != SupplierOrderStatus.cancelled &&
+              o.status != SupplierOrderStatus.merged,
         );
 
     final isSingleResend = selectedOrders.length == 1 &&
@@ -285,6 +325,8 @@ class _SupplierOrdersSearchScreenState
       title: 'Buscar orden',
       hintText: 'Proveedor o número...',
       historyKey: 'supplier_orders_search_history',
+      initialQuery: widget.initialQuery,
+      readOnly: widget.isSearchQueryReadOnly,
       isPaginatedMode: true,
       paginatedDataAsync: paginatedAsync,
       appBarOverride: selection.isSelectionMode
@@ -332,6 +374,8 @@ class _SupplierOrdersSearchScreenState
                 setState(() => _currentSort = val);
               },
               options: const [
+                SortOption.orderNumberDesc,
+                SortOption.orderNumberAsc,
                 SortOption.recent,
                 SortOption.nameAZ,
                 SortOption.nameZA,
@@ -347,17 +391,25 @@ class _SupplierOrdersSearchScreenState
           isSelected: selection.isSelected(order.id),
           onLongPress: () =>
               ref.read(supplierOrderSelectionProvider.notifier).toggle(order.id),
-          onTap: selection.isSelectionMode
-              ? () => ref.read(supplierOrderSelectionProvider.notifier).toggle(order.id)
-              : () {
-                  context.push('/supplier-orders/view/${order.id}');
-                },
+          onTap: widget.selectionMode
+              ? () {
+                  Navigator.of(context).pop(order);
+                }
+              : (selection.isSelectionMode
+                  ? () => ref
+                      .read(supplierOrderSelectionProvider.notifier)
+                      .toggle(order.id)
+                  : () {
+                      context.push('/supplier-orders/view/${order.id}');
+                    }),
         );
       },
       filters: [
         FilterChipData(
           label: _getChipLabel(_selectedSupplierNames, 'Proveedor'),
           isActive: _selectedSupplierNames.isNotEmpty,
+          isEnabled: widget.supplierNameFilter == null ||
+              widget.supplierNameFilter!.isEmpty,
           onTap: () {
             final currentOrders = paginatedAsync.valueOrNull?.items ?? [];
             _showSupplierFilter(

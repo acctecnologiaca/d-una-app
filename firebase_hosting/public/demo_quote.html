@@ -1,0 +1,444 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Vista Previa - Diseño 100% Neutro Ejecutivo D-UNA</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      /* Paleta Neutra Ejecutiva (Grayscale / Slate Universal) */
+      --neutral-dark: #0F172A;        /* Negro Slate 900 - Títulos Principales */
+      --neutral-medium: #334155;      /* Gris Slate 700 - Subtítulos */
+      --neutral-muted: #64748B;       /* Gris Slate 500 - Etiquetas / Metadatos */
+      --neutral-border: #E2E8F0;      /* Gris Slate 200 - Bordes */
+      --neutral-border-dark: #CBD5E1; /* Gris Slate 300 - Bordes de Énfasis */
+      --neutral-bg-subtle: #F8FAFC;   /* Gris Slate 50 - Fondos de Tarjeta / Filas Zebra */
+      --neutral-bg-header: #F1F5F9;   /* Gris Slate 100 - Fondo de Cabecera de Tabla */
+      
+      /* Acciones Funcionales del WebViewer */
+      --btn-success-bg: #16A34A;
+      --btn-success-text: #FFFFFF;
+      --btn-danger-bg: #DC2626;
+      --btn-danger-text: #FFFFFF;
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      background: #F1F5F9;
+      color: var(--neutral-dark);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 24px 16px;
+    }
+
+    .container {
+      max-width: 780px;
+      width: 100%;
+      margin: 0 auto;
+    }
+
+    .card {
+      background: #FFFFFF;
+      border-radius: 16px;
+      box-shadow: 0 10px 25px -5px rgba(15, 23, 42, 0.05);
+      overflow: hidden;
+      border: 1px solid var(--neutral-border);
+    }
+
+    /* 1. ENCABEZADO 100% NEUTRO BLANCO CON DIVISOR NEUTRO */
+    .header-banner {
+      background: #FFFFFF;
+      padding: 28px 32px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 16px;
+      border-bottom: 2px solid var(--neutral-dark); /* Línea de acento negra ejecutiva */
+    }
+
+    .header-banner .brand {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+
+    .header-banner .brand img {
+      max-height: 54px;
+      width: auto;
+      object-fit: contain;
+    }
+
+    .header-banner .title-block h1 {
+      font-size: 24px;
+      font-weight: 800;
+      color: var(--neutral-dark);
+      letter-spacing: 0.5px;
+    }
+
+    .header-banner .title-block .doc-num {
+      font-size: 13px;
+      color: var(--neutral-muted);
+      font-weight: 600;
+      margin-top: 2px;
+    }
+
+    .validity-badge {
+      background: var(--neutral-bg-subtle);
+      border: 1px solid var(--neutral-border-dark);
+      color: var(--neutral-dark);
+      padding: 8px 16px;
+      border-radius: 20px;
+      font-size: 13px;
+      font-weight: 600;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .body-content {
+      padding: 32px 32px 24px;
+    }
+
+    /* 2. GRID DE INFORMACIÓN EN GRIS NEUTRO */
+    .info-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 20px;
+      margin-bottom: 32px;
+    }
+
+    @media (max-width: 640px) {
+      .info-grid { grid-template-columns: 1fr; }
+      .header-banner, .body-content { padding: 20px 16px; }
+    }
+
+    .info-box {
+      background: var(--neutral-bg-subtle);
+      border: 1px solid var(--neutral-border);
+      border-radius: 12px;
+      padding: 18px;
+    }
+
+    .info-box h3 {
+      font-size: 12px;
+      font-weight: 700;
+      color: var(--neutral-dark);
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+      margin-bottom: 12px;
+      border-bottom: 2px solid var(--neutral-border-dark);
+      padding-bottom: 6px;
+    }
+
+    .info-box p {
+      font-size: 13px;
+      color: var(--neutral-dark);
+      line-height: 1.65;
+    }
+
+    .info-box p strong {
+      color: var(--neutral-muted);
+      font-weight: 500;
+    }
+
+    /* 3. TABLA DE ÍTEMS MONOCROMÁTICA NEUTRA */
+    .table-container {
+      overflow-x: auto;
+      margin-bottom: 28px;
+      border: 1px solid var(--neutral-border);
+      border-radius: 12px;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13px;
+    }
+
+    th {
+      background: var(--neutral-bg-header);
+      color: var(--neutral-dark);
+      font-weight: 700;
+      text-align: left;
+      padding: 12px 16px;
+      border-bottom: 2px solid var(--neutral-border-dark);
+      text-transform: uppercase;
+      font-size: 11px;
+      letter-spacing: 0.6px;
+    }
+
+    td {
+      padding: 14px 16px;
+      border-bottom: 1px solid var(--neutral-border);
+      color: var(--neutral-dark);
+    }
+
+    tr:nth-child(even) {
+      background: var(--neutral-bg-subtle);
+    }
+
+    tr:last-child td { border-bottom: none; }
+    .text-right { text-align: right; }
+
+    /* 4. TOTALES EN GRIS EJECUTIVO */
+    .totals-block {
+      display: flex;
+      justify-content: flex-end;
+      margin-bottom: 28px;
+    }
+
+    .totals-card {
+      width: 300px;
+      background: var(--neutral-bg-subtle);
+      border: 1px solid var(--neutral-border);
+      border-radius: 12px;
+      overflow: hidden;
+    }
+
+    .totals-row {
+      display: flex;
+      justify-content: space-between;
+      font-size: 13px;
+      padding: 10px 16px;
+      color: var(--neutral-muted);
+    }
+
+    .totals-row.grand-total {
+      font-size: 15px;
+      font-weight: 800;
+      color: var(--neutral-dark);
+      background: #FFFFFF;
+      border-top: 2px solid var(--neutral-dark);
+      padding: 14px 16px;
+    }
+
+    /* 5. CONDICIONES EN FONDO SUAVE NEUTRO */
+    .conditions-box {
+      background: var(--neutral-bg-subtle);
+      border: 1px solid var(--neutral-border);
+      border-radius: 12px;
+      padding: 18px;
+      margin-bottom: 24px;
+    }
+
+    .conditions-box h4 {
+      font-size: 12px;
+      font-weight: 700;
+      color: var(--neutral-dark);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 8px;
+    }
+
+    .conditions-box ul {
+      padding-left: 18px;
+      font-size: 12px;
+      color: var(--neutral-medium);
+      line-height: 1.6;
+    }
+
+    /* 6. PANEL DE ACCIONES */
+    .action-panel {
+      border-top: 1px solid var(--neutral-border);
+      padding: 24px 32px;
+      background: var(--neutral-bg-subtle);
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      align-items: center;
+    }
+
+    .btn-group {
+      display: flex;
+      gap: 14px;
+      width: 100%;
+      max-width: 480px;
+    }
+
+    @media (max-width: 480px) {
+      .btn-group { flex-direction: column; }
+    }
+
+    .btn {
+      flex: 1;
+      padding: 14px 20px;
+      border-radius: 10px;
+      font-weight: 600;
+      font-size: 14px;
+      cursor: pointer;
+      border: none;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      text-decoration: none;
+      transition: transform 0.15s ease;
+    }
+
+    .btn:active { transform: scale(0.98); }
+
+    .btn-success {
+      background: var(--btn-success-bg);
+      color: var(--btn-success-text);
+      box-shadow: 0 4px 12px rgba(22, 163, 74, 0.2);
+    }
+
+    .btn-danger {
+      background: var(--btn-danger-bg);
+      color: var(--btn-danger-text);
+      box-shadow: 0 4px 12px rgba(220, 38, 38, 0.2);
+    }
+
+    .btn-secondary {
+      background: #FFFFFF;
+      color: var(--neutral-dark);
+      border: 1.5px solid var(--neutral-dark);
+    }
+
+    .footer {
+      text-align: center;
+      padding: 24px;
+      font-size: 12px;
+      color: var(--neutral-muted);
+    }
+  </style>
+</head>
+<body>
+
+  <div class="container">
+    <div class="card">
+      <!-- 1. ENCABEZADO MONOCROMÁTICO NEUTRO BLANCO -->
+      <div class="header-banner">
+        <div class="brand">
+          <img src="https://fdkswvzrozijbizdthge.supabase.co/storage/v1/object/sign/app_images/logo_d_una.png?token=eyJraWQiOiJzdG9yYWdlLXVybC1zaWduaW5nLWtleV8yNjZhOWZkMS0xYWQyLTQ3OWEtOGNlYS1kYjQzMjA0OGNlMjkiLCJhbGciOiJIUzI1NiJ9.eyJ1cmwiOiJhcHBfaW1hZ2VzL2xvZ29fZF91bmEucG5nIiwic2NvcGUiOiJkb3dubG9hZCIsImlhdCI6MTc4NTI2NTY0NSwiZXhwIjo0OTM4ODY1NjQ1fQ.2vHh0Q0-FA0ZQDV-HeBtlf6CKCS7jrPI5CIFjK7yPVw" alt="Logo Emisor">
+          <div class="title-block">
+            <h1>COTIZACIÓN</h1>
+            <div class="doc-num">CT-VE0001-26001 &bull; 30/07/2026</div>
+          </div>
+        </div>
+        <div class="validity-badge">
+          ⌛ Válida hasta: 14/08/2026
+        </div>
+      </div>
+
+      <div class="body-content">
+        <!-- 2. DATOS EN 2 COLUMNAS EN NEUTRO -->
+        <div class="info-grid">
+          <div class="info-box">
+            <h3>Datos del Cliente</h3>
+            <p><strong>Razón Social:</strong> Corporación Tecnológica C.A.</p>
+            <p><strong>RIF / Cédula:</strong> J-40192837-5</p>
+            <p><strong>Atención:</strong> Ing. Alejandro Pérez</p>
+            <p><strong>Teléfono:</strong> +58 414 1234567</p>
+            <p><strong>Email:</strong> cliente@empresa.com</p>
+          </div>
+
+          <div class="info-box">
+            <h3>Asesor Comercial</h3>
+            <p><strong>Empresa:</strong> Servicios Integrales D-UNA</p>
+            <p><strong>Vendedor:</strong> Asesor Técnico Principal</p>
+            <p><strong>Teléfono:</strong> +58 412 9876543</p>
+            <p><strong>Email:</strong> asesor@d-una.app</p>
+          </div>
+        </div>
+
+        <!-- 3. TABLA DE ÍTEMS EN NEUTRO -->
+        <div class="table-container">
+          <table>
+            <thead>
+              <tr>
+                <th>Ítem / Descripción</th>
+                <th class="text-right">Cant.</th>
+                <th class="text-right">P. Unit</th>
+                <th class="text-right">Total</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>
+                  <strong>Cámara IP Exterior Full HD 1080p</strong><br>
+                  <small style="color: var(--neutral-muted);">Marca: Hikvision - Modelo: DS-2CD2143G0-I</small>
+                </td>
+                <td class="text-right">4 Und</td>
+                <td class="text-right">$65.00</td>
+                <td class="text-right">$260.00</td>
+              </tr>
+              <tr>
+                <td>
+                  <strong>DVR Grabador 8 Canales 4K</strong><br>
+                  <small style="color: var(--neutral-muted);">Marca: Dahua - Modelo: XVR5108HS-X</small>
+                </td>
+                <td class="text-right">1 Und</td>
+                <td class="text-right">$120.00</td>
+                <td class="text-right">$120.00</td>
+              </tr>
+              <tr>
+                <td>
+                  <strong>Servicio de Instalación y Configuración</strong><br>
+                  <small style="color: var(--neutral-muted);">Incluye cableado estructurado UTP Cat6 y conectores</small>
+                </td>
+                <td class="text-right">1 Serv.</td>
+                <td class="text-right">$150.00</td>
+                <td class="text-right">$150.00</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <!-- 4. TOTALES DESTACADOS EN GRIS NEUTRO EJECUTIVO -->
+        <div class="totals-block">
+          <div class="totals-card">
+            <div class="totals-row">
+              <span>Subtotal:</span>
+              <span>$530.00</span>
+            </div>
+            <div class="totals-row">
+              <span>Impuesto / IVA (16%):</span>
+              <span>$84.80</span>
+            </div>
+            <div class="totals-row grand-total">
+              <span>TOTAL USD:</span>
+              <span>$614.80</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- 5. CONDICIONES -->
+        <div class="conditions-box">
+          <h4>Condiciones Comerciales y Observaciones</h4>
+          <ul>
+            <li>Tiempo de entrega estimado: 3 a 5 días hábiles tras recibir la aprobación.</li>
+            <li>Forma de Pago: 50% al aprobar la cotización y 50% contra entrega e instalación.</li>
+            <li>Garantía de equipos: 12 meses contra defectos de fábrica.</li>
+          </ul>
+        </div>
+      </div>
+
+      <!-- 6. PANEL DE ACCIONES -->
+      <div class="action-panel">
+        <div class="btn-group">
+          <button class="btn btn-success">🟩 Aprobar Cotización</button>
+          <button class="btn btn-danger">🟥 Rechazar</button>
+        </div>
+        <button class="btn btn-secondary" style="width: 100%; max-width: 480px; margin-top: 4px;">
+          📄 Descargar versión PDF
+        </button>
+      </div>
+    </div>
+
+    <div class="footer">
+      <img src="https://fdkswvzrozijbizdthge.supabase.co/storage/v1/object/sign/app_images/logo_d_una.png?token=eyJraWQiOiJzdG9yYWdlLXVybC1zaWduaW5nLWtleV8yNjZhOWZkMS0xYWQyLTQ3OWEtOGNlYS1kYjQzMjA0OGNlMjkiLCJhbGciOiJIUzI1NiJ9.eyJ1cmwiOiJhcHBfaW1hZ2VzL2xvZ29fZF91bmEucG5nIiwic2NvcGUiOiJkb3dubG9hZCIsImlhdCI6MTc4NTI2NTY0NSwiZXhwIjo0OTM4ODY1NjQ1fQ.2vHh0Q0-FA0ZQDV-HeBtlf6CKCS7jrPI5CIFjK7yPVw" alt="D-UNA" style="height: 22px; margin-bottom: 6px; vertical-align: middle;"><br>
+      Sistema Transaccional D-UNA &bull; Gestión Operativa
+    </div>
+  </div>
+
+</body>
+</html>

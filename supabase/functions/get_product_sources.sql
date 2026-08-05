@@ -1,3 +1,6 @@
+-- Drop old RPC signature to allow return table modification
+DROP FUNCTION IF EXISTS public.get_product_sources(text, text, text, text);
+
 CREATE OR REPLACE FUNCTION public.get_product_sources(
     p_name text,
     p_brand text,
@@ -14,7 +17,8 @@ RETURNS TABLE (
     trade_type text,
     uom_icon_name text,
     is_accessible boolean,
-    reserved_stock numeric
+    reserved_stock numeric,
+    last_updated timestamp with time zone
 ) 
 LANGUAGE plpgsql
 SECURITY DEFINER
@@ -54,7 +58,8 @@ BEGIN
         'RETAIL'::text,
         COALESCE(u.icon_name, 'package_2'),
         true, -- El inventario propio siempre es accesible
-        COALESCE(p.reserved_quantity, 0.0)::numeric
+        COALESCE(p.reserved_quantity, 0.0)::numeric,
+        p.updated_at as last_updated
     FROM products p
     LEFT JOIN brands b ON p.brand_id = b.id
     LEFT JOIN uoms u ON p.uom_id = u.id
@@ -87,7 +92,8 @@ BEGIN
                    COALESCE(s.allowed_verification_types::text, '') NOT ILIKE '%individual%'
                 )
         END,
-        0.0::numeric
+        0.0::numeric,
+        sbs.updated_at as last_updated
     FROM supplier_products sp
     JOIN supplier_branch_stock sbs ON sp.id = sbs.product_id
     JOIN suppliers s ON sp.supplier_id = s.id

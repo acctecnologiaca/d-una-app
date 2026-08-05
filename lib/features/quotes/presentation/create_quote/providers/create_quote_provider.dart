@@ -9,6 +9,8 @@ import '../../../../portfolio/data/repositories/lookup_repository.dart';
 import '../../../../portfolio/presentation/providers/lookup_providers.dart';
 import 'package:d_una_app/features/profile/presentation/providers/profile_provider.dart';
 import 'package:d_una_app/core/utils/country_iso_codes.dart';
+import '../../../../supplier_orders/domain/models/supplier_order_status.dart';
+import '../../../../supplier_orders/presentation/supplier_orders_list/providers/supplier_orders_providers.dart';
 
 class QuoteState {
   final Quote? quote; // The final object being built
@@ -39,6 +41,7 @@ class QuoteState {
   final double globalTaxRate;
   final String pricingMethod; // 'markup' or 'margin'
   final bool isReadOnly;
+  final bool hasProcessedOrders;
 
   QuoteState({
     this.quote,
@@ -67,6 +70,7 @@ class QuoteState {
     this.globalTaxRate = 0.0,
     this.pricingMethod = 'margin',
     this.isReadOnly = false,
+    this.hasProcessedOrders = false,
   }) : dateIssued = dateIssued ?? DateTime.now();
 
   QuoteState copyWith({
@@ -96,6 +100,7 @@ class QuoteState {
     double? globalTaxRate,
     String? pricingMethod,
     bool? isReadOnly,
+    bool? hasProcessedOrders,
   }) {
     return QuoteState(
       quote: quote ?? this.quote,
@@ -124,6 +129,7 @@ class QuoteState {
       globalTaxRate: globalTaxRate ?? this.globalTaxRate,
       pricingMethod: pricingMethod ?? this.pricingMethod,
       isReadOnly: isReadOnly ?? this.isReadOnly,
+      hasProcessedOrders: hasProcessedOrders ?? this.hasProcessedOrders,
     );
   }
 
@@ -255,10 +261,17 @@ class QuoteState {
       final p = products[i];
       final op = quote!.products![i];
       if (p.productId != op.productId ||
+          p.supplierBranchStockId != op.supplierBranchStockId ||
           p.quantity != op.quantity ||
           p.unitPrice != op.unitPrice ||
+          p.costPrice != op.costPrice ||
+          p.profitMargin != op.profitMargin ||
           p.sourceType != op.sourceType ||
-          p.name != op.name) {
+          p.name != op.name ||
+          p.deliveryTimeId != op.deliveryTimeId ||
+          p.groupIndex != op.groupIndex ||
+          p.warrantyTime != op.warrantyTime ||
+          p.warrantyUnit != op.warrantyUnit) {
         return true;
       }
     }
@@ -271,7 +284,10 @@ class QuoteState {
       if (s.serviceId != os.serviceId ||
           s.quantity != os.quantity ||
           s.unitPrice != os.unitPrice ||
-          s.name != os.name) {
+          s.costPrice != os.costPrice ||
+          s.profitMargin != os.profitMargin ||
+          s.name != os.name ||
+          s.orderIndex != os.orderIndex) {
         return true;
       }
     }
@@ -500,6 +516,18 @@ class CreateQuoteNotifier extends StateNotifier<QuoteState> {
 
       final fullQuote = await _repository.getQuoteWithDetails(quoteId);
 
+      bool hasProcessed = false;
+      try {
+        final supplierOrdersRepo = _ref.read(supplierOrdersRepositoryProvider);
+        final linkedOrders = await supplierOrdersRepo.getSupplierOrdersByQuoteId(quoteId);
+        hasProcessed = linkedOrders.any(
+          (o) =>
+              o.status == SupplierOrderStatus.sent ||
+              o.status == SupplierOrderStatus.resent ||
+              o.status == SupplierOrderStatus.finalized,
+        );
+      } catch (_) {}
+
       state = state.copyWith(
         quote: fullQuote,
         products: fullQuote.products ?? [],
@@ -518,6 +546,7 @@ class CreateQuoteNotifier extends StateNotifier<QuoteState> {
         label: fullQuote.quoteTag,
         dateIssued: fullQuote.dateIssued,
         currentQuoteNumber: fullQuote.quoteNumber,
+        hasProcessedOrders: hasProcessed,
         isLoading: false,
       );
     } catch (e) {
@@ -971,9 +1000,13 @@ class CreateQuoteNotifier extends StateNotifier<QuoteState> {
 
       final isEditing = state.quote != null && state.quote!.id.isNotEmpty;
 
-      // Determine the final status
-      String effectiveStatus =
-          status ?? (isEditing ? state.quote!.status : 'draft');
+      // Determine the final status (preserve existing status when editing)
+      String effectiveStatus;
+      if (isEditing) {
+        effectiveStatus = (status != null && status != 'draft') ? status : state.quote!.status;
+      } else {
+        effectiveStatus = status ?? 'draft';
+      }
 
       // Reactivation logic for expired quotes
       if (isEditing && effectiveStatus == 'expired') {

@@ -22,6 +22,7 @@ class GenericSearchScreen<T> extends StatefulWidget {
   final Widget? bottomFilterWidget;
   final int Function(T a, T b)? comparator;
   final String? initialQuery;
+  final bool readOnly;
   final bool showHistory;
   final PreferredSizeWidget? appBarOverride;
   
@@ -46,6 +47,7 @@ class GenericSearchScreen<T> extends StatefulWidget {
     this.bottomFilterWidget,
     this.comparator,
     this.initialQuery,
+    this.readOnly = false,
     this.showHistory = true,
     this.appBarOverride,
     this.isPaginatedMode = false,
@@ -86,10 +88,12 @@ class _GenericSearchScreenState<T> extends State<GenericSearchScreen<T>> {
     if (widget.initialQuery != null && widget.initialQuery!.isNotEmpty) {
       _searchController.text = widget.initialQuery!;
     }
-    // Request focus after build
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      _focusNode.requestFocus();
-    });
+    // Request focus after build (only if not readOnly)
+    if (!widget.readOnly) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _focusNode.requestFocus();
+      });
+    }
   }
 
   @override
@@ -171,6 +175,7 @@ class _GenericSearchScreenState<T> extends State<GenericSearchScreen<T>> {
             controller: _searchController,
             focusNode: _focusNode,
             hintText: widget.hintText,
+            readOnly: widget.readOnly,
             onSubmitted: _onSearchSubmitted,
           ),
         ),

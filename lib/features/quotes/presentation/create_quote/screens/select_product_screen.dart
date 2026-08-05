@@ -1,3 +1,4 @@
+import 'package:d_una_app/shared/widgets/info_disclaimer_card.dart';
 import 'package:flutter/material.dart';
 import 'package:d_una_app/shared/widgets/friendly_error_widget.dart';
 import 'package:go_router/go_router.dart';
@@ -102,15 +103,12 @@ class _SelectProductScreenState extends ConsumerState<SelectProductScreen> {
 
           // 3. Disclaimer
           Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
-            child: Text(
-              'Precios no incluyen impuesto y pueden variar sin previo aviso',
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                fontSize: 12,
-                fontWeight: FontWeight.bold,
-                color: colors.onSurface,
-              ),
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            child: const InfoDisclaimerCard(
+              text: 'MPD: Menor precio disponible.',
+              showCloseButton: true,
+              askDismissForever: true,
+              dismissKey: 'disclaimer_mpd',
             ),
           ),
 

@@ -1,3 +1,4 @@
+import 'package:d_una_app/core/theme/app_theme.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -20,12 +21,17 @@ import '../../../../../shared/widgets/bottom_sheet_action_item.dart';
 import '../../../../../shared/widgets/custom_dialog.dart';
 import 'package:material_symbols_icons/symbols.dart';
 import 'package:pdf/pdf.dart';
+import 'package:d_una_app/core/pdf/pdf_helpers.dart';
 import 'package:d_una_app/core/pdf/templates/supplier_order_pdf_template.dart';
 import 'package:d_una_app/features/profile/presentation/providers/profile_provider.dart';
+import 'package:d_una_app/features/settings/data/models/shipping_method.dart';
+import 'package:d_una_app/features/collaborators/domain/models/collaborator.dart';
+import 'package:d_una_app/features/supplier_orders/domain/utils/oc_email_template_builder.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'dart:convert';
 import 'package:d_una_app/core/utils/contact_utils.dart';
-import 'package:d_una_app/features/quotes/domain/models/quote_model.dart' show StockStatus;
+import 'package:d_una_app/features/quotes/domain/models/quote_model.dart'
+    show StockStatus;
 import '../../create_supplier_order/providers/supplier_order_validation_provider.dart';
 
 class SupplierOrderDetailsScreen extends ConsumerStatefulWidget {
@@ -68,16 +74,17 @@ class _SupplierOrderDetailsScreenState
     final detailsAsync = ref.watch(supplierOrderDetailProvider(widget.orderId));
     final suppliers = ref.watch(suppliersProvider).valueOrNull ?? [];
 
-    return detailsAsync.when(
+    return detailsAsync.unwrapPrevious().when(
       data: (data) {
         final order = data.order;
         final items = data.items;
-        final canEdit =
-            order.status != SupplierOrderStatus.finalized &&
-            order.status != SupplierOrderStatus.cancelled;
+        final canEdit = order.status.canEdit;
+
+        final isDraft = order.status == SupplierOrderStatus.draft;
         final isSentOrResent =
             order.status == SupplierOrderStatus.sent ||
             order.status == SupplierOrderStatus.resent;
+        final canSendOrResend = isDraft || isSentOrResent;
 
         if (widget.triggerSend && !_hasTriggeredSend) {
           _hasTriggeredSend = true;
@@ -94,13 +101,7 @@ class _SupplierOrderDetailsScreenState
           }
         }
 
-        final supplierDisplayName = /*matchedSupplier != null
-        ? (matchedSupplier.legalName != null && matchedSupplier.legalName!.isNotEmpty
-            ? '${matchedSupplier.name} (${matchedSupplier.legalName})'
-            :*/
-            matchedSupplier!.name; /*)*/
-        /*: 
-        order.supplierName;*/
+        final supplierDisplayName = matchedSupplier!.name;
 
         return Scaffold(
           appBar: StandardAppBar(
@@ -108,12 +109,18 @@ class _SupplierOrderDetailsScreenState
             subtitle: '${order.orderNumber} ($supplierDisplayName)',
             actions: [
               IconButton(
-                icon: Icon(isSentOrResent ? Symbols.forward : Icons.send),
-                color: canEdit
+                icon: Icon(
+                  isDraft
+                      ? Icons.send
+                      : (isSentOrResent ? Symbols.forward : Icons.send),
+                ),
+                color: canSendOrResend
                     ? colors.onSurfaceVariant
                     : colors.onSurfaceVariant.withValues(alpha: 0.38),
-                tooltip: isSentOrResent ? 'Reenviar' : 'Enviar',
-                onPressed: canEdit
+                tooltip: isDraft
+                    ? 'Enviar'
+                    : (isSentOrResent ? 'Reenviar' : 'Enviar'),
+                onPressed: canSendOrResend
                     ? () {
                         _checkAndSendOrder(context, order, items);
                       }
@@ -135,11 +142,14 @@ class _SupplierOrderDetailsScreenState
                             context.pop();
                             ref
                                 .read(createSupplierOrderProvider.notifier)
-                                .loadFromExisting(order, []);
-                            context.push('/supplier-orders/edit/${order.id}');
+                                .loadFromExisting(order, items);
+                            context.push(
+                              '/supplier-orders/edit/${order.id}?tab=${_tabController.index}',
+                            );
                           },
                         ),
-                      if (isSentOrResent) ...[
+
+                      if (isSentOrResent)
                         BottomSheetActionItem(
                           icon: Symbols.forward,
                           label: 'Reenviar',
@@ -148,15 +158,15 @@ class _SupplierOrderDetailsScreenState
                             _checkAndSendOrder(context, order, items);
                           },
                         ),
+                      if (order.status == SupplierOrderStatus.approved)
                         BottomSheetActionItem(
-                          icon: Icons.check_circle_outline,
-                          label: 'Finalizar',
+                          icon: Icons.receipt_long_outlined,
+                          label: 'Registrar compra',
                           onTap: () {
                             context.pop();
-                            _finalizeOrderFlow(context, order, items);
+                            _finalizeOrderFlow(order, items);
                           },
                         ),
-                      ],
                       if (canEdit)
                         BottomSheetActionItem(
                           icon: Icons.cancel_outlined,
@@ -280,11 +290,13 @@ class _SupplierOrderDetailsScreenState
                       final validationState = ref.watch(
                         supplierOrderValidationProvider(items),
                       );
-                      final hasAlerts = canShowAlerts && (
-                        order.hasPriceIncrease ||
-                        order.stockStatus != StockStatus.available ||
-                        validationState.items.values.any((item) => item.statuses.isNotEmpty)
-                      );
+                      final hasAlerts =
+                          canShowAlerts &&
+                          (order.hasPriceIncrease ||
+                              order.stockStatus != StockStatus.available ||
+                              validationState.items.values.any(
+                                (item) => item.statuses.isNotEmpty,
+                              ));
                       return Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
@@ -314,31 +326,78 @@ class _SupplierOrderDetailsScreenState
               ),
             ],
           ),
-          floatingActionButton: canEdit
+          floatingActionButton:
+              (canEdit ||
+                  order.status == SupplierOrderStatus.approved ||
+                  isSentOrResent)
               ? Padding(
                   padding: const EdgeInsets.only(bottom: 40.0),
                   child: Builder(
                     builder: (context) {
                       final showFinalizeFab =
-                          order.status == SupplierOrderStatus.sent ||
-                          order.status == SupplierOrderStatus.resent;
+                          order.status == SupplierOrderStatus.approved;
+                      final showWhatsAppFab =
+                          isSentOrResent ||
+                          order.status == SupplierOrderStatus.approved;
 
                       if (showFinalizeFab) {
                         return Column(
                           mainAxisSize: MainAxisSize.min,
                           crossAxisAlignment: CrossAxisAlignment.end,
                           children: [
+                            if (showWhatsAppFab) ...[
+                              FloatingActionButton(
+                                heroTag: 'whatsapp_contact_fab',
+                                onPressed: () {
+                                  _contactSupplierWhatsApp(context, order);
+                                },
+                                backgroundColor: colors.greenBase,
+                                tooltip: 'Contactar proveedor por WhatsApp',
+                                child: Image.asset(
+                                  'assets/icons/whatsapp_icon.png',
+                                  width: 28,
+                                  height: 28,
+                                  color: colors.greenBaseOn,
+                                ),
+                              ),
+                              const SizedBox(height: 16),
+                            ],
                             FloatingActionButton(
                               heroTag: 'finalize_order_fab',
                               onPressed: () {
-                                _finalizeOrderFlow(context, order, items);
+                                _finalizeOrderFlow(order, items);
                               },
                               backgroundColor: colors.secondaryContainer,
                               foregroundColor: colors.onSecondaryContainer,
-                              tooltip: 'Finalizar orden',
-                              child: const Icon(Icons.check_circle_outline),
+                              tooltip: 'Registrar compra',
+                              child: const Icon(Icons.receipt_long_outlined),
                             ),
-                            const SizedBox(height: 16),
+                          ],
+                        );
+                      }
+
+                      if (canEdit) {
+                        return Column(
+                          mainAxisSize: MainAxisSize.min,
+                          crossAxisAlignment: CrossAxisAlignment.end,
+                          children: [
+                            if (showWhatsAppFab) ...[
+                              FloatingActionButton(
+                                heroTag: 'whatsapp_contact_fab',
+                                onPressed: () {
+                                  _contactSupplierWhatsApp(context, order);
+                                },
+                                backgroundColor: colors.greenBase,
+                                tooltip: 'Contactar proveedor por WhatsApp',
+                                child: Image.asset(
+                                  'assets/icons/whatsapp_icon.png',
+                                  width: 28,
+                                  height: 28,
+                                  color: colors.greenBaseOn,
+                                ),
+                              ),
+                              const SizedBox(height: 16),
+                            ],
                             FloatingActionButton(
                               heroTag: 'edit_order_fab',
                               onPressed: () {
@@ -355,18 +414,7 @@ class _SupplierOrderDetailsScreenState
                         );
                       }
 
-                      return FloatingActionButton(
-                        heroTag: 'edit_order_fab',
-                        onPressed: () {
-                          ref
-                              .read(createSupplierOrderProvider.notifier)
-                              .loadFromExisting(order, items);
-                          context.push(
-                            '/supplier-orders/edit/${order.id}?tab=${_tabController.index}',
-                          );
-                        },
-                        child: const Icon(Icons.edit_outlined),
-                      );
+                      return const SizedBox.shrink();
                     },
                   ),
                 )
@@ -432,63 +480,22 @@ class _SupplierOrderDetailsScreenState
       final phone = branchInfo['phone'] as String?;
 
       final hasEmail = email != null && email.trim().isNotEmpty;
-      final hasPhone = phone != null && phone.trim().isNotEmpty;
 
       if (!hasEmail) {
-        if (hasPhone) {
-          CustomDialog.show(
-            context: context,
-            dialog: CustomDialog.confirmation(
-              title: 'Envío no disponible',
-              icon: Symbols.warning,
-              iconColor: Colors.amber,
-              contentWidget: const Text(
-                'La sucursal seleccionada no cuenta con un correo electrónico registrado para el envío automático de la orden.\n\n'
-                'Puedes ponerte en contacto directamente con el proveedor por WhatsApp para coordinar tu compra.',
+        CustomDialog.show(
+          context: context,
+          dialog: CustomDialog.confirmation(
+            title: 'Error de envío',
+            contentText:
+                'La sucursal seleccionada no cuenta con un correo electrónico registrado en la plataforma para el envío automático de la orden. Por favor, contacta al administrador.',
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text('OK'),
               ),
-              actions: [
-                TextButton(
-                  onPressed: () => Navigator.pop(context),
-                  child: const Text('Cerrar'),
-                ),
-                ElevatedButton.icon(
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF25D366),
-                    foregroundColor: Colors.white,
-                    elevation: 0,
-                  ),
-                  onPressed: () {
-                    Navigator.pop(context);
-                    final msg =
-                        'Hola, le escribo con respecto a la Orden de Compra #${order.orderNumber}.';
-                    ContactUtils.launchWhatsApp(phone, message: msg);
-                  },
-                  icon: Image.asset(
-                    'assets/icons/whatsapp_icon.png',
-                    width: 22,
-                    color: Colors.white,
-                  ),
-                  label: const Text('Contactar'),
-                ),
-              ],
-            ),
-          );
-        } else {
-          CustomDialog.show(
-            context: context,
-            dialog: CustomDialog.confirmation(
-              title: 'Error de envío',
-              contentText:
-                  'La sucursal seleccionada no cuenta con correo electrónico ni número de teléfono registrados.',
-              actions: [
-                TextButton(
-                  onPressed: () => Navigator.pop(context),
-                  child: const Text('OK'),
-                ),
-              ],
-            ),
-          );
-        }
+            ],
+          ),
+        );
         return;
       }
 
@@ -540,11 +547,20 @@ class _SupplierOrderDetailsScreenState
         throw Exception('No se pudo cargar el perfil del usuario.');
       }
 
+      final results = await Future.wait([
+        PdfHelpers.fetchShippingMethodById(order.shippingMethodId),
+        PdfHelpers.fetchCollaboratorById(order.receiverCollaboratorId),
+      ]);
+      final shippingMethod = results[0] as ShippingMethod?;
+      final receiverCollaborator = results[1] as Collaborator?;
+
       final pdfBytes = await SupplierOrderPdfTemplate(
         order: order,
         items: items,
         userProfile: userProfile,
         userEmail: userEmail,
+        shippingMethod: shippingMethod,
+        receiverCollaborator: receiverCollaborator,
       ).generate(PdfPageFormat.a4);
 
       final base64Pdf = base64Encode(pdfBytes);
@@ -552,12 +568,31 @@ class _SupplierOrderDetailsScreenState
       final userName =
           '${userProfile.firstName ?? ''} ${userProfile.lastName ?? ''}'.trim();
 
+      // Generar token de acción único de 72h
+      final actionToken = await ref
+          .read(supplierOrdersRepositoryProvider)
+          .generateActionToken(order.id);
+
+      const apiBaseUrl = 'https://fdkswvzrozijbizdthge.supabase.co/functions';
+
+      final bodyHtml = OcEmailTemplateBuilder.buildHtmlBody(
+        order: order,
+        items: items,
+        userProfile: userProfile,
+        userEmail: userEmail ?? '',
+        actionToken: actionToken,
+        apiBaseUrl: apiBaseUrl,
+        shippingMethod: shippingMethod,
+        receiverCollaborator: receiverCollaborator,
+      );
+
       final response = await Supabase.instance.client.functions.invoke(
         'send_document_email',
         body: {
           'documentBase64': base64Pdf,
           'fileName': fileName,
           'documentType': 'supplier_order',
+          'documentId': order.id,
           'recipientEmails': [email],
           'userContext': {
             'name': userName.isEmpty ? 'Usuario' : userName,
@@ -567,14 +602,11 @@ class _SupplierOrderDetailsScreenState
             'companyLogo': userProfile.companyLogoUrl,
           },
           'emailContent': {
-            'subject':
-                'Orden de Compra #${order.orderNumber} - ${userProfile.companyName ?? ''}',
-            'bodyHtml':
-                '<p>Estimado Proveedor,</p>'
-                '<p>Le adjuntamos la Orden de Compra <b>#${order.orderNumber}</b> emitida por <b>${userProfile.companyName ?? 'nuestra empresa'}</b>.</p>'
-                '<p>Quedamos atentos a sus comentarios.</p>'
-                '<p>Atentamente,</p>'
-                '<p><b>${userName.isEmpty ? 'Usuario' : userName}</b><br>${userProfile.companyName ?? ''}</p>',
+            'subject': OcEmailTemplateBuilder.buildSubject(
+              order: order,
+              userProfile: userProfile,
+            ),
+            'bodyHtml': bodyHtml,
           },
         },
       );
@@ -647,7 +679,7 @@ class _SupplierOrderDetailsScreenState
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             Text(
-              'La orden ha sido enviada exitosamente por $methodUsed.',
+              'La orden ha sido enviada exitosamente',
               textAlign: TextAlign.center,
               style: textTheme.bodyLarge,
             ),
@@ -696,8 +728,8 @@ class _SupplierOrderDetailsScreenState
             ),
             ElevatedButton.icon(
               style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFF25D366),
-                foregroundColor: Colors.white,
+                backgroundColor: colors.greenBase,
+                foregroundColor: colors.greenBaseOn,
                 elevation: 0,
                 padding: const EdgeInsets.symmetric(
                   horizontal: 12,
@@ -707,15 +739,18 @@ class _SupplierOrderDetailsScreenState
               onPressed: () {
                 Navigator.of(context).pop();
                 final msg =
-                    'Hola, le escribo con respecto a la Orden de Compra #${order.orderNumber}.';
+                    'Hola, acabo de enviarles la Orden de Compra #${order.orderNumber} al correo electrónico, quisiera concretar la compra de los productos que aparecen en ella, ¿podrían indicarme los pasos a seguir? Gracias.';
                 ContactUtils.launchWhatsApp(branchPhone, message: msg);
               },
               icon: Image.asset(
                 'assets/icons/whatsapp_icon.png',
                 width: 22,
-                color: Colors.white,
+                color: colors.greenBaseOn,
               ),
-              label: const Text('Contactar'),
+              label: Text(
+                'Contactar',
+                style: TextStyle(fontWeight: FontWeight.bold),
+              ),
             ),
           ] else
             TextButton(
@@ -731,13 +766,17 @@ class _SupplierOrderDetailsScreenState
     if (!order.canShowAlerts) return false;
 
     final validationState = ref.read(supplierOrderValidationProvider(items));
-    final hasValidationAlerts =
-        validationState.items.values.any((item) => item.statuses.isNotEmpty);
+    final hasValidationAlerts = validationState.items.values.any(
+      (item) => item.statuses.isNotEmpty,
+    );
 
     return order.hasPriceIncrease ||
         order.stockStatus != StockStatus.available ||
         hasValidationAlerts ||
-        items.any((item) => item.hasPriceIncrease || item.isOutOfStock || item.hasLowStock);
+        items.any(
+          (item) =>
+              item.hasPriceIncrease || item.isOutOfStock || item.hasLowStock,
+        );
   }
 
   Future<void> _checkAndSendOrder(
@@ -875,7 +914,6 @@ class _SupplierOrderDetailsScreenState
   }
 
   Future<void> _finalizeOrderFlow(
-    BuildContext context,
     SupplierOrder order,
     List<SupplierOrderItem> items,
   ) async {
@@ -912,34 +950,36 @@ class _SupplierOrderDetailsScreenState
     );
 
     if (result != null) {
-      if (!context.mounted) return;
+      if (!mounted) return;
       final confirm = await CustomDialog.show<bool>(
         context: context,
         dialog: CustomDialog.destructive(
-          title: '¿Finalizar Orden de Compra?',
+          title: '¿Registrar compra?',
           contentText:
-              'Una vez finalizada, esta orden no podrá ser modificada ni cancelada. '
-              'El documento cargado debe coincidir plenamente con la Orden de Compra. '
-              'De lo contrario, los créditos otorgados serán revertidos y su cuenta puede ser suspendida.',
+              'Se creará el registro de compra y los productos se agregarán a tu inventario.\n'
+              'La orden pasará a estatus finalizada.',
           actions: [
             TextButton(
-              onPressed: () => Navigator.pop(context, false),
+              onPressed: () =>
+                  Navigator.of(context, rootNavigator: true).pop(false),
               child: const Text('Cancelar'),
             ),
             FilledButton(
-              onPressed: () => Navigator.pop(context, true),
+              onPressed: () =>
+                  Navigator.of(context, rootNavigator: true).pop(true),
               style: FilledButton.styleFrom(
                 backgroundColor: Theme.of(context).colorScheme.error,
                 foregroundColor: Theme.of(context).colorScheme.onError,
               ),
-              child: const Text('Finalizar'),
+              child: const Text('Registrar'),
             ),
           ],
         ),
       );
 
       if (confirm == true) {
-        if (!context.mounted) return;
+        if (!mounted) return;
+        final navigator = Navigator.of(context, rootNavigator: true);
         showDialog(
           context: context,
           barrierDismissible: false,
@@ -948,7 +988,7 @@ class _SupplierOrderDetailsScreenState
         );
 
         try {
-          await ref
+          final purchaseId = await ref
               .read(paginatedSupplierOrdersProvider.notifier)
               .finalizeSupplierOrder(
                 orderId: order.id,
@@ -958,24 +998,109 @@ class _SupplierOrderDetailsScreenState
                 createPurchaseRecord: result['createPurchaseRecord'] as bool,
               );
 
-          if (context.mounted) {
-            Navigator.pop(context); // Dismiss loading dialog
-          }
+          navigator.pop(); // Dismiss loading dialog cleanly
+          await Future.delayed(const Duration(milliseconds: 100));
 
-          ref.invalidate(supplierOrderDetailProvider(order.id));
-          messenger.showSnackBar(
-            const SnackBar(
-              content: Text('Orden de compra finalizada con éxito.'),
-            ),
-          );
-        } catch (e) {
-          if (context.mounted) {
-            Navigator.pop(context); // Dismiss loading dialog
+          if (!mounted) return;
+
+          if (result['createPurchaseRecord'] == true && purchaseId != null) {
+            final goToPurchase = await CustomDialog.show<bool>(
+              context: context,
+              dialog: CustomDialog.confirmation(
+                title: '¿Completar registro?',
+                contentText:
+                    'Se generó el registro de compra. ¿Deseas agregar ahora los seriales y tiempos de garantía de los productos registrados?',
+                actions: [
+                  TextButton(
+                    onPressed: () => navigator.pop(false),
+                    child: const Text('Más tarde'),
+                  ),
+                  FilledButton(
+                    onPressed: () => navigator.pop(true),
+                    child: const Text('Registrar ahora'),
+                  ),
+                ],
+              ),
+            );
+
+            ref.invalidate(supplierOrderDetailProvider(order.id));
+            ref.invalidate(linkedPurchaseProvider(order.id));
+
+            if (goToPurchase == true && mounted) {
+              context.push(
+                '/my-purchases/view/$purchaseId',
+                extra: {'editMode': true},
+              );
+            }
+          } else {
+            ref.invalidate(supplierOrderDetailProvider(order.id));
+            ref.invalidate(linkedPurchaseProvider(order.id));
+
+            messenger.showSnackBar(
+              const SnackBar(
+                content: Text('Orden de compra finalizada con éxito.'),
+              ),
+            );
           }
-          messenger.showSnackBar(
-            SnackBar(content: Text('Error al finalizar orden: $e')),
-          );
+        } catch (e) {
+          navigator.pop(); // Dismiss loading dialog cleanly on error
+          if (mounted) {
+            messenger.showSnackBar(
+              SnackBar(content: Text('Error al finalizar orden: $e')),
+            );
+          }
         }
+      }
+    }
+  }
+
+  Future<void> _contactSupplierWhatsApp(
+    BuildContext context,
+    SupplierOrder order,
+  ) async {
+    final branchId = order.supplierBranchId;
+    if (branchId == null) {
+      CustomDialog.show(
+        context: context,
+        dialog: CustomDialog.confirmation(
+          title: 'Contacto no disponible',
+          contentText: 'La orden no tiene una sucursal asignada.',
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('OK'),
+            ),
+          ],
+        ),
+      );
+      return;
+    }
+
+    final branchInfo = await ref.read(
+      supplierBranchContactInfoProvider(branchId).future,
+    );
+
+    final phone = branchInfo?['phone'] as String?;
+    if (phone != null && phone.trim().isNotEmpty) {
+      final msg =
+          'Hola, les escribo con respecto a la Orden de Compra #${order.orderNumber}, la cual fue enviada a su correo electrónico. Quisiera concretar la compra de los productos que aparecen en ella, ¿podrían indicarme los pasos a seguir? Gracias.';
+      ContactUtils.launchWhatsApp(phone.trim(), message: msg);
+    } else {
+      if (context.mounted) {
+        CustomDialog.show(
+          context: context,
+          dialog: CustomDialog.confirmation(
+            title: 'Contacto no disponible',
+            contentText:
+                'La sucursal seleccionada no cuenta con un número de teléfono registrado.',
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text('OK'),
+              ),
+            ],
+          ),
+        );
       }
     }
   }

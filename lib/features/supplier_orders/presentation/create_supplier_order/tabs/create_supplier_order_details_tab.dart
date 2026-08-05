@@ -311,7 +311,7 @@ class _CreateSupplierOrderDetailsTabState
                   : null;
 
               return CustomDropdown<Collaborator>(
-                label: 'Persona que recibe/retira',
+                label: 'Persona que retira',
                 value: selectedCollaborator,
                 items: collaborators,
                 itemLabelBuilder: (c) => c.fullName,

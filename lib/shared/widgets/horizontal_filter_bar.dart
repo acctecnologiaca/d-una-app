@@ -4,11 +4,13 @@ class FilterChipData {
   final String label;
   final bool isActive;
   final VoidCallback onTap;
+  final bool isEnabled;
 
   const FilterChipData({
     required this.label,
     required this.isActive,
     required this.onTap,
+    this.isEnabled = true,
   });
 }
 
@@ -86,8 +88,10 @@ class HorizontalFilterBar extends StatelessWidget {
                       ),
                       const SizedBox(width: 4),
                       Icon(
-                        Icons.arrow_drop_down,
-                        size: 20,
+                        filter.isEnabled
+                            ? Icons.arrow_drop_down
+                            : Icons.lock_outline,
+                        size: filter.isEnabled ? 20 : 16,
                         color: filter.isActive
                             ? colors.onSecondaryContainer
                             : colors.onSurface,
@@ -109,7 +113,7 @@ class HorizontalFilterBar extends StatelessWidget {
                     horizontal: 4,
                     vertical: 2,
                   ),
-                  onPressed: filter.onTap,
+                  onPressed: filter.isEnabled ? filter.onTap : null,
                 ),
               );
             }).toList()..addAll([

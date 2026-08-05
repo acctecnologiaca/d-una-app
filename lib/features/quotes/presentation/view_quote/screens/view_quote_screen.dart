@@ -15,8 +15,10 @@ import '../../create_quote/providers/quote_validation_provider.dart';
 import '../../../../../shared/widgets/custom_action_sheet.dart';
 import '../../../../../shared/widgets/bottom_sheet_action_item.dart';
 import '../../../../../shared/widgets/custom_dialog.dart';
-import '../../../domain/models/quote_model.dart';
+import '../../../domain/models/quote_model.dart' show QuoteStatus;
+import '../../../data/models/quote.dart';
 import '../../../domain/repositories/quotes_repository.dart';
+import '../../../data/models/quote_item_product.dart';
 import 'package:material_symbols_icons/symbols.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:d_una_app/core/pdf/templates/quote_pdf_template.dart';
@@ -25,11 +27,18 @@ import 'package:pdf/pdf.dart';
 import '../../../../../shared/utils/string_utils.dart';
 import '../../../../supplier_orders/presentation/supplier_orders_list/providers/supplier_orders_providers.dart';
 import '../widgets/send_email_bottom_sheet.dart';
+import '../widgets/select_oc_suppliers_sheet.dart';
 import '../widgets/send_whatsapp_bottom_sheet.dart';
+import 'package:intl/intl.dart';
 
 class ViewQuoteScreen extends ConsumerStatefulWidget {
   final String quoteId;
-  const ViewQuoteScreen({super.key, required this.quoteId});
+  final bool triggerSend;
+  const ViewQuoteScreen({
+    super.key,
+    required this.quoteId,
+    this.triggerSend = false,
+  });
 
   @override
   ConsumerState<ViewQuoteScreen> createState() => _ViewQuoteScreenState();
@@ -38,6 +47,7 @@ class ViewQuoteScreen extends ConsumerStatefulWidget {
 class _ViewQuoteScreenState extends ConsumerState<ViewQuoteScreen>
     with SingleTickerProviderStateMixin {
   late final TabController _tabController;
+  bool _hasTriggeredSend = false;
 
   @override
   void initState() {
@@ -67,6 +77,21 @@ class _ViewQuoteScreenState extends ConsumerState<ViewQuoteScreen>
 
   @override
   Widget build(BuildContext context) {
+    ref.listen<QuoteState>(viewQuoteProvider(widget.quoteId), (prev, next) {
+      if (widget.triggerSend && !_hasTriggeredSend && next.quote != null) {
+        _hasTriggeredSend = true;
+        final quote = next.quote!;
+        final isSentOrResent =
+            quote.status == QuoteStatus.sent.dbValue ||
+            quote.status == QuoteStatus.resent.dbValue;
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted) {
+            _showSendOptions(context, quote, isSentOrResent);
+          }
+        });
+      }
+    });
+
     final colors = Theme.of(context).colorScheme;
     final state = ref.watch(viewQuoteProvider(widget.quoteId));
     final quote = state.quote;
@@ -75,51 +100,38 @@ class _ViewQuoteScreenState extends ConsumerState<ViewQuoteScreen>
         (quote.status == QuoteStatus.sent.dbValue ||
             quote.status == QuoteStatus.resent.dbValue);
 
+    final isFinalized = quote?.status == QuoteStatus.finalized.dbValue;
+
+    if (widget.triggerSend &&
+        !_hasTriggeredSend &&
+        quote != null &&
+        !isFinalized) {
+      _hasTriggeredSend = true;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) {
+          _showSendOptions(context, quote, isSentOrResent);
+        }
+      });
+    }
+
     return Scaffold(
       appBar: StandardAppBar(
         title: 'Cotización',
         subtitle: state.clientName != null
-            ? '#${state.currentQuoteNumber} (${state.clientName})'
+            ? '${state.currentQuoteNumber} (${state.clientName})'
             : (state.currentQuoteNumber ?? 'Cargando...'),
         actions: [
           IconButton(
-            onPressed: () async {
-              if (quote == null) return;
-
-              CustomActionSheet.show(
-                context: context,
-                title: isSentOrResent
-                    ? 'Reenviar cotización'
-                    : 'Enviar cotización',
-                actions: [
-                  BottomSheetActionItem(
-                    icon: Icons.email_outlined,
-                    label: isSentOrResent
-                        ? 'Reenviar por correo electrónico'
-                        : 'Enviar por correo electrónico',
-                    onTap: () {
-                      Navigator.of(context).pop();
-                      SendEmailBottomSheet.show(context, quote);
-                    },
-                  ),
-                  BottomSheetActionItem(
-                    icon: 'assets/icons/whatsapp_icon.png',
-                    label: isSentOrResent
-                        ? 'Reenviar por WhatsApp'
-                        : 'Enviar por WhatsApp',
-                    onTap: () {
-                      Navigator.of(context).pop();
-                      SendWhatsAppBottomSheet.show(context, quote);
-                    },
-                  ),
-                ],
-              );
-            },
+            onPressed: (isFinalized || quote == null)
+                ? null
+                : () => _showSendOptions(context, quote, isSentOrResent),
             icon: Icon(
               isSentOrResent ? Symbols.forward : Icons.send,
-              color: colors.onSurfaceVariant,
+              color: isFinalized ? colors.outline : colors.onSurfaceVariant,
             ),
-            tooltip: isSentOrResent ? 'Reenviar' : 'Enviar',
+            tooltip: isFinalized
+                ? 'Cotización finalizada. No se puede enviar'
+                : (isSentOrResent ? 'Reenviar' : 'Enviar'),
           ),
           IconButton(
             onPressed: () {
@@ -174,158 +186,296 @@ class _ViewQuoteScreenState extends ConsumerState<ViewQuoteScreen>
                     },
                   ),
                   const Divider(height: 1, indent: 16, endIndent: 16),
-                  BottomSheetActionItem(
-                    icon: Symbols.conversion_path,
-                    label: 'Cambiar estatus',
-                    onTap: () async {
-                      final messenger = ScaffoldMessenger.of(context);
-                      context.pop(); // Close the action sheet
+                  Builder(
+                    builder: (context) {
+                      final isFinalized =
+                          state.quote?.status == QuoteStatus.finalized.dbValue;
+                      return BottomSheetActionItem(
+                        icon: Symbols.conversion_path,
+                        label: 'Cambiar estatus',
+                        enabled: !isFinalized,
+                        subtitle: isFinalized
+                            ? 'Cotización finalizada. No se puede cambiar de estado'
+                            : null,
+                        onTap: () async {
+                          final messenger = ScaffoldMessenger.of(context);
+                          context.pop(); // Close the action sheet
 
-                      final currentStatusStr = state.quote?.status;
-                      if (currentStatusStr == null) return;
+                          final currentStatusStr = state.quote?.status;
+                          if (currentStatusStr == null) return;
 
-                      final currentEnum = QuoteStatus.fromDbValue(
-                        currentStatusStr,
-                      );
-                      final selectedStatus = await _showStatusDialog(
-                        currentEnum,
-                      );
+                          final currentEnum = QuoteStatus.fromDbValue(
+                            currentStatusStr,
+                          );
+                          final selectedStatus = await _showStatusDialog(
+                            currentEnum,
+                          );
 
-                      if (selectedStatus != null &&
-                          selectedStatus != currentEnum) {
-                        try {
-                          await ref
-                              .read(quotesListProvider.notifier)
-                              .updateQuoteStatus(
-                                widget.quoteId,
-                                selectedStatus.dbValue,
+                          if (selectedStatus != null &&
+                              selectedStatus != currentEnum) {
+                            try {
+                              await ref
+                                  .read(quotesListProvider.notifier)
+                                  .updateQuoteStatus(
+                                    widget.quoteId,
+                                    selectedStatus.dbValue,
+                                  );
+
+                              await ref
+                                  .read(
+                                    viewQuoteProvider(widget.quoteId).notifier,
+                                  )
+                                  .loadExistingQuote(widget.quoteId);
+
+                              refreshAllQuoteProviders(ref);
+
+                              messenger.showSnackBar(
+                                SnackBar(
+                                  content: Text(
+                                    'Estatus cambiado a "${selectedStatus.label}"',
+                                  ),
+                                ),
                               );
-
-                          if (!context.mounted) return;
-
-                          // Refresh view provider
-                          ref.invalidate(viewQuoteProvider(widget.quoteId));
-
-                          messenger.showSnackBar(
-                            SnackBar(
-                              content: Text(
-                                'Estatus cambiado a "${selectedStatus.label}"',
-                              ),
-                            ),
-                          );
-                        } on InsufficientStockException catch (e) {
-                          if (!context.mounted) return;
-                          CustomDialog.show(
-                            context: context,
-                            dialog: CustomDialog.confirmation(
-                              icon: Symbols.warning,
-                              iconColor: Colors.amber.shade800,
-                              title: 'Stock Insuficiente',
-                              contentText:
-                                  'No se puede aprobar la cotización porque no hay suficiente stock disponible en el inventario propio de los siguientes productos:\n\n${e.productNames.map((name) => '• $name').join('\n')}\n\nPor favor, agregue más stock para poder aprobarla.',
-                              actions: [
-                                TextButton(
-                                  onPressed: () => Navigator.of(
-                                    context,
-                                    rootNavigator: true,
-                                  ).pop(),
-                                  child: const Text('Entendido'),
+                            } on InsufficientStockException catch (e) {
+                              if (!context.mounted) return;
+                              CustomDialog.show(
+                                context: context,
+                                dialog: CustomDialog.confirmation(
+                                  icon: Symbols.warning,
+                                  iconColor: Colors.amber.shade800,
+                                  title: 'Stock Insuficiente',
+                                  contentText:
+                                      'No se puede aprobar la cotización porque no hay suficiente stock disponible en el inventario propio de los siguientes productos:\n\n${e.productNames.map((name) => '• $name').join('\n')}\n\nPor favor, agregue más stock para poder aprobarla.',
+                                  actions: [
+                                    TextButton(
+                                      onPressed: () => Navigator.of(
+                                        context,
+                                        rootNavigator: true,
+                                      ).pop(),
+                                      child: const Text('Entendido'),
+                                    ),
+                                  ],
                                 ),
-                              ],
-                            ),
-                          );
-                        } catch (e) {
-                          if (!context.mounted) return;
-                          messenger.showSnackBar(
-                            SnackBar(
-                              content: Text('Error al cambiar estatus: $e'),
-                            ),
-                          );
-                        }
-                      }
+                              );
+                            } catch (e) {
+                              if (!context.mounted) return;
+                              messenger.showSnackBar(
+                                SnackBar(
+                                  content: Text('Error al cambiar estatus: $e'),
+                                ),
+                              );
+                            }
+                          }
+                        },
+                      );
                     },
                   ),
-                  BottomSheetActionItem(
-                    icon: Icons.shopping_cart_outlined,
-                    label: 'Generar orden de compra',
-                    onTap: () async {
-                      context.pop();
+                  Builder(
+                    builder: (context) {
+                      final statusStr = state.quote?.status;
+                      final isBlockedForOcNe =
+                          statusStr == QuoteStatus.rejected.dbValue ||
+                          statusStr == QuoteStatus.finalized.dbValue ||
+                          statusStr == QuoteStatus.cancelled.dbValue;
 
-                      final quote = state.quote;
-                      if (quote == null) return;
-
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text('Generando órdenes de compra...'),
-                          duration: Duration(seconds: 1),
-                        ),
+                      final hasAffiliatedProducts = state.products.any(
+                        (p) =>
+                            p.sourceType == QuoteItemSourceType.affiliated ||
+                            p.supplierBranchStockId != null,
                       );
 
-                      try {
-                        final repo = ref.read(supplierOrdersRepositoryProvider);
-                        final result = await repo.batchGenerateFromQuote(
-                          quote.id,
-                        );
-
-                        if (!context.mounted) return;
-
-                        final skipped =
-                            result['skippedSuppliers'] as List<dynamic>? ?? [];
-                        final generatedCount =
-                            result['generatedCount'] as int? ?? 0;
-
-                        if (skipped.isNotEmpty) {
-                          // Show warning dialog about skipped suppliers
-                          await CustomDialog.show(
-                            context: context,
-                            dialog: CustomDialog.confirmation(
-                              icon: Icons.warning_amber_rounded,
-                              iconColor: Colors.amber.shade800,
-                              title: 'Órdenes Generadas con Advertencias',
-                              contentText:
-                                  'Se generaron $generatedCount órdenes de compra.\n\nNo se pudieron generar órdenes para los siguientes proveedores porque no están registrados en la tabla de proveedores:\n\n${skipped.map((s) => '• $s').join('\n')}',
-                              actions: [
-                                TextButton(
-                                  onPressed: () => Navigator.of(
-                                    context,
-                                    rootNavigator: true,
-                                  ).pop(),
-                                  child: const Text('Entendido'),
+                      final validationState = ref.watch(
+                        quoteValidationProvider(widget.quoteId),
+                      );
+                      final hasValidationAlerts = validationState.items.values
+                          .any(
+                            (i) =>
+                                i.statuses.contains(
+                                  QuoteValidationStatus.priceIncreased,
+                                ) ||
+                                i.statuses.contains(
+                                  QuoteValidationStatus.outOfStock,
+                                ) ||
+                                i.statuses.contains(
+                                  QuoteValidationStatus.lowStock,
                                 ),
-                              ],
-                            ),
                           );
-                        } else {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(
-                              content: Text(
-                                'Se generaron $generatedCount órdenes de compra exitosamente.',
-                              ),
-                            ),
-                          );
-                        }
 
-                        // Navigate to supplier orders list
-                        if (context.mounted) {
-                          context.push('/supplier-orders');
-                        }
-                      } catch (e) {
-                        if (context.mounted) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(
-                              content: Text('Error al generar órdenes: $e'),
-                              backgroundColor: Colors.red,
-                            ),
-                          );
-                        }
+                      final isEnabled =
+                          !isBlockedForOcNe &&
+                          hasAffiliatedProducts &&
+                          !hasValidationAlerts;
+
+                      String? subtitleText;
+                      if (isBlockedForOcNe) {
+                        subtitleText =
+                            'No disponible para cotizaciones rechazadas, finalizadas o canceladas';
+                      } else if (!hasAffiliatedProducts) {
+                        subtitleText =
+                            'Esta cotización no contiene productos de proveedores afiliados';
+                      } else if (hasValidationAlerts) {
+                        subtitleText =
+                            'Bloqueado: La cotización contiene productos con alza de costo o stock insuficiente. Resuelve las alertas antes de generar la OC';
                       }
+
+                      return BottomSheetActionItem(
+                        icon: Icons.shopping_cart_outlined,
+                        label: 'Generar ordenes de compra',
+                        enabled: isEnabled,
+                        subtitle: subtitleText,
+                        onTap: () async {
+                          final router = GoRouter.of(context);
+                          final messenger = ScaffoldMessenger.of(context);
+
+                          final quote = state.quote;
+                          if (quote == null) return;
+
+                          try {
+                            final repo = ref.read(
+                              supplierOrdersRepositoryProvider,
+                            );
+
+                            final statuses = await repo
+                                .getQuoteSuppliersOcStatus(quote.id);
+
+                            if (!context.mounted) return;
+
+                            // Close the action sheet
+                            Navigator.of(context).pop();
+
+                            final availableSuppliers = statuses
+                                .where((s) => !s.hasExistingOc)
+                                .toList();
+
+                            if (availableSuppliers.isEmpty &&
+                                statuses.isNotEmpty) {
+                              await CustomDialog.show(
+                                context: context,
+                                dialog: CustomDialog.confirmation(
+                                  icon: Icons.info_outline,
+                                  title: 'Órdenes de Compra Emitidas',
+                                  contentText:
+                                      'Todos los proveedores afiliados de esta cotización ya cuentan con Órdenes de Compra activas generadas.',
+                                  actions: [
+                                    TextButton(
+                                      onPressed: () => Navigator.of(
+                                        context,
+                                        rootNavigator: true,
+                                      ).pop(),
+                                      child: const Text('Entendido'),
+                                    ),
+                                  ],
+                                ),
+                              );
+                              return;
+                            }
+
+                            final selectedIds =
+                                await SelectOcSuppliersSheet.show(
+                                  context: context,
+                                  suppliers: statuses,
+                                );
+
+                            if (selectedIds == null || selectedIds.isEmpty) {
+                              return;
+                            }
+
+                            messenger.showSnackBar(
+                              const SnackBar(
+                                content: Text('Generando órdenes de compra...'),
+                                duration: Duration(seconds: 1),
+                              ),
+                            );
+
+                            final result = await repo.batchGenerateFromQuote(
+                              quote.id,
+                              selectedSupplierIds: selectedIds,
+                            );
+
+                            final skipped =
+                                result['skippedSuppliers'] as List<dynamic>? ??
+                                [];
+                            final generatedCount =
+                                result['generatedCount'] as int? ?? 0;
+
+                            if (generatedCount > 0) {
+                              await ref
+                                  .read(viewQuoteProvider(quote.id).notifier)
+                                  .loadExistingQuote(quote.id);
+                              refreshAllQuoteProviders(ref);
+                            }
+
+                            if (skipped.isNotEmpty) {
+                              if (context.mounted) {
+                                await CustomDialog.show(
+                                  context: context,
+                                  dialog: CustomDialog.confirmation(
+                                    icon: Icons.warning_amber_rounded,
+                                    iconColor: Colors.amber.shade800,
+                                    title: 'Órdenes Generadas con Advertencias',
+                                    contentText:
+                                        'Se generaron $generatedCount órdenes de compra.\n\nNo se generaron órdenes de compra para los siguientes ítems/proveedores porque corresponden a inventario propio, proveedores externos o no están afiliados oficialmente:\n\n${skipped.map((s) => '• $s').join('\n')}',
+                                    actions: [
+                                      TextButton(
+                                        onPressed: () => Navigator.of(
+                                          context,
+                                          rootNavigator: true,
+                                        ).pop(),
+                                        child: const Text('Entendido'),
+                                      ),
+                                    ],
+                                  ),
+                                );
+                              }
+                            } else {
+                              messenger.showSnackBar(
+                                SnackBar(
+                                  content: Text(
+                                    'Se generaron $generatedCount órdenes de compra exitosamente.',
+                                  ),
+                                ),
+                              );
+                            }
+
+                            final query =
+                                quote.quoteNumber ??
+                                state.currentQuoteNumber ??
+                                quote.id;
+                            router.push(
+                              '/supplier-orders/search',
+                              extra: {'initialQuery': query, 'readOnly': true},
+                            );
+                          } catch (e) {
+                            messenger.showSnackBar(
+                              SnackBar(
+                                content: Text('Error al generar órdenes: $e'),
+                                backgroundColor: Colors.red,
+                              ),
+                            );
+                          }
+                        },
+                      );
                     },
                   ),
-                  BottomSheetActionItem(
-                    icon: Icons.receipt_outlined,
-                    label: 'Generar nota de entrega',
-                    onTap: () {
-                      context.pop();
+                  Builder(
+                    builder: (context) {
+                      final statusStr = state.quote?.status;
+                      final isBlockedForOcNe =
+                          statusStr == QuoteStatus.rejected.dbValue ||
+                          statusStr == QuoteStatus.finalized.dbValue ||
+                          statusStr == QuoteStatus.cancelled.dbValue;
+
+                      return BottomSheetActionItem(
+                        icon: Icons.receipt_outlined,
+                        label: 'Generar nota de entrega',
+                        enabled: !isBlockedForOcNe,
+                        subtitle: isBlockedForOcNe
+                            ? 'No disponible para cotizaciones rechazadas, finalizadas o canceladas'
+                            : null,
+                        onTap: () {
+                          context.pop();
+                        },
+                      );
                     },
                   ),
                   const Divider(height: 1, indent: 16, endIndent: 16),
@@ -453,30 +603,32 @@ class _ViewQuoteScreenState extends ConsumerState<ViewQuoteScreen>
                 ),
               ],
             ),
-      floatingActionButton: Padding(
-        padding: const EdgeInsets.only(bottom: 40.0),
-        child: FloatingActionButton(
-          onPressed: () async {
-            await context.push(
-              '/quotes/edit/${widget.quoteId}?tab=${_tabController.index}',
-            );
-            // Al volver, refrescamos el proveedor de visualización para obtener los datos actualizados
-            ref.invalidate(viewQuoteProvider(widget.quoteId));
-            // Y disparamos la validación de inventario inmediatamente
-            ref
-                .read(quoteValidationProvider(widget.quoteId).notifier)
-                .validate();
-          },
-          child: const Icon(Icons.edit_outlined),
-        ),
-      ),
+      floatingActionButton: state.quote?.status == QuoteStatus.finalized.dbValue
+          ? null
+          : Padding(
+              padding: const EdgeInsets.only(bottom: 40.0),
+              child: FloatingActionButton(
+                onPressed: () async {
+                  await context.push(
+                    '/quotes/edit/${widget.quoteId}?tab=${_tabController.index}',
+                  );
+                  // Al volver, refrescamos el proveedor de visualización para obtener los datos actualizados
+                  ref.invalidate(viewQuoteProvider(widget.quoteId));
+                  // Y disparamos la validación de inventario inmediatamente
+                  ref
+                      .read(quoteValidationProvider(widget.quoteId).notifier)
+                      .validate();
+                },
+                child: const Icon(Icons.edit_outlined),
+              ),
+            ),
     );
   }
 
   Future<QuoteStatus?> _showStatusDialog(QuoteStatus currentStatus) async {
     final colors = Theme.of(context).colorScheme;
 
-    return CustomDialog.show<QuoteStatus>(
+    final selectedStatus = await CustomDialog.show<QuoteStatus>(
       context: context,
       dialog: CustomDialog.vertical(
         icon: Symbols.conversion_path,
@@ -515,6 +667,36 @@ class _ViewQuoteScreenState extends ConsumerState<ViewQuoteScreen>
         ],
       ),
     );
+
+    if (selectedStatus == QuoteStatus.finalized) {
+      if (!mounted) return null;
+      final confirmFinalize = await CustomDialog.show<bool>(
+        context: context,
+        dialog: CustomDialog.confirmation(
+          icon: Icons.warning_amber_rounded,
+          iconColor: Colors.amber.shade800,
+          title: 'Finalizar Cotización',
+          contentText:
+              '¿Estás seguro de que deseas finalizar esta cotización? Una vez finalizada, la cotización quedará cerrada permanentemente y no se podrá editar, enviar ni cambiar de estado.',
+          actions: [
+            TextButton(
+              onPressed: () =>
+                  Navigator.of(context, rootNavigator: true).pop(false),
+              child: const Text('Cancelar'),
+            ),
+            FilledButton(
+              onPressed: () =>
+                  Navigator.of(context, rootNavigator: true).pop(true),
+              child: const Text('Confirmar y Finalizar'),
+            ),
+          ],
+        ),
+      );
+
+      if (confirmFinalize != true) return null;
+    }
+
+    return selectedStatus;
   }
 
   bool _isQuoteExpired(QuoteState state) {
@@ -536,5 +718,124 @@ class _ViewQuoteScreenState extends ConsumerState<ViewQuoteScreen>
       Duration(days: state.validityDays),
     );
     return expirationDate.isBefore(DateTime.now());
+  }
+
+  void _showSendOptions(
+    BuildContext context,
+    Quote quote,
+    bool isSentOrResent,
+  ) {
+    if (quote.status == QuoteStatus.finalized.dbValue) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('La cotización está finalizada y no se puede enviar.'),
+        ),
+      );
+      return;
+    }
+
+    _checkDateAndSend(
+      context: context,
+      quote: quote,
+      onSend: (targetQuote) {
+        CustomActionSheet.show(
+          context: context,
+          title: isSentOrResent ? 'Reenviar cotización' : 'Enviar cotización',
+          actions: [
+            BottomSheetActionItem(
+              icon: Icons.email_outlined,
+              label: isSentOrResent
+                  ? 'Reenviar por correo electrónico'
+                  : 'Enviar por correo electrónico',
+              onTap: () {
+                Navigator.of(context).pop();
+                SendEmailBottomSheet.show(context, targetQuote);
+              },
+            ),
+            BottomSheetActionItem(
+              icon: 'assets/icons/whatsapp_icon.png',
+              label: isSentOrResent
+                  ? 'Reenviar por WhatsApp'
+                  : 'Enviar por WhatsApp',
+              onTap: () {
+                Navigator.of(context).pop();
+                SendWhatsAppBottomSheet.show(context, targetQuote);
+              },
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  Future<void> _checkDateAndSend({
+    required BuildContext context,
+    required Quote quote,
+    required Function(Quote quote) onSend,
+  }) async {
+    final now = DateTime.now();
+    final issueDate = quote.dateIssued;
+    final isSameDate =
+        issueDate.year == now.year &&
+        issueDate.month == now.month &&
+        issueDate.day == now.day;
+
+    if (isSameDate) {
+      onSend(quote);
+      return;
+    }
+
+    final formattedQuoteDate = DateFormat('dd/MM/yyyy').format(issueDate);
+    final formattedToday = DateFormat('dd/MM/yyyy').format(now);
+
+    final action = await CustomDialog.show<String>(
+      context: context,
+      dialog: CustomDialog.confirmation(
+        icon: Icons.date_range_outlined,
+        title: 'Fecha de emisión diferente',
+        contentText:
+            'La fecha de emisión de esta cotización ($formattedQuoteDate) es distinta a la fecha de hoy ($formattedToday). ¿Cómo deseas proceder?',
+        actions: [
+          TextButton(
+            onPressed: () =>
+                Navigator.of(context, rootNavigator: true).pop('send_as_is'),
+            child: const Text('Enviar así'),
+          ),
+          FilledButton(
+            onPressed: () =>
+                Navigator.of(context, rootNavigator: true).pop('update_date'),
+            child: const Text('Actualizar fecha y enviar'),
+          ),
+          OutlinedButton(
+            onPressed: () =>
+                Navigator.of(context, rootNavigator: true).pop('modify'),
+            child: const Text('Modificar'),
+          ),
+        ],
+      ),
+    );
+
+    if (action == 'send_as_is') {
+      onSend(quote);
+    } else if (action == 'update_date') {
+      try {
+        await ref
+            .read(quotesListProvider.notifier)
+            .updateQuoteDate(quote.id, DateTime.now());
+        ref.invalidate(viewQuoteProvider(quote.id));
+        final updatedQuote = quote.copyWith(dateIssued: DateTime.now());
+        onSend(updatedQuote);
+      } catch (e) {
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Error al actualizar fecha: $e')),
+          );
+        }
+      }
+    } else if (action == 'modify') {
+      if (context.mounted) {
+        context.push('/quotes/edit/${quote.id}');
+      }
+    }
   }
 }

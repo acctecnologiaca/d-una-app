@@ -444,8 +444,379 @@ class _SupplierBranchContactInfoProviderElement
   String get branchId => (origin as SupplierBranchContactInfoProvider).branchId;
 }
 
+String _$mergedChildOrdersHash() => r'9553abb10afd576b98927ea86c171517654b7dee';
+
+/// See also [mergedChildOrders].
+@ProviderFor(mergedChildOrders)
+const mergedChildOrdersProvider = MergedChildOrdersFamily();
+
+/// See also [mergedChildOrders].
+class MergedChildOrdersFamily extends Family<AsyncValue<List<SupplierOrder>>> {
+  /// See also [mergedChildOrders].
+  const MergedChildOrdersFamily();
+
+  /// See also [mergedChildOrders].
+  MergedChildOrdersProvider call(String parentOrderId) {
+    return MergedChildOrdersProvider(parentOrderId);
+  }
+
+  @override
+  MergedChildOrdersProvider getProviderOverride(
+    covariant MergedChildOrdersProvider provider,
+  ) {
+    return call(provider.parentOrderId);
+  }
+
+  static const Iterable<ProviderOrFamily>? _dependencies = null;
+
+  @override
+  Iterable<ProviderOrFamily>? get dependencies => _dependencies;
+
+  static const Iterable<ProviderOrFamily>? _allTransitiveDependencies = null;
+
+  @override
+  Iterable<ProviderOrFamily>? get allTransitiveDependencies =>
+      _allTransitiveDependencies;
+
+  @override
+  String? get name => r'mergedChildOrdersProvider';
+}
+
+/// See also [mergedChildOrders].
+class MergedChildOrdersProvider
+    extends AutoDisposeFutureProvider<List<SupplierOrder>> {
+  /// See also [mergedChildOrders].
+  MergedChildOrdersProvider(String parentOrderId)
+    : this._internal(
+        (ref) => mergedChildOrders(ref as MergedChildOrdersRef, parentOrderId),
+        from: mergedChildOrdersProvider,
+        name: r'mergedChildOrdersProvider',
+        debugGetCreateSourceHash: const bool.fromEnvironment('dart.vm.product')
+            ? null
+            : _$mergedChildOrdersHash,
+        dependencies: MergedChildOrdersFamily._dependencies,
+        allTransitiveDependencies:
+            MergedChildOrdersFamily._allTransitiveDependencies,
+        parentOrderId: parentOrderId,
+      );
+
+  MergedChildOrdersProvider._internal(
+    super._createNotifier, {
+    required super.name,
+    required super.dependencies,
+    required super.allTransitiveDependencies,
+    required super.debugGetCreateSourceHash,
+    required super.from,
+    required this.parentOrderId,
+  }) : super.internal();
+
+  final String parentOrderId;
+
+  @override
+  Override overrideWith(
+    FutureOr<List<SupplierOrder>> Function(MergedChildOrdersRef provider)
+    create,
+  ) {
+    return ProviderOverride(
+      origin: this,
+      override: MergedChildOrdersProvider._internal(
+        (ref) => create(ref as MergedChildOrdersRef),
+        from: from,
+        name: null,
+        dependencies: null,
+        allTransitiveDependencies: null,
+        debugGetCreateSourceHash: null,
+        parentOrderId: parentOrderId,
+      ),
+    );
+  }
+
+  @override
+  AutoDisposeFutureProviderElement<List<SupplierOrder>> createElement() {
+    return _MergedChildOrdersProviderElement(this);
+  }
+
+  @override
+  bool operator ==(Object other) {
+    return other is MergedChildOrdersProvider &&
+        other.parentOrderId == parentOrderId;
+  }
+
+  @override
+  int get hashCode {
+    var hash = _SystemHash.combine(0, runtimeType.hashCode);
+    hash = _SystemHash.combine(hash, parentOrderId.hashCode);
+
+    return _SystemHash.finish(hash);
+  }
+}
+
+@Deprecated('Will be removed in 3.0. Use Ref instead')
+// ignore: unused_element
+mixin MergedChildOrdersRef
+    on AutoDisposeFutureProviderRef<List<SupplierOrder>> {
+  /// The parameter `parentOrderId` of this provider.
+  String get parentOrderId;
+}
+
+class _MergedChildOrdersProviderElement
+    extends AutoDisposeFutureProviderElement<List<SupplierOrder>>
+    with MergedChildOrdersRef {
+  _MergedChildOrdersProviderElement(super.provider);
+
+  @override
+  String get parentOrderId =>
+      (origin as MergedChildOrdersProvider).parentOrderId;
+}
+
+String _$parentSupplierOrderHash() =>
+    r'5b8aeb0d3d3c2b2fac71e41f8ed80daeffb1aabf';
+
+/// See also [parentSupplierOrder].
+@ProviderFor(parentSupplierOrder)
+const parentSupplierOrderProvider = ParentSupplierOrderFamily();
+
+/// See also [parentSupplierOrder].
+class ParentSupplierOrderFamily extends Family<AsyncValue<SupplierOrder?>> {
+  /// See also [parentSupplierOrder].
+  const ParentSupplierOrderFamily();
+
+  /// See also [parentSupplierOrder].
+  ParentSupplierOrderProvider call(String? parentOrderId) {
+    return ParentSupplierOrderProvider(parentOrderId);
+  }
+
+  @override
+  ParentSupplierOrderProvider getProviderOverride(
+    covariant ParentSupplierOrderProvider provider,
+  ) {
+    return call(provider.parentOrderId);
+  }
+
+  static const Iterable<ProviderOrFamily>? _dependencies = null;
+
+  @override
+  Iterable<ProviderOrFamily>? get dependencies => _dependencies;
+
+  static const Iterable<ProviderOrFamily>? _allTransitiveDependencies = null;
+
+  @override
+  Iterable<ProviderOrFamily>? get allTransitiveDependencies =>
+      _allTransitiveDependencies;
+
+  @override
+  String? get name => r'parentSupplierOrderProvider';
+}
+
+/// See also [parentSupplierOrder].
+class ParentSupplierOrderProvider
+    extends AutoDisposeFutureProvider<SupplierOrder?> {
+  /// See also [parentSupplierOrder].
+  ParentSupplierOrderProvider(String? parentOrderId)
+    : this._internal(
+        (ref) =>
+            parentSupplierOrder(ref as ParentSupplierOrderRef, parentOrderId),
+        from: parentSupplierOrderProvider,
+        name: r'parentSupplierOrderProvider',
+        debugGetCreateSourceHash: const bool.fromEnvironment('dart.vm.product')
+            ? null
+            : _$parentSupplierOrderHash,
+        dependencies: ParentSupplierOrderFamily._dependencies,
+        allTransitiveDependencies:
+            ParentSupplierOrderFamily._allTransitiveDependencies,
+        parentOrderId: parentOrderId,
+      );
+
+  ParentSupplierOrderProvider._internal(
+    super._createNotifier, {
+    required super.name,
+    required super.dependencies,
+    required super.allTransitiveDependencies,
+    required super.debugGetCreateSourceHash,
+    required super.from,
+    required this.parentOrderId,
+  }) : super.internal();
+
+  final String? parentOrderId;
+
+  @override
+  Override overrideWith(
+    FutureOr<SupplierOrder?> Function(ParentSupplierOrderRef provider) create,
+  ) {
+    return ProviderOverride(
+      origin: this,
+      override: ParentSupplierOrderProvider._internal(
+        (ref) => create(ref as ParentSupplierOrderRef),
+        from: from,
+        name: null,
+        dependencies: null,
+        allTransitiveDependencies: null,
+        debugGetCreateSourceHash: null,
+        parentOrderId: parentOrderId,
+      ),
+    );
+  }
+
+  @override
+  AutoDisposeFutureProviderElement<SupplierOrder?> createElement() {
+    return _ParentSupplierOrderProviderElement(this);
+  }
+
+  @override
+  bool operator ==(Object other) {
+    return other is ParentSupplierOrderProvider &&
+        other.parentOrderId == parentOrderId;
+  }
+
+  @override
+  int get hashCode {
+    var hash = _SystemHash.combine(0, runtimeType.hashCode);
+    hash = _SystemHash.combine(hash, parentOrderId.hashCode);
+
+    return _SystemHash.finish(hash);
+  }
+}
+
+@Deprecated('Will be removed in 3.0. Use Ref instead')
+// ignore: unused_element
+mixin ParentSupplierOrderRef on AutoDisposeFutureProviderRef<SupplierOrder?> {
+  /// The parameter `parentOrderId` of this provider.
+  String? get parentOrderId;
+}
+
+class _ParentSupplierOrderProviderElement
+    extends AutoDisposeFutureProviderElement<SupplierOrder?>
+    with ParentSupplierOrderRef {
+  _ParentSupplierOrderProviderElement(super.provider);
+
+  @override
+  String? get parentOrderId =>
+      (origin as ParentSupplierOrderProvider).parentOrderId;
+}
+
+String _$linkedPurchaseHash() => r'c54184ca4d36df50d1301faac95a3a2dfaca3610';
+
+/// See also [linkedPurchase].
+@ProviderFor(linkedPurchase)
+const linkedPurchaseProvider = LinkedPurchaseFamily();
+
+/// See also [linkedPurchase].
+class LinkedPurchaseFamily extends Family<AsyncValue<Map<String, dynamic>?>> {
+  /// See also [linkedPurchase].
+  const LinkedPurchaseFamily();
+
+  /// See also [linkedPurchase].
+  LinkedPurchaseProvider call(String orderId) {
+    return LinkedPurchaseProvider(orderId);
+  }
+
+  @override
+  LinkedPurchaseProvider getProviderOverride(
+    covariant LinkedPurchaseProvider provider,
+  ) {
+    return call(provider.orderId);
+  }
+
+  static const Iterable<ProviderOrFamily>? _dependencies = null;
+
+  @override
+  Iterable<ProviderOrFamily>? get dependencies => _dependencies;
+
+  static const Iterable<ProviderOrFamily>? _allTransitiveDependencies = null;
+
+  @override
+  Iterable<ProviderOrFamily>? get allTransitiveDependencies =>
+      _allTransitiveDependencies;
+
+  @override
+  String? get name => r'linkedPurchaseProvider';
+}
+
+/// See also [linkedPurchase].
+class LinkedPurchaseProvider
+    extends AutoDisposeFutureProvider<Map<String, dynamic>?> {
+  /// See also [linkedPurchase].
+  LinkedPurchaseProvider(String orderId)
+    : this._internal(
+        (ref) => linkedPurchase(ref as LinkedPurchaseRef, orderId),
+        from: linkedPurchaseProvider,
+        name: r'linkedPurchaseProvider',
+        debugGetCreateSourceHash: const bool.fromEnvironment('dart.vm.product')
+            ? null
+            : _$linkedPurchaseHash,
+        dependencies: LinkedPurchaseFamily._dependencies,
+        allTransitiveDependencies:
+            LinkedPurchaseFamily._allTransitiveDependencies,
+        orderId: orderId,
+      );
+
+  LinkedPurchaseProvider._internal(
+    super._createNotifier, {
+    required super.name,
+    required super.dependencies,
+    required super.allTransitiveDependencies,
+    required super.debugGetCreateSourceHash,
+    required super.from,
+    required this.orderId,
+  }) : super.internal();
+
+  final String orderId;
+
+  @override
+  Override overrideWith(
+    FutureOr<Map<String, dynamic>?> Function(LinkedPurchaseRef provider) create,
+  ) {
+    return ProviderOverride(
+      origin: this,
+      override: LinkedPurchaseProvider._internal(
+        (ref) => create(ref as LinkedPurchaseRef),
+        from: from,
+        name: null,
+        dependencies: null,
+        allTransitiveDependencies: null,
+        debugGetCreateSourceHash: null,
+        orderId: orderId,
+      ),
+    );
+  }
+
+  @override
+  AutoDisposeFutureProviderElement<Map<String, dynamic>?> createElement() {
+    return _LinkedPurchaseProviderElement(this);
+  }
+
+  @override
+  bool operator ==(Object other) {
+    return other is LinkedPurchaseProvider && other.orderId == orderId;
+  }
+
+  @override
+  int get hashCode {
+    var hash = _SystemHash.combine(0, runtimeType.hashCode);
+    hash = _SystemHash.combine(hash, orderId.hashCode);
+
+    return _SystemHash.finish(hash);
+  }
+}
+
+@Deprecated('Will be removed in 3.0. Use Ref instead')
+// ignore: unused_element
+mixin LinkedPurchaseRef on AutoDisposeFutureProviderRef<Map<String, dynamic>?> {
+  /// The parameter `orderId` of this provider.
+  String get orderId;
+}
+
+class _LinkedPurchaseProviderElement
+    extends AutoDisposeFutureProviderElement<Map<String, dynamic>?>
+    with LinkedPurchaseRef {
+  _LinkedPurchaseProviderElement(super.provider);
+
+  @override
+  String get orderId => (origin as LinkedPurchaseProvider).orderId;
+}
+
 String _$paginatedSupplierOrdersHash() =>
-    r'871550e927d5a3d29fab1f6c3e562b6f8f47b3e3';
+    r'99fc9f721fc267617934f9d36b691e0c295ba323';
 
 /// See also [PaginatedSupplierOrders].
 @ProviderFor(PaginatedSupplierOrders)

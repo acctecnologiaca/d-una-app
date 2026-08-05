@@ -4,6 +4,9 @@ import '../../../../collaborators/presentation/providers/collaborators_providers
 import '../../../../portfolio/presentation/providers/lookup_providers.dart';
 import '../../create_quote/providers/create_quote_provider.dart';
 
+import 'package:d_una_app/features/supplier_orders/domain/models/supplier_order.dart';
+import 'package:d_una_app/features/supplier_orders/presentation/supplier_orders_list/providers/supplier_orders_providers.dart';
+
 final viewQuoteProvider = StateNotifierProvider.autoDispose
     .family<CreateQuoteNotifier, QuoteState, String>((ref, quoteId) {
       final repository = ref.watch(quotesRepositoryProvider);
@@ -26,3 +29,9 @@ final viewQuoteProvider = StateNotifierProvider.autoDispose
 
       return notifier;
     });
+
+final linkedSupplierOrdersProvider = FutureProvider.autoDispose
+    .family<List<SupplierOrder>, String>((ref, quoteId) async {
+  final repo = ref.watch(supplierOrdersRepositoryProvider);
+  return repo.getSupplierOrdersByQuoteId(quoteId);
+});

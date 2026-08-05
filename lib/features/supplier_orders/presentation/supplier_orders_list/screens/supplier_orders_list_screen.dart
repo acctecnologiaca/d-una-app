@@ -27,7 +27,7 @@ class SupplierOrdersListScreen extends ConsumerStatefulWidget {
 
 class _SupplierOrdersListScreenState
     extends ConsumerState<SupplierOrdersListScreen> {
-  SortOption _currentSort = SortOption.recent;
+  SortOption _currentSort = SortOption.orderNumberDesc;
   final TextEditingController _searchController = TextEditingController();
 
   @override
@@ -53,8 +53,11 @@ class _SupplierOrdersListScreenState
         selection.count <= 3 &&
         selectedOrders.every(
           (o) =>
+              o.status != SupplierOrderStatus.approved &&
+              o.status != SupplierOrderStatus.rejected &&
               o.status != SupplierOrderStatus.finalized &&
-              o.status != SupplierOrderStatus.cancelled,
+              o.status != SupplierOrderStatus.cancelled &&
+              o.status != SupplierOrderStatus.merged,
         );
 
     final isError = paginatedAsync.hasError && allOrders.isEmpty;
@@ -116,6 +119,8 @@ class _SupplierOrdersListScreenState
                       setState(() => _currentSort = val);
                     },
                     options: const [
+                      SortOption.orderNumberDesc,
+                      SortOption.orderNumberAsc,
                       SortOption.recent,
                       SortOption.nameAZ,
                       SortOption.nameZA,
@@ -153,7 +158,13 @@ class _SupplierOrdersListScreenState
 
                     var items = state.items;
                     // Local sorting according to selected option
-                    if (_currentSort == SortOption.recent) {
+                     if (_currentSort == SortOption.orderNumberDesc) {
+                      items = List.from(items)
+                        ..sort((a, b) => b.orderNumber.compareTo(a.orderNumber));
+                    } else if (_currentSort == SortOption.orderNumberAsc) {
+                      items = List.from(items)
+                        ..sort((a, b) => a.orderNumber.compareTo(b.orderNumber));
+                    } else if (_currentSort == SortOption.recent) {
                       items = List.from(items)
                         ..sort((a, b) => b.date.compareTo(a.date));
                     } else if (_currentSort == SortOption.nameAZ) {

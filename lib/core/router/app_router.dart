@@ -80,6 +80,7 @@ import '../../features/supplier_orders/presentation/supplier_orders_list/screens
 import '../../features/supplier_orders/presentation/create_supplier_order/screens/select_supplier_order_product_screen.dart';
 import '../../features/supplier_orders/presentation/create_supplier_order/screens/supplier_order_product_search_screen.dart';
 import '../../features/supplier_orders/presentation/create_supplier_order/screens/supplier_order_product_branches_screen.dart';
+import '../../features/supplier_orders/domain/models/supplier_order_status.dart';
 import '../../features/portfolio/domain/models/aggregated_product.dart';
 
 import '../router/router_notifier.dart';
@@ -267,7 +268,12 @@ final routerProvider = Provider<GoRouter>((ref) {
                   parentNavigatorKey: rootNavigatorKey,
                   builder: (context, state) {
                     final id = state.pathParameters['id']!;
-                    return ViewQuoteScreen(quoteId: id);
+                    final extra = state.extra as Map<String, dynamic>?;
+                    final triggerSend = extra?['triggerSend'] as bool? ?? false;
+                    return ViewQuoteScreen(
+                      quoteId: id,
+                      triggerSend: triggerSend,
+                    );
                   },
                 ),
                 GoRoute(
@@ -584,7 +590,36 @@ final routerProvider = Provider<GoRouter>((ref) {
       routes: [
         GoRoute(
           path: 'search',
-          builder: (context, state) => const SupplierOrdersSearchScreen(),
+          builder: (context, state) {
+            String? initialQuery;
+            bool readOnly = false;
+            if (state.extra is String) {
+              initialQuery = state.extra as String;
+            } else if (state.extra is Map<String, dynamic>) {
+              final map = state.extra as Map<String, dynamic>;
+              initialQuery = map['initialQuery'] as String?;
+              readOnly = map['readOnly'] as bool? ?? (initialQuery != null && initialQuery.isNotEmpty);
+            }
+            return SupplierOrdersSearchScreen(
+              initialQuery: initialQuery,
+              isSearchQueryReadOnly: readOnly,
+            );
+          },
+        ),
+        GoRoute(
+          path: 'select',
+          parentNavigatorKey: rootNavigatorKey,
+          builder: (context, state) {
+            final extra = state.extra as Map<String, dynamic>?;
+            final allowedStatuses =
+                extra?['statuses'] as Set<SupplierOrderStatus>?;
+            final supplierName = extra?['supplierName'] as String?;
+            return SupplierOrdersSearchScreen(
+              selectionMode: true,
+              allowedStatuses: allowedStatuses,
+              supplierNameFilter: supplierName,
+            );
+          },
         ),
         GoRoute(
           path: 'create',
@@ -630,7 +665,14 @@ final routerProvider = Provider<GoRouter>((ref) {
         ),
         GoRoute(
           path: 'edit/:id',
-          builder: (context, state) => const CreateSupplierOrderScreen(editMode: true),
+          builder: (context, state) {
+            final tabParam = state.uri.queryParameters['tab'];
+            final initialTab = tabParam != null ? int.tryParse(tabParam) : null;
+            return CreateSupplierOrderScreen(
+              editMode: true,
+              initialTab: initialTab,
+            );
+          },
         ),
         GoRoute(
           path: 'view/:id',

@@ -70,7 +70,7 @@ class ViewSupplierOrderDetailsTab extends ConsumerWidget {
               const SizedBox(height: 24),
               InfoBlock.text(
                 icon: Icons.person_outline,
-                label: 'Persona que recibe/retira',
+                label: 'Persona que retira',
                 value: order.receiverName!,
               ),
             ],

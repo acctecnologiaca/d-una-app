@@ -6,7 +6,7 @@ class SupplierOrderDto {
   static SupplierOrder fromJson(Map<String, dynamic> json) {
     String? supplierName;
     if (json['suppliers'] != null) {
-      supplierName = json['suppliers']['legal_name'] as String? ?? json['suppliers']['name'] as String?;
+      supplierName = json['suppliers']['name'] as String? ?? json['suppliers']['legal_name'] as String?;
     }
     String? branchName = json['supplier_branches']?['name'] as String?;
     String? shippingLabel = json['shipping_methods']?['label'] as String?;
@@ -43,6 +43,8 @@ class SupplierOrderDto {
       supplierBranchId: json['supplier_branch_id'],
       shippingMethodId: json['shipping_method_id'],
       receiverCollaboratorId: json['receiver_collaborator_id'],
+      quoteId: json['quote_id'] as String?,
+      parentOrderId: json['parent_order_id'] as String?,
       orderNumber: json['order_number'] ?? 'S/N',
       date: DateTime.parse(json['date']),
       paymentMethod: json['payment_method'],
@@ -69,15 +71,15 @@ class SupplierOrderDto {
       'supplier_branch_id': order.supplierBranchId,
       'shipping_method_id': order.shippingMethodId,
       'receiver_collaborator_id': order.receiverCollaboratorId,
+      'quote_id': order.quoteId,
+      'parent_order_id': order.parentOrderId,
       'date': order.date.toIso8601String().split('T')[0],
       'payment_method': order.paymentMethod,
       'status': order.status.dbValue,
       'subtotal': order.subtotal,
       'tax': order.tax,
       'total': order.total,
-      'invoice_photo_url': order.invoicePhotoUrl,
       'is_archived': order.isArchived,
-      'verification_status': order.verificationStatus,
       'order_number': order.orderNumber,
     };
   }

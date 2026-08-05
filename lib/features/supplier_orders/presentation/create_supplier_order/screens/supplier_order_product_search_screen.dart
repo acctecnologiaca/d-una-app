@@ -1,3 +1,4 @@
+import 'package:d_una_app/shared/widgets/info_disclaimer_card.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -53,7 +54,11 @@ class _SupplierOrderProductSearchScreenState
         .updateBranchFilter([]);
   }
 
-  String _getChipLabel(String defaultLabel, Set<String> selected, {Map<String, String>? nameMap}) {
+  String _getChipLabel(
+    String defaultLabel,
+    Set<String> selected, {
+    Map<String, String>? nameMap,
+  }) {
     if (selected.isEmpty) return defaultLabel;
     String firstLabel = selected.first;
     if (nameMap != null && nameMap.containsKey(firstLabel)) {
@@ -77,7 +82,10 @@ class _SupplierOrderProductSearchScreenState
   ({Set<String> categories, Set<String> brands}) _getAvailableFacets() {
     final supplierId = ref.read(createSupplierOrderProvider).supplierId ?? '';
     final baseState = ref.read(
-      supplierOrderProductSuggestionsProvider(supplierId: supplierId, query: _currentQuery),
+      supplierOrderProductSuggestionsProvider(
+        supplierId: supplierId,
+        query: _currentQuery,
+      ),
     );
 
     final items = baseState.valueOrNull ?? [];
@@ -134,7 +142,9 @@ class _SupplierOrderProductSearchScreenState
 
   void _showBranchFilter(List<Map<String, dynamic>> branches) {
     final options = branches.map((b) => b['id'] as String).toList();
-    final nameMap = {for (final b in branches) b['id'] as String: b['name'] as String};
+    final nameMap = {
+      for (final b in branches) b['id'] as String: b['name'] as String,
+    };
 
     FilterBottomSheet.showMulti(
       context: context,
@@ -186,20 +196,28 @@ class _SupplierOrderProductSearchScreenState
 
   @override
   Widget build(BuildContext context) {
-    final colors = Theme.of(context).colorScheme;
     final orderState = ref.watch(createSupplierOrderProvider);
     final supplierId = orderState.supplierId ?? '';
     final orderItems = orderState.items;
 
     // Load facets base data
-    ref.watch(supplierOrderProductSuggestionsProvider(supplierId: supplierId, query: _currentQuery));
+    ref.watch(
+      supplierOrderProductSuggestionsProvider(
+        supplierId: supplierId,
+        query: _currentQuery,
+      ),
+    );
 
-    final paginatedAsync = ref.watch(paginatedSupplierOrderProductSearchProvider);
+    final paginatedAsync = ref.watch(
+      paginatedSupplierOrderProductSearchProvider,
+    );
 
     final branchesAsync = ref.watch(supplierBranchesProvider(supplierId));
     final branches = branchesAsync.valueOrNull ?? [];
     final hasBranches = branches.isNotEmpty;
-    final branchNameMap = {for (final b in branches) b['id'] as String: b['name'] as String};
+    final branchNameMap = {
+      for (final b in branches) b['id'] as String: b['name'] as String,
+    };
 
     return GenericSearchScreen<AggregatedProduct>(
       title: 'Buscar Producto',
@@ -213,14 +231,20 @@ class _SupplierOrderProductSearchScreenState
             .updateSearch(query);
       },
       onLoadMore: () {
-        ref.read(paginatedSupplierOrderProductSearchProvider.notifier).loadMore();
+        ref
+            .read(paginatedSupplierOrderProductSearchProvider.notifier)
+            .loadMore();
       },
       onResetFilters: _resetFilters,
       initialQuery: widget.initialQuery,
       filters: [
         if (hasBranches)
           FilterChipData(
-            label: _getChipLabel('Sucursal', _selectedBranchIds, nameMap: branchNameMap),
+            label: _getChipLabel(
+              'Sucursal',
+              _selectedBranchIds,
+              nameMap: branchNameMap,
+            ),
             isActive: _selectedBranchIds.isNotEmpty,
             onTap: () => _showBranchFilter(branches),
           ),
@@ -245,14 +269,9 @@ class _SupplierOrderProductSearchScreenState
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Text(
-              'Precios no incluyen impuesto y pueden variar sin previo aviso',
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                fontSize: 12,
-                fontWeight: FontWeight.bold,
-                color: colors.onSurface,
-              ),
+            const InfoDisclaimerCard(
+              text: 'Precios no incluyen impuestos',
+              showCloseButton: true,
             ),
             const SizedBox(height: 8),
             Align(
@@ -282,8 +301,10 @@ class _SupplierOrderProductSearchScreenState
       itemBuilder: (context, product) {
         final isAlreadyInOrder = orderItems.any(
           (item) =>
-              (item.brand ?? '').trim().toUpperCase() == product.brand.trim().toUpperCase() &&
-              (item.model ?? '').trim().toUpperCase() == product.model.trim().toUpperCase() &&
+              (item.brand ?? '').trim().toUpperCase() ==
+                  product.brand.trim().toUpperCase() &&
+              (item.model ?? '').trim().toUpperCase() ==
+                  product.model.trim().toUpperCase() &&
               item.uom.trim().toUpperCase() == product.uom.trim().toUpperCase(),
         );
 

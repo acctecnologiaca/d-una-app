@@ -23,6 +23,7 @@ class CreateSupplierOrderState extends Equatable {
   final List<SupplierOrderItem> items;
   final bool isLoading;
   final String? error;
+  final bool isDirty;
 
   // For UI display
   final String? supplierName;
@@ -43,6 +44,7 @@ class CreateSupplierOrderState extends Equatable {
     this.items = const [],
     this.isLoading = false,
     this.error,
+    this.isDirty = false,
     this.supplierName,
     this.branchName,
     this.shippingMethodLabel,
@@ -66,6 +68,7 @@ class CreateSupplierOrderState extends Equatable {
     List<SupplierOrderItem>? items,
     bool? isLoading,
     String? error,
+    bool? isDirty,
     String? supplierName,
     String? branchName,
     String? shippingMethodLabel,
@@ -85,6 +88,7 @@ class CreateSupplierOrderState extends Equatable {
       items: items ?? this.items,
       isLoading: isLoading ?? this.isLoading,
       error: error,
+      isDirty: isDirty ?? this.isDirty,
       supplierName: supplierName ?? this.supplierName,
       branchName: branchName ?? this.branchName,
       shippingMethodLabel: shippingMethodLabel ?? this.shippingMethodLabel,
@@ -108,6 +112,7 @@ class CreateSupplierOrderState extends Equatable {
     items,
     isLoading,
     error,
+    isDirty,
     supplierName,
     branchName,
     shippingMethodLabel,
@@ -278,28 +283,37 @@ class CreateSupplierOrder extends _$CreateSupplierOrder {
         supplierBranchId: null, // Limpiar sucursal anterior ya que pertenece a otro proveedor
         branchName: null,
         items: const [],        // Vaciar la lista de ítems para evitar inconsistencias
+        isDirty: true,
       );
     }
   }
 
   void setBranch(String? id, String? name) {
-    state = state.copyWith(supplierBranchId: id, branchName: name);
+    state = state.copyWith(supplierBranchId: id, branchName: name, isDirty: true);
   }
 
   void setShippingMethod(String? id, String? label) {
-    state = state.copyWith(shippingMethodId: id, shippingMethodLabel: label);
+    state = state.copyWith(
+      shippingMethodId: id,
+      shippingMethodLabel: label,
+      isDirty: true,
+    );
   }
 
   void setReceiver(String? id, String? name) {
-    state = state.copyWith(receiverCollaboratorId: id, receiverName: name);
+    state = state.copyWith(
+      receiverCollaboratorId: id,
+      receiverName: name,
+      isDirty: true,
+    );
   }
 
   void setPaymentMethod(String? method) {
-    state = state.copyWith(paymentMethod: method);
+    state = state.copyWith(paymentMethod: method, isDirty: true);
   }
 
   void setDate(DateTime date) {
-    state = state.copyWith(date: date);
+    state = state.copyWith(date: date, isDirty: true);
   }
 
   void addItem({
@@ -328,7 +342,7 @@ class CreateSupplierOrder extends _$CreateSupplierOrder {
       supplierBranchStockId: supplierBranchStockId,
       currentSupplierStock: currentSupplierStock,
     );
-    state = state.copyWith(items: [...state.items, newItem]);
+    state = state.copyWith(items: [...state.items, newItem], isDirty: true);
   }
 
   void updateItem(
@@ -339,6 +353,7 @@ class CreateSupplierOrder extends _$CreateSupplierOrder {
     double? currentSupplierStock,
   }) {
     state = state.copyWith(
+      isDirty: true,
       items: state.items.map((item) {
         if (item.id == itemId) {
           return SupplierOrderItem(
@@ -365,6 +380,7 @@ class CreateSupplierOrder extends _$CreateSupplierOrder {
 
   void removeItem(String itemId) {
     state = state.copyWith(
+      isDirty: true,
       items: state.items.where((item) => item.id != itemId).toList(),
     );
   }
@@ -383,7 +399,7 @@ class CreateSupplierOrder extends _$CreateSupplierOrder {
         result.add(item);
       }
     }
-    state = state.copyWith(items: result);
+    state = state.copyWith(items: result, isDirty: true);
   }
 
   void updateGroupQuantity(String productKey, double newTotalQty) {
@@ -472,7 +488,7 @@ class CreateSupplierOrder extends _$CreateSupplierOrder {
         result.add(item);
       }
     }
-    state = state.copyWith(items: result);
+    state = state.copyWith(items: result, isDirty: true);
   }
 
   Future<String?> saveOrder() async {

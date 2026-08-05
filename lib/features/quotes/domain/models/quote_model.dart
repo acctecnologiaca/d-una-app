@@ -172,6 +172,12 @@ class Quote {
   final String? quoteTag;
   final DateTime createdAt;
 
+  bool get canShowAlerts =>
+      status == QuoteStatus.draft ||
+      status == QuoteStatus.sent ||
+      status == QuoteStatus.resent ||
+      status == QuoteStatus.inReview;
+
   Quote({
     required this.id,
     required this.quoteNumber,
@@ -187,4 +193,36 @@ class Quote {
     this.isArchived = false,
     this.quoteTag,
   });
+
+  Quote copyWith({
+    String? id,
+    String? quoteNumber,
+    String? clientName,
+    DateTime? date,
+    double? amount,
+    String? categoryId,
+    String? categoryName,
+    QuoteStatus? status,
+    StockStatus? stockStatus,
+    bool? hasPriceIncrease,
+    bool? isArchived,
+    String? quoteTag,
+    DateTime? createdAt,
+  }) {
+    return Quote(
+      id: id ?? this.id,
+      quoteNumber: quoteNumber ?? this.quoteNumber,
+      clientName: clientName ?? this.clientName,
+      date: date ?? this.date,
+      amount: amount ?? this.amount,
+      categoryId: categoryId ?? this.categoryId,
+      categoryName: categoryName ?? this.categoryName,
+      status: status ?? this.status,
+      stockStatus: stockStatus ?? this.stockStatus,
+      hasPriceIncrease: hasPriceIncrease ?? this.hasPriceIncrease,
+      isArchived: isArchived ?? this.isArchived,
+      quoteTag: quoteTag ?? this.quoteTag,
+      createdAt: createdAt ?? this.createdAt,
+    );
+  }
 }

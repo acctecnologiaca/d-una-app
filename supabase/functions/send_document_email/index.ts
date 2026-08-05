@@ -22,11 +22,13 @@ Deno.serve(async (req) => {
       fileName, 
       recipientEmails, 
       userContext, 
-      emailContent
+      emailContent,
+      documentType = 'quote',
+      documentId = null,
     } = body;
 
     // Verify required fields
-    if (!documentBase64 || !recipientEmails || !emailContent) {
+    if (!recipientEmails || !emailContent) {
       console.error('Error: Faltan campos obligatorios');
       throw new Error('Missing required fields in payload');
     }
@@ -54,53 +56,66 @@ Deno.serve(async (req) => {
     const userId = user.id;
 
     // ============================================================
-    // RATE LIMITING: Validate before sending
+    // RATE LIMITING & CREDITS VALIDATION
     // ============================================================
-    const MAX_RECIPIENTS_PER_SEND = 3;
-    const COOLDOWN_SECONDS = 60;
+    const COOLDOWN_SECONDS = 20;
+    const isExemptFromCredits = documentType === 'supplier_order' || documentType === 'oc';
+    let remainingCredits = 0;
 
-    // Check credits status via RPC
-    const { data: creditStatus, error: rpcError } = await supabaseAdmin
-      .rpc('get_user_credit_status', { p_user_id: userId });
+    // 1. Check credits status for non-exempt documents
+    if (!isExemptFromCredits) {
+      const { data: creditStatus, error: rpcError } = await supabaseAdmin
+        .rpc('get_user_credit_status', { p_user_id: userId });
 
-    if (rpcError || !creditStatus) {
-      console.error('Error checking credit status:', rpcError);
-      throw new Error('Could not verify credit status');
-    }
+      if (rpcError || !creditStatus) {
+        console.error('Error checking credit status:', rpcError);
+        throw new Error('Could not verify credit status');
+      }
 
-    const remainingCredits = creditStatus.remainingCredits || 0;
-    if (remainingCredits <= 0) {
-      return new Response(JSON.stringify({ 
-        success: false, 
-        error: `Has alcanzado el límite de envíos de tu ciclo. Créditos restantes: 0`,
-        errorCode: 'DAILY_LIMIT_EXCEEDED',
-        remainingCredits: 0,
-      }), {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        status: 429,
-      });
-    }
-
-    // 3. Check cooldown (last send must be > 60 seconds ago)
-    if (usageLogs && usageLogs.length > 0) {
-      const lastSendTime = new Date(usageLogs[0].created_at).getTime();
-      const secondsSinceLastSend = (Date.now() - lastSendTime) / 1000;
-      
-      if (secondsSinceLastSend < COOLDOWN_SECONDS) {
-        const waitSeconds = Math.ceil(COOLDOWN_SECONDS - secondsSinceLastSend);
+      remainingCredits = creditStatus.remainingCredits || 0;
+      if (remainingCredits <= 0) {
         return new Response(JSON.stringify({ 
           success: false, 
-          error: `Debes esperar ${waitSeconds} segundos antes de enviar otro correo`,
-          errorCode: 'COOLDOWN_ACTIVE',
-          waitSeconds: waitSeconds,
+          error: `Has alcanzado el límite de créditos de tu ciclo.`,
+          errorCode: 'INSUFFICIENT_CREDITS',
+          remainingCredits: 0,
         }), {
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
           status: 429,
         });
       }
     }
+
+    // 2. Check 20s cooldown specifically for the SAME document (documentId)
+    if (documentId) {
+      const { data: recentSends } = await supabaseAdmin
+        .from('credit_transactions')
+        .select('created_at')
+        .eq('user_id', userId)
+        .eq('reference_id', documentId)
+        .order('created_at', { ascending: false })
+        .limit(1);
+
+      if (recentSends && recentSends.length > 0) {
+        const lastSendTime = new Date(recentSends[0].created_at).getTime();
+        const secondsSinceLastSend = (Date.now() - lastSendTime) / 1000;
+
+        if (secondsSinceLastSend < COOLDOWN_SECONDS) {
+          const waitSeconds = Math.ceil(COOLDOWN_SECONDS - secondsSinceLastSend);
+          return new Response(JSON.stringify({ 
+            success: false, 
+            error: `Debes esperar ${waitSeconds} segundos antes de volver a enviar este documento.`,
+            errorCode: 'COOLDOWN_ACTIVE',
+            waitSeconds: waitSeconds,
+          }), {
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+            status: 429,
+          });
+        }
+      }
+    }
     // ============================================================
-    // END RATE LIMITING
+    // END RATE LIMITING & CREDITS VALIDATION
     // ============================================================
 
     const provider = Deno.env.get('MAIL_PROVIDER') || 'GOOGLE';
@@ -140,8 +155,11 @@ Deno.serve(async (req) => {
         socketTimeout: 10000,
       });
 
-      // Construct HTML Body with Automated Signature
-      const fullBodyHtml = `
+      // Construct HTML Body: para Órdenes de Compra (supplier_order / oc) se usa directamente bodyHtml sin firma duplicada
+      const isSupplierOrder = documentType === 'supplier_order' || documentType === 'oc';
+      const fullBodyHtml = isSupplierOrder 
+        ? emailContent.bodyHtml
+        : `
         <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; color: #333; line-height: 1.6;">
           <div style="margin-bottom: 30px;">
             ${emailContent.bodyHtml.replace(/\n/g, '<br>')}
@@ -182,13 +200,15 @@ Deno.serve(async (req) => {
           from: smtpUser,
           to: recipientEmails,
         },
-        attachments: [
-          {
-            filename: fileName || 'documento.pdf',
-            content: documentBase64,
-            encoding: 'base64',
-          },
-        ],
+        attachments: documentBase64
+          ? [
+              {
+                filename: fileName || 'documento.pdf',
+                content: documentBase64,
+                encoding: 'base64',
+              },
+            ]
+          : [],
       };
 
       const info = await transporter.sendMail(mailOptions);
@@ -212,12 +232,14 @@ Deno.serve(async (req) => {
           reply_to: userContext.replyToEmail,
           subject: emailContent.subject,
           html: emailContent.bodyHtml,
-          attachments: [
-            {
-              filename: fileName || 'documento.pdf',
-              content: documentBase64,
-            },
-          ],
+          attachments: documentBase64
+            ? [
+                {
+                  filename: fileName || 'documento.pdf',
+                  content: documentBase64,
+                },
+              ]
+            : undefined,
         }),
       });
 
@@ -233,32 +255,44 @@ Deno.serve(async (req) => {
     }
 
     // ============================================================
-    // LOG SUCCESSFUL SEND (after email is sent, before response)
+    // LOG & CONSUME CREDIT AFTER SUCCESSFUL SEND
     // ============================================================
-    // ============================================================
-    // CONSUME CREDIT AFTER SUCCESSFUL SEND
-    // ============================================================
-    const { data: updatedStatus, error: consumeError } = await supabaseAdmin.rpc(
-      'consume_user_credit',
-      {
-        p_user_id: userId,
-        p_doc_type: body.documentType || 'quote',
-        p_channel: 'email',
-        p_ref_id: body.documentId || null,
-      }
-    );
+    let newRemaining = remainingCredits;
 
-    if (consumeError) {
-      console.error('Warning: Failed to consume credit:', consumeError);
+    if (!isExemptFromCredits) {
+      const { data: updatedStatus, error: consumeError } = await supabaseAdmin.rpc(
+        'consume_user_credit',
+        {
+          p_user_id: userId,
+          p_doc_type: documentType,
+          p_channel: 'email',
+          p_ref_id: documentId,
+        }
+      );
+
+      if (consumeError) {
+        console.error('Warning: Failed to consume credit:', consumeError);
+      } else {
+        newRemaining = updatedStatus?.remainingCredits ?? (remainingCredits - 1);
+      }
+    } else if (documentId) {
+      // Para documentos exentos (OCs), se inserta un registro con monto 0 
+      // para habilitar el control de cooldown de 20s por el mismo documentId.
+      await supabaseAdmin.from('credit_transactions').insert({
+        user_id: userId,
+        transaction_type: 'email_sent',
+        amount: 0,
+        reference_type: documentType,
+        reference_id: documentId,
+        description: `Envío de ${documentType} vía email (Exento)`,
+      });
     }
     // ============================================================
-
-    const newRemaining = updatedStatus?.remainingCredits ?? (remainingCredits - 1);
 
     return new Response(JSON.stringify({
       success: true,
       message: 'Email sent successfully',
-      remainingCredits: newRemaining,
+      remainingCredits: isExemptFromCredits ? null : newRemaining,
     }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       status: 200,

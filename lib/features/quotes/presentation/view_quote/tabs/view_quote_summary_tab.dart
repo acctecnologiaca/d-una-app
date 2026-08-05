@@ -8,6 +8,9 @@ import '../providers/view_quote_provider.dart';
 import '../../../data/models/quote.dart' as data;
 import '../../../data/models/quote_item_product.dart';
 import '../../../data/models/quote_item_service.dart';
+import 'package:go_router/go_router.dart';
+import '../../../../supplier_orders/domain/models/supplier_order.dart';
+import '../../../../supplier_orders/domain/models/supplier_order_status.dart';
 
 class ViewQuoteSummaryTab extends ConsumerWidget {
   final String quoteId;
@@ -123,6 +126,30 @@ class ViewQuoteSummaryTab extends ConsumerWidget {
           // 4. Rentabilidad Section
           _buildSectionHeader(context, Icons.bar_chart, 'Rentabilidad'),
           _buildUtilityCard(context, totalSales, totalCosts, estimatedProfit),
+          const SizedBox(height: 16),
+
+          // 5. Órdenes de Compra vinculadas Section
+          Builder(
+            builder: (context) {
+              final linkedOrdersAsync = ref.watch(
+                linkedSupplierOrdersProvider(quoteId),
+              );
+              final orders = linkedOrdersAsync.value ?? [];
+              if (orders.isEmpty) return const SizedBox.shrink();
+
+              return Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  _buildSectionHeader(
+                    context,
+                    Icons.shopping_cart_outlined,
+                    'Órdenes de compra',
+                  ),
+                  _buildLinkedSupplierOrdersCard(context, orders),
+                ],
+              );
+            },
+          ),
           const SizedBox(height: 40),
         ],
       ),
@@ -507,56 +534,62 @@ class ViewQuoteSummaryTab extends ConsumerWidget {
                 child: TextButton.icon(
                   onPressed: () => onNavigateToTab(0),
                   icon: const Icon(Icons.arrow_forward_ios, size: 14),
-                  label: const Text('Ir a productos'),
+                  label: const Text(
+                    'Ir a productos',
+                    style: TextStyle(fontWeight: FontWeight.bold),
+                  ),
                   style: TextButton.styleFrom(
                     padding: const EdgeInsets.symmetric(horizontal: 8),
                   ),
                 ),
               ),
 
-            const SizedBox(height: 16),
-
-            // Services
-            _buildHeaderRow(
-              context,
-              Icons.handyman_outlined,
-              'Servicios',
-              groupedCount: servicesCount,
-              amount: CurrencyFormatter.format(servicesSubtotal),
-            ),
-            const SizedBox(height: 8),
-            ...displayServices.map((service) {
-              return Padding(
-                padding: const EdgeInsets.only(bottom: 4.0, left: 24.0),
-                child: Text.rich(
-                  TextSpan(
-                    children: [
-                      TextSpan(
-                        text:
-                            '${service.quantity.toInt()} ${service.rateSymbol}: ',
-                        style: const TextStyle(fontWeight: FontWeight.bold),
-                      ),
-                      TextSpan(
-                        text: service.name,
-                        style: TextStyle(color: colors.onSurfaceVariant),
-                      ),
-                    ],
+            if (servicesCount > 0) ...[
+              const SizedBox(height: 16),
+              // Services
+              _buildHeaderRow(
+                context,
+                Icons.handyman_outlined,
+                'Servicios',
+                groupedCount: servicesCount,
+                amount: CurrencyFormatter.format(servicesSubtotal),
+              ),
+              const SizedBox(height: 8),
+              ...displayServices.map((service) {
+                return Padding(
+                  padding: const EdgeInsets.only(bottom: 4.0, left: 24.0),
+                  child: Text.rich(
+                    TextSpan(
+                      children: [
+                        TextSpan(
+                          text:
+                              '${service.quantity.toInt()} ${service.rateSymbol}: ',
+                          style: const TextStyle(fontWeight: FontWeight.bold),
+                        ),
+                        TextSpan(
+                          text: service.name,
+                          style: TextStyle(color: colors.onSurfaceVariant),
+                        ),
+                      ],
+                    ),
                   ),
-                ),
-              );
-            }),
-            if (servicesCount > 0)
+                );
+              }),
               Align(
                 alignment: Alignment.centerRight,
                 child: TextButton.icon(
                   onPressed: () => onNavigateToTab(1),
                   icon: const Icon(Icons.arrow_forward_ios, size: 14),
-                  label: const Text('Ir a servicios'),
+                  label: const Text(
+                    'Ir a servicios',
+                    style: TextStyle(fontWeight: FontWeight.bold),
+                  ),
                   style: TextButton.styleFrom(
                     padding: const EdgeInsets.symmetric(horizontal: 8),
                   ),
                 ),
               ),
+            ],
 
             const Padding(
               padding: EdgeInsets.symmetric(vertical: 8.0),
@@ -714,6 +747,78 @@ class ViewQuoteSummaryTab extends ConsumerWidget {
           ),
         ),
       ],
+    );
+  }
+
+  Widget _buildLinkedSupplierOrdersCard(
+    BuildContext context,
+    List<SupplierOrder> orders,
+  ) {
+    final colors = Theme.of(context).colorScheme;
+
+    return Card(
+      elevation: 0,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(8),
+        side: BorderSide(color: colors.outlineVariant),
+      ),
+      color: colors.surface,
+      child: ListView.separated(
+        shrinkWrap: true,
+        physics: const NeverScrollableScrollPhysics(),
+        itemCount: orders.length,
+        separatorBuilder: (context, index) => Divider(
+          height: 1,
+          color: colors.outlineVariant.withValues(alpha: 0.5),
+        ),
+        itemBuilder: (context, index) {
+          final order = orders[index];
+          final isCancelled = order.status == SupplierOrderStatus.cancelled;
+
+          return ListTile(
+            contentPadding: const EdgeInsets.symmetric(
+              horizontal: 16,
+              vertical: 4,
+            ),
+            title: Text(
+              '${order.orderNumber} (${order.supplierName})',
+              style: TextStyle(
+                fontWeight: FontWeight.bold,
+                fontSize: 14,
+                color: isCancelled
+                    ? colors.onSurfaceVariant.withValues(alpha: 0.7)
+                    : colors.onSurface,
+                decoration: isCancelled ? TextDecoration.lineThrough : null,
+              ),
+            ),
+            trailing: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Tooltip(
+                  message: order.status.label,
+                  child: Image.asset(
+                    order.status.iconPath,
+                    width: 18,
+                    height: 18,
+                    errorBuilder: (context, error, stackTrace) {
+                      return const Icon(
+                        Icons.help_outline,
+                        size: 24,
+                        color: Colors.grey,
+                      );
+                    },
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Icon(Icons.chevron_right, color: colors.onSurfaceVariant),
+              ],
+            ),
+            onTap: () {
+              context.push('/supplier-orders/view/${order.id}');
+            },
+          );
+        },
+      ),
     );
   }
 }

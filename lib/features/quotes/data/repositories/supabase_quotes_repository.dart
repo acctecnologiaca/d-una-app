@@ -1,3 +1,4 @@
+import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../domain/repositories/quotes_repository.dart';
@@ -525,6 +526,14 @@ class SupabaseQuotesRepository implements QuotesRepository {
   }
 
   @override
+  Future<void> updateQuoteDate(String id, DateTime newDate) async {
+    await _client
+        .from('quotes')
+        .update({'date_issued': newDate.toIso8601String()})
+        .eq('id', id);
+  }
+
+  @override
   Future<void> deleteQuote(String id) async {
     await _client.from('quotes').delete().eq('id', id);
   }
@@ -559,5 +568,58 @@ class SupabaseQuotesRepository implements QuotesRepository {
         .from('quotes')
         .update({'is_archived': isArchived})
         .inFilter('id', ids);
+  }
+
+  @override
+  Future<String> uploadQuotePdf({
+    required String quoteId,
+    required List<int> pdfBytes,
+    required String fileName,
+  }) async {
+    final userId = _client.auth.currentUser?.id;
+    if (userId == null) throw Exception('Usuario no autenticado');
+
+    final bytes = pdfBytes is Uint8List ? pdfBytes : Uint8List.fromList(pdfBytes);
+    final path = '$userId/quotes/$quoteId/$fileName';
+
+    // 1. Upload to Supabase Storage bucket 'quote_documents'
+    await _client.storage.from('quote_documents').uploadBinary(
+          path,
+          bytes,
+          fileOptions: const FileOptions(
+            contentType: 'application/pdf',
+            upsert: true,
+          ),
+        );
+
+    // 2. Generate Signed URL (15 days validity fallback)
+    final signedUrl = await _client.storage
+        .from('quote_documents')
+        .createSignedUrl(path, 1296000); // 15 days in seconds
+
+    // 3. Update pdf_url on quotes table
+    await _client
+        .from('quotes')
+        .update({
+          'pdf_url': signedUrl,
+          'updated_at': DateTime.now().toIso8601String(),
+        })
+        .eq('id', quoteId);
+
+    return signedUrl;
+  }
+
+  @override
+  Future<String> generateActionToken(String quoteId) async {
+    final response = await _client.rpc(
+      'generate_quote_action_token',
+      params: {'p_quote_id': quoteId},
+    );
+
+    if (response == null) {
+      throw Exception('Error al generar token de acción para cotización');
+    }
+
+    return response.toString();
   }
 }

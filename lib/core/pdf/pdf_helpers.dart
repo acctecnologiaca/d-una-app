@@ -3,8 +3,11 @@ import 'package:flutter/services.dart';
 import 'package:http/http.dart' as http;
 import 'package:pdf/widgets.dart' as pw;
 import 'package:intl/intl.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../shared/utils/currency_formatter.dart';
 import '../../features/profile/domain/models/user_profile.dart';
+import '../../features/settings/data/models/shipping_method.dart';
+import '../../features/collaborators/domain/models/collaborator.dart';
 
 class PdfSenderInfo {
   final String name;
@@ -88,5 +91,47 @@ class PdfHelpers {
         email: userEmail,
       );
     }
+  }
+
+  /// Obtiene el ShippingMethod completo con su relación company:shipping_companies(*) desde Supabase
+  static Future<ShippingMethod?> fetchShippingMethodById(
+    String? shippingMethodId,
+  ) async {
+    if (shippingMethodId == null || shippingMethodId.trim().isEmpty) return null;
+    try {
+      final data = await Supabase.instance.client
+          .from('shipping_methods')
+          .select('*, company:shipping_companies(*)')
+          .eq('id', shippingMethodId.trim())
+          .maybeSingle();
+
+      if (data != null) {
+        return ShippingMethod.fromJson(data);
+      }
+    } catch (e) {
+      debugPrint('Error fetching shipping method by ID ($shippingMethodId): $e');
+    }
+    return null;
+  }
+
+  /// Obtiene el Collaborator completo desde Supabase
+  static Future<Collaborator?> fetchCollaboratorById(
+    String? collaboratorId,
+  ) async {
+    if (collaboratorId == null || collaboratorId.trim().isEmpty) return null;
+    try {
+      final data = await Supabase.instance.client
+          .from('collaborators')
+          .select()
+          .eq('id', collaboratorId.trim())
+          .maybeSingle();
+
+      if (data != null) {
+        return Collaborator.fromJson(data);
+      }
+    } catch (e) {
+      debugPrint('Error fetching collaborator by ID ($collaboratorId): $e');
+    }
+    return null;
   }
 }

@@ -125,6 +125,19 @@ class _ManageProductSerialsScreenState
   }
 
   Future<void> _showAddSerialSheet() async {
+    if (_serials.length >= widget.quantity) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            'Ya se han registrado todos los seriales (${widget.quantity}) correspondientes a la cantidad de este producto.',
+          ),
+          backgroundColor: Theme.of(context).colorScheme.error,
+        ),
+      );
+      return;
+    }
+
     final result = await showModalBottomSheet<String>(
       context: context,
       isScrollControlled: true,
@@ -358,9 +371,18 @@ class _ManageProductSerialsScreenState
             if (!_noSerials) ...[
               FloatingActionButton(
                 heroTag: 'add_serial_fab',
-                onPressed: _showAddSerialSheet,
-                backgroundColor: colors.secondaryContainer,
-                foregroundColor: colors.onSecondaryContainer,
+                onPressed:
+                    _serials.length >= widget.quantity
+                        ? null
+                        : _showAddSerialSheet,
+                backgroundColor:
+                    _serials.length >= widget.quantity
+                        ? colors.surfaceContainerHighest
+                        : colors.secondaryContainer,
+                foregroundColor:
+                    _serials.length >= widget.quantity
+                        ? colors.onSurfaceVariant
+                        : colors.onSecondaryContainer,
                 child: const Icon(Icons.add),
               ),
               const SizedBox(height: 16),

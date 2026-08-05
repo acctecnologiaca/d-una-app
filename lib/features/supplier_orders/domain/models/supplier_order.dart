@@ -10,6 +10,8 @@ class SupplierOrder extends Equatable {
   final String? supplierBranchId;
   final String? shippingMethodId;
   final String? receiverCollaboratorId;
+  final String? quoteId;
+  final String? parentOrderId;
   final String orderNumber;
   final DateTime date;
   final String? paymentMethod;
@@ -41,6 +43,8 @@ class SupplierOrder extends Equatable {
     this.supplierBranchId,
     this.shippingMethodId,
     this.receiverCollaboratorId,
+    this.quoteId,
+    this.parentOrderId,
     required this.orderNumber,
     required this.date,
     this.paymentMethod,
@@ -82,6 +86,8 @@ class SupplierOrder extends Equatable {
     supplierBranchId,
     shippingMethodId,
     receiverCollaboratorId,
+    quoteId,
+    parentOrderId,
     orderNumber,
     date,
     paymentMethod,

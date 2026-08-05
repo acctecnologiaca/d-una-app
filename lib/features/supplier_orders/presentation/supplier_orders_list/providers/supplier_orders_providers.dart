@@ -103,9 +103,40 @@ class PaginatedSupplierOrders extends _$PaginatedSupplierOrders {
   String? _statusFilter;
   bool _includeArchived = false;
 
+  RealtimeChannel? _realtimeChannel;
+
   @override
   FutureOr<PaginatedState<SupplierOrder>> build() async {
+    _initRealtimeSubscription();
     return _fetchPage(0);
+  }
+
+  void _initRealtimeSubscription() {
+    if (_realtimeChannel != null) return;
+
+    final channel = Supabase.instance.client
+        .channel('public:supplier_orders_changes')
+        .onPostgresChanges(
+          event: PostgresChangeEvent.update,
+          schema: 'public',
+          table: 'supplier_orders',
+          callback: (payload) {
+            final updatedRecord = payload.newRecord;
+            final updatedId = updatedRecord['id'] as String?;
+            if (updatedId != null) {
+              ref.invalidate(supplierOrderDetailProvider(updatedId));
+            }
+            refresh();
+          },
+        )
+        .subscribe();
+
+    _realtimeChannel = channel;
+
+    ref.onDispose(() {
+      _realtimeChannel?.unsubscribe();
+      _realtimeChannel = null;
+    });
   }
 
   Future<PaginatedState<SupplierOrder>> _fetchPage(int offset) async {
@@ -178,21 +209,22 @@ class PaginatedSupplierOrders extends _$PaginatedSupplierOrders {
     await refresh();
   }
 
-  Future<void> finalizeSupplierOrder({
+  Future<String?> finalizeSupplierOrder({
     required String orderId,
     required String documentNumber,
     required String documentType,
     required dynamic photoFile, // Dynamic or File type. Let's import File from dart:io or use dynamic.
     required bool createPurchaseRecord,
   }) async {
-    await ref.read(supplierOrdersRepositoryProvider).finalizeSupplierOrder(
+    final purchaseId = await ref.read(supplierOrdersRepositoryProvider).finalizeSupplierOrder(
       orderId: orderId,
       photoFile: photoFile,
       documentType: documentType,
       documentNumber: documentNumber,
       createPurchaseRecord: createPurchaseRecord,
     );
-    await refresh();
+    refresh();
+    return purchaseId;
   }
 
   Future<void> batchArchiveSupplierOrders(List<String> ids, {required bool archive}) async {
@@ -268,7 +300,6 @@ class PaginatedSupplierOrderSearch extends AutoDisposeAsyncNotifier<PaginatedSta
   }
 
   void updateSearch(String? query) {
-    if (_searchQuery == query) return;
     _searchQuery = query;
     refresh();
   }
@@ -315,4 +346,33 @@ Future<Map<String, dynamic>?> supplierBranchContactInfo(
       .maybeSingle();
   return response;
 }
+
+@riverpod
+Future<List<SupplierOrder>> mergedChildOrders(
+  Ref ref,
+  String parentOrderId,
+) async {
+  final repo = ref.watch(supplierOrdersRepositoryProvider);
+  return repo.getMergedChildOrders(parentOrderId);
+}
+
+@riverpod
+Future<SupplierOrder?> parentSupplierOrder(
+  Ref ref,
+  String? parentOrderId,
+) async {
+  if (parentOrderId == null || parentOrderId.isEmpty) return null;
+  final repo = ref.watch(supplierOrdersRepositoryProvider);
+  return repo.getParentSupplierOrder(parentOrderId);
+}
+
+@riverpod
+Future<Map<String, dynamic>?> linkedPurchase(
+  Ref ref,
+  String orderId,
+) async {
+  final repo = ref.watch(supplierOrdersRepositoryProvider);
+  return repo.getLinkedPurchase(orderId);
+}
+
 

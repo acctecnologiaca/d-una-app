@@ -56,6 +56,26 @@ class WhatsAppRepository {
       throw Exception('Error al enviar WhatsApp: ${response.data}');
     }
   }
+
+  /// Sends a template message via WhatsApp Cloud API without attaching a document file.
+  Future<void> sendMessage({
+    required String phone,
+    required String templateName,
+    required List<String> bodyVariables,
+  }) async {
+    final response = await _client.functions.invoke(
+      'send_whatsapp_message',
+      body: {
+        'phone': phone,
+        'templateName': templateName,
+        'bodyVariables': bodyVariables,
+      },
+    );
+
+    if (response.status != 200) {
+      throw Exception('Error al enviar WhatsApp: ${response.data}');
+    }
+  }
 }
 
 @riverpod

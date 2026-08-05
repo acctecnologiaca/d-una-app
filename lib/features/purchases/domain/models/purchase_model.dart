@@ -17,6 +17,8 @@ class Purchase extends Equatable {
 
   // Derived field for UI
   final String? supplierName;
+  final String? invoicePhotoUrl;
+  final String? verificationStatus;
 
   const Purchase({
     required this.id,
@@ -33,6 +35,8 @@ class Purchase extends Equatable {
     required this.createdAt,
     required this.updatedAt,
     this.supplierName,
+    this.invoicePhotoUrl,
+    this.verificationStatus,
   });
 
   factory Purchase.fromJson(Map<String, dynamic> json) {
@@ -51,6 +55,8 @@ class Purchase extends Equatable {
       createdAt: DateTime.parse(json['created_at']),
       updatedAt: DateTime.parse(json['updated_at']),
       supplierName: json['supplier_name'],
+      invoicePhotoUrl: json['invoice_photo_url'],
+      verificationStatus: json['verification_status'],
     );
   }
 
@@ -66,6 +72,8 @@ class Purchase extends Equatable {
       'tax': tax,
       'total': total,
       'has_missing_serials': hasMissingSerials,
+      'invoice_photo_url': invoicePhotoUrl,
+      'verification_status': verificationStatus,
     };
   }
 
@@ -85,5 +93,7 @@ class Purchase extends Equatable {
     createdAt,
     updatedAt,
     supplierName,
+    invoicePhotoUrl,
+    verificationStatus,
   ];
 }

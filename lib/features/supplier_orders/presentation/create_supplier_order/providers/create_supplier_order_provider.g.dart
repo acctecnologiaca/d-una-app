@@ -7,7 +7,7 @@ part of 'create_supplier_order_provider.dart';
 // **************************************************************************
 
 String _$createSupplierOrderHash() =>
-    r'a8f095592d9aaa8560568f248f4e2a3035ddd24b';
+    r'188e41dfe1efff5d3ff4ec50916d299fc8062ebd';
 
 /// See also [CreateSupplierOrder].
 @ProviderFor(CreateSupplierOrder)

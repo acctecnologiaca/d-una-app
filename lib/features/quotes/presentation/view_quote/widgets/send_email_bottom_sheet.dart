@@ -1,4 +1,3 @@
-import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -9,6 +8,7 @@ import '../../../../../shared/widgets/custom_dialog.dart';
 import '../../../../settings/presentation/providers/email_templates_provider.dart';
 import '../../../../../core/utils/email_content_generator.dart';
 import '../../../../profile/presentation/providers/profile_provider.dart';
+import 'package:d_una_app/features/quotes/presentation/quotes_list/providers/quotes_provider.dart';
 import '../../../data/models/quote.dart';
 import 'package:d_una_app/core/pdf/templates/quote_pdf_template.dart';
 import 'package:d_una_app/core/providers/credits_providers.dart';
@@ -165,17 +165,39 @@ class _SendEmailBottomSheetState extends ConsumerState<SendEmailBottomSheet> {
         userEmail: userEmail,
       ).generate(PdfPageFormat.a4);
 
-      final base64Pdf = base64Encode(pdfBytes);
       final fileName =
-          'Cotizacion_${widget.quote.quoteNumber ?? widget.quote.id}.pdf';
+          '${widget.quote.quoteNumber ?? widget.quote.id}.pdf';
 
-      // 2. Llamar a Edge Function
+      // 2. Subir PDF a Supabase Storage & Generar Action Token
+      final quotesRepo = ref.read(quotesRepositoryProvider);
+      await quotesRepo.uploadQuotePdf(
+        quoteId: widget.quote.id,
+        pdfBytes: pdfBytes,
+        fileName: fileName,
+      );
+
+      final actionToken = await quotesRepo.generateActionToken(widget.quote.id);
+      final webViewerUrl = 'https://d-una.app/quote.html?token=$actionToken';
+
+      // Append WebViewer interactive button to email body HTML
+      final rawBodyHtml = _bodyController.text.trim();
+      final webViewerButtonHtml = '''
+<br><br>
+<div style="text-align: center; margin: 24px 0;">
+  <a href="$webViewerUrl" style="background-color: #2563EB; color: #ffffff; padding: 14px 28px; text-decoration: none; border-radius: 8px; font-weight: bold; display: inline-block; font-size: 15px;">Ver y Aprobar Cotización Interactivamente</a>
+  <p style="font-size: 12px; color: #64748B; margin-top: 10px;">Esta cotización es válida durante ${widget.quote.validityDays} días desde su emisión.</p>
+</div>
+''';
+      final finalBodyHtml = '$rawBodyHtml$webViewerButtonHtml';
+
+      // 3. Llamar a Edge Function send_document_email (sin adjuntar PDF en el correo)
       final response = await Supabase.instance.client.functions.invoke(
         'send_document_email',
         body: {
-          'documentBase64': base64Pdf,
           'fileName': fileName,
           'documentType': 'quote',
+          'documentId': widget.quote.id,
+          'actionToken': actionToken,
           'recipientEmails': _recipientsController.text
               .split(',')
               .map((e) => e.trim())
@@ -191,7 +213,7 @@ class _SendEmailBottomSheetState extends ConsumerState<SendEmailBottomSheet> {
           },
           'emailContent': {
             'subject': _subjectController.text.trim(),
-            'bodyHtml': _bodyController.text.trim(),
+            'bodyHtml': finalBodyHtml,
           },
         },
       );
@@ -220,10 +242,12 @@ class _SendEmailBottomSheetState extends ConsumerState<SendEmailBottomSheet> {
         final errorStr = e.toString();
         if (errorStr.contains('MAX_RECIPIENTS_EXCEEDED')) {
           errorMessage = 'Máximo 3 destinatarios por envío';
-        } else if (errorStr.contains('DAILY_LIMIT_EXCEEDED')) {
-          errorMessage = 'Has alcanzado el límite de envíos diarios';
+        } else if (errorStr.contains('INSUFFICIENT_CREDITS') ||
+            errorStr.contains('DAILY_LIMIT_EXCEEDED')) {
+          errorMessage = 'Has alcanzado el límite de créditos de tu ciclo';
         } else if (errorStr.contains('COOLDOWN_ACTIVE')) {
-          errorMessage = 'Debes esperar antes de enviar otro correo';
+          errorMessage =
+              'Debes esperar unos segundos antes de volver a enviar este documento';
         } else {
           errorMessage = 'Error al enviar: $e';
         }

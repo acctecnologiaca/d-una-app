@@ -508,54 +508,55 @@ class QuoteSummaryTab extends ConsumerWidget {
                 ),
               ),
 
-            const SizedBox(height: 16),
-
-            // Services
-            _buildHeaderRow(
-              context,
-              Icons.handyman_outlined,
-              'Servicios',
-              groupedCount: state.services.length,
-              amount: CurrencyFormatter.format(servicesSubtotal),
-            ),
-            const SizedBox(height: 8),
-            ...displayServices.map((service) {
-              final String rateStr = service.rateSymbol;
-              return Padding(
-                padding: const EdgeInsets.only(bottom: 4.0, left: 24.0),
-                child: Text.rich(
-                  TextSpan(
-                    children: [
-                      TextSpan(
-                        text: '${service.quantity.toInt()} $rateStr: ',
-                        style: const TextStyle(fontWeight: FontWeight.bold),
-                      ),
-                      TextSpan(
-                        text: service.name,
-                        style: TextStyle(color: colors.onSurfaceVariant),
-                      ),
-                    ],
-                  ),
-                ),
-              );
-            }),
-            if (state.services.length > 3)
-              Align(
-                alignment: Alignment.centerRight,
-                child: TextButton.icon(
-                  onPressed: () => onNavigateToTab(1), // Services Tab
-                  icon: const Icon(Icons.arrow_forward_ios, size: 14),
-                  label: const Text('Ir a servicios'),
-                  style: TextButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 8,
-                      vertical: 4,
-                    ),
-                    minimumSize: Size.zero,
-                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                  ),
-                ),
+            if (state.services.isNotEmpty) ...[
+              const SizedBox(height: 16),
+              // Services
+              _buildHeaderRow(
+                context,
+                Icons.handyman_outlined,
+                'Servicios',
+                groupedCount: state.services.length,
+                amount: CurrencyFormatter.format(servicesSubtotal),
               ),
+              const SizedBox(height: 8),
+              ...displayServices.map((service) {
+                final String rateStr = service.rateSymbol;
+                return Padding(
+                  padding: const EdgeInsets.only(bottom: 4.0, left: 24.0),
+                  child: Text.rich(
+                    TextSpan(
+                      children: [
+                        TextSpan(
+                          text: '${service.quantity.toInt()} $rateStr: ',
+                          style: const TextStyle(fontWeight: FontWeight.bold),
+                        ),
+                        TextSpan(
+                          text: service.name,
+                          style: TextStyle(color: colors.onSurfaceVariant),
+                        ),
+                      ],
+                    ),
+                  ),
+                );
+              }),
+              if (state.services.length > 3)
+                Align(
+                  alignment: Alignment.centerRight,
+                  child: TextButton.icon(
+                    onPressed: () => onNavigateToTab(1), // Services Tab
+                    icon: const Icon(Icons.arrow_forward_ios, size: 14),
+                    label: const Text('Ir a servicios'),
+                    style: TextButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 4,
+                      ),
+                      minimumSize: Size.zero,
+                      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                    ),
+                  ),
+                ),
+            ],
 
             const Padding(
               padding: EdgeInsets.symmetric(vertical: 8.0),

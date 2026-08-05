@@ -13,6 +13,7 @@ class QuoteProductSource {
   final String? externalProviderName;
   final double reservedStock;
   final double minimumPurchaseAmount;
+  final DateTime? lastUpdated;
 
   // Mutable UI state for draft selection
   double selectedQuantity;
@@ -31,9 +32,12 @@ class QuoteProductSource {
     this.selectedQuantity = 0.0,
     this.reservedStock = 0.0,
     this.minimumPurchaseAmount = 0.0,
+    this.lastUpdated,
   });
 
   factory QuoteProductSource.fromMap(Map<String, dynamic> map) {
+    final rawLastUpdated = map['last_updated'] ?? map['updated_at'];
+
     return QuoteProductSource(
       id: map['source_id'] ?? '',
       sourceType: map['source_type'] == 'OWN'
@@ -49,6 +53,9 @@ class QuoteProductSource {
       externalProviderName: map['external_provider_name'],
       reservedStock: (map['reserved_stock'] as num?)?.toDouble() ?? 0.0,
       minimumPurchaseAmount: (map['minimum_purchase_amount'] as num?)?.toDouble() ?? 0.0,
+      lastUpdated: rawLastUpdated != null
+          ? DateTime.tryParse(rawLastUpdated.toString())
+          : null,
     );
   }
 

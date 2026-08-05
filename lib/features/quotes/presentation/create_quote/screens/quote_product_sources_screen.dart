@@ -13,7 +13,9 @@ import '../../../../../shared/widgets/horizontal_filter_bar.dart';
 import '../../../../../shared/widgets/filter_bottom_sheet.dart';
 import '../../../../../shared/widgets/price_filter_sheet.dart';
 import '../../../../../shared/widgets/sort_selector.dart';
+import '../../../../../shared/widgets/info_disclaimer_card.dart';
 import '../../../../../shared/widgets/custom_extended_fab.dart';
+import '../../../../../shared/utils/currency_formatter.dart';
 import '../widgets/quote_product_sale_details_sheet.dart';
 import '../widgets/quote_product_source_card.dart';
 import '../../../data/repositories/warranty_repository.dart';
@@ -97,6 +99,7 @@ class _QuoteProductSourcesScreenState
     final selectionController = ref.read(quoteSourceSelectionProvider.notifier);
 
     double totalQuantity = 0;
+    double totalCostSum = 0;
 
     // We need the data to calculate real totals based on selection
     final rawSourceList = sourcesAsync.valueOrNull ?? [];
@@ -113,19 +116,26 @@ class _QuoteProductSourcesScreenState
     for (final source in sourceList) {
       if (selectionState.containsKey(source.id)) {
         final qty = selectionState[source.id]!;
-        totalQuantity += qty;
+        if (qty > 0) {
+          totalQuantity += qty;
+          final effectivePrice =
+              source.sourceType == ProductSourceType.externalManagement
+              ? (_externalCostPrice ?? source.price)
+              : source.price;
+          totalCostSum += (effectivePrice * qty);
 
-        // Track conflicts: selection > maxStock (skip externalManagement and own)
-        if (source.sourceType == ProductSourceType.supplier &&
-            qty > source.maxStock) {
-          hasConflicts = true;
+          // Track conflicts: selection > maxStock (skip externalManagement and own)
+          if (source.sourceType == ProductSourceType.supplier &&
+              qty > source.maxStock) {
+            hasConflicts = true;
+          }
         }
       }
     }
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Proveedor y cantidades'),
+        title: const Text('Proveedores y cantidades'),
         centerTitle: false,
         titleTextStyle: TextStyle(
           color: colors.onSurface,
@@ -179,19 +189,15 @@ class _QuoteProductSourcesScreenState
               showPriceAndStock: false,
             ),
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 0),
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16),
             child: Column(
               children: [
-                Text(
-                  'Precios no incluyen impuesto y pueden variar sin previo aviso',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.bold,
-                    color: Theme.of(context).colorScheme.onSurface,
-                  ),
+                const InfoDisclaimerCard(
+                  text:
+                      'Precios no incluyen impuestos y pueden variar sin previo aviso. Cotizar con proveedores afiliados no reserva stock ni establece un compromiso de venta.',
+                  showCloseButton: true,
                 ),
                 const SizedBox(height: 12),
                 Align(
@@ -199,6 +205,7 @@ class _QuoteProductSourcesScreenState
                   child: SortSelector(
                     currentSort: _currentSort,
                     options: const [
+                      SortOption.recent,
                       SortOption.nameAZ,
                       SortOption.nameZA,
                       SortOption.highestPrice,
@@ -291,6 +298,10 @@ class _QuoteProductSourcesScreenState
 
                   // 3. El resto de proveedores obedecen el selector de orden
                   switch (_currentSort) {
+                    case SortOption.recent:
+                      final dateA = a.lastUpdated ?? DateTime(2000);
+                      final dateB = b.lastUpdated ?? DateTime(2000);
+                      return dateB.compareTo(dateA);
                     case SortOption.lowestPrice:
                       return a.price.compareTo(b.price);
                     case SortOption.highestPrice:
@@ -352,19 +363,23 @@ class _QuoteProductSourcesScreenState
                       final quoteState = ref.read(createQuoteProvider);
                       if (quoteState.quote?.status == 'approved' &&
                           widget.groupIndex != null) {
-                        final originalOwnQtyInQuote = quoteState.quote?.products
-                                ?.where((p) =>
-                                    p.groupIndex == widget.groupIndex &&
-                                    p.sourceType == QuoteItemSourceType.own)
+                        final originalOwnQtyInQuote =
+                            quoteState.quote?.products
+                                ?.where(
+                                  (p) =>
+                                      p.groupIndex == widget.groupIndex &&
+                                      p.sourceType == QuoteItemSourceType.own,
+                                )
                                 .fold(0.0, (sum, p) => sum + p.quantity) ??
                             0.0;
-                        final adjusted = item.reservedStock - originalOwnQtyInQuote;
+                        final adjusted =
+                            item.reservedStock - originalOwnQtyInQuote;
                         if (adjusted > 0) {
-                          effectiveSource =
-                              item.copyWith(reservedStock: adjusted);
+                          effectiveSource = item.copyWith(
+                            reservedStock: adjusted,
+                          );
                         } else {
-                          effectiveSource =
-                              item.copyWith(reservedStock: 0.0);
+                          effectiveSource = item.copyWith(reservedStock: 0.0);
                         }
                       }
                     }
@@ -620,7 +635,8 @@ class _QuoteProductSourcesScreenState
                     : (source.sourceType == ProductSourceType.own
                           ? QuoteItemSourceType.own
                           : QuoteItemSourceType.affiliated),
-                supplierMinPurchase: (source.sourceType == ProductSourceType.supplier)
+                supplierMinPurchase:
+                    (source.sourceType == ProductSourceType.supplier)
                     ? source.minimumPurchaseAmount
                     : 0.0,
               );
@@ -632,8 +648,14 @@ class _QuoteProductSourcesScreenState
             }
           },
           icon: Icons.check,
-          label:
-              'Confirmar (${totalQuantity.toStringAsFixed(totalQuantity.truncateToDouble() == totalQuantity ? 0 : 2)} ${widget.product.uom})',
+          label: () {
+            final formattedQty =
+                totalQuantity.truncateToDouble() == totalQuantity
+                ? totalQuantity.toInt().toString()
+                : totalQuantity.toStringAsFixed(2);
+            final formattedTotal = CurrencyFormatter.format(totalCostSum);
+            return 'Confirmar ($formattedQty ${widget.product.uom} - $formattedTotal)';
+          }(),
           isEnabled: totalQuantity > 0 && !hasConflicts,
         ),
       ),

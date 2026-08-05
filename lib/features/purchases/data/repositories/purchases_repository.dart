@@ -87,9 +87,12 @@ class PurchasesRepository {
       query = query.eq('status', statusFilter);
     }
 
-    final response = await query
-        .order(orderBy, ascending: ascending)
-        .range(offset, offset + limit - 1);
+    var orderedQuery = query.order(orderBy, ascending: ascending);
+    if (orderBy != 'created_at') {
+      orderedQuery = orderedQuery.order('created_at', ascending: ascending);
+    }
+
+    final response = await orderedQuery.range(offset, offset + limit - 1);
 
     return (response as List<dynamic>).map((json) {
       String? supplierName;

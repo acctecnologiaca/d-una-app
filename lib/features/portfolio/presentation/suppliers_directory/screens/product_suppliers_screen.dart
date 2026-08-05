@@ -1,6 +1,7 @@
 import 'package:d_una_app/features/portfolio/domain/models/product_search_filters.dart';
 import 'package:d_una_app/shared/widgets/friendly_error_widget.dart';
 import 'package:d_una_app/features/profile/presentation/screens/verification_screen.dart';
+import 'package:d_una_app/shared/widgets/info_disclaimer_card.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../domain/models/aggregated_product.dart';
@@ -148,26 +149,23 @@ class _ProductSuppliersScreenState
               showPriceAndStock: false,
             ),
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 8),
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16),
             child: Column(
               children: [
-                Text(
-                  'Precios no incluyen impuesto y pueden variar sin previo aviso',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.bold,
-                    color: Theme.of(context).colorScheme.onSurface,
-                  ),
+                const InfoDisclaimerCard(
+                  text:
+                      'Precios no incluyen impuestos y pueden variar sin previo aviso. Cotizar con proveedores afiliados no reserva stock ni establece un compromiso de venta.',
+                  showCloseButton: true,
                 ),
-                const SizedBox(height: 12),
+                const SizedBox(height: 16),
                 Align(
                   alignment: Alignment.centerLeft,
                   child: SortSelector(
                     currentSort: _currentSort,
                     options: const [
+                      SortOption.recent,
                       SortOption.nameAZ,
                       SortOption.nameZA,
                       SortOption.highestPrice,
@@ -227,6 +225,16 @@ class _ProductSuppliersScreenState
                   }
 
                   switch (_currentSort) {
+                    case SortOption.recent:
+                      final dateA = a['last_updated'] != null
+                          ? DateTime.tryParse(a['last_updated'].toString()) ??
+                                DateTime(1970)
+                          : DateTime(1970);
+                      final dateB = b['last_updated'] != null
+                          ? DateTime.tryParse(b['last_updated'].toString()) ??
+                                DateTime(1970)
+                          : DateTime(1970);
+                      return dateB.compareTo(dateA);
                     case SortOption.lowestPrice:
                       final priceA = parseDouble(a['price']);
                       final priceB = parseDouble(b['price']);
@@ -311,7 +319,8 @@ class _ProductSuppliersScreenState
                     }
 
                     final item = items[index];
-                    final supplierBranchStockId = item['supplier_branch_stock_id'] as String;
+                    final supplierBranchStockId =
+                        item['supplier_branch_stock_id'] as String;
                     final supplierName = item['supplier_name'] as String;
                     final tradeType =
                         item['supplier_trade_type'] as String? ?? 'RETAIL';
@@ -323,7 +332,9 @@ class _ProductSuppliersScreenState
                         item['uom'] as String? ??
                         'Unidad';
                     final uomIconName = item['uom_icon_name'] as String?;
-                    final minimumPurchaseAmount = parseDouble(item['minimum_purchase_amount']);
+                    final minimumPurchaseAmount = parseDouble(
+                      item['minimum_purchase_amount'],
+                    );
 
                     // Parse Access Level from Backend
                     final isRestricted =
@@ -336,6 +347,10 @@ class _ProductSuppliersScreenState
                     // Restricted OR Partial items block navigation/action and show SnackBar
                     final shouldShowSnackBar = isRestricted || isPartial;
 
+                    final lastUpdated = item['last_updated'] != null
+                        ? DateTime.tryParse(item['last_updated'].toString())
+                        : null;
+
                     return SupplierProductRow(
                       supplierName: supplierName,
                       locationName: branchCity,
@@ -347,6 +362,7 @@ class _ProductSuppliersScreenState
                       isLocked: isRestricted,
                       isPartial: isPartial,
                       minimumPurchaseAmount: minimumPurchaseAmount,
+                      lastUpdated: lastUpdated,
                       onTap: () {
                         if (shouldShowSnackBar) {
                           ScaffoldMessenger.of(context).hideCurrentSnackBar();

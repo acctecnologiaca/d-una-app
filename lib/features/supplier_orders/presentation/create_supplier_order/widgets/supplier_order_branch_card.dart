@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../../../../../shared/utils/currency_formatter.dart';
 import '../../../../../shared/widgets/dynamic_material_symbol.dart';
 import '../../../../../shared/widgets/editable_quantity_stepper.dart';
+import '../../../../../core/utils/time_formatter.dart';
 
 class SupplierOrderBranchCard extends StatefulWidget {
   final String branchCity;
@@ -9,6 +10,7 @@ class SupplierOrderBranchCard extends StatefulWidget {
   final int stock;
   final String uom;
   final String? uomIconName;
+  final DateTime? lastUpdated;
   final double selectedQty;
   final ValueChanged<double> onQtyChanged;
   final VoidCallback onSelectAll;
@@ -21,6 +23,7 @@ class SupplierOrderBranchCard extends StatefulWidget {
     required this.stock,
     required this.uom,
     this.uomIconName,
+    this.lastUpdated,
     required this.selectedQty,
     required this.onQtyChanged,
     required this.onSelectAll,
@@ -117,14 +120,16 @@ class _SupplierOrderBranchCardState extends State<SupplierOrderBranchCard> {
                     crossAxisAlignment: CrossAxisAlignment.end,
                     children: [
                       Text(
-                        CurrencyFormatter.format(widget.price),
+                        widget.uom.isNotEmpty
+                            ? '${CurrencyFormatter.format(widget.price)}/${widget.uom}'
+                            : CurrencyFormatter.format(widget.price),
                         style: textTheme.titleLarge?.copyWith(
                           fontWeight: FontWeight.w700,
                           fontSize: 18,
                           color: colors.onSurfaceVariant,
                         ),
                       ),
-                      const SizedBox(height: 8),
+                      const SizedBox(height: 6),
                       Container(
                         padding: const EdgeInsets.symmetric(
                           horizontal: 6,
@@ -155,6 +160,39 @@ class _SupplierOrderBranchCardState extends State<SupplierOrderBranchCard> {
                             ),
                           ],
                         ),
+                      ),
+                      const SizedBox(height: 4),
+                      Builder(
+                        builder: (context) {
+                          final isOutdated = TimeFormatter.isOutdated(widget.lastUpdated);
+                          final iconColor = isOutdated ? colors.error : colors.onSurfaceVariant;
+                          final displayText = isOutdated
+                              ? 'Más de 7 días'
+                              : TimeFormatter.formatRelative(widget.lastUpdated);
+
+                          return Tooltip(
+                            message: 'Última actualización',
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(
+                                  Icons.schedule,
+                                  size: 11,
+                                  color: iconColor,
+                                ),
+                                const SizedBox(width: 2),
+                                Text(
+                                  displayText,
+                                  style: TextStyle(
+                                    fontSize: 10,
+                                    fontWeight: FontWeight.bold,
+                                    color: iconColor,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          );
+                        },
                       ),
                     ],
                   ),

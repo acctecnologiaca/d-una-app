@@ -189,6 +189,7 @@ class QuotesListNotifier extends AsyncNotifier<List<domain.Quote>> {
     await refresh();
     ref.invalidate(paginatedQuotesListProvider);
     ref.invalidate(paginatedQuoteSearchProvider);
+    await ref.read(paginatedQuotesListProvider.notifier).refresh();
   }
 
   Future<void> archiveQuote(String id, {required bool archive}) async {
@@ -198,6 +199,11 @@ class QuotesListNotifier extends AsyncNotifier<List<domain.Quote>> {
 
   Future<void> updateQuoteStatus(String id, String status) async {
     await ref.read(quotesRepositoryProvider).updateQuoteStatus(id, status);
+    await _refreshAll();
+  }
+
+  Future<void> updateQuoteDate(String id, DateTime newDate) async {
+    await ref.read(quotesRepositoryProvider).updateQuoteDate(id, newDate);
     await _refreshAll();
   }
 
@@ -552,4 +558,11 @@ class PaginatedQuoteSearch extends AutoDisposeFamilyAsyncNotifier<PaginatedState
     _ascending = ascending;
     refresh();
   }
+}
+
+void refreshAllQuoteProviders(WidgetRef ref) {
+  ref.invalidate(quotesListProvider);
+  ref.invalidate(paginatedQuotesListProvider);
+  ref.invalidate(paginatedQuoteSearchProvider);
+  ref.read(paginatedQuotesListProvider.notifier).refresh();
 }

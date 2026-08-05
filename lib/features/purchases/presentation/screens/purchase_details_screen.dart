@@ -91,11 +91,14 @@ class _PurchaseDetailsScreenState extends ConsumerState<PurchaseDetailsScreen>
 
     return asyncData.when(
       loading: () => Scaffold(
-        appBar: const StandardAppBar(title: 'Compra', subtitle: 'Cargando...'),
+        appBar: const StandardAppBar(
+          title: 'Registro de compra',
+          subtitle: 'Cargando...',
+        ),
         body: const Center(child: CircularProgressIndicator()),
       ),
       error: (error, stack) => Scaffold(
-        appBar: const StandardAppBar(title: 'Compra'),
+        appBar: const StandardAppBar(title: 'Registro de compra'),
         body: Center(child: Text('Error al cargar los detalles: $error')),
       ),
       data: (data) {
@@ -121,97 +124,62 @@ class _PurchaseDetailsScreenState extends ConsumerState<PurchaseDetailsScreen>
         }
 
         return PopScope(
-          canPop: !(_isEditing && notifier.hasChanges),
+          canPop: !_isEditing,
           onPopInvokedWithResult: (didPop, result) async {
             if (didPop) return;
 
-            final shouldPop = await CustomDialog.show<bool>(
-              context: context,
-              dialog: CustomDialog.destructive(
-                title: '¿Descartar cambios?',
-                contentText:
-                    'Se perderán todos los cambios realizados en esta compra.',
-                actions: [
-                  TextButton(
-                    onPressed: () => Navigator.of(context).pop(false),
-                    child: const Text('Continuar editando'),
+            if (_isEditing) {
+              if (notifier.hasChanges) {
+                final shouldDiscard = await CustomDialog.show<bool>(
+                  context: context,
+                  dialog: CustomDialog.destructive(
+                    title: '¿Descartar cambios?',
+                    contentText:
+                        'Se perderán todos los cambios realizados en esta compra.',
+                    actions: [
+                      TextButton(
+                        onPressed: () => Navigator.of(context).pop(false),
+                        child: const Text('Continuar editando'),
+                      ),
+                      FilledButton(
+                        onPressed: () {
+                          notifier.reset(); // clear state if discarded
+                          Navigator.of(context).pop(true);
+                        },
+                        style: FilledButton.styleFrom(
+                          backgroundColor: colors.error,
+                          foregroundColor: colors.onError,
+                        ),
+                        child: const Text('Descartar'),
+                      ),
+                    ],
                   ),
-                  FilledButton(
-                    onPressed: () {
-                      notifier.reset(); // clear state if discarded
-                      Navigator.of(context).pop(true);
-                    },
-                    style: FilledButton.styleFrom(
-                      backgroundColor: colors.error,
-                      foregroundColor: colors.onError,
-                    ),
-                    child: const Text('Descartar'),
-                  ),
-                ],
-              ),
-            );
+                );
 
-            if (shouldPop == true && context.mounted) {
-              context.pop();
+                if (shouldDiscard == true && mounted) {
+                  setState(() {
+                    _isEditing = false;
+                  });
+                }
+              } else {
+                setState(() {
+                  _isEditing = false;
+                });
+              }
             }
           },
           child: Scaffold(
             backgroundColor: colors.surface,
             appBar: StandardAppBar(
-              title: 'Compra',
+              title: 'Registro de compra',
               subtitle:
-                  '${purchase.documentType == 'invoice' ? 'F/.' : 'N/E'} #${purchase.documentNumber} - ${purchase.supplierName ?? 'Proveedor'}',
+                  '${purchase.documentType == 'invoice' ? 'FC' : 'NE'} #${purchase.documentNumber} (${purchase.supplierName ?? 'Proveedor'})',
               actions: [
                 if (!_isEditing)
                   IconButton(
                     icon: Icon(Icons.more_vert, color: colors.onSurface),
                     tooltip: 'Opciones',
                     onPressed: () => _showPurchaseOptions(context, data),
-                  ),
-                if (_isEditing)
-                  IconButton(
-                    icon: Icon(Icons.close, color: colors.onSurface),
-                    tooltip: 'Cancelar edición',
-                    onPressed: () async {
-                      if (notifier.hasChanges) {
-                        final shouldClose = await CustomDialog.show<bool>(
-                          context: context,
-                          dialog: CustomDialog.destructive(
-                            title: '¿Descartar cambios?',
-                            contentText:
-                                'Se perderán todos los cambios realizados en esta compra.',
-                            actions: [
-                              TextButton(
-                                onPressed: () =>
-                                    Navigator.of(context).pop(false),
-                                child: const Text('Continuar editando'),
-                              ),
-                              FilledButton(
-                                onPressed: () {
-                                  notifier.reset(); // clear state if discarded
-                                  Navigator.of(context).pop(true);
-                                },
-                                style: FilledButton.styleFrom(
-                                  backgroundColor: colors.error,
-                                  foregroundColor: colors.onError,
-                                ),
-                                child: const Text('Descartar'),
-                              ),
-                            ],
-                          ),
-                        );
-
-                        if (shouldClose == true && mounted) {
-                          setState(() {
-                            _isEditing = false;
-                          });
-                        }
-                      } else {
-                        setState(() {
-                          _isEditing = false;
-                        });
-                      }
-                    },
                   ),
               ],
               bottom: TabBar(
@@ -273,26 +241,86 @@ class _PurchaseDetailsScreenState extends ConsumerState<PurchaseDetailsScreen>
     );
   }
 
+  Future<void> _savePurchaseChanges() async {
+    final notifier = ref.read(addPurchaseProvider.notifier);
+    final success = await notifier.createPurchase();
+    if (success && mounted) {
+      setState(() {
+        _isEditing = false;
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Compra actualizada correctamente')),
+      );
+    } else if (mounted) {
+      final error = ref.read(addPurchaseProvider).error;
+      if (error != null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error: $error')),
+        );
+      }
+    }
+  }
+
+  Widget _buildQuickSaveFab(bool hasChanges, bool isLoading) {
+    final colors = Theme.of(context).colorScheme;
+    final isEnabled = hasChanges && !isLoading;
+
+    return FloatingActionButton(
+      heroTag: 'quick_save_fab',
+      onPressed: isEnabled ? _savePurchaseChanges : null,
+      backgroundColor: isEnabled
+          ? colors.secondaryContainer
+          : colors.surfaceContainerHighest,
+      foregroundColor: isEnabled
+          ? colors.onSecondaryContainer
+          : colors.onSurface.withValues(alpha: 0.38),
+      elevation: isEnabled ? 4 : 0,
+      tooltip: 'Guardar cambios',
+      child: const Icon(Icons.save_outlined),
+    );
+  }
+
   Widget? _buildFab(PurchaseDetailsData data) {
     final colors = Theme.of(context).colorScheme;
+    final notifier = ref.read(addPurchaseProvider.notifier);
+    final addState = ref.watch(addPurchaseProvider);
+    final hasChanges = notifier.hasChanges;
+    final isLoading = addState.isLoading;
+
     if (_isEditing) {
-      // Hide the 'Agregar' button if the purchase is linked to a supplier order
+      // Pestaña 2 (Resumen): No mostrar FAB rápido (AddPurchaseSummaryTab ya tiene su botón de guardar)
+      if (_tabController.index == 2) return null;
+
+      // Pestaña 1 (Productos): Apilar con el FAB de Agregar si no es una compra desde OC
       if (_tabController.index == 1 && data.purchase.supplierOrderId == null) {
         return Padding(
           padding: const EdgeInsets.only(bottom: 40.0),
-          child: CustomExtendedFab(
-            onPressed: () {
-              context.push('/my-purchases/add/select-product');
-            },
-            icon: Icons.add,
-            label: 'Agregar',
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              _buildQuickSaveFab(hasChanges, isLoading),
+              const SizedBox(height: 12),
+              CustomExtendedFab(
+                onPressed: () {
+                  context.push('/my-purchases/add/select-product');
+                },
+                icon: Icons.add,
+                label: 'Agregar',
+              ),
+            ],
           ),
         );
       }
-      return null;
+
+      // Pestaña 0 (Detalles) o Pestaña 1 (Productos vinculada a OC)
+      return Padding(
+        padding: const EdgeInsets.only(bottom: 40.0),
+        child: _buildQuickSaveFab(hasChanges, isLoading),
+      );
     }
 
-    // View Mode FABs
+    // Modo Visualización FAB
     return Padding(
       padding: const EdgeInsets.only(bottom: 40.0),
       child: FloatingActionButton(

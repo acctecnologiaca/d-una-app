@@ -10,8 +10,13 @@ import '../tabs/create_supplier_order_summary_tab.dart';
 
 class CreateSupplierOrderScreen extends ConsumerStatefulWidget {
   final bool editMode;
+  final int? initialTab;
 
-  const CreateSupplierOrderScreen({super.key, this.editMode = false});
+  const CreateSupplierOrderScreen({
+    super.key,
+    this.editMode = false,
+    this.initialTab,
+  });
 
   @override
   ConsumerState<CreateSupplierOrderScreen> createState() =>
@@ -26,7 +31,11 @@ class _CreateSupplierOrderScreenState
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 3, vsync: this);
+    _tabController = TabController(
+      length: 3,
+      vsync: this,
+      initialIndex: (widget.initialTab ?? 0).clamp(0, 2),
+    );
     _tabController.addListener(() {
       if (!_tabController.indexIsChanging) {
         setState(() {});
@@ -46,7 +55,7 @@ class _CreateSupplierOrderScreenState
     final state = ref.watch(createSupplierOrderProvider);
 
     return PopScope(
-      canPop: false,
+      canPop: !state.isDirty,
       onPopInvokedWithResult: (didPop, result) async {
         if (didPop) return;
 

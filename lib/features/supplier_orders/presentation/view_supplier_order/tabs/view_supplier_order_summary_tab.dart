@@ -9,9 +9,9 @@ import '../../../domain/models/supplier_order_item.dart';
 import '../../../domain/models/supplier_order_status.dart';
 import 'package:d_una_app/features/portfolio/presentation/providers/suppliers_provider.dart';
 import 'package:d_una_app/features/portfolio/domain/models/supplier_model.dart';
-import 'package:http/http.dart' as http;
-import 'package:printing/printing.dart';
+import 'package:go_router/go_router.dart';
 import 'package:d_una_app/features/supplier_orders/domain/utils/oc_credit_helper.dart';
+import 'package:d_una_app/features/supplier_orders/presentation/supplier_orders_list/providers/supplier_orders_providers.dart';
 
 class ViewSupplierOrderSummaryTab extends ConsumerWidget {
   final SupplierOrder order;
@@ -108,7 +108,7 @@ class ViewSupplierOrderSummaryTab extends ConsumerWidget {
               const SizedBox(height: 16),
             ],
             // 0. Status & Last Mod Card
-            _buildInfoCard(context, order),
+            _buildInfoCard(context, ref, order),
             const SizedBox(height: 16),
 
             // 1. Proveedor Section
@@ -146,7 +146,7 @@ class ViewSupplierOrderSummaryTab extends ConsumerWidget {
             const SizedBox(height: 16),
 
             // 4. Pedido Section
-            _buildSectionHeader(context, Icons.shopping_cart, 'Pedido'),
+            _buildSectionHeader(context, Icons.article, 'Pedido'),
             Card(
               elevation: 0,
               shape: RoundedRectangleBorder(
@@ -196,13 +196,16 @@ class ViewSupplierOrderSummaryTab extends ConsumerWidget {
                         ),
                       );
                     }),
-                    if (totalGroupedProducts > 3)
+                    if (totalGroupedProducts > 0)
                       Align(
                         alignment: Alignment.centerRight,
                         child: TextButton.icon(
                           onPressed: () => onNavigateToTab(1), // Products Tab
-                          icon: const Icon(Icons.exit_to_app, size: 14),
-                          label: const Text(' > Ir a productos'),
+                          icon: const Icon(Icons.arrow_forward_ios, size: 14),
+                          label: const Text(
+                            'Ir a productos',
+                            style: TextStyle(fontWeight: FontWeight.bold),
+                          ),
                           style: TextButton.styleFrom(
                             padding: const EdgeInsets.symmetric(
                               horizontal: 8,
@@ -271,7 +274,7 @@ class ViewSupplierOrderSummaryTab extends ConsumerWidget {
             _buildSectionHeader(
               context,
               Icons.local_shipping,
-              'Método de envío',
+              'Condiciones de envío',
             ),
             Card(
               elevation: 0,
@@ -298,7 +301,7 @@ class ViewSupplierOrderSummaryTab extends ConsumerWidget {
             const SizedBox(height: 16),
 
             // 3. Método de pago Section
-            _buildSectionHeader(context, Icons.payment, 'Método de pago'),
+            _buildSectionHeader(context, Icons.payment, 'Condiciones de pago'),
             Card(
               elevation: 0,
               shape: RoundedRectangleBorder(
@@ -313,7 +316,7 @@ class ViewSupplierOrderSummaryTab extends ConsumerWidget {
                     _buildSummaryRow(
                       context,
                       Icons.account_balance_wallet,
-                      'Condición',
+                      'Método',
                       order.paymentMethod ?? 'Por definir',
                       isTextValue: true,
                     ),
@@ -322,173 +325,32 @@ class ViewSupplierOrderSummaryTab extends ConsumerWidget {
               ),
             ),
 
-            // If invoice photo/pdf is available
-            if (order.invoicePhotoUrl != null &&
-                order.invoicePhotoUrl!.isNotEmpty) ...[
-              const SizedBox(height: 16),
-              _buildSectionHeader(
-                context,
-                Icons.receipt_long_outlined,
-                'Documento de Soporte',
-              ),
-              Card(
-                elevation: 0,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(8),
-                  side: BorderSide(color: colors.outlineVariant),
-                ),
-                color: colors.surface,
-                child: InkWell(
-                  borderRadius: BorderRadius.circular(8),
-                  onTap: () {
-                    if (_isPdfUrl(order.invoicePhotoUrl!)) {
-                      _showFullscreenPdfViewer(
-                        context,
-                        order.invoicePhotoUrl!,
-                        order.orderNumber,
-                      );
-                    } else {
-                      _showFullscreenImageViewer(
-                        context,
-                        order.invoicePhotoUrl!,
-                        order.orderNumber,
-                      );
-                    }
-                  },
-                  child: Padding(
-                    padding: const EdgeInsets.all(16.0),
-                    child: _isPdfUrl(order.invoicePhotoUrl!)
-                        ? Row(
-                            children: [
-                              Container(
-                                width: 56,
-                                height: 56,
-                                decoration: BoxDecoration(
-                                  color: colors.primaryContainer,
-                                  borderRadius: BorderRadius.circular(8),
-                                ),
-                                child: Icon(
-                                  Icons.picture_as_pdf_outlined,
-                                  size: 32,
-                                  color: colors.onPrimaryContainer,
-                                ),
-                              ),
-                              const SizedBox(width: 16),
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      'Comprobante PDF',
-                                      style: TextStyle(
-                                        fontSize: 16,
-                                        fontWeight: FontWeight.bold,
-                                        color: colors.onSurface,
-                                      ),
-                                    ),
-                                    const SizedBox(height: 4),
-                                    Text(
-                                      'Presione para ampliar la vista previa',
-                                      style: TextStyle(
-                                        fontSize: 13,
-                                        color: colors.primary,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                              Icon(
-                                Symbols.zoom_in,
-                                color: colors.primary,
-                                size: 28,
-                              ),
-                            ],
-                          )
-                        : Stack(
-                            alignment: Alignment.center,
-                            children: [
-                              ClipRRect(
-                                borderRadius: BorderRadius.circular(8),
-                                child: Image.network(
-                                  order.invoicePhotoUrl!,
-                                  height: 200,
-                                  width: double.infinity,
-                                  fit: BoxFit.cover,
-                                  errorBuilder: (context, error, stackTrace) =>
-                                      Container(
-                                        height: 120,
-                                        color: colors.surfaceContainer,
-                                        child: Column(
-                                          mainAxisAlignment:
-                                              MainAxisAlignment.center,
-                                          children: [
-                                            Icon(
-                                              Icons
-                                                  .image_not_supported_outlined,
-                                              size: 40,
-                                              color: colors.onSurfaceVariant,
-                                            ),
-                                            const SizedBox(height: 8),
-                                            Text(
-                                              'Error al cargar imagen',
-                                              style: TextStyle(
-                                                color: colors.onSurfaceVariant,
-                                              ),
-                                            ),
-                                          ],
-                                        ),
-                                      ),
-                                ),
-                              ),
-                              Positioned(
-                                bottom: 8,
-                                right: 8,
-                                child: Container(
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 8,
-                                    vertical: 4,
-                                  ),
-                                  decoration: BoxDecoration(
-                                    color: Colors.black.withValues(alpha: 0.65),
-                                    borderRadius: BorderRadius.circular(12),
-                                  ),
-                                  child: const Row(
-                                    mainAxisSize: MainAxisSize.min,
-                                    children: [
-                                      Icon(
-                                        Symbols.zoom_in,
-                                        size: 16,
-                                        color: Colors.white,
-                                      ),
-                                      SizedBox(width: 4),
-                                      Text(
-                                        'Ampliar',
-                                        style: TextStyle(
-                                          color: Colors.white,
-                                          fontSize: 12,
-                                          fontWeight: FontWeight.w500,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                  ),
-                ),
-              ),
+            if (order.status == SupplierOrderStatus.merged) ...[
+              _buildParentOrderSection(context, ref, order),
+            ] else ...[
+              _buildMergedChildOrdersSection(context, ref, order),
             ],
+            _buildLinkedPurchaseSection(context, ref, order),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildInfoCard(BuildContext context, SupplierOrder order) {
+  Widget _buildInfoCard(
+    BuildContext context,
+    WidgetRef ref,
+    SupplierOrder order,
+  ) {
     final colors = Theme.of(context).colorScheme;
     final dateFormat = DateFormat('dd/MM/yyyy - hh:mm a');
     final status = order.status;
+
+    final linkedPurchaseAsync = ref.watch(linkedPurchaseProvider(order.id));
+    final linkedPurchase = linkedPurchaseAsync.valueOrNull;
+    final verificationStatus =
+        linkedPurchase?['verification_status'] as String? ??
+        order.verificationStatus;
 
     return Card(
       elevation: 0,
@@ -559,79 +421,85 @@ class ViewSupplierOrderSummaryTab extends ConsumerWidget {
                 _buildStatusBadge(context, status),
               ],
             ),
-            const SizedBox(height: 12),
-
-            Row(
-              children: [
-                Icon(
-                  Icons.star_border_outlined,
-                  size: 20,
-                  color: colors.onSurfaceVariant,
-                ),
-                const SizedBox(width: 8),
-                Text(
-                  'Créditos:',
-                  style: TextStyle(
-                    fontWeight: FontWeight.bold,
-                    color: colors.onSurface,
-                  ),
-                ),
-                const SizedBox(width: 8),
-                Builder(
-                  builder: (context) {
-                    final earned = OCCreditHelper.calculateEarnedCredits(
-                      order.total,
-                    );
-                    final isApproved = order.verificationStatus == 'approved';
-                    final isRejected = order.verificationStatus == 'rejected';
-                    final creditsDisplay = isApproved
-                        ? '$earned'
-                        : isRejected
-                        ? '- $earned'
-                        : '$earned';
-                    final creditsColor = isApproved
-                        ? Color(0xFF388E3C)
-                        : isRejected
-                        ? colors.error
-                        : colors.secondary;
-
-                    return Text(
-                      creditsDisplay,
-                      style: TextStyle(
-                        fontSize: 16,
-                        color: creditsColor,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    );
-                  },
-                ),
-              ],
-            ),
-            if (order.status == SupplierOrderStatus.finalized) ...[
+            if (order.status != SupplierOrderStatus.merged) ...[
               const SizedBox(height: 12),
               Row(
                 children: [
                   Icon(
-                    Icons.receipt_long_outlined,
+                    Icons.star_border_outlined,
                     size: 20,
                     color: colors.onSurfaceVariant,
                   ),
                   const SizedBox(width: 8),
                   Text(
-                    'Soporte:',
+                    'Créditos:',
                     style: TextStyle(
                       fontWeight: FontWeight.bold,
                       color: colors.onSurface,
                     ),
                   ),
-                  const SizedBox(width: 12),
-                  _buildVerificationBadge(context, order.verificationStatus),
+                  const SizedBox(width: 8),
+                  Builder(
+                    builder: (context) {
+                      final earned = OCCreditHelper.calculateEarnedCredits(
+                        order.total,
+                      );
+                      final isRejected = verificationStatus == 'rejected';
+                      final isCreditsGranted =
+                          (order.status == SupplierOrderStatus.approved ||
+                              order.status == SupplierOrderStatus.finalized) &&
+                          !isRejected;
+
+                      final String creditsDisplay;
+                      final Color creditsColor;
+                      final String tooltipMessage;
+
+                      if (isRejected) {
+                        creditsDisplay = '$earned (revocados)';
+                        creditsColor = colors.error;
+                        tooltipMessage =
+                            'Créditos revocados por inconsistencia entre la orden y el soporte cargado al registrar la compra';
+                      } else if (isCreditsGranted) {
+                        creditsDisplay = '$earned (aprobados)';
+                        creditsColor = const Color(0xFF388E3C);
+                        tooltipMessage =
+                            'El proveedor ha aprobado la orden de compra';
+                      } else {
+                        creditsDisplay = '0 ($earned pendientes)';
+                        creditsColor = colors.secondary;
+                        tooltipMessage =
+                            'Acreditados una vez el proveedor apruebe la orden de compra';
+                      }
+
+                      return Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(
+                            creditsDisplay,
+                            style: TextStyle(
+                              fontSize: 16,
+                              color: creditsColor,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          const SizedBox(width: 6),
+                          Tooltip(
+                            message: tooltipMessage,
+                            triggerMode: TooltipTriggerMode.tap,
+                            child: Icon(
+                              Icons.info_outline_rounded,
+                              size: 16,
+                              color: colors.onSurfaceVariant,
+                            ),
+                          ),
+                        ],
+                      );
+                    },
+                  ),
                 ],
               ),
             ],
-            order.status == SupplierOrderStatus.finalized
-                ? const SizedBox(height: 12)
-                : const SizedBox(height: 20),
+            const SizedBox(height: 20),
             Row(
               children: [
                 Icon(Icons.update, size: 20, color: colors.onSurfaceVariant),
@@ -674,50 +542,6 @@ class ViewSupplierOrderSummaryTab extends ConsumerWidget {
             status.label,
             style: TextStyle(
               color: status.statusColor(colors),
-              fontWeight: FontWeight.bold,
-              fontSize: 14,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildVerificationBadge(
-    BuildContext context,
-    String verificationStatus,
-  ) {
-    final colors = Theme.of(context).colorScheme;
-    String label = 'En revisión';
-    Color statusColor = colors.secondary;
-    IconData icon = Icons.hourglass_empty_rounded;
-
-    if (verificationStatus == 'approved') {
-      label = 'Aprobado';
-      statusColor = Color(0xFF388E3C);
-      icon = Icons.check_circle_outline_rounded;
-    } else if (verificationStatus == 'rejected') {
-      label = 'Rechazado';
-      statusColor = colors.error;
-      icon = Icons.cancel_outlined;
-    }
-
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-      decoration: BoxDecoration(
-        color: Colors.transparent, //statusColor.withValues(alpha: 0.1),
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: colors.primary.withValues(alpha: 0.2)),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(icon, size: 16, color: statusColor),
-          const SizedBox(width: 8),
-          Text(
-            label,
-            style: TextStyle(
-              color: statusColor,
               fontWeight: FontWeight.bold,
               fontSize: 14,
             ),
@@ -855,152 +679,234 @@ class ViewSupplierOrderSummaryTab extends ConsumerWidget {
     );
   }
 
-  bool _isPdfUrl(String url) {
-    final cleanUrl = url.split('?').first.toLowerCase();
-    return cleanUrl.endsWith('.pdf');
-  }
-
-  void _showFullscreenImageViewer(
+  Widget _buildParentOrderSection(
     BuildContext context,
-    String imageUrl,
-    String orderNumber,
+    WidgetRef ref,
+    SupplierOrder order,
   ) {
-    showDialog(
-      context: context,
-      builder: (context) {
-        return Dialog(
-          insetPadding: EdgeInsets.zero,
-          backgroundColor: Colors.black,
-          child: Stack(
-            children: [
-              Center(
-                child: InteractiveViewer(
-                  minScale: 0.5,
-                  maxScale: 4.0,
-                  child: Image.network(
-                    imageUrl,
-                    fit: BoxFit.contain,
-                    loadingBuilder: (context, child, loadingProgress) {
-                      if (loadingProgress == null) return child;
-                      return const Center(
-                        child: CircularProgressIndicator(color: Colors.white),
-                      );
-                    },
-                    errorBuilder: (context, error, stackTrace) => const Center(
-                      child: Text(
-                        'Error al cargar la imagen',
-                        style: TextStyle(color: Colors.white),
-                      ),
-                    ),
+    if (order.status != SupplierOrderStatus.merged ||
+        order.parentOrderId == null) {
+      return const SizedBox.shrink();
+    }
+
+    final parentOrderAsync = ref.watch(
+      parentSupplierOrderProvider(order.parentOrderId),
+    );
+
+    return parentOrderAsync.when(
+      data: (parentOrder) {
+        if (parentOrder == null) return const SizedBox.shrink();
+        final colors = Theme.of(context).colorScheme;
+
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            const SizedBox(height: 16),
+            _buildSectionHeader(
+              context,
+              Icons.shopping_cart,
+              'Orden Principal',
+            ),
+            Card(
+              elevation: 0,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(8),
+                side: BorderSide(color: colors.outlineVariant),
+              ),
+              color: colors.surface,
+              child: ListTile(
+                contentPadding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 4,
+                ),
+                title: Text(
+                  '${parentOrder.orderNumber} (${parentOrder.supplierName})',
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 14,
+                    color: colors.onSurface,
                   ),
                 ),
-              ),
-              Positioned(
-                top: 40,
-                left: 16,
-                right: 16,
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                trailing: Row(
+                  mainAxisSize: MainAxisSize.min,
                   children: [
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 12,
-                        vertical: 6,
-                      ),
-                      decoration: BoxDecoration(
-                        color: Colors.black54,
-                        borderRadius: BorderRadius.circular(16),
-                      ),
-                      child: Text(
-                        'Soporte #$orderNumber',
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontWeight: FontWeight.bold,
-                        ),
+                    Tooltip(
+                      message: parentOrder.status.label,
+                      child: Image.asset(
+                        parentOrder.status.iconPath,
+                        width: 18,
+                        height: 18,
+                        errorBuilder: (context, error, stackTrace) =>
+                            const Icon(Icons.merge_type_rounded, size: 18),
                       ),
                     ),
-                    IconButton(
-                      icon: const Icon(
-                        Icons.close,
-                        color: Colors.white,
-                        size: 28,
-                      ),
-                      onPressed: () => Navigator.of(context).pop(),
-                    ),
+                    const SizedBox(width: 8),
+                    Icon(Icons.chevron_right, color: colors.onSurfaceVariant),
                   ],
                 ),
+                onTap: () {
+                  context.push('/supplier-orders/view/${parentOrder.id}');
+                },
               ),
-            ],
-          ),
+            ),
+          ],
         );
       },
+      loading: () => const SizedBox.shrink(),
+      error: (_, _) => const SizedBox.shrink(),
     );
   }
 
-  void _showFullscreenPdfViewer(
+  Widget _buildMergedChildOrdersSection(
     BuildContext context,
-    String pdfUrl,
-    String orderNumber,
+    WidgetRef ref,
+    SupplierOrder order,
   ) {
-    showDialog(
-      context: context,
-      builder: (context) {
+    final mergedOrdersAsync = ref.watch(mergedChildOrdersProvider(order.id));
+    return mergedOrdersAsync.when(
+      data: (orders) {
+        if (orders.isEmpty) return const SizedBox.shrink();
         final colors = Theme.of(context).colorScheme;
-        return Dialog(
-          insetPadding: const EdgeInsets.symmetric(
-            horizontal: 16,
-            vertical: 24,
-          ),
-          backgroundColor: colors.surface,
-          child: Column(
-            children: [
-              AppBar(
-                title: Text(
-                  'Soporte (#$orderNumber)',
-                  style: TextStyle(color: colors.onSurface),
-                ),
-                automaticallyImplyLeading: false,
-                backgroundColor: colors.surface,
-                elevation: 0,
-                actions: [
-                  IconButton(
-                    icon: const Icon(Icons.close),
-                    color: colors.onSurface,
-                    onPressed: () => Navigator.of(context).pop(),
-                  ),
-                ],
+
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            const SizedBox(height: 16),
+            _buildSectionHeader(
+              context,
+              Icons.merge_type_rounded,
+              'Órdenes consolidadas',
+            ),
+            Card(
+              elevation: 0,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(8),
+                side: BorderSide(color: colors.outlineVariant),
               ),
-              Expanded(
-                child: PdfPreview(
-                  build: (format) async {
-                    final response = await http.get(Uri.parse(pdfUrl));
-                    if (response.statusCode == 200) {
-                      return response.bodyBytes;
-                    }
-                    throw Exception(
-                      'Error al descargar el PDF (${response.statusCode})',
-                    );
-                  },
-                  allowPrinting: false,
-                  allowSharing: false,
-                  canChangeOrientation: false,
-                  canChangePageFormat: false,
-                  canDebug: false,
-                  scrollViewDecoration: BoxDecoration(
-                    color: colors.surfaceContainer,
-                  ),
-                  loadingWidget: const Center(
-                    child: CircularProgressIndicator(),
-                  ),
-                  onError: (context, error) => const Center(
-                    child: Text('Error al cargar la vista previa del PDF'),
-                  ),
+              color: colors.surface,
+              child: ListView.separated(
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                itemCount: orders.length,
+                separatorBuilder: (context, index) => Divider(
+                  height: 1,
+                  color: colors.outlineVariant.withValues(alpha: 0.5),
                 ),
+                itemBuilder: (context, index) {
+                  final childOrder = orders[index];
+                  return ListTile(
+                    contentPadding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 4,
+                    ),
+                    title: Text(
+                      '${childOrder.orderNumber} (${childOrder.supplierName})',
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 14,
+                        color: colors.onSurface,
+                      ),
+                    ),
+                    trailing: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Tooltip(
+                          message: childOrder.status.label,
+                          child: Image.asset(
+                            childOrder.status.iconPath,
+                            width: 18,
+                            height: 18,
+                            errorBuilder: (context, error, stackTrace) =>
+                                const Icon(Icons.merge_type_rounded, size: 18),
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Icon(
+                          Icons.chevron_right,
+                          color: colors.onSurfaceVariant,
+                        ),
+                      ],
+                    ),
+                    onTap: () {
+                      context.push('/supplier-orders/view/${childOrder.id}');
+                    },
+                  );
+                },
               ),
-            ],
-          ),
+            ),
+          ],
         );
       },
+      loading: () => const SizedBox.shrink(),
+      error: (_, _) => const SizedBox.shrink(),
+    );
+  }
+
+  Widget _buildLinkedPurchaseSection(
+    BuildContext context,
+    WidgetRef ref,
+    SupplierOrder order,
+  ) {
+    final linkedPurchaseAsync = ref.watch(linkedPurchaseProvider(order.id));
+
+    return linkedPurchaseAsync.when(
+      data: (purchaseData) {
+        if (purchaseData == null) return const SizedBox.shrink();
+        final colors = Theme.of(context).colorScheme;
+
+        final rawDocNumber =
+            (purchaseData['document_number'] as String?)?.trim() ??
+            order.orderNumber;
+        final cleanDocNumber = rawDocNumber.startsWith('#')
+            ? rawDocNumber
+            : '#$rawDocNumber';
+        final docType = purchaseData['document_type'] == 'invoice'
+            ? 'Factura'
+            : 'Nota de entrega';
+
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            const SizedBox(height: 16),
+            _buildSectionHeader(
+              context,
+              Icons.receipt_long_outlined,
+              'Registro de compra',
+            ),
+            Card(
+              elevation: 0,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(8),
+                side: BorderSide(color: colors.outlineVariant),
+              ),
+              color: colors.surface,
+              child: ListTile(
+                contentPadding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 0,
+                ),
+                title: Text(
+                  '$docType $cleanDocNumber',
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 14,
+                    color: colors.onSurface,
+                  ),
+                ),
+                trailing: Icon(
+                  Icons.chevron_right,
+                  color: colors.onSurfaceVariant,
+                ),
+                onTap: () {
+                  context.push('/my-purchases/view/${purchaseData['id']}');
+                },
+              ),
+            ),
+          ],
+        );
+      },
+      loading: () => const SizedBox.shrink(),
+      error: (_, _) => const SizedBox.shrink(),
     );
   }
 }

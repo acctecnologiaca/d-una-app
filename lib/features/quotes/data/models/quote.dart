@@ -20,6 +20,9 @@ class Quote {
   final String? notes;
   final String? quoteTag;
   final bool isArchived; // New Field
+  final String? pdfUrl;
+  final String? actionToken;
+  final DateTime? actionTokenExpiresAt;
   final DateTime createdAt;
   final DateTime updatedAt;
 
@@ -62,6 +65,9 @@ class Quote {
     this.notes,
     this.quoteTag,
     this.isArchived = false,
+    this.pdfUrl,
+    this.actionToken,
+    this.actionTokenExpiresAt,
     required this.createdAt,
     required this.updatedAt,
     this.clientName,
@@ -83,6 +89,90 @@ class Quote {
     this.clientCountry,
     this.contact,
   });
+
+  Quote copyWith({
+    String? id,
+    String? userId,
+    String? quoteNumber,
+    String? clientId,
+    String? contactId,
+    String? advisorId,
+    String? categoryId,
+    String? status,
+    DateTime? dateIssued,
+    int? validityDays,
+    double? subtotal,
+    double? taxAmount,
+    double? total,
+    String? notes,
+    String? quoteTag,
+    bool? isArchived,
+    String? pdfUrl,
+    String? actionToken,
+    DateTime? actionTokenExpiresAt,
+    DateTime? createdAt,
+    DateTime? updatedAt,
+    String? clientName,
+    String? categoryName,
+    String? contactName,
+    String? contactPhone,
+    String? contactEmail,
+    String? advisorName,
+    List<QuoteItemProduct>? products,
+    List<QuoteItemService>? services,
+    List<QuoteCondition>? conditions,
+    Contact? contact,
+    String? clientTaxId,
+    String? clientAddress,
+    String? clientPhone,
+    String? clientEmail,
+    String? clientType,
+    String? clientCity,
+    String? clientState,
+    String? clientCountry,
+  }) {
+    return Quote(
+      id: id ?? this.id,
+      userId: userId ?? this.userId,
+      quoteNumber: quoteNumber ?? this.quoteNumber,
+      clientId: clientId ?? this.clientId,
+      contactId: contactId ?? this.contactId,
+      advisorId: advisorId ?? this.advisorId,
+      categoryId: categoryId ?? this.categoryId,
+      status: status ?? this.status,
+      dateIssued: dateIssued ?? this.dateIssued,
+      validityDays: validityDays ?? this.validityDays,
+      subtotal: subtotal ?? this.subtotal,
+      taxAmount: taxAmount ?? this.taxAmount,
+      total: total ?? this.total,
+      notes: notes ?? this.notes,
+      quoteTag: quoteTag ?? this.quoteTag,
+      isArchived: isArchived ?? this.isArchived,
+      pdfUrl: pdfUrl ?? this.pdfUrl,
+      actionToken: actionToken ?? this.actionToken,
+      actionTokenExpiresAt: actionTokenExpiresAt ?? this.actionTokenExpiresAt,
+      createdAt: createdAt ?? this.createdAt,
+      updatedAt: updatedAt ?? this.updatedAt,
+      clientName: clientName ?? this.clientName,
+      categoryName: categoryName ?? this.categoryName,
+      contactName: contactName ?? this.contactName,
+      contactPhone: contactPhone ?? this.contactPhone,
+      contactEmail: contactEmail ?? this.contactEmail,
+      advisorName: advisorName ?? this.advisorName,
+      products: products ?? this.products,
+      services: services ?? this.services,
+      conditions: conditions ?? this.conditions,
+      contact: contact ?? this.contact,
+      clientTaxId: clientTaxId ?? this.clientTaxId,
+      clientAddress: clientAddress ?? this.clientAddress,
+      clientPhone: clientPhone ?? this.clientPhone,
+      clientEmail: clientEmail ?? this.clientEmail,
+      clientType: clientType ?? this.clientType,
+      clientCity: clientCity ?? this.clientCity,
+      clientState: clientState ?? this.clientState,
+      clientCountry: clientCountry ?? this.clientCountry,
+    );
+  }
 
   factory Quote.fromJson(Map<String, dynamic> json) {
     return Quote(
@@ -106,6 +196,11 @@ class Quote {
       createdAt: DateTime.parse(json['created_at'] as String),
       updatedAt: DateTime.parse(json['updated_at'] as String),
       isArchived: json['is_archived'] as bool? ?? false,
+      pdfUrl: json['pdf_url'] as String?,
+      actionToken: json['action_token'] as String?,
+      actionTokenExpiresAt: json['action_token_expires_at'] != null
+          ? DateTime.parse(json['action_token_expires_at'] as String)
+          : null,
 
       // Handle joined client name (robust mapping for Map or List)
       clientName: _extractClientName(json['clients']),
@@ -168,6 +263,9 @@ class Quote {
       'notes': notes,
       'quote_tag': quoteTag,
       'is_archived': isArchived,
+      'pdf_url': pdfUrl,
+      'action_token': actionToken,
+      'action_token_expires_at': actionTokenExpiresAt?.toIso8601String(),
       'created_at': createdAt.toIso8601String(),
       'updated_at': updatedAt.toIso8601String(),
     };

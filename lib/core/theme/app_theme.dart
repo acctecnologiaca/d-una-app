@@ -117,3 +117,15 @@ class AppTheme {
     );
   }
 }
+
+extension CustomColorScheme on ColorScheme {
+  /// Color verde base de la aplicación
+  Color get greenBase => brightness == Brightness.light
+      ? const Color(0xFFbcf0b4)
+      : const Color(0xFFbcf0b4); // Ajuste opcional para tema oscuro
+
+  /// Color para texto o iconos sobre el verde base
+  Color get greenBaseOn => brightness == Brightness.light
+      ? const Color(0xFF245024)
+      : const Color(0xFF245024); // Ajuste opcional para tema oscuro
+}

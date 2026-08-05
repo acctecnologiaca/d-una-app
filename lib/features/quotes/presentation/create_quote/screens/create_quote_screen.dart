@@ -14,6 +14,9 @@ import '../tabs/quote_summary_tab.dart';
 import '../../../../../shared/widgets/custom_action_sheet.dart';
 import '../../../../../shared/widgets/bottom_sheet_action_item.dart';
 import '../../../../../shared/widgets/custom_dialog.dart';
+import '../../../../supplier_orders/domain/models/supplier_order_status.dart';
+import '../../../../supplier_orders/presentation/supplier_orders_list/providers/supplier_orders_providers.dart';
+import '../../../domain/models/quote_model.dart' show QuoteStatus;
 
 class CreateQuoteScreen extends ConsumerStatefulWidget {
   final String? quoteId;
@@ -63,6 +66,20 @@ class _CreateQuoteScreenState extends ConsumerState<CreateQuoteScreen>
           }
         }
       }
+
+      if (widget.quoteId != null &&
+          currentState.quote?.status == QuoteStatus.finalized.dbValue) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text(
+                'La cotización está finalizada y no se puede editar.',
+              ),
+            ),
+          );
+          context.pop();
+        }
+      }
     });
   }
 
@@ -109,9 +126,9 @@ class _CreateQuoteScreenState extends ConsumerState<CreateQuoteScreen>
               ? 'Editar cotización'
               : 'Nueva cotización',
           subtitle: state.clientName != null
-              ? '#${state.currentQuoteNumber} (${state.clientName})'
+              ? '${state.currentQuoteNumber} (${state.clientName})'
               : (state.currentQuoteNumber != null
-                    ? '#${state.currentQuoteNumber}'
+                    ? '${state.currentQuoteNumber}'
                     : 'Cargando...'),
           actions: [
             IconButton(
@@ -173,8 +190,50 @@ class _CreateQuoteScreenState extends ConsumerState<CreateQuoteScreen>
         child: CustomExtendedFab(
           label: state.isLoading ? 'Guardando...' : 'Guardar',
           icon: state.isLoading ? Icons.hourglass_empty : Icons.save_outlined,
-          isEnabled: state.isReadyToFinalize && !state.isLoading,
+          isEnabled:
+              state.isReadyToFinalize && state.hasChanges && !state.isLoading,
           onPressed: () async {
+            if (widget.quoteId != null) {
+              try {
+                final repo = ref.read(supplierOrdersRepositoryProvider);
+                final linked = await repo.getSupplierOrdersByQuoteId(
+                  widget.quoteId!,
+                );
+                final draftOrders = linked
+                    .where((o) => o.status == SupplierOrderStatus.draft)
+                    .toList();
+
+                if (draftOrders.isNotEmpty) {
+                  if (!mounted) return;
+                  final confirm = await CustomDialog.show<bool>(
+                    context: context,
+                    dialog: CustomDialog.confirmation(
+                      icon: Icons.warning_amber_rounded,
+                      iconColor: Colors.amber.shade800,
+                      title: 'Actualizar Cotización',
+                      contentText:
+                          'Al guardar las modificaciones, las Órdenes de Compra en borrador previas (${draftOrders.map((e) => e.orderNumber).join(', ')}) cambiarán a estatus "Cancelada" para permitir generar órdenes actualizadas. ¿Deseas continuar?',
+                      actions: [
+                        TextButton(
+                          onPressed: () => Navigator.pop(context, false),
+                          child: const Text('Cancelar'),
+                        ),
+                        FilledButton(
+                          onPressed: () => Navigator.pop(context, true),
+                          child: const Text('Continuar'),
+                        ),
+                      ],
+                    ),
+                  );
+
+                  if (confirm != true) return;
+
+                  await repo.cancelDraftOrdersByQuoteId(widget.quoteId!);
+                  ref.invalidate(linkedSupplierOrdersProvider(widget.quoteId!));
+                }
+              } catch (_) {}
+            }
+
             final success = await ref
                 .read(createQuoteProvider.notifier)
                 .createQuote();
@@ -185,6 +244,7 @@ class _CreateQuoteScreenState extends ConsumerState<CreateQuoteScreen>
               final quote = ref.read(createQuoteProvider).quote;
               if (quote != null) {
                 ref.invalidate(viewQuoteProvider(quote.id));
+                ref.invalidate(linkedSupplierOrdersProvider(quote.id));
               }
               final savedQuoteNumber =
                   ref.read(createQuoteProvider).quote?.quoteNumber ?? '';
@@ -237,7 +297,7 @@ class _CreateQuoteScreenState extends ConsumerState<CreateQuoteScreen>
         BottomSheetActionItem(
           icon: Icons.save_outlined,
           label: 'Guardar y continuar luego',
-          enabled: state.isReadyToSaveDraft,
+          enabled: state.isReadyToSaveDraft && state.hasChanges,
           onTap: () async {
             context.pop(); // Close sheet
             final success = await notifier.saveAsDraft();
@@ -309,15 +369,16 @@ class _CreateQuoteScreenState extends ConsumerState<CreateQuoteScreen>
           icon: Icons.send_outlined,
           label: 'Enviar ahora',
           onTap: () {
-            context.pop(); // Close sheet
-            // Future: Navigate to sharing flow or PDF generation
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                content: Text('Funcionalidad de envío próximamente disponible'),
-              ),
-            );
+            final savedQuote = ref.read(createQuoteProvider).quote;
+            final quoteId = savedQuote?.id;
             ref.read(createQuoteProvider.notifier).reset();
-            context.pop(); // Back to list
+            context.pop(); // Close sheet
+            if (quoteId != null) {
+              context.pushReplacement(
+                '/quotes/view/$quoteId',
+                extra: {'triggerSend': true},
+              );
+            }
           },
         ),
         BottomSheetActionItem(

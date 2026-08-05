@@ -10,6 +10,7 @@ import '../../../../profile/presentation/providers/profile_provider.dart';
 import '../../../../../core/utils/phone_utils.dart';
 import '../../../../../core/services/whatsapp_repository.dart';
 import '../../../../../core/providers/credits_providers.dart';
+import 'package:d_una_app/features/quotes/presentation/quotes_list/providers/quotes_provider.dart';
 import '../../../../../shared/widgets/info_block.dart';
 import '../../../data/models/quote.dart';
 import 'package:d_una_app/core/pdf/templates/quote_pdf_template.dart';
@@ -106,7 +107,18 @@ class _SendWhatsAppBottomSheetState
       ).generate(PdfPageFormat.a4);
 
       final fileName =
-          'Cotizacion_${widget.quote.quoteNumber ?? widget.quote.id}.pdf';
+          '${widget.quote.quoteNumber ?? widget.quote.id}.pdf';
+
+      // 2. Upload PDF & Generate Action Token for WebViewer
+      final quotesRepo = ref.read(quotesRepositoryProvider);
+      await quotesRepo.uploadQuotePdf(
+        quoteId: widget.quote.id,
+        pdfBytes: pdfBytes,
+        fileName: fileName,
+      );
+
+      final actionToken = await quotesRepo.generateActionToken(widget.quote.id);
+      final webViewerUrl = 'https://d-una.app/quote.html?token=$actionToken';
 
       final userName =
           '${userProfile.firstName ?? ''} ${userProfile.lastName ?? ''}'.trim();
@@ -116,21 +128,19 @@ class _SendWhatsAppBottomSheetState
           ? userProfile.companyName!
           : (userName.isEmpty ? 'Usuario' : userName);
 
-      // Construct the final note with a fixed disclaimer
+      // Construct the final note with WebViewer interactive link
       final userNote = _messageController.text.trim();
-      const disclaimer =
-          'El documento adjunto estará disponible para su descarga durante un periodo limitado de *12 horas*';
+      final webViewerDisclaimer =
+          'Ver y aprobar cotización interactiva: $webViewerUrl (Válida por ${widget.quote.validityDays} días)';
       final finalNote = userNote.isEmpty
-          ? disclaimer
-          : '$userNote. $disclaimer';
+          ? webViewerDisclaimer
+          : '$userNote. $webViewerDisclaimer';
 
-      // 2. Send via Cloud API Repository
+      // 3. Send via Cloud API Repository (sin adjuntar archivo PDF)
       await ref
           .read(whatsappRepositoryProvider)
-          .sendDocument(
+          .sendMessage(
             phone: phone,
-            pdfBytes: pdfBytes,
-            fileName: fileName,
             templateName: 'enviar_documento_pdf',
             bodyVariables: [
               _sanitizeParam(

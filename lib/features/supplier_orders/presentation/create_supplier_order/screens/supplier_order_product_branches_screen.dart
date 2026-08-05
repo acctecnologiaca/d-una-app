@@ -1,10 +1,13 @@
+import 'package:d_una_app/shared/widgets/info_disclaimer_card.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:uuid/uuid.dart';
 import '../../../../../shared/widgets/standard_app_bar.dart';
+import '../../../../../shared/utils/currency_formatter.dart';
 import '../../../../../shared/widgets/friendly_error_widget.dart';
 import '../../../../../shared/widgets/custom_extended_fab.dart';
+import '../../../../../shared/widgets/sort_selector.dart';
 import '../../../../portfolio/domain/models/aggregated_product.dart';
 import '../../../domain/models/supplier_order_item.dart';
 import '../providers/create_supplier_order_provider.dart';
@@ -32,6 +35,7 @@ class _SupplierOrderProductBranchesScreenState
     extends ConsumerState<SupplierOrderProductBranchesScreen> {
   // Maps supplier_branch_stock_id to selected quantity
   final Map<String, double> _selectedQuantities = {};
+  SortOption _currentSort = SortOption.recent;
 
   @override
   void initState() {
@@ -55,13 +59,24 @@ class _SupplierOrderProductBranchesScreenState
       ),
     );
 
-    double totalQuantity = _selectedQuantities.values.fold(
-      0.0,
-      (sum, val) => sum + val,
-    );
+    double totalQuantity = 0.0;
+    double totalCostSum = 0.0;
+
+    final branchesList = branchesAsync.valueOrNull ?? [];
+    for (final entry in _selectedQuantities.entries) {
+      if (entry.value > 0) {
+        totalQuantity += entry.value;
+        final branch = branchesList.firstWhere(
+          (b) => b['supplier_branch_stock_id'] == entry.key,
+          orElse: () => <String, dynamic>{},
+        );
+        final price = ((branch['price'] ?? 0.0) as num).toDouble();
+        totalCostSum += (entry.value * price);
+      }
+    }
 
     return Scaffold(
-      appBar: const StandardAppBar(title: 'Seleccionar sucursal y cantidad'),
+      appBar: const StandardAppBar(title: 'Sucursales y cantidades'),
       body: Column(
         children: [
           // Product header
@@ -106,20 +121,38 @@ class _SupplierOrderProductBranchesScreenState
               ],
             ),
           ),
+          const SizedBox(height: 8),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: const InfoDisclaimerCard(
+              text:
+                  'Precios no incluyen impuestos y pueden variar sin previo aviso. Esta orden no reserva stock ni establece un compromiso de venta con el proveedor.',
+              showCloseButton: true,
+            ),
+          ),
           const SizedBox(height: 16),
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16),
-            child: Text(
-              'Precios no incluyen impuesto y pueden variar sin previo aviso',
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                fontSize: 12,
-                fontWeight: FontWeight.bold,
-                color: Theme.of(context).colorScheme.onSurface,
-              ),
+            child: Row(
+              children: [
+                SortSelector(
+                  currentSort: _currentSort,
+                  options: const [
+                    SortOption.recent,
+                    SortOption.lowestPrice,
+                    SortOption.highestPrice,
+                    SortOption.quantityDesc,
+                  ],
+                  onSortChanged: (newSort) {
+                    setState(() {
+                      _currentSort = newSort;
+                    });
+                  },
+                ),
+              ],
             ),
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 16),
           Expanded(
             child: branchesAsync.when(
               loading: () => const Center(child: CircularProgressIndicator()),
@@ -134,10 +167,47 @@ class _SupplierOrderProductBranchesScreenState
                     child: Text('No hay sucursales disponibles.'),
                   );
                 }
+
+                final sortedBranches = List<Map<String, dynamic>>.from(
+                  branches,
+                );
+                sortedBranches.sort((a, b) {
+                  switch (_currentSort) {
+                    case SortOption.recent:
+                      final dateA = a['last_updated'] != null
+                          ? DateTime.tryParse(a['last_updated'].toString()) ??
+                                DateTime(1970)
+                          : DateTime(1970);
+                      final dateB = b['last_updated'] != null
+                          ? DateTime.tryParse(b['last_updated'].toString()) ??
+                                DateTime(1970)
+                          : DateTime(1970);
+                      return dateB.compareTo(dateA);
+                    case SortOption.lowestPrice:
+                      final priceA = (a['price'] as num?)?.toDouble() ?? 0.0;
+                      final priceB = (b['price'] as num?)?.toDouble() ?? 0.0;
+                      return priceA.compareTo(priceB);
+                    case SortOption.highestPrice:
+                      final priceA = (a['price'] as num?)?.toDouble() ?? 0.0;
+                      final priceB = (b['price'] as num?)?.toDouble() ?? 0.0;
+                      return priceB.compareTo(priceA);
+                    case SortOption.quantityDesc:
+                      final stockA =
+                          ((a['stock_quantity'] ?? a['stock'] ?? 0) as num)
+                              .toInt();
+                      final stockB =
+                          ((b['stock_quantity'] ?? b['stock'] ?? 0) as num)
+                              .toInt();
+                      return stockB.compareTo(stockA);
+                    default:
+                      return 0;
+                  }
+                });
+
                 return ListView.builder(
-                  itemCount: branches.length,
+                  itemCount: sortedBranches.length,
                   itemBuilder: (context, index) {
-                    final branchData = branches[index];
+                    final branchData = sortedBranches[index];
                     final stockId =
                         branchData['supplier_branch_stock_id'] as String;
                     final price = ((branchData['price'] ?? 0.0) as num)
@@ -152,6 +222,11 @@ class _SupplierOrderProductBranchesScreenState
                         (branchData['branch_city'] ?? branchData['city_name'])
                             as String? ??
                         'Ciudad Desconocida';
+                    final lastUpdated = branchData['last_updated'] != null
+                        ? DateTime.tryParse(
+                            branchData['last_updated'].toString(),
+                          )
+                        : null;
 
                     return Padding(
                       padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -161,6 +236,7 @@ class _SupplierOrderProductBranchesScreenState
                         stock: stock,
                         uom: widget.product.uom,
                         uomIconName: widget.product.uomIconName,
+                        lastUpdated: lastUpdated,
                         selectedQty: _selectedQuantities[stockId] ?? 0.0,
                         onQtyChanged: (val) {
                           setState(() {
@@ -257,8 +333,14 @@ class _SupplierOrderProductBranchesScreenState
             context.pop(true);
           },
           icon: Icons.check,
-          label:
-              'Confirmar (${totalQuantity.toStringAsFixed(totalQuantity.truncateToDouble() == totalQuantity ? 0 : 2)} ${widget.product.uom})',
+          label: () {
+            final formattedQty =
+                totalQuantity.truncateToDouble() == totalQuantity
+                    ? totalQuantity.toInt().toString()
+                    : totalQuantity.toStringAsFixed(2);
+            final formattedTotal = CurrencyFormatter.format(totalCostSum);
+            return 'Confirmar ($formattedQty ${widget.product.uom} - $formattedTotal)';
+          }(),
           isEnabled: totalQuantity > 0,
         ),
       ),

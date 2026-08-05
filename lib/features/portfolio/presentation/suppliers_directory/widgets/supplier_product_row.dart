@@ -5,6 +5,7 @@ import '../../../../../shared/widgets/dynamic_material_symbol.dart';
 import '../../../../../shared/widgets/standard_list_item.dart';
 import '../../../../../shared/widgets/status_badge.dart';
 import '../../../../../shared/utils/currency_formatter.dart';
+import '../../../../../core/utils/time_formatter.dart';
 
 class SupplierProductRow extends StatelessWidget {
   final String supplierName;
@@ -17,6 +18,7 @@ class SupplierProductRow extends StatelessWidget {
   final bool isLocked; // Fully restricted (Start with this)
   final bool isPartial; // Access allowed but price hidden/blurred
   final double minimumPurchaseAmount;
+  final DateTime? lastUpdated;
   final VoidCallback? onTap;
 
   const SupplierProductRow({
@@ -31,6 +33,7 @@ class SupplierProductRow extends StatelessWidget {
     this.isLocked = false,
     this.isPartial = false,
     this.minimumPurchaseAmount = 0.0,
+    this.lastUpdated,
     this.onTap,
   });
 
@@ -162,7 +165,7 @@ class SupplierProductRow extends StatelessWidget {
             ],
           ),
 
-          const SizedBox(height: 8),
+          const SizedBox(height: 6),
 
           // Stock Validations
           StatusBadge(
@@ -174,6 +177,39 @@ class SupplierProductRow extends StatelessWidget {
               size: 14,
               color: stockColor,
             ),
+          ),
+          const SizedBox(height: 4),
+          Builder(
+            builder: (context) {
+              final isOutdated = TimeFormatter.isOutdated(lastUpdated);
+              final iconColor = isOutdated ? colors.error : colors.onSurfaceVariant;
+              final displayText = isOutdated
+                  ? 'Más de 7 días'
+                  : TimeFormatter.formatRelative(lastUpdated);
+
+              return Tooltip(
+                message: 'Última actualización',
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(
+                      Icons.schedule,
+                      size: 11,
+                      color: iconColor,
+                    ),
+                    const SizedBox(width: 2),
+                    Text(
+                      displayText,
+                      style: TextStyle(
+                        fontSize: 10,
+                        fontWeight: FontWeight.bold,
+                        color: iconColor,
+                      ),
+                    ),
+                  ],
+                ),
+              );
+            },
           ),
         ],
       ),

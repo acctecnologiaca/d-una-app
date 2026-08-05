@@ -1,3 +1,4 @@
+import 'package:d_una_app/shared/widgets/info_disclaimer_card.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -95,15 +96,10 @@ class _SelectServiceScreenState extends ConsumerState<SelectServiceScreen> {
 
           // 3. Disclaimer
           Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
-            child: Text(
-              'Precios no incluyen impuesto',
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                fontSize: 12,
-                fontWeight: FontWeight.bold,
-                color: colors.onSurface,
-              ),
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            child: const InfoDisclaimerCard(
+              text: 'Precios no incluyen impuestos',
+              showCloseButton: true,
             ),
           ),
 

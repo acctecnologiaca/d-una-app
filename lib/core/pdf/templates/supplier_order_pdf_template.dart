@@ -7,42 +7,51 @@ import '../pdf_common_sections.dart';
 import '../../../features/supplier_orders/domain/models/supplier_order.dart';
 import '../../../features/supplier_orders/domain/models/supplier_order_item.dart';
 import '../../../features/profile/domain/models/user_profile.dart';
+import '../../../features/settings/data/models/shipping_method.dart';
+import '../../../features/collaborators/domain/models/collaborator.dart';
 
 class SupplierOrderPdfTemplate {
   final SupplierOrder order;
   final List<SupplierOrderItem> items;
   final UserProfile userProfile;
   final String? userEmail;
+  final ShippingMethod? shippingMethod;
+  final Collaborator? receiverCollaborator;
 
   SupplierOrderPdfTemplate({
     required this.order,
     required this.items,
     required this.userProfile,
     this.userEmail,
+    this.shippingMethod,
+    this.receiverCollaborator,
   });
 
   Future<Uint8List> generate(PdfPageFormat format) async {
     final pdf = pw.Document(theme: PdfThemeConfig.buildTheme());
     final senderInfo = PdfHelpers.resolvePdfSenderInfo(userProfile, userEmail);
-    final logoImage = await PdfHelpers.loadNetworkImage(senderInfo.logoUrl);
+    final dUnaLogoImage = await PdfHelpers.loadAssetImage(
+      'assets/images/logo_d_una.png',
+    );
     final footerImage = await PdfHelpers.loadAssetImage(
       'assets/images/creado_con_d_una.png',
     );
+
+    final formattedDate = PdfHelpers.formatDate(order.date);
+    final locationDateStr =
+        (userProfile.mainCity != null &&
+            userProfile.mainCity!.trim().isNotEmpty)
+        ? '${userProfile.mainCity!.trim()}, $formattedDate'
+        : formattedDate;
 
     pdf.addPage(
       pw.MultiPage(
         pageFormat: format,
         margin: const pw.EdgeInsets.all(PdfThemeConfig.horizontalMargin),
-        header: (context) => PdfCommonSections.buildLetterhead(
-          title: 'ORDEN DE COMPRA',
-          documentNumber: order.orderNumber,
-          date: order.date,
-          senderInfo: senderInfo,
-          logoImage: logoImage,
-        ),
         footer: (context) =>
             PdfCommonSections.buildFooter(context, footerImage: footerImage),
         build: (context) => [
+          _buildCenteredHeader(dUnaLogoImage, locationDateStr),
           _buildInfoGrid(senderInfo),
           pw.SizedBox(height: 20),
           _buildItemsTable(),
@@ -54,48 +63,192 @@ class SupplierOrderPdfTemplate {
     return pdf.save();
   }
 
+  pw.Widget _buildCenteredHeader(
+    pw.MemoryImage? logoImage,
+    String locationDateStr,
+  ) {
+    return pw.Column(
+      crossAxisAlignment: pw.CrossAxisAlignment.center,
+      children: [
+        if (logoImage != null)
+          pw.Container(
+            height: 48,
+            child: pw.Image(logoImage, fit: pw.BoxFit.contain),
+          ),
+        pw.SizedBox(height: 6),
+        pw.Text(
+          'ORDEN DE COMPRA',
+          style: PdfThemeConfig.headerStyle.copyWith(
+            fontSize: 16,
+            fontWeight: pw.FontWeight.bold,
+            color: PdfColors.blueGrey800,
+          ),
+        ),
+        pw.SizedBox(height: 2),
+        pw.Text(
+          order.orderNumber,
+          style: PdfThemeConfig.headerStyle.copyWith(
+            fontSize: 14,
+            fontWeight: pw.FontWeight.bold,
+            color: PdfThemeConfig.accentColor,
+          ),
+        ),
+        pw.SizedBox(height: 2),
+        pw.Text(
+          'Fecha y Lugar: $locationDateStr',
+          style: PdfThemeConfig.bodyStyle.copyWith(
+            fontSize: 8,
+            color: PdfColors.grey700,
+          ),
+        ),
+        pw.SizedBox(height: 12),
+        pw.Divider(color: PdfColors.grey400, thickness: 0.5),
+        pw.SizedBox(height: 10),
+      ],
+    );
+  }
+
   pw.Widget _buildInfoGrid(PdfSenderInfo senderInfo) {
+    final hasCompany =
+        (userProfile.companyName != null &&
+        userProfile.companyName!.trim().isNotEmpty);
+    final userDisplayName = hasCompany
+        ? userProfile.companyName!.trim()
+        : '${userProfile.firstName ?? ''} ${userProfile.lastName ?? ''}'.trim();
+    final userIdOrRif = hasCompany
+        ? (userProfile.companyRif ?? '-')
+        : (userProfile.nationalId ?? '-');
+    final userAddress = hasCompany
+        ? (userProfile.companyAddress ?? '-')
+        : ([
+            userProfile.mainAddress,
+            userProfile.mainCity,
+          ].where((e) => e != null && e.trim().isNotEmpty).join(', '));
+
+    final companyName =
+        shippingMethod?.company?.name ??
+        shippingMethod?.company?.legalName ??
+        '-';
+    final deliveryOption = shippingMethod?.deliveryOption ?? '-';
+
+    final isBranchDelivery = deliveryOption.toLowerCase().contains('sucursal');
+    final showBranchCode =
+        isBranchDelivery &&
+        shippingMethod?.branchCode != null &&
+        shippingMethod!.branchCode!.trim().isNotEmpty;
+
+    final addressParts = <String>[];
+    if (shippingMethod != null) {
+      if (shippingMethod!.useMainAddress) {
+        if (senderInfo.address.trim().isNotEmpty) {
+          addressParts.add(senderInfo.address.trim());
+        }
+      } else {
+        if (shippingMethod!.address != null &&
+            shippingMethod!.address!.trim().isNotEmpty) {
+          addressParts.add(shippingMethod!.address!.trim());
+        }
+        if (shippingMethod!.city != null &&
+            shippingMethod!.city!.trim().isNotEmpty) {
+          addressParts.add(shippingMethod!.city!.trim());
+        }
+        if (shippingMethod!.state != null &&
+            shippingMethod!.state!.trim().isNotEmpty) {
+          addressParts.add(shippingMethod!.state!.trim());
+        }
+        if (shippingMethod!.country != null &&
+            shippingMethod!.country!.trim().isNotEmpty) {
+          addressParts.add(shippingMethod!.country!.trim());
+        }
+      }
+    }
+    final fullAddress = addressParts.isNotEmpty ? addressParts.join(', ') : '-';
+
+    final isPersonalPickup =
+        deliveryOption.toLowerCase().contains('retiro en persona') ||
+        deliveryOption.toLowerCase().contains('retiro personal');
+
     return pw.Row(
       crossAxisAlignment: pw.CrossAxisAlignment.start,
       children: [
-        // Columna Izquierda: Datos del Proveedor
+        // Columna Izquierda: Datos del Cliente
         pw.Expanded(
           child: pw.Column(
             crossAxisAlignment: pw.CrossAxisAlignment.start,
             children: [
               pw.Text(
-                'Datos del Proveedor',
+                'Datos del Cliente',
                 style: PdfThemeConfig.headerStyle.copyWith(
                   fontStyle: pw.FontStyle.italic,
                   decoration: pw.TextDecoration.underline,
                 ),
               ),
               pw.SizedBox(height: 4),
-              _infoRow('Proveedor:', order.supplierName),
-              _infoRow('Sucursal:', order.branchName ?? '-'),
-              _infoRow('Método de Envío:', order.shippingMethodLabel ?? '-'),
-              _infoRow('Condición de Pago:', order.paymentMethod ?? '-'),
+              _infoRow(
+                hasCompany ? 'Razón Social:' : 'Nombre:',
+                userDisplayName.isEmpty ? '-' : userDisplayName,
+              ),
+              _infoRow(
+                hasCompany ? 'RIF/ID Fiscal:' : 'C.I. / ID:',
+                userIdOrRif.isEmpty ? '-' : userIdOrRif,
+              ),
+              _infoRow('Dirección:', userAddress.isEmpty ? '-' : userAddress),
+              _infoRow(
+                'Contacto:',
+                '${userProfile.firstName ?? ''} ${userProfile.lastName ?? ''}'
+                        .trim()
+                        .isEmpty
+                    ? '-'
+                    : '${userProfile.firstName ?? ''} ${userProfile.lastName ?? ''}'
+                          .trim(),
+              ),
+              _infoRow('Teléfono:', userProfile.phone ?? '-'),
             ],
           ),
         ),
-        pw.SizedBox(width: 40),
-        // Columna Derecha: Emitido Por
+        pw.SizedBox(width: 30),
+        // Columna Derecha: Condiciones de Envío / Entrega
         pw.Expanded(
           child: pw.Column(
             crossAxisAlignment: pw.CrossAxisAlignment.start,
             children: [
               pw.Text(
-                'Emitido Por',
+                'Condiciones de Envío / Entrega',
                 style: PdfThemeConfig.headerStyle.copyWith(
                   fontStyle: pw.FontStyle.italic,
                   decoration: pw.TextDecoration.underline,
                 ),
               ),
               pw.SizedBox(height: 4),
-              _infoRow('Compañía:', senderInfo.name),
-              _infoRow('Teléfono:', senderInfo.phone ?? '-'),
-              _infoRow('Email:', userEmail ?? '-'),
-              _infoRow('Dirección:', senderInfo.address),
+              if (!isPersonalPickup) ...[
+                _infoRow('Empresa de Envío:', companyName),
+                if (showBranchCode)
+                  _infoRow(
+                    'Código Sucursal:',
+                    shippingMethod!.branchCode!.trim(),
+                  ),
+                _infoRow('Dirección Envío:', fullAddress),
+              ],
+              _infoRow('Opción de Entrega:', deliveryOption),
+              pw.SizedBox(height: 4),
+              pw.Text(
+                'Persona que retira',
+                style: PdfThemeConfig.headerStyle.copyWith(
+                  fontStyle: pw.FontStyle.italic,
+                  decoration: pw.TextDecoration.underline,
+                ),
+              ),
+              pw.SizedBox(height: 4),
+              _infoRow(
+                'Nombre:',
+                receiverCollaborator?.fullName ?? order.receiverName ?? '-',
+              ),
+              if (receiverCollaborator?.identificationId != null &&
+                  receiverCollaborator!.identificationId!.trim().isNotEmpty)
+                _infoRow('ID:', receiverCollaborator!.identificationId!.trim()),
+              if (receiverCollaborator?.phone != null &&
+                  receiverCollaborator!.phone!.trim().isNotEmpty)
+                _infoRow('Teléfono:', receiverCollaborator!.phone!.trim()),
             ],
           ),
         ),
@@ -123,12 +276,7 @@ class SupplierOrderPdfTemplate {
   }
 
   pw.Widget _buildItemsTable() {
-    final headers = [
-      'CANT.',
-      'PRODUCTO / DETALLES',
-      'PRECIO UNIT.',
-      'SUB-TOTAL',
-    ];
+    final headers = ['CANT.', 'PRODUCTOS', 'PRECIO UNIT.', 'SUB-TOTAL'];
     final columnWidths = {
       0: const pw.FixedColumnWidth(40),
       1: const pw.FlexColumnWidth(1),
@@ -279,8 +427,25 @@ class SupplierOrderPdfTemplate {
         : 0.0;
 
     return pw.Row(
-      mainAxisAlignment: pw.MainAxisAlignment.end,
+      crossAxisAlignment: pw.CrossAxisAlignment.start,
+      mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
       children: [
+        // Columna Izquierda: Condiciones de Pago
+        pw.Column(
+          crossAxisAlignment: pw.CrossAxisAlignment.start,
+          children: [
+            pw.Text(
+              'Condiciones de Pago',
+              style: PdfThemeConfig.headerStyle.copyWith(
+                fontStyle: pw.FontStyle.italic,
+                decoration: pw.TextDecoration.underline,
+              ),
+            ),
+            pw.SizedBox(height: 4),
+            _infoRow('Método:', order.paymentMethod ?? 'Por definir'),
+          ],
+        ),
+        // Columna Derecha: Totales
         pw.Container(
           width: 150,
           padding: const pw.EdgeInsets.all(5),

@@ -5,6 +5,7 @@ import 'package:intl/intl.dart';
 import 'package:d_una_app/shared/widgets/generic_search_screen.dart';
 import 'package:d_una_app/shared/widgets/filter_bottom_sheet.dart';
 import 'package:d_una_app/shared/widgets/horizontal_filter_bar.dart';
+import 'package:d_una_app/shared/widgets/sort_selector.dart';
 import 'package:d_una_app/features/purchases/presentation/providers/purchases_providers.dart';
 import 'package:d_una_app/features/portfolio/presentation/providers/suppliers_provider.dart';
 import 'package:d_una_app/features/portfolio/presentation/providers/lookup_providers.dart';
@@ -33,6 +34,7 @@ class _PurchasesSearchScreenState extends ConsumerState<PurchasesSearchScreen> {
   final Set<String> _selectedTypes = {}; // 'invoice', 'delivery_note'
   DateTimeRange? _dateRange;
   bool _missingSerialsOnly = false;
+  SortOption _currentSort = SortOption.recent;
 
   String _getChipLabel(Set<String> selected, String defaultLabel) {
     if (selected.isEmpty) return defaultLabel;
@@ -174,7 +176,9 @@ class _PurchasesSearchScreenState extends ConsumerState<PurchasesSearchScreen> {
           _selectedTypes.clear();
           _dateRange = null;
           _missingSerialsOnly = false;
+          _currentSort = SortOption.recent;
         });
+        ref.read(paginatedPurchaseSearchProvider(widget.productId).notifier).updateSort('date', false);
         ref.read(paginatedPurchaseSearchProvider(widget.productId).notifier).updateSearch(null);
       },
       onServerSearch: (query) {
@@ -186,6 +190,27 @@ class _PurchasesSearchScreenState extends ConsumerState<PurchasesSearchScreen> {
       onQueryChanged: (query) {
         // Handled by onServerSearch
       },
+      bottomFilterWidget: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16.0),
+        child: Row(
+          children: [
+            SortSelector(
+              currentSort: _currentSort,
+              onSortChanged: (val) {
+                setState(() => _currentSort = val);
+                final isAscending = val == SortOption.oldest;
+                ref
+                    .read(paginatedPurchaseSearchProvider(widget.productId).notifier)
+                    .updateSort('date', isAscending);
+              },
+              options: const [
+                SortOption.recent,
+                SortOption.oldest,
+              ],
+            ),
+          ],
+        ),
+      ),
       itemBuilder: (context, purchase) {
         return PurchaseListItem(
           purchase: purchase,

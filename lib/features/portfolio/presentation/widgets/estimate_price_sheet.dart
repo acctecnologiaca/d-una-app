@@ -60,7 +60,6 @@ class _EstimatePriceSheetState extends ConsumerState<EstimatePriceSheet> {
   late final TextEditingController _percentageController;
   String _pricingMethod = 'margin';
 
-
   @override
   void initState() {
     super.initState();
@@ -117,7 +116,6 @@ class _EstimatePriceSheetState extends ConsumerState<EstimatePriceSheet> {
     final val = double.tryParse(sanitized);
     if (val != null) {
       setState(() {
-
         _profitPercentage = val;
       });
     }
@@ -125,7 +123,6 @@ class _EstimatePriceSheetState extends ConsumerState<EstimatePriceSheet> {
 
   void _increment() {
     setState(() {
-
       _profitPercentage += 1.0;
       _percentageController.text = _formatNumber(_profitPercentage);
     });
@@ -134,7 +131,6 @@ class _EstimatePriceSheetState extends ConsumerState<EstimatePriceSheet> {
   void _decrement() {
     setState(() {
       if (_profitPercentage > 0) {
-
         _profitPercentage -= 1.0;
         _percentageController.text = _formatNumber(_profitPercentage);
       }
@@ -149,7 +145,6 @@ class _EstimatePriceSheetState extends ConsumerState<EstimatePriceSheet> {
 
   @override
   Widget build(BuildContext context) {
-
     final theme = Theme.of(context);
     final colors = theme.colorScheme;
     final textTheme = theme.textTheme;
@@ -253,7 +248,7 @@ class _EstimatePriceSheetState extends ConsumerState<EstimatePriceSheet> {
                     '*Marca:* ${widget.productBrand ?? "Genérica"}\n'
                     '*Modelo:* ${widget.productModel ?? "N/A"}\n'
                     '*Precio:* ${_formatCurrency(_sellingPrice)}\n'
-                    '\nLos precios no incluyen IVA y pueden variar sin previo aviso'
+                    '\nLos precios no incluyen impuestos y pueden variar sin previo aviso'
                     '\nEnviado desde *d·una app*';
                 await SharePlus.instance.share(
                   ShareParams(

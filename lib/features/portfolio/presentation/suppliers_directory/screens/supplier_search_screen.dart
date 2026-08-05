@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:d_una_app/shared/widgets/horizontal_filter_bar.dart';
+import 'package:d_una_app/shared/widgets/info_disclaimer_card.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:d_una_app/shared/widgets/generic_search_screen.dart';
@@ -300,7 +301,6 @@ class _SupplierSearchScreenState extends ConsumerState<SupplierSearchScreen> {
     // Dynamic label helpers
     final suppliers = suppliersAsync.valueOrNull ?? [];
     final supplierNameMap = {for (var s in suppliers) s.id: s.name};
-    final colors = Theme.of(context).colorScheme;
 
     return GenericSearchScreen<SearchResultItem>(
       title: 'Proveedores',
@@ -320,16 +320,13 @@ class _SupplierSearchScreenState extends ConsumerState<SupplierSearchScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Text(
-              'Precios no incluyen impuesto y pueden variar sin previo aviso',
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                fontSize: 12,
-                fontWeight: FontWeight.bold,
-                color: colors.onSurface,
-              ),
+            const InfoDisclaimerCard(
+              text: 'MPD: Menor precio disponible.',
+              showCloseButton: true,
+              askDismissForever: true,
+              dismissKey: 'disclaimer_mpd',
             ),
-            const SizedBox(height: 8),
+            const SizedBox(height: 16),
             Align(
               alignment: Alignment.centerLeft,
               child: SortSelector(

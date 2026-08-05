@@ -14,6 +14,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../../../supplier_orders/presentation/create_supplier_order/providers/create_supplier_order_provider.dart';
 import '../../../../supplier_orders/presentation/supplier_orders_list/providers/supplier_orders_providers.dart';
 import '../../../../supplier_orders/domain/models/supplier_order.dart';
+import '../../../../supplier_orders/domain/models/supplier_order_item.dart';
 import '../../../../supplier_orders/domain/models/supplier_order_status.dart';
 
 class ProductActionSheet {
@@ -72,21 +73,30 @@ class ProductActionSheet {
                 .eq('name', supplierName)
                 .maybeSingle();
 
-            final String supplierId = response != null ? response['id'] as String : '';
+            final String supplierId = response != null
+                ? response['id'] as String
+                : '';
 
-            ref.read(createSupplierOrderProvider.notifier).initializeNew(
+            ref
+                .read(createSupplierOrderProvider.notifier)
+                .initializeNew(
                   supplierId: supplierId,
                   supplierName: supplierName,
                 );
 
             // Add the product directly
-            ref.read(createSupplierOrderProvider.notifier).addItem(
+            ref
+                .read(createSupplierOrderProvider.notifier)
+                .addItem(
                   name: productName,
                   brand: brand,
                   model: model,
                   uom: uom,
+                  uomIconName: uomIconName,
                   quantity: 1.0,
                   unitPrice: price,
+                  supplierBranchStockId: supplierBranchStockId,
+                  currentSupplierStock: stock.toDouble(),
                 );
 
             if (context.mounted) {
@@ -99,68 +109,42 @@ class ProductActionSheet {
           label: 'Agregar a orden de compra existente',
           onTap: () async {
             context.pop();
-            
-            // Show list dialog of existing drafts
-            final repo = ref.read(supplierOrdersRepositoryProvider);
-            final drafts = await repo.getSupplierOrders();
-            final filteredDrafts = drafts.where((o) => o.status == SupplierOrderStatus.draft && o.supplierName == supplierName).toList();
 
-            if (!context.mounted) return;
-
-            if (filteredDrafts.isEmpty) {
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(content: Text('No se encontraron órdenes en borrador para $supplierName')),
-              );
-              return;
-            }
-
-            final selectedOrder = await showDialog<SupplierOrder>(
-              context: context,
-              builder: (ctx) {
-                return AlertDialog(
-                  title: const Text('Seleccionar orden de compra'),
-                  content: SizedBox(
-                    width: double.maxFinite,
-                    child: ListView.builder(
-                      shrinkWrap: true,
-                      itemCount: filteredDrafts.length,
-                      itemBuilder: (ctx, index) {
-                        final order = filteredDrafts[index];
-                        return ListTile(
-                          title: Text(order.orderNumber),
-                          subtitle: Text('Total: \$${order.total.toStringAsFixed(2)}'),
-                          onTap: () => Navigator.pop(ctx, order),
-                        );
-                      },
-                    ),
-                  ),
-                  actions: [
-                    TextButton(
-                      onPressed: () => Navigator.pop(ctx),
-                      child: const Text('Cancelar'),
-                    ),
-                  ],
-                );
+            final selectedOrder = await context.push<SupplierOrder>(
+              '/supplier-orders/select',
+              extra: {
+                'statuses': {
+                  SupplierOrderStatus.draft,
+                  SupplierOrderStatus.sent,
+                  SupplierOrderStatus.resent,
+                },
+                'supplierName': supplierName,
               },
             );
+            if (selectedOrder == null || !context.mounted) return;
 
-            if (selectedOrder != null && context.mounted) {
-              final details = await repo.getSupplierOrderDetails(selectedOrder.id);
-              ref.read(createSupplierOrderProvider.notifier).loadFromExisting(details.order, details.items);
-              
-              // Add product to loaded state
-              ref.read(createSupplierOrderProvider.notifier).addItem(
-                name: productName,
+            final repo = ref.read(supplierOrdersRepositoryProvider);
+            final details = await repo.getSupplierOrderDetails(
+              selectedOrder.id,
+            );
+            ref
+                .read(createSupplierOrderProvider.notifier)
+                .loadFromExisting(details.order, details.items);
+
+            if (context.mounted) {
+              await _addSupplierProductToExistingOrder(
+                context,
+                ref,
+                supplierBranchStockId: supplierBranchStockId,
+                supplierName: supplierName,
+                productName: productName,
+                price: price,
+                stock: stock,
+                uom: uom,
+                uomIconName: uomIconName,
                 brand: brand,
                 model: model,
-                uom: uom,
-                quantity: 1.0,
-                unitPrice: price,
               );
-
-              if (context.mounted) {
-                context.push('/supplier-orders/edit/${selectedOrder.id}');
-              }
             }
           },
         ),
@@ -469,6 +453,142 @@ class ProductActionSheet {
       context.push('/quotes/edit/$quoteId');
     } else {
       context.push('/quotes/create');
+    }
+  }
+
+  static Future<void> _addSupplierProductToExistingOrder(
+    BuildContext context,
+    WidgetRef ref, {
+    required String supplierBranchStockId,
+    required String supplierName,
+    required String productName,
+    required double price,
+    required int stock,
+    required String uom,
+    String? uomIconName,
+    String? brand,
+    String? model,
+  }) async {
+    final colors = Theme.of(context).colorScheme;
+    final orderState = ref.read(createSupplierOrderProvider);
+    final existingItems = orderState.items;
+
+    // Check if product already exists in order for this specific branch stock
+    SupplierOrderItem? existingItem;
+    for (final item in existingItems) {
+      if (item.supplierBranchStockId != null &&
+          supplierBranchStockId.isNotEmpty) {
+        if (item.supplierBranchStockId == supplierBranchStockId) {
+          existingItem = item;
+          break;
+        }
+      } else if (item.supplierBranchStockId == null &&
+          item.name.trim().toLowerCase() == productName.trim().toLowerCase() &&
+          (item.brand ?? '').trim().toLowerCase() ==
+              (brand ?? '').trim().toLowerCase() &&
+          (item.model ?? '').trim().toLowerCase() ==
+              (model ?? '').trim().toLowerCase() &&
+          item.uom.trim().toLowerCase() == uom.trim().toLowerCase()) {
+        existingItem = item;
+        break;
+      }
+    }
+
+    if (existingItem != null) {
+      final double newQty = existingItem.quantity + 1.0;
+      final double maxAvailable =
+          existingItem.currentSupplierStock ?? stock.toDouble();
+
+      if (newQty > maxAvailable) {
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              duration: const Duration(seconds: 8),
+              content: Text(
+                'No se puede agregar más de este producto. La orden de compra ya tiene el stock máximo disponible ($maxAvailable $uom).',
+              ),
+              behavior: SnackBarBehavior.floating,
+              backgroundColor: colors.error,
+              showCloseIcon: true,
+            ),
+          );
+          _navigateToSupplierOrder(context, orderState.id);
+        }
+        return;
+      }
+
+      // Update quantity of existing item
+      ref
+          .read(createSupplierOrderProvider.notifier)
+          .updateItem(existingItem.id, quantity: newQty);
+
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            duration: const Duration(seconds: 8),
+            content: Text(
+              'Este producto ya se encontraba en la orden. Se actualizó la cantidad a ${newQty.toStringAsFixed(newQty.truncateToDouble() == newQty ? 0 : 2)} $uom.',
+            ),
+            behavior: SnackBarBehavior.floating,
+            showCloseIcon: true,
+          ),
+        );
+        _navigateToSupplierOrder(context, orderState.id);
+      }
+      return;
+    }
+
+    // Defensive stock check
+    if (stock <= 0) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            duration: const Duration(seconds: 8),
+            content: Text(
+              'No se puede agregar este producto. El stock en la sucursal es 0 $uom.',
+            ),
+            behavior: SnackBarBehavior.floating,
+            backgroundColor: colors.error,
+            showCloseIcon: true,
+          ),
+        );
+      }
+      return;
+    }
+
+    // Add item with full branch & stock metadata
+    ref
+        .read(createSupplierOrderProvider.notifier)
+        .addItem(
+          name: productName,
+          brand: brand,
+          model: model,
+          uom: uom,
+          uomIconName: uomIconName,
+          quantity: 1.0,
+          unitPrice: price,
+          supplierBranchStockId: supplierBranchStockId,
+          currentSupplierStock: stock.toDouble(),
+        );
+
+    if (context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          duration: const Duration(seconds: 4),
+          content: Text('Se agregó "$productName" a la orden de compra.'),
+          behavior: SnackBarBehavior.floating,
+          showCloseIcon: true,
+        ),
+      );
+      _navigateToSupplierOrder(context, orderState.id);
+    }
+  }
+
+  static void _navigateToSupplierOrder(BuildContext context, String? orderId) {
+    if (orderId != null && orderId.isNotEmpty) {
+      context.push('/supplier-orders/edit/$orderId');
+    } else {
+      context.push('/supplier-orders/create');
     }
   }
 }

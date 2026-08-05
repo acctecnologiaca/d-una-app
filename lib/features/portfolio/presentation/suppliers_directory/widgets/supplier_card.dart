@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
-//import '../../../../../shared/utils/currency_formatter.dart';
+import '../../../../../core/utils/time_formatter.dart';
 import '../../../domain/models/supplier_model.dart';
 // import 'package:go_router/go_router.dart'; // Uncomment if navigation is needed inside the card or passed as callback
 
@@ -74,13 +74,13 @@ class SupplierCard extends StatelessWidget {
                 child: _TradeTypeChip(tradeType: supplier.tradeType!),
               ),
 
-            // Minimum Purchase amount warning chip
-            /*  if (supplier.minimumPurchaseAmount > 0)
+            // Catalog update / outdated status chip
+            if (supplier.updatedAt != null)
               Positioned(
                 bottom: 12,
                 left: 12,
-                child: _MinimumPurchaseChip(amount: supplier.minimumPurchaseAmount),
-              ), */
+                child: _CatalogUpdateChip(updatedAt: supplier.updatedAt!),
+              ),
 
             // Lock Icon - Center (if locked)
             if (isLocked)
@@ -173,6 +173,52 @@ class _TradeTypeChip extends StatelessWidget {
           color: color,
           fontSize: 12,
           fontWeight: FontWeight.bold,
+        ),
+      ),
+    );
+  }
+}
+
+class _CatalogUpdateChip extends StatelessWidget {
+  final DateTime updatedAt;
+
+  const _CatalogUpdateChip({required this.updatedAt});
+
+  @override
+  Widget build(BuildContext context) {
+    final isOutdated = TimeFormatter.isOutdated(updatedAt);
+    final textColor = isOutdated ? Colors.red.shade800 : Colors.grey.shade800;
+    final displayText = isOutdated
+        ? 'Catálogo: Más de 7 días'
+        : 'Catálogo: ${TimeFormatter.formatRelative(updatedAt)}';
+
+    return Tooltip(
+      message: 'Última actualización del catálogo',
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+        decoration: BoxDecoration(
+          color: isOutdated ? Colors.red.shade50 : Colors.white,
+          borderRadius: BorderRadius.circular(12),
+          border: isOutdated ? Border.all(color: Colors.red.shade200) : null,
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              Icons.schedule,
+              size: 12,
+              color: textColor,
+            ),
+            const SizedBox(width: 4),
+            Text(
+              displayText,
+              style: TextStyle(
+                color: textColor,
+                fontSize: 11,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ],
         ),
       ),
     );

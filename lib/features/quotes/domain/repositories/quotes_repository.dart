@@ -50,12 +50,21 @@ abstract class QuotesRepository {
     List<QuoteCondition>? conditions,
   });
   Future<void> updateQuoteStatus(String id, String status);
+  Future<void> updateQuoteDate(String id, DateTime newDate);
   Future<void> archiveQuote(String id, bool isArchived);
   Future<void> deleteQuote(String id);
 
   // Batch Operations
   Future<BatchUpdateResult> batchUpdateStatus(List<String> ids, String status);
   Future<void> batchArchive(List<String> ids, bool isArchived);
+
+  // PDF Storage & WebViewer Actions
+  Future<String> uploadQuotePdf({
+    required String quoteId,
+    required List<int> pdfBytes,
+    required String fileName,
+  });
+  Future<String> generateActionToken(String quoteId);
 }
 
 class InsufficientStockException implements Exception {

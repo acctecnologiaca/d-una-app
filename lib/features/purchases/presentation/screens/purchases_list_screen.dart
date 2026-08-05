@@ -40,7 +40,7 @@ class _PurchasesListScreenState extends ConsumerState<PurchasesListScreen> {
       appBar: StandardAppBar(
         title: productId != null
             ? 'Compras del producto'
-            : 'Registro de compras',
+            : 'Registros de compra',
       ),
       body: Column(
         children: [
@@ -167,8 +167,8 @@ class _PurchasesListScreenState extends ConsumerState<PurchasesListScreen> {
             ref.read(addPurchaseProvider.notifier).reset();
             context.push('/my-purchases/add');
           },
-          label: 'Registrar',
-          icon: Icons.post_add,
+          label: 'Nuevo',
+          icon: Icons.add,
         ),
       ),
     );

@@ -7,6 +7,7 @@ import '../../../../../shared/widgets/horizontal_filter_bar.dart';
 import '../../../../../shared/widgets/filter_bottom_sheet.dart';
 import '../../../../../shared/widgets/price_filter_sheet.dart';
 import '../../../../../shared/widgets/sort_selector.dart';
+import '../../../../../shared/widgets/info_disclaimer_card.dart';
 import '../../../../../core/utils/search_utils.dart';
 import '../../../domain/models/quote_aggregated_product.dart';
 import '../providers/quote_product_selection_provider.dart';
@@ -266,8 +267,6 @@ class _QuoteProductSearchScreenState
 
   @override
   Widget build(BuildContext context) {
-    final colors = Theme.of(context).colorScheme;
-
     // 1. Fetch base query for Facets (fast UI, we keep using the unpaginated one to get all facets)
     final baseParams = ProductSearchParams(query: _currentQuery);
     ref.watch(quoteProductSuggestionsProvider(baseParams));
@@ -336,16 +335,13 @@ class _QuoteProductSearchScreenState
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Text(
-              'Precios no incluyen impuesto y pueden variar sin previo aviso',
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                fontSize: 12,
-                fontWeight: FontWeight.bold,
-                color: colors.onSurface,
-              ),
+            const InfoDisclaimerCard(
+              text: 'MPD: Menor precio disponible.',
+              showCloseButton: true,
+              askDismissForever: true,
+              dismissKey: 'disclaimer_mpd',
             ),
-            const SizedBox(height: 8),
+            const SizedBox(height: 16),
             Align(
               alignment: Alignment.centerLeft,
               child: SortSelector(

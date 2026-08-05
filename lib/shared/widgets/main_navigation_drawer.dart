@@ -74,14 +74,14 @@ class MainNavigationDrawer extends StatelessWidget {
                   _buildMenuItem(
                     context: context,
                     icon: Symbols.shopping_cart,
-                    label: 'Ordenes de compra',
+                    label: 'Órdenes de compra',
                     route: '/supplier-orders', // Placeholder route
                     currentRoute: currentRoute,
                   ),
                   _buildMenuItem(
                     context: context,
                     icon: Symbols.receipt_long,
-                    label: 'Registro de compras',
+                    label: 'Registros de compra',
                     route: '/my-purchases', // Placeholder route
                     currentRoute: currentRoute,
                   ),

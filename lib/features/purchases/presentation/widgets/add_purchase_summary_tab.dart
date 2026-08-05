@@ -102,31 +102,45 @@ class AddPurchaseSummaryTab extends ConsumerWidget {
           ],
         ),
       ),
-      floatingActionButton: Padding(
-        padding: const EdgeInsets.only(bottom: 40.0),
-        child: CustomExtendedFab(
-          label: 'Guardar',
-          icon: Icons.save_outlined,
-          onPressed: state.isLoading
-              ? null
-              : () async {
-                  final success = await ref
-                      .read(addPurchaseProvider.notifier)
-                      .createPurchase();
-                  if (success && context.mounted) {
-                    context.pop();
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text('Compra registrada exitosamente'),
-                      ),
-                    );
-                  } else if (state.error != null && context.mounted) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(content: Text('Error: ${state.error}')),
-                    );
-                  }
-                },
-        ),
+      floatingActionButton: Builder(
+        builder: (context) {
+          final notifier = ref.read(addPurchaseProvider.notifier);
+          final isEnabled = notifier.hasChanges && !state.isLoading;
+
+          return Padding(
+            padding: const EdgeInsets.only(bottom: 40.0),
+            child: CustomExtendedFab(
+              label: 'Guardar',
+              icon: Icons.save_outlined,
+              isEnabled: isEnabled,
+              onPressed: isEnabled
+                  ? () async {
+                      final success = await ref
+                          .read(addPurchaseProvider.notifier)
+                          .createPurchase();
+                      if (success && context.mounted) {
+                        if (state.purchaseId == null) {
+                          context.pop();
+                        }
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text(
+                              state.purchaseId != null
+                                  ? 'Compra actualizada correctamente'
+                                  : 'Compra registrada exitosamente',
+                            ),
+                          ),
+                        );
+                      } else if (state.error != null && context.mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(content: Text('Error: ${state.error}')),
+                        );
+                      }
+                    }
+                  : null,
+            ),
+          );
+        },
       ),
     );
   }

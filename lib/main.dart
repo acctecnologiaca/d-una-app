@@ -8,11 +8,18 @@ import 'core/utils/session_manager.dart';
 import 'package:d_una_app/features/profile/presentation/providers/profile_provider.dart';
 import 'package:d_una_app/shared/providers/pdf_preview_provider.dart';
 
+//import 'package:shared_preferences/shared_preferences.dart';
+
 final GlobalKey<RootAppState> rootAppKey = GlobalKey();
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
+  // Reset disclaimer_mpd flag in SharedPreferences
+  /* SharedPreferences.getInstance().then((prefs) {
+    prefs.remove('disclaimer_mpd');
+  });
+*/
   await Supabase.initialize(
     url: 'https://fdkswvzrozijbizdthge.supabase.co',
     anonKey:

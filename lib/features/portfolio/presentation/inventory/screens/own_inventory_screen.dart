@@ -1,3 +1,4 @@
+import 'package:d_una_app/shared/widgets/info_disclaimer_card.dart';
 import 'package:flutter/material.dart';
 import 'package:d_una_app/shared/widgets/friendly_error_widget.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -67,14 +68,13 @@ class _OwnInventoryScreenState extends ConsumerState<OwnInventoryScreen> {
 
             // Disclaimer (Updated text since price/stock are 0 for now)
             Padding(
-              padding: const EdgeInsets.only(bottom: 8.0),
-              child: Text(
-                'Precios no incluyen impuesto',
-                style: TextStyle(
-                  fontSize: 12,
-                  fontWeight: FontWeight.bold,
-                  color: colors.onSurface,
-                ),
+              padding: const EdgeInsets.symmetric(
+                horizontal: 16.0,
+                vertical: 8.0,
+              ),
+              child: const InfoDisclaimerCard(
+                text: 'Precios no incluyen impuestos',
+                showCloseButton: true,
               ),
             ),
 
@@ -99,7 +99,9 @@ class _OwnInventoryScreenState extends ConsumerState<OwnInventoryScreen> {
                         orderBy = 'name';
                         ascending = false;
                       }
-                      ref.read(paginatedProductsProvider.notifier).updateSort(orderBy, ascending);
+                      ref
+                          .read(paginatedProductsProvider.notifier)
+                          .updateSort(orderBy, ascending);
                     },
                     options: const [
                       SortOption.recent,
@@ -130,14 +132,18 @@ class _OwnInventoryScreenState extends ConsumerState<OwnInventoryScreen> {
                 ),
                 data: (_) {
                   final paginatedState = paginatedStateAsync.valueOrNull;
-                  if (paginatedState == null || paginatedState.isInitialLoading) {
+                  if (paginatedState == null ||
+                      paginatedState.isInitialLoading) {
                     return const Center(child: CircularProgressIndicator());
                   }
 
-                  if (paginatedStateAsync.hasError && paginatedState.items.isEmpty) {
+                  if (paginatedStateAsync.hasError &&
+                      paginatedState.items.isEmpty) {
                     return FriendlyErrorWidget(
                       error: paginatedStateAsync.error!,
-                      onRetry: () => ref.read(paginatedProductsProvider.notifier).refresh(),
+                      onRetry: () => ref
+                          .read(paginatedProductsProvider.notifier)
+                          .refresh(),
                     );
                   }
 
@@ -158,12 +164,12 @@ class _OwnInventoryScreenState extends ConsumerState<OwnInventoryScreen> {
                     items: paginatedState.items,
                     isLoadingMore: paginatedState.isLoadingMore,
                     hasReachedEnd: paginatedState.hasReachedEnd,
-                    onLoadMore: () => ref.read(paginatedProductsProvider.notifier).loadMore(),
+                    onLoadMore: () =>
+                        ref.read(paginatedProductsProvider.notifier).loadMore(),
                     padding: const EdgeInsets.fromLTRB(16, 16, 16, 120),
                     separatorBuilder: (context, index) =>
                         const Divider(height: 1, color: Colors.transparent),
                     itemBuilder: (context, index, product) {
-
                       return InventoryItemCard(
                         name: product.name,
                         brand: product.brand?.name ?? 'Sin marca',
@@ -194,15 +200,15 @@ class _OwnInventoryScreenState extends ConsumerState<OwnInventoryScreen> {
       floatingActionButton: isError
           ? null
           : Padding(
-        padding: const EdgeInsets.only(bottom: 40.0),
-        child: CustomExtendedFab(
-          onPressed: () {
-            context.go('/portfolio/own-inventory/add');
-          },
-          label: 'Agregar',
-          icon: Icons.add,
-        ),
-      ),
+              padding: const EdgeInsets.only(bottom: 40.0),
+              child: CustomExtendedFab(
+                onPressed: () {
+                  context.go('/portfolio/own-inventory/add');
+                },
+                label: 'Agregar',
+                icon: Icons.add,
+              ),
+            ),
     );
   }
 }

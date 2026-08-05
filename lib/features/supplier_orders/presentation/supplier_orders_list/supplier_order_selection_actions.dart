@@ -16,8 +16,14 @@ import 'package:d_una_app/features/supplier_orders/presentation/view_supplier_or
 import 'package:d_una_app/features/supplier_orders/presentation/supplier_orders_list/providers/supplier_orders_providers.dart';
 import 'package:d_una_app/features/supplier_orders/presentation/supplier_orders_list/providers/supplier_orders_selection_provider.dart';
 import 'package:d_una_app/features/supplier_orders/presentation/create_supplier_order/providers/create_supplier_order_provider.dart';
-import 'package:d_una_app/features/quotes/domain/models/quote_model.dart' show StockStatus;
+import 'package:d_una_app/features/quotes/domain/models/quote_model.dart'
+    show StockStatus;
+import 'package:d_una_app/core/pdf/pdf_helpers.dart';
 import 'package:d_una_app/core/pdf/templates/supplier_order_pdf_template.dart';
+import 'package:d_una_app/features/settings/data/models/shipping_method.dart';
+import 'package:d_una_app/features/supplier_orders/presentation/supplier_orders_list/widgets/merge_supplier_orders_sheet.dart';
+import 'package:d_una_app/features/collaborators/domain/models/collaborator.dart';
+import 'package:d_una_app/features/supplier_orders/domain/utils/oc_email_template_builder.dart';
 
 class SupplierOrderSelectionActions {
   SupplierOrderSelectionActions._();
@@ -60,12 +66,7 @@ class SupplierOrderSelectionActions {
     SupplierOrder order,
   ) {
     final isDraft = order.status == SupplierOrderStatus.draft;
-    final isSentOrResent =
-        order.status == SupplierOrderStatus.sent ||
-        order.status == SupplierOrderStatus.resent;
-    final canEdit =
-        order.status != SupplierOrderStatus.finalized &&
-        order.status != SupplierOrderStatus.cancelled;
+    final canEdit = order.status.canEdit;
 
     CustomActionSheet.show(
       context: context,
@@ -99,16 +100,17 @@ class SupplierOrderSelectionActions {
               );
             },
           ),
-          if (isSentOrResent)
+          if (order.status == SupplierOrderStatus.approved)
             BottomSheetActionItem(
-              icon: Icons.check_circle_outline,
-              label: 'Finalizar',
+              icon: Icons.receipt_long_outlined,
+              label: 'Registrar compra',
               onTap: () async {
+                final parentContext = context;
                 Navigator.pop(context);
                 ref
                     .read(supplierOrderSelectionProvider.notifier)
                     .clearSelection();
-                _finalizeOrderFlow(context, ref, order);
+                _finalizeOrderFlow(parentContext, ref, order);
               },
             ),
 
@@ -150,6 +152,16 @@ class SupplierOrderSelectionActions {
             },
           ),
         ],
+
+        if (order.status == SupplierOrderStatus.merged)
+          BottomSheetActionItem(
+            icon: Icons.call_split_rounded,
+            label: 'Deshacer Consolidación',
+            onTap: () {
+              Navigator.pop(context);
+              _handleUnmergeOrder(context, ref, [order.id]);
+            },
+          ),
         const Divider(height: 1, indent: 16, endIndent: 16),
         BottomSheetActionItem(
           icon: Icons.content_copy_outlined,
@@ -200,13 +212,50 @@ class SupplierOrderSelectionActions {
           o.status == SupplierOrderStatus.resent,
     );
 
-    final isAllArchived = selectedOrders.isNotEmpty &&
-        selectedOrders.every((o) => o.isArchived);
+    final canMerge =
+        selectedOrders.length >= 2 &&
+        selectedOrders.every((o) => o.status.canEdit);
+
+    final canUnmergeAll =
+        selectedOrders.isNotEmpty &&
+        selectedOrders.every((o) => o.status == SupplierOrderStatus.merged);
+
+    final firstSupplierId = selectedOrders.isNotEmpty
+        ? selectedOrders.first.supplierId
+        : null;
+    final isSameSupplier =
+        selectedOrders.isNotEmpty &&
+        selectedOrders.every((o) => o.supplierId == firstSupplierId);
+
+    final isAllArchived =
+        selectedOrders.isNotEmpty && selectedOrders.every((o) => o.isArchived);
 
     CustomActionSheet.show(
       context: context,
       title: '${selection.count} seleccionados',
       actions: [
+        if (canMerge)
+          BottomSheetActionItem(
+            icon: Icons.merge_type_rounded,
+            label: 'Consolidar órdenes de compra',
+            enabled: isSameSupplier,
+            subtitle: !isSameSupplier
+                ? 'Solo se pueden consolidar órdenes del mismo proveedor'
+                : null,
+            onTap: () {
+              Navigator.pop(context);
+              _handleBatchMerge(context, ref, selectedOrders);
+            },
+          ),
+        if (canUnmergeAll)
+          BottomSheetActionItem(
+            icon: Icons.call_split_rounded,
+            label: 'Deshacer consolidación',
+            onTap: () {
+              Navigator.pop(context);
+              _handleUnmergeOrder(context, ref, selection.selectedIds.toList());
+            },
+          ),
         if (canCancelAll)
           BottomSheetActionItem(
             icon: Icons.cancel_outlined,
@@ -218,15 +267,72 @@ class SupplierOrderSelectionActions {
           ),
         const Divider(height: 1, indent: 16, endIndent: 16),
         BottomSheetActionItem(
-          icon: isAllArchived ? Icons.unarchive_outlined : Icons.archive_outlined,
+          icon: isAllArchived
+              ? Icons.unarchive_outlined
+              : Icons.archive_outlined,
           label: isAllArchived ? 'Desarchivar' : 'Archivar',
           onTap: () async {
             Navigator.pop(context);
-            await handleBatchArchive(context, ref, selection, archive: !isAllArchived);
+            await handleBatchArchive(
+              context,
+              ref,
+              selection,
+              archive: !isAllArchived,
+            );
           },
         ),
       ],
     );
+  }
+
+  static Future<void> _handleBatchMerge(
+    BuildContext context,
+    WidgetRef ref,
+    List<SupplierOrder> selectedOrders,
+  ) async {
+    final confirm = await MergeSupplierOrdersSheet.show(
+      context: context,
+      selectedOrders: selectedOrders,
+    );
+
+    if (confirm == true && context.mounted) {
+      final messenger = ScaffoldMessenger.of(context);
+      messenger.showSnackBar(
+        const SnackBar(
+          content: Text('Consolidando órdenes de compra...'),
+          duration: Duration(seconds: 1),
+        ),
+      );
+
+      try {
+        final repo = ref.read(supplierOrdersRepositoryProvider);
+        final orderIds = selectedOrders.map((o) => o.id).toList();
+        final primaryOrder = await repo.mergeSupplierOrders(orderIds);
+
+        ref.read(paginatedSupplierOrdersProvider.notifier).refresh();
+        ref.invalidate(paginatedSupplierOrderSearchProvider);
+        ref.read(supplierOrderSelectionProvider.notifier).clearSelection();
+
+        if (context.mounted) {
+          messenger.showSnackBar(
+            SnackBar(
+              content: Text(
+                'Órdenes consolidadas exitosamente en ${primaryOrder.orderNumber}.',
+              ),
+            ),
+          );
+        }
+      } catch (e) {
+        if (context.mounted) {
+          messenger.showSnackBar(
+            SnackBar(
+              content: Text('Error al consolidar órdenes: $e'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+      }
+    }
   }
 
   static Future<void> handleBatchArchive(
@@ -266,9 +372,13 @@ class SupplierOrderSelectionActions {
         .where((o) => selection.selectedIds.contains(o.id))
         .toList();
 
-    final ordersWithAlerts = selectedOrders.where(
-      (o) => o.canShowAlerts && (o.hasPriceIncrease || o.stockStatus != StockStatus.available),
-    ).toList();
+    final ordersWithAlerts = selectedOrders
+        .where(
+          (o) =>
+              o.canShowAlerts &&
+              (o.hasPriceIncrease || o.stockStatus != StockStatus.available),
+        )
+        .toList();
 
     if (ordersWithAlerts.isNotEmpty) {
       final isSingle = selectedOrders.length == 1;
@@ -281,16 +391,16 @@ class SupplierOrderSelectionActions {
         dialog: CustomDialog.confirmation(
           title: isSingle
               ? (selectedOrders.first.status == SupplierOrderStatus.draft
-                  ? 'No se puede enviar la orden'
-                  : 'No se puede reenviar la orden')
+                    ? 'No se puede enviar la orden'
+                    : 'No se puede reenviar la orden')
               : 'Envío bloqueado por alertas',
           icon: Symbols.warning,
           iconColor: Colors.amber.shade800,
           contentWidget: Text(
             isSingle
                 ? (selectedOrders.first.status == SupplierOrderStatus.draft
-                    ? 'Esta orden de compra contiene productos con alza de costo o problemas de stock. Debes resolver las alertas antes de enviarla al proveedor.'
-                    : 'Esta orden de compra contiene productos con alza de costo o problemas de stock. No es posible reenviarla mientras las alertas persistan.')
+                      ? 'Esta orden de compra contiene productos con alza de costo o problemas de stock. Debes resolver las alertas antes de enviarla al proveedor.'
+                      : 'Esta orden de compra contiene productos con alza de costo o problemas de stock. No es posible reenviarla mientras las alertas persistan.')
                 : 'Las siguientes órdenes de compra contienen productos con alza de costo o problemas de stock y no pueden ser enviadas:\n\n• $numbers\n\nPor favor resuelve las alertas antes de proceder.',
             style: Theme.of(context).textTheme.bodyMedium,
           ),
@@ -364,16 +474,42 @@ class SupplierOrderSelectionActions {
           final email = contact?['email'] as String?;
 
           if (email != null && email.trim().isNotEmpty) {
+            final results = await Future.wait([
+              PdfHelpers.fetchShippingMethodById(order.shippingMethodId),
+              PdfHelpers.fetchCollaboratorById(order.receiverCollaboratorId),
+            ]);
+            final shippingMethod = results[0] as ShippingMethod?;
+            final receiverCollaborator = results[1] as Collaborator?;
+
             final pdfBytes = await SupplierOrderPdfTemplate(
               order: order,
               items: details.items,
               userProfile: profile,
               userEmail: userEmail,
+              shippingMethod: shippingMethod,
+              receiverCollaborator: receiverCollaborator,
             ).generate(PdfPageFormat.a4);
 
             final base64Pdf = base64Encode(pdfBytes);
             final userName =
                 '${profile.firstName ?? ''} ${profile.lastName ?? ''}'.trim();
+
+            final actionToken = await ref
+                .read(supplierOrdersRepositoryProvider)
+                .generateActionToken(order.id);
+            const apiBaseUrl =
+                'https://fdkswvzrozijbizdthge.supabase.co/functions';
+
+            final bodyHtml = OcEmailTemplateBuilder.buildHtmlBody(
+              order: order,
+              items: details.items,
+              userProfile: profile,
+              userEmail: userEmail ?? '',
+              actionToken: actionToken,
+              apiBaseUrl: apiBaseUrl,
+              shippingMethod: shippingMethod,
+              receiverCollaborator: receiverCollaborator,
+            );
 
             await Supabase.instance.client.functions.invoke(
               'send_document_email',
@@ -381,6 +517,7 @@ class SupplierOrderSelectionActions {
                 'documentBase64': base64Pdf,
                 'fileName': 'Orden_${order.orderNumber}.pdf',
                 'documentType': 'supplier_order',
+                'documentId': order.id,
                 'recipientEmails': [email.trim()],
                 'userContext': {
                   'name': userName.isEmpty ? 'Usuario' : userName,
@@ -390,10 +527,11 @@ class SupplierOrderSelectionActions {
                   'companyLogo': profile.companyLogoUrl,
                 },
                 'emailContent': {
-                  'subject':
-                      'Orden de Compra #${order.orderNumber} - ${profile.companyName ?? ''}',
-                  'bodyHtml':
-                      '<p>Estimado Proveedor,</p><p>Le adjuntamos la Orden de Compra #${order.orderNumber}.</p>',
+                  'subject': OcEmailTemplateBuilder.buildSubject(
+                    order: order,
+                    userProfile: profile,
+                  ),
+                  'bodyHtml': bodyHtml,
                 },
               },
             );
@@ -467,7 +605,8 @@ class SupplierOrderSelectionActions {
     WidgetRef ref,
     SupplierOrder order,
   ) async {
-    final hasAlerts = order.canShowAlerts &&
+    final hasAlerts =
+        order.canShowAlerts &&
         (order.hasPriceIncrease || order.stockStatus != StockStatus.available);
 
     if (hasAlerts) {
@@ -502,6 +641,7 @@ class SupplierOrderSelectionActions {
     );
 
     if (result != null && context.mounted) {
+      final navigator = Navigator.of(context, rootNavigator: true);
       showDialog(
         context: context,
         barrierDismissible: false,
@@ -509,7 +649,7 @@ class SupplierOrderSelectionActions {
       );
 
       try {
-        await ref
+        final purchaseId = await ref
             .read(paginatedSupplierOrdersProvider.notifier)
             .finalizeSupplierOrder(
               orderId: order.id,
@@ -518,9 +658,112 @@ class SupplierOrderSelectionActions {
               documentNumber: result['documentNumber'] as String,
               createPurchaseRecord: result['createPurchaseRecord'] as bool,
             );
-        if (context.mounted) Navigator.pop(context);
+
+        navigator.pop(); // Dismiss loading
+        await Future.delayed(const Duration(milliseconds: 100));
+
+        if (context.mounted &&
+            result['createPurchaseRecord'] == true &&
+            purchaseId != null) {
+          final goToPurchase = await CustomDialog.show<bool>(
+            context: context,
+            dialog: CustomDialog.confirmation(
+              title: 'Compra registrada',
+              contentText:
+                  'Se ha generado el registro de compra con éxito. '
+                  'Recuerda ingresar los números de serie y tiempos de garantía de los productos agregados.',
+              actions: [
+                TextButton(
+                  onPressed: () => navigator.pop(false),
+                  child: const Text('Más tarde'),
+                ),
+                FilledButton(
+                  onPressed: () => navigator.pop(true),
+                  child: const Text('Ir al registro'),
+                ),
+              ],
+            ),
+          );
+
+          ref.invalidate(linkedPurchaseProvider(order.id));
+
+          if (goToPurchase == true && context.mounted) {
+            context.push(
+              '/my-purchases/view/$purchaseId',
+              extra: {'editMode': true},
+            );
+          }
+        }
       } catch (e) {
-        if (context.mounted) Navigator.pop(context);
+        navigator.pop();
+      }
+    }
+  }
+
+  static Future<void> _handleUnmergeOrder(
+    BuildContext context,
+    WidgetRef ref,
+    List<String> orderIds,
+  ) async {
+    final confirm = await CustomDialog.show<bool>(
+      context: context,
+      dialog: CustomDialog.confirmation(
+        title: '¿Deshacer consolidación?',
+        contentText: orderIds.length == 1
+            ? 'La orden seleccionada se desvinculará de la OC Principal y volverá al estado Borrador.'
+            : 'Las ${orderIds.length} órdenes seleccionadas se desvincularán de sus OCs Principales y volverán al estado Borrador.',
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Volver'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Confirmar'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm == true) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Procesando...'),
+            duration: Duration(seconds: 1),
+          ),
+        );
+      }
+
+      try {
+        await ref
+            .read(supplierOrdersRepositoryProvider)
+            .batchUnmergeSupplierOrders(orderIds);
+
+        ref.read(paginatedSupplierOrdersProvider.notifier).refresh();
+        ref.invalidate(paginatedSupplierOrderSearchProvider);
+        ref.read(supplierOrderSelectionProvider.notifier).clearSelection();
+
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(
+                orderIds.length == 1
+                    ? 'Consolidación deshecha. La orden volvió a Borrador.'
+                    : 'Consolidación deshecha. Las ${orderIds.length} órdenes volvieron a Borrador.',
+              ),
+            ),
+          );
+        }
+      } catch (e) {
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Error al deshacer consolidación: $e'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
       }
     }
   }

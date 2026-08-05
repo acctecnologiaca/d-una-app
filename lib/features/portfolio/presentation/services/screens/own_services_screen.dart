@@ -1,3 +1,4 @@
+import 'package:d_una_app/shared/widgets/info_disclaimer_card.dart';
 import 'package:flutter/material.dart';
 import 'package:d_una_app/shared/widgets/friendly_error_widget.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -67,14 +68,13 @@ class _OwnServicesScreenState extends ConsumerState<OwnServicesScreen> {
 
             // Disclaimer
             Padding(
-              padding: const EdgeInsets.only(bottom: 8.0),
-              child: Text(
-                'Precios no incluyen impuesto',
-                style: TextStyle(
-                  fontSize: 12,
-                  fontWeight: FontWeight.bold,
-                  color: colors.onSurface,
-                ),
+              padding: const EdgeInsets.symmetric(
+                horizontal: 16.0,
+                vertical: 8.0,
+              ),
+              child: const InfoDisclaimerCard(
+                text: 'Precios no incluyen impuestos',
+                showCloseButton: true,
               ),
             ),
 
@@ -99,7 +99,9 @@ class _OwnServicesScreenState extends ConsumerState<OwnServicesScreen> {
                         orderBy = 'name';
                         ascending = false;
                       }
-                      ref.read(paginatedServicesProvider.notifier).updateSort(orderBy, ascending);
+                      ref
+                          .read(paginatedServicesProvider.notifier)
+                          .updateSort(orderBy, ascending);
                     },
                     options: const [
                       SortOption.recent,
@@ -113,58 +115,61 @@ class _OwnServicesScreenState extends ConsumerState<OwnServicesScreen> {
           ],
 
           Expanded(
-              child: RefreshIndicator(
-                onRefresh: () async {
-                  await ref.read(paginatedServicesProvider.notifier).refresh();
-                },
-                child: Builder(
-                  builder: (context) {
-                    final state = paginatedAsync.valueOrNull;
+            child: RefreshIndicator(
+              onRefresh: () async {
+                await ref.read(paginatedServicesProvider.notifier).refresh();
+              },
+              child: Builder(
+                builder: (context) {
+                  final state = paginatedAsync.valueOrNull;
 
-                    if (state == null || state.isInitialLoading) {
-                      return const Center(child: CircularProgressIndicator());
-                    }
+                  if (state == null || state.isInitialLoading) {
+                    return const Center(child: CircularProgressIndicator());
+                  }
 
-                    if (paginatedAsync.hasError && state.items.isEmpty) {
-                      return FriendlyErrorWidget(
-                        error: paginatedAsync.error!,
-                        onRetry: () => ref.read(paginatedServicesProvider.notifier).refresh(),
-                      );
-                    }
-
-                    if (state.items.isEmpty) {
-                      return SingleChildScrollView(
-                        physics: const AlwaysScrollableScrollPhysics(),
-                        child: SizedBox(
-                          height: MediaQuery.of(context).size.height * 0.5,
-                          child: const EmptyListState(
-                            icon: Icons.handyman_outlined,
-                            message: 'No tienes servicios registrados',
-                          ),
-                        ),
-                      );
-                    }
-
-                    return PaginatedListView(
-                      items: state.items,
-                      isLoadingMore: state.isLoadingMore,
-                      hasReachedEnd: state.hasReachedEnd,
-                      onLoadMore: () => ref.read(paginatedServicesProvider.notifier).loadMore(),
-                      padding: const EdgeInsets.fromLTRB(16, 16, 16, 120),
-                      separatorBuilder: (context, index) =>
-                          const Divider(height: 1, color: Colors.transparent),
-                      itemBuilder: (context, index, service) {
-                        return ServiceListItem(
-                          service: service,
-                          onTap: () {
-                            _showServiceActionSheet(context, service);
-                          },
-                        );
-                      },
+                  if (paginatedAsync.hasError && state.items.isEmpty) {
+                    return FriendlyErrorWidget(
+                      error: paginatedAsync.error!,
+                      onRetry: () => ref
+                          .read(paginatedServicesProvider.notifier)
+                          .refresh(),
                     );
-                  },
-                ),
+                  }
+
+                  if (state.items.isEmpty) {
+                    return SingleChildScrollView(
+                      physics: const AlwaysScrollableScrollPhysics(),
+                      child: SizedBox(
+                        height: MediaQuery.of(context).size.height * 0.5,
+                        child: const EmptyListState(
+                          icon: Icons.handyman_outlined,
+                          message: 'No tienes servicios registrados',
+                        ),
+                      ),
+                    );
+                  }
+
+                  return PaginatedListView(
+                    items: state.items,
+                    isLoadingMore: state.isLoadingMore,
+                    hasReachedEnd: state.hasReachedEnd,
+                    onLoadMore: () =>
+                        ref.read(paginatedServicesProvider.notifier).loadMore(),
+                    padding: const EdgeInsets.fromLTRB(16, 16, 16, 120),
+                    separatorBuilder: (context, index) =>
+                        const Divider(height: 1, color: Colors.transparent),
+                    itemBuilder: (context, index, service) {
+                      return ServiceListItem(
+                        service: service,
+                        onTap: () {
+                          _showServiceActionSheet(context, service);
+                        },
+                      );
+                    },
+                  );
+                },
               ),
+            ),
           ),
         ],
       ),

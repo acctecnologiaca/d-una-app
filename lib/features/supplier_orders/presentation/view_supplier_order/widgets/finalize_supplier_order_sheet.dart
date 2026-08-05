@@ -24,7 +24,6 @@ class _FinalizeSupplierOrderSheetState
 
   String _documentType = 'invoice'; // 'invoice' | 'delivery_note'
   File? _selectedFile;
-  bool _createPurchaseRecord = true;
   bool _isPdf = false;
 
   @override
@@ -139,7 +138,7 @@ class _FinalizeSupplierOrderSheetState
         _documentNumberController.text.trim().isNotEmpty;
 
     return CustomActionSheet(
-      title: 'Finalizar Orden de Compra',
+      title: 'Registrar compra',
       isContentScrollable: true,
       showDivider: false,
       content: Form(
@@ -181,7 +180,7 @@ class _FinalizeSupplierOrderSheetState
 
             // Document number input
             CustomTextField(
-              label: 'Número de documento',
+              label: 'Número de documento*',
               hintText: 'Ej. F-92810 o NE-2831',
               controller: _documentNumberController,
               validator: (value) {
@@ -195,7 +194,7 @@ class _FinalizeSupplierOrderSheetState
 
             // File Attachment Area
             Text(
-              'Soporte digital',
+              'Soporte digital*',
               style: textTheme.bodyMedium?.copyWith(
                 fontWeight: FontWeight.w600,
               ),
@@ -296,25 +295,14 @@ class _FinalizeSupplierOrderSheetState
             ),
             const SizedBox(height: 20),
 
-            // Register purchase toggle
-            SwitchListTile(
-              title: const Text('Registrar como compra en inventario'),
-              subtitle: const Text('Actualiza automáticamente el stock propio'),
-              value: _createPurchaseRecord,
-              onChanged: (bool value) {
-                setState(() {
-                  _createPurchaseRecord = value;
-                });
-              },
-              contentPadding: EdgeInsets.zero,
-            ),
-            const SizedBox(height: 12),
             Container(
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
                 color: colors.primaryContainer.withValues(alpha: 0.3),
                 borderRadius: BorderRadius.circular(8),
-                border: Border.all(color: colors.primary.withValues(alpha: 0.2)),
+                border: Border.all(
+                  color: colors.primary.withValues(alpha: 0.2),
+                ),
               ),
               child: Row(
                 children: [
@@ -322,8 +310,11 @@ class _FinalizeSupplierOrderSheetState
                   const SizedBox(width: 10),
                   Expanded(
                     child: Text(
-                      'Al finalizar, los créditos correspondientes serán otorgados a tu cuenta y el comprobante pasará a estatus "En revisión".',
-                      style: textTheme.bodySmall?.copyWith(color: colors.onSurfaceVariant),
+                      'Esta acción registrará los productos de la orden en el inventario propio automáticamente.\n\n'
+                      'El soporte digital adjunto debe coincidir plenamente con la orden de compra, ya que éste puede pasar por un proceso de verificación.',
+                      style: textTheme.bodySmall?.copyWith(
+                        color: colors.onSurfaceVariant,
+                      ),
                     ),
                   ),
                 ],
@@ -339,7 +330,7 @@ class _FinalizeSupplierOrderSheetState
             mainAxisAlignment: MainAxisAlignment.end,
             children: [
               CustomButton(
-                text: 'Finalizar',
+                text: 'Registrar',
                 isFullWidth: false,
                 onPressed: isFormValid
                     ? () {
@@ -349,7 +340,7 @@ class _FinalizeSupplierOrderSheetState
                             'documentType': _documentType,
                             'documentNumber': _documentNumberController.text
                                 .trim(),
-                            'createPurchaseRecord': _createPurchaseRecord,
+                            'createPurchaseRecord': true,
                           });
                         }
                       }

@@ -10,6 +10,8 @@ class PdfCommonSections {
     required DateTime date,
     required PdfSenderInfo senderInfo,
     pw.MemoryImage? logoImage,
+    String? dateLabel,
+    String? dateValue,
   }) {
     return pw.Column(
       children: [
@@ -66,9 +68,9 @@ class PdfCommonSections {
                   style: PdfThemeConfig.subTitleStyle,
                 ),
                 pw.SizedBox(height: 20),
-                pw.Text('Fecha', style: PdfThemeConfig.headerStyle),
+                pw.Text(dateLabel ?? 'Fecha', style: PdfThemeConfig.headerStyle),
                 pw.Text(
-                  PdfHelpers.formatDate(date),
+                  dateValue ?? PdfHelpers.formatDate(date),
                   style: PdfThemeConfig.bodyStyle,
                 ),
                 /*  pw.SizedBox(height: 10),

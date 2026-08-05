@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Respuesta de Orden - D'UNA</title>
+  <style>
+    :root {
+      --bg-color: #F8F9FA;
+      --card-bg: #FFFFFF;
+      --text-main: #1A1D20;
+      --text-muted: #6C757D;
+      --brand-primary: #1D8DC7;
+    }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      background-color: var(--bg-color);
+      color: var(--text-main);
+      margin: 0;
+      padding: 20px;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+    }
+    .card {
+      background: var(--card-bg);
+      border-radius: 16px;
+      box-shadow: 0 10px 25px rgba(0,0,0,0.05);
+      max-width: 480px;
+      width: 100%;
+      padding: 32px 24px;
+      text-align: center;
+      box-sizing: border-box;
+    }
+    .icon-badge {
+      width: 72px;
+      height: 72px;
+      border-radius: 50%;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 36px;
+      margin-bottom: 20px;
+    }
+    h1 {
+      font-size: 22px;
+      font-weight: 700;
+      margin: 0 0 12px 0;
+      color: var(--text-main);
+    }
+    p {
+      font-size: 15px;
+      line-height: 1.5;
+      color: var(--text-muted);
+      margin: 0 0 24px 0;
+    }
+    .footer {
+      border-top: 1px solid #E9ECEF;
+      padding-top: 16px;
+      font-size: 12px;
+      color: #ADB5BD;
+    }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <div id="badge" class="icon-badge"></div>
+    <h1 id="heading">Cargando...</h1>
+    <p id="message"></p>
+    <div class="footer">
+      Sistema Transaccional D'UNA &bull; Gestión Operativa
+    </div>
+  </div>
+
+  <script>
+    (function() {
+      const params = new URLSearchParams(window.location.search);
+      const status = params.get('status') || 'invalid';
+      const order = params.get('order') || '';
+      const msg = params.get('msg') || '';
+
+      const badge = document.getElementById('badge');
+      const heading = document.getElementById('heading');
+      const message = document.getElementById('message');
+
+      if (status === 'approved') {
+        document.title = 'Orden Aprobada - D\'UNA';
+        badge.style.backgroundColor = '#2E7D3215';
+        badge.style.color = '#2E7D32';
+        badge.textContent = '🎉';
+        heading.textContent = '¡Orden Aprobada Exitosamente!';
+        message.innerHTML = `Gracias por su respuesta. La orden <strong>${order}</strong> ha sido marcada como <strong>APROBADA</strong> en el sistema D'UNA.`;
+      } else if (status === 'rejected') {
+        document.title = 'Orden Rechazada - D\'UNA';
+        badge.style.backgroundColor = '#C6282815';
+        badge.style.color = '#C62828';
+        badge.textContent = '📋';
+        heading.textContent = 'Orden Marcada como Rechazada / Stock Incompleto';
+        message.innerHTML = `Gracias por su respuesta. La orden <strong>${order}</strong> ha sido marcada como <strong>RECHAZADA / STOCK INCOMPLETO</strong> en el sistema D'UNA.`;
+      } else if (status === 'already_processed') {
+        document.title = 'Orden Procesada Previamente - D\'UNA';
+        badge.style.backgroundColor = '#1D8DC715';
+        badge.style.color = '#1D8DC7';
+        badge.textContent = '✅';
+        heading.textContent = `Orden ${order} ya fue registrada`;
+        message.innerHTML = `Esta orden ya había sido procesada anteriormente.`;
+      } else if (status === 'expired') {
+        document.title = 'Enlace Expirado - D\'UNA';
+        badge.style.backgroundColor = '#FB8C0015';
+        badge.style.color = '#FB8C00';
+        badge.textContent = '⌛';
+        heading.textContent = 'Enlace Expirado (72h)';
+        message.innerHTML = `El plazo de 72 horas para responder a la orden <strong>${order}</strong> ha vencido. Solicite un nuevo reenvío al comprador.`;
+      } else {
+        document.title = 'Enlace Inválido - D\'UNA';
+        badge.style.backgroundColor = '#E5393515';
+        badge.style.color = '#E53935';
+        badge.textContent = '⚠️';
+        heading.textContent = 'Enlace Caducado o Inválido';
+        message.textContent = msg || 'Este enlace de acción ya no es válido o ha sido utilizado previamente.';
+      }
+    })();
+  </script>
+</body>
+</html>

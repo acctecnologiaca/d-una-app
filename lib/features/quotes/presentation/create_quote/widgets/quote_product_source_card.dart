@@ -8,6 +8,7 @@ import '../../../../portfolio/presentation/providers/lookup_providers.dart';
 import '../../../../../shared/utils/currency_formatter.dart';
 import '../../../../../shared/widgets/dynamic_material_symbol.dart';
 import '../../../../../shared/widgets/editable_quantity_stepper.dart';
+import '../../../../../core/utils/time_formatter.dart';
 import '../../../domain/models/quote_product_source.dart';
 import '../../../../profile/presentation/screens/verification_screen.dart';
 
@@ -422,7 +423,11 @@ class _QuoteProductSourceCardState
                                   ? ImageFilter.blur(sigmaX: 4, sigmaY: 4)
                                   : ImageFilter.blur(sigmaX: 0, sigmaY: 0),
                               child: Text(
-                                CurrencyFormatter.format(widget.source.price),
+                                widget.uom.isNotEmpty
+                                    ? '${CurrencyFormatter.format(widget.source.price)}/${widget.uom}'
+                                    : CurrencyFormatter.format(
+                                        widget.source.price,
+                                      ),
                                 style: Theme.of(context).textTheme.titleLarge
                                     ?.copyWith(
                                       fontWeight: FontWeight.w700,
@@ -435,7 +440,7 @@ class _QuoteProductSourceCardState
                             ),
                           ],
                         ),
-                        const SizedBox(height: 8),
+                        const SizedBox(height: 6),
                         Container(
                           padding: const EdgeInsets.symmetric(
                             horizontal: 6,
@@ -465,6 +470,47 @@ class _QuoteProductSourceCardState
                             ],
                           ),
                         ),
+                        if (!isOwn && !isExternal) ...[
+                          const SizedBox(height: 4),
+                          Builder(
+                            builder: (context) {
+                              final isOutdated = TimeFormatter.isOutdated(
+                                widget.source.lastUpdated,
+                              );
+                              final iconColor = isOutdated
+                                  ? colors.error
+                                  : colors.onSurfaceVariant;
+                              final displayText = isOutdated
+                                  ? 'Más de 7 días'
+                                  : TimeFormatter.formatRelative(
+                                      widget.source.lastUpdated,
+                                    );
+
+                              return Tooltip(
+                                message: 'Última actualización',
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Icon(
+                                      Icons.schedule,
+                                      size: 11,
+                                      color: iconColor,
+                                    ),
+                                    const SizedBox(width: 2),
+                                    Text(
+                                      displayText,
+                                      style: TextStyle(
+                                        fontSize: 10,
+                                        fontWeight: FontWeight.bold,
+                                        color: iconColor,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              );
+                            },
+                          ),
+                        ],
                       ],
                     ),
                   ],
