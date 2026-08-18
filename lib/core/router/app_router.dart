@@ -51,6 +51,7 @@ import 'package:d_una_app/features/settings/data/models/shipping_method.dart';
 import 'package:d_una_app/features/profile/presentation/screens/occupation_screen.dart';
 import 'package:d_una_app/features/profile/presentation/screens/security_screen.dart';
 import 'package:d_una_app/features/profile/presentation/screens/verification_screen.dart';
+import 'package:d_una_app/features/profile/presentation/screens/credit_history_screen.dart';
 import '../../features/portfolio/presentation/suppliers_directory/screens/suppliers_directory_screen.dart';
 import 'package:d_una_app/features/settings/presentation/screens/settings_screen.dart';
 import 'package:d_una_app/features/settings/presentation/screens/brands_list_screen.dart';
@@ -249,7 +250,19 @@ final routerProvider = Provider<GoRouter>((ref) {
                   path: 'search',
                   builder: (context, state) {
                     final productId = state.uri.queryParameters['productId'];
-                    return QuotesSearchScreen(productId: productId);
+                    final clientId = state.uri.queryParameters['clientId'];
+                    final clientName = state.uri.queryParameters['clientName'];
+                    final productModel =
+                        state.uri.queryParameters['productModel'];
+                    final isReadOnly =
+                        state.uri.queryParameters['readOnly'] == 'true';
+                    final initialQuery = productModel ?? clientName;
+                    return QuotesSearchScreen(
+                      productId: productId,
+                      clientId: clientId,
+                      initialQuery: initialQuery,
+                      isSearchQueryReadOnly: isReadOnly,
+                    );
                   },
                 ),
                 GoRoute(
@@ -440,6 +453,10 @@ final routerProvider = Provider<GoRouter>((ref) {
           path: 'verification',
           builder: (context, state) => const VerificationScreen(),
         ),
+        GoRoute(
+          path: 'credits-history',
+          builder: (context, state) => const CreditHistoryScreen(),
+        ),
       ],
     ),
 
@@ -504,7 +521,14 @@ final routerProvider = Provider<GoRouter>((ref) {
           path: 'search',
           builder: (context, state) {
             final productId = state.uri.queryParameters['productId'];
-            return PurchasesSearchScreen(productId: productId);
+            final productModel = state.uri.queryParameters['productModel'];
+            final isReadOnly =
+                state.uri.queryParameters['readOnly'] == 'true';
+            return PurchasesSearchScreen(
+              productId: productId,
+              initialQuery: productModel,
+              isSearchQueryReadOnly: isReadOnly,
+            );
           },
         ),
         GoRoute(
@@ -617,7 +641,9 @@ final routerProvider = Provider<GoRouter>((ref) {
             return SupplierOrdersSearchScreen(
               selectionMode: true,
               allowedStatuses: allowedStatuses,
-              supplierNameFilter: supplierName,
+              initialQuery: supplierName,
+              isSearchQueryReadOnly:
+                  supplierName != null && supplierName.isNotEmpty,
             );
           },
         ),

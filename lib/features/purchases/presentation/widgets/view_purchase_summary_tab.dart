@@ -8,6 +8,7 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:d_una_app/shared/utils/currency_formatter.dart';
 import 'package:d_una_app/features/supplier_orders/presentation/supplier_orders_list/providers/supplier_orders_providers.dart';
 import '../providers/purchase_details_provider.dart';
+import 'purchase_rejected_support_notice.dart';
 
 class ViewPurchaseSummaryTab extends ConsumerWidget {
   final PurchaseDetailsData data;
@@ -110,6 +111,40 @@ class ViewPurchaseSummaryTab extends ConsumerWidget {
                 context,
                 Icons.description,
                 'Soporte digital',
+                trailing: purchase.verificationStatus == 'rejected'
+                    ? Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 8,
+                          vertical: 3,
+                        ),
+                        decoration: BoxDecoration(
+                          color: colors.errorContainer,
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(
+                            color: colors.error.withValues(alpha: 0.5),
+                          ),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(
+                              Icons.error_outline,
+                              size: 14,
+                              color: colors.error,
+                            ),
+                            const SizedBox(width: 4),
+                            Text(
+                              'Rechazado',
+                              style: TextStyle(
+                                fontSize: 11,
+                                fontWeight: FontWeight.bold,
+                                color: colors.error,
+                              ),
+                            ),
+                          ],
+                        ),
+                      )
+                    : null,
               ),
               _buildSupportDocumentCard(
                 context,
@@ -119,7 +154,14 @@ class ViewPurchaseSummaryTab extends ConsumerWidget {
                 purchase.documentType == 'invoice'
                     ? 'Factura'
                     : 'Nota de entrega',
+                isRejected: purchase.verificationStatus == 'rejected',
               ),
+              if (purchase.verificationStatus == 'rejected') ...[
+                const SizedBox(height: 12),
+                PurchaseRejectedSupportNotice(
+                  totalAmount: purchase.total,
+                ),
+              ],
             ],
           ],
         ),
@@ -200,15 +242,21 @@ class ViewPurchaseSummaryTab extends ConsumerWidget {
     ColorScheme colors,
     String photoUrl,
     String docNumber,
-    String docTypeLabel,
-  ) {
+    String docTypeLabel, {
+    bool isRejected = false,
+  }) {
     final isPdf = _isPdfUrl(photoUrl);
 
     return Card(
       elevation: 0,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(8),
-        side: BorderSide(color: colors.outlineVariant),
+        side: BorderSide(
+          color: isRejected
+              ? colors.error.withValues(alpha: 0.5)
+              : colors.outlineVariant,
+          width: isRejected ? 1.5 : 1.0,
+        ),
       ),
       color: colors.surface,
       child: InkWell(
@@ -496,23 +544,30 @@ class ViewPurchaseSummaryTab extends ConsumerWidget {
   Widget _buildSectionHeader(
     BuildContext context,
     IconData icon,
-    String title,
-  ) {
+    String title, {
+    Widget? trailing,
+  }) {
     final colors = Theme.of(context).colorScheme;
     return Padding(
       padding: const EdgeInsets.only(bottom: 8.0),
       child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Icon(icon, size: 20, color: colors.onSurfaceVariant),
-          const SizedBox(width: 8),
-          Text(
-            title,
-            style: TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.bold,
-              color: colors.onSurfaceVariant,
-            ),
+          Row(
+            children: [
+              Icon(icon, size: 20, color: colors.onSurfaceVariant),
+              const SizedBox(width: 8),
+              Text(
+                title,
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                  color: colors.onSurfaceVariant,
+                ),
+              ),
+            ],
           ),
+          ?trailing,
         ],
       ),
     );

@@ -6,10 +6,12 @@ import '../../../domain/repositories/quotes_repository.dart';
 import '../../../data/repositories/supabase_quotes_repository.dart';
 import '../../../data/repositories/quote_product_selection_repository.dart';
 import '../../../domain/models/quote_model.dart' as domain;
-// import '../../../data/models/quote.dart' as data;
+import '../../../data/models/quote.dart' as data;
 import '../../../domain/models/quote_validation_result.dart';
 import '../../../data/models/quote_item_product.dart';
 import '../../../domain/models/batch_update_result.dart';
+
+import '../../view_quote/providers/view_quote_provider.dart';
 
 final quotesRepositoryProvider = Provider<QuotesRepository>((ref) {
   return SupabaseQuotesRepository(Supabase.instance.client);
@@ -119,6 +121,8 @@ class QuotesListNotifier extends AsyncNotifier<List<domain.Quote>> {
       validationMap = {for (var r in results) r.itemId: r};
     }
 
+    final priorAllocations = _computeApprovedPriorAllocations(quotesDtos);
+
     // 3. Map to Domain Entities
     return quotesDtos.map((dto) {
       // Determine Stock Status
@@ -138,13 +142,29 @@ class QuotesListNotifier extends AsyncNotifier<List<domain.Quote>> {
 
           final validation = validationMap[dbId];
           
+          final isApproved = dto.status == 'approved';
+          double availableStock;
+          if (validation == null) {
+            availableStock = 0.0;
+          } else if (validation.itemType == 'OWN') {
+            if (isApproved) {
+              final priorAllocated =
+                  priorAllocations[dto.id]?[p.productId] ?? 0.0;
+              availableStock = validation.currentStock - priorAllocated;
+            } else {
+              availableStock = validation.availableStock;
+            }
+          } else {
+            availableStock = validation.currentStock;
+          }
+
           // Check Stock
           if (validation == null) {
             stockStatus = domain.StockStatus.unavailable;
-          } else if (validation.currentStock <= 0) {
+          } else if (availableStock <= 0) {
             stockStatus = domain.StockStatus.unavailable;
             // No break, we might still want to check price increases on other items
-          } else if (validation.currentStock < p.quantity) {
+          } else if (availableStock < p.quantity) {
             // Only set to lowStock if not already marked as unavailable by another item
             if (stockStatus != domain.StockStatus.unavailable) {
               stockStatus = domain.StockStatus.lowStock;
@@ -229,13 +249,43 @@ class PaginatedQuotesList extends AsyncNotifier<PaginatedState<domain.Quote>> {
   String? _searchQuery;
   String? _statusFilter;
   String? _categoryFilter;
-  String _orderBy = 'date_issued';
+  String _orderBy = 'quote_number';
   bool _ascending = false;
   bool _includeArchived = false;
+  RealtimeChannel? _realtimeChannel;
 
   @override
   FutureOr<PaginatedState<domain.Quote>> build() async {
+    _initRealtimeSubscription();
     return _fetchPage(0);
+  }
+
+  void _initRealtimeSubscription() {
+    if (_realtimeChannel != null) return;
+
+    final channel = Supabase.instance.client
+        .channel('public:quotes_changes_${DateTime.now().millisecondsSinceEpoch}')
+        .onPostgresChanges(
+          event: PostgresChangeEvent.update,
+          schema: 'public',
+          table: 'quotes',
+          callback: (payload) {
+            final updatedRecord = payload.newRecord;
+            final updatedId = updatedRecord['id'] as String?;
+            if (updatedId != null) {
+              ref.invalidate(viewQuoteProvider(updatedId));
+            }
+            refresh();
+          },
+        )
+        .subscribe();
+
+    _realtimeChannel = channel;
+
+    ref.onDispose(() {
+      _realtimeChannel?.unsubscribe();
+      _realtimeChannel = null;
+    });
   }
 
   Future<PaginatedState<domain.Quote>> _fetchPage(int offset) async {
@@ -288,6 +338,8 @@ class PaginatedQuotesList extends AsyncNotifier<PaginatedState<domain.Quote>> {
       validationMap = {for (var r in results) r.itemId: r};
     }
 
+    final priorAllocations = _computeApprovedPriorAllocations(quotesDtos);
+
     final domainQuotes = quotesDtos.map((dto) {
       domain.StockStatus stockStatus = domain.StockStatus.available;
       bool hasPriceIncrease = false;
@@ -302,11 +354,27 @@ class PaginatedQuotesList extends AsyncNotifier<PaginatedState<domain.Quote>> {
           if (dbId == null) continue;
           final validation = validationMap[dbId];
           
+          final isApproved = dto.status == 'approved';
+          double availableStock;
+          if (validation == null) {
+            availableStock = 0.0;
+          } else if (validation.itemType == 'OWN') {
+            if (isApproved) {
+              final priorAllocated =
+                  priorAllocations[dto.id]?[p.productId] ?? 0.0;
+              availableStock = validation.currentStock - priorAllocated;
+            } else {
+              availableStock = validation.availableStock;
+            }
+          } else {
+            availableStock = validation.currentStock;
+          }
+
           if (validation == null) {
             stockStatus = domain.StockStatus.unavailable;
-          } else if (validation.currentStock <= 0) {
+          } else if (availableStock <= 0) {
             stockStatus = domain.StockStatus.unavailable;
-          } else if (validation.currentStock < p.quantity) {
+          } else if (availableStock < p.quantity) {
             if (stockStatus != domain.StockStatus.unavailable) {
               stockStatus = domain.StockStatus.lowStock;
             }
@@ -331,6 +399,8 @@ class PaginatedQuotesList extends AsyncNotifier<PaginatedState<domain.Quote>> {
         isArchived: dto.isArchived,
         quoteTag: dto.quoteTag,
         createdAt: dto.createdAt,
+        clientFeedback: dto.clientFeedback,
+        clientFeedbackAt: dto.clientFeedbackAt,
       );
     }).toList();
 
@@ -390,21 +460,44 @@ class PaginatedQuotesList extends AsyncNotifier<PaginatedState<domain.Quote>> {
 }
 
 // --- Paginated Quote Search (AutoDispose) ---
-final paginatedQuoteSearchProvider = AutoDisposeAsyncNotifierProviderFamily<PaginatedQuoteSearch, PaginatedState<domain.Quote>, String?>(() {
+class QuoteSearchArgs {
+  final String? productId;
+  final String? clientId;
+
+  const QuoteSearchArgs({
+    this.productId,
+    this.clientId,
+  });
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is QuoteSearchArgs &&
+          runtimeType == other.runtimeType &&
+          productId == other.productId &&
+          clientId == other.clientId;
+
+  @override
+  int get hashCode => Object.hash(productId, clientId);
+}
+
+final paginatedQuoteSearchProvider = AutoDisposeAsyncNotifierProviderFamily<
+    PaginatedQuoteSearch, PaginatedState<domain.Quote>, QuoteSearchArgs?>(() {
   return PaginatedQuoteSearch();
 });
 
-class PaginatedQuoteSearch extends AutoDisposeFamilyAsyncNotifier<PaginatedState<domain.Quote>, String?> {
+class PaginatedQuoteSearch
+    extends AutoDisposeFamilyAsyncNotifier<PaginatedState<domain.Quote>, QuoteSearchArgs?> {
   static const int _limit = 25;
   String? _searchQuery;
   String? _statusFilter;
   String? _categoryFilter;
-  String _orderBy = 'date_issued';
+  String _orderBy = 'quote_number';
   bool _ascending = false;
   bool _includeArchived = true;
 
   @override
-  FutureOr<PaginatedState<domain.Quote>> build(String? arg) async {
+  FutureOr<PaginatedState<domain.Quote>> build(QuoteSearchArgs? arg) async {
     return _fetchPage(0);
   }
 
@@ -421,7 +514,8 @@ class PaginatedQuoteSearch extends AutoDisposeFamilyAsyncNotifier<PaginatedState
       statusFilter: _statusFilter,
       categoryFilter: _categoryFilter,
       includeArchived: _includeArchived,
-      productId: arg,
+      productId: arg?.productId,
+      clientId: arg?.clientId,
     );
 
     if (quotesDtos.isEmpty) {
@@ -459,6 +553,8 @@ class PaginatedQuoteSearch extends AutoDisposeFamilyAsyncNotifier<PaginatedState
       validationMap = {for (var r in results) r.itemId: r};
     }
 
+    final priorAllocations = _computeApprovedPriorAllocations(quotesDtos);
+
     final domainQuotes = quotesDtos.map((dto) {
       domain.StockStatus stockStatus = domain.StockStatus.available;
       bool hasPriceIncrease = false;
@@ -473,11 +569,27 @@ class PaginatedQuoteSearch extends AutoDisposeFamilyAsyncNotifier<PaginatedState
           if (dbId == null) continue;
           final validation = validationMap[dbId];
           
+          final isApproved = dto.status == 'approved';
+          double availableStock;
+          if (validation == null) {
+            availableStock = 0.0;
+          } else if (validation.itemType == 'OWN') {
+            if (isApproved) {
+              final priorAllocated =
+                  priorAllocations[dto.id]?[p.productId] ?? 0.0;
+              availableStock = validation.currentStock - priorAllocated;
+            } else {
+              availableStock = validation.availableStock;
+            }
+          } else {
+            availableStock = validation.currentStock;
+          }
+
           if (validation == null) {
             stockStatus = domain.StockStatus.unavailable;
-          } else if (validation.currentStock <= 0) {
+          } else if (availableStock <= 0) {
             stockStatus = domain.StockStatus.unavailable;
-          } else if (validation.currentStock < p.quantity) {
+          } else if (availableStock < p.quantity) {
             if (stockStatus != domain.StockStatus.unavailable) {
               stockStatus = domain.StockStatus.lowStock;
             }
@@ -502,6 +614,8 @@ class PaginatedQuoteSearch extends AutoDisposeFamilyAsyncNotifier<PaginatedState
         isArchived: dto.isArchived,
         quoteTag: dto.quoteTag,
         createdAt: dto.createdAt,
+        clientFeedback: dto.clientFeedback,
+        clientFeedbackAt: dto.clientFeedbackAt,
       );
     }).toList();
 
@@ -565,4 +679,36 @@ void refreshAllQuoteProviders(WidgetRef ref) {
   ref.invalidate(paginatedQuotesListProvider);
   ref.invalidate(paginatedQuoteSearchProvider);
   ref.read(paginatedQuotesListProvider.notifier).refresh();
+}
+
+Map<String, Map<String, double>> _computeApprovedPriorAllocations(
+  List<data.Quote> quotes,
+) {
+  final approvedQuotes =
+      quotes.where((q) => q.status == 'approved').toList()
+        ..sort((a, b) {
+          final timeA = a.clientFeedbackAt ?? a.updatedAt;
+          final timeB = b.clientFeedbackAt ?? b.updatedAt;
+          final cmp = timeA.compareTo(timeB);
+          if (cmp != 0) return cmp;
+          return a.id.compareTo(b.id);
+        });
+
+  final Map<String, Map<String, double>> allocations = {};
+  final Map<String, double> runningAllocationByProduct = {};
+
+  for (final q in approvedQuotes) {
+    if (q.products == null) continue;
+    allocations[q.id] = {};
+    for (final p in q.products!) {
+      if (p.sourceType == QuoteItemSourceType.own && p.productId != null) {
+        final pid = p.productId!;
+        final prior = runningAllocationByProduct[pid] ?? 0.0;
+        allocations[q.id]![pid] = prior;
+        runningAllocationByProduct[pid] = prior + p.quantity;
+      }
+    }
+  }
+
+  return allocations;
 }

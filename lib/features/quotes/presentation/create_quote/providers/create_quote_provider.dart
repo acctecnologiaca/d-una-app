@@ -11,6 +11,7 @@ import 'package:d_una_app/features/profile/presentation/providers/profile_provid
 import 'package:d_una_app/core/utils/country_iso_codes.dart';
 import '../../../../supplier_orders/domain/models/supplier_order_status.dart';
 import '../../../../supplier_orders/presentation/supplier_orders_list/providers/supplier_orders_providers.dart';
+import '../../view_quote/providers/view_quote_provider.dart';
 
 class QuoteState {
   final Quote? quote; // The final object being built
@@ -1000,10 +1001,10 @@ class CreateQuoteNotifier extends StateNotifier<QuoteState> {
 
       final isEditing = state.quote != null && state.quote!.id.isNotEmpty;
 
-      // Determine the final status (preserve existing status when editing)
+      // Determine the final status (preserve existing status when editing unless status is explicitly passed)
       String effectiveStatus;
       if (isEditing) {
-        effectiveStatus = (status != null && status != 'draft') ? status : state.quote!.status;
+        effectiveStatus = status ?? state.quote!.status;
       } else {
         effectiveStatus = status ?? 'draft';
       }
@@ -1107,8 +1108,11 @@ class CreateQuoteNotifier extends StateNotifier<QuoteState> {
 
       state = state.copyWith(quote: savedQuote, isLoading: false);
 
-      // Auto-refresh the list
+      // Auto-refresh the list & view provider
+      _ref.invalidate(viewQuoteProvider(savedQuote.id));
       _ref.invalidate(quotesListProvider);
+      _ref.invalidate(paginatedQuotesListProvider);
+      _ref.invalidate(paginatedQuoteSearchProvider);
 
       return true;
     } catch (e) {

@@ -24,8 +24,28 @@ class QuotesListScreen extends ConsumerStatefulWidget {
   ConsumerState<QuotesListScreen> createState() => _QuotesListScreenState();
 }
 
-class _QuotesListScreenState extends ConsumerState<QuotesListScreen> {
-  SortOption _currentSort = SortOption.recent;
+class _QuotesListScreenState extends ConsumerState<QuotesListScreen>
+    with WidgetsBindingObserver {
+  SortOption _currentSort = SortOption.quoteNumberDesc;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed && mounted) {
+      ref.read(paginatedQuotesListProvider.notifier).refresh();
+    }
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -78,16 +98,22 @@ class _QuotesListScreenState extends ConsumerState<QuotesListScreen> {
                       currentSort: _currentSort,
                       onSortChanged: (val) {
                         setState(() => _currentSort = val);
-                        String orderBy = 'date_issued';
+                        String orderBy = 'quote_number';
                         bool ascending = false;
-                        if (val == SortOption.recent || val == SortOption.frequency) {
+                        if (val == SortOption.quoteNumberDesc) {
+                          orderBy = 'quote_number';
+                          ascending = false;
+                        } else if (val == SortOption.quoteNumberAsc) {
+                          orderBy = 'quote_number';
+                          ascending = true;
+                        } else if (val == SortOption.recent || val == SortOption.frequency) {
                           orderBy = 'created_at';
                           ascending = false;
                         } else if (val == SortOption.dateIssued) {
                           orderBy = 'date_issued';
                           ascending = false;
                         } else if (val == SortOption.nameAZ) {
-                          orderBy = 'clients(name)'; // Not possible out of the box in RPC but let's assume local handled or ignored if not supported
+                          orderBy = 'clients(name)';
                           ascending = true;
                         } else if (val == SortOption.nameZA) {
                           orderBy = 'clients(name)';
@@ -96,6 +122,8 @@ class _QuotesListScreenState extends ConsumerState<QuotesListScreen> {
                         ref.read(paginatedQuotesListProvider.notifier).updateSort(orderBy, ascending);
                       },
                       options: const [
+                        SortOption.quoteNumberDesc,
+                        SortOption.quoteNumberAsc,
                         SortOption.recent,
                         SortOption.dateIssued,
                         SortOption.nameAZ,

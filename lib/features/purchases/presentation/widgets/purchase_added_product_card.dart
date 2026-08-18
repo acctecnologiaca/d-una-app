@@ -102,13 +102,12 @@ class PurchaseAddedProductCard extends StatelessWidget {
           onPressed: onEdit,
           tooltip: 'Editar detalles',
         ),
-        if (item.requiresSerials)
-          IconButton(
-            icon: const Icon(Symbols.barcode),
-            color: colors.onSurfaceVariant,
-            onPressed: onAddSerials,
-            tooltip: 'Gestionar seriales',
-          ),
+        IconButton(
+          icon: const Icon(Symbols.barcode),
+          color: colors.onSurfaceVariant,
+          onPressed: onAddSerials,
+          tooltip: 'Gestionar seriales',
+        ),
       ],
       expandedTrailing: Builder(
         builder: (context) {

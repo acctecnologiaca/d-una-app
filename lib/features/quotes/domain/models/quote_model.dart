@@ -4,6 +4,7 @@ enum QuoteStatus {
   draft,
   sent,
   resent,
+  opened,
   inReview,
   approved,
   rejected,
@@ -19,8 +20,10 @@ enum QuoteStatus {
         return 'Enviada';
       case QuoteStatus.resent:
         return 'Reenviada';
+      case QuoteStatus.opened:
+        return 'Abierta';
       case QuoteStatus.inReview:
-        return 'En revisión';
+        return 'En evaluación';
       case QuoteStatus.approved:
         return 'Aprobada';
       case QuoteStatus.rejected:
@@ -42,6 +45,8 @@ enum QuoteStatus {
         return 'assets/icons/status_sent.png';
       case QuoteStatus.resent:
         return 'assets/icons/status_resent.png';
+      case QuoteStatus.opened:
+        return 'assets/icons/status_opened.png';
       case QuoteStatus.inReview:
         return 'assets/icons/status_review.png';
       case QuoteStatus.approved:
@@ -65,6 +70,8 @@ enum QuoteStatus {
         return 'sent';
       case QuoteStatus.resent:
         return 'resent';
+      case QuoteStatus.opened:
+        return 'opened';
       case QuoteStatus.inReview:
         return 'review';
       case QuoteStatus.approved:
@@ -88,6 +95,8 @@ enum QuoteStatus {
         return QuoteStatus.sent;
       case 'resent':
         return QuoteStatus.resent;
+      case 'opened':
+        return QuoteStatus.opened;
       case 'review':
         return QuoteStatus.inReview;
       case 'approved':
@@ -113,6 +122,8 @@ enum QuoteStatus {
         return colors.primary;
       case QuoteStatus.resent:
         return const Color(0xFF1D8DC7);
+      case QuoteStatus.opened:
+        return const Color(0xFF5C6BC0);
       case QuoteStatus.inReview:
         return const Color(0xFFFFB964);
       case QuoteStatus.approved:
@@ -171,12 +182,16 @@ class Quote {
   final bool isArchived;
   final String? quoteTag;
   final DateTime createdAt;
+  final String? clientFeedback;
+  final DateTime? clientFeedbackAt;
 
   bool get canShowAlerts =>
       status == QuoteStatus.draft ||
       status == QuoteStatus.sent ||
       status == QuoteStatus.resent ||
-      status == QuoteStatus.inReview;
+      status == QuoteStatus.opened ||
+      status == QuoteStatus.inReview ||
+      status == QuoteStatus.approved;
 
   Quote({
     required this.id,
@@ -192,6 +207,8 @@ class Quote {
     required this.createdAt,
     this.isArchived = false,
     this.quoteTag,
+    this.clientFeedback,
+    this.clientFeedbackAt,
   });
 
   Quote copyWith({
@@ -208,6 +225,8 @@ class Quote {
     bool? isArchived,
     String? quoteTag,
     DateTime? createdAt,
+    String? clientFeedback,
+    DateTime? clientFeedbackAt,
   }) {
     return Quote(
       id: id ?? this.id,
@@ -223,6 +242,8 @@ class Quote {
       isArchived: isArchived ?? this.isArchived,
       quoteTag: quoteTag ?? this.quoteTag,
       createdAt: createdAt ?? this.createdAt,
+      clientFeedback: clientFeedback ?? this.clientFeedback,
+      clientFeedbackAt: clientFeedbackAt ?? this.clientFeedbackAt,
     );
   }
 }

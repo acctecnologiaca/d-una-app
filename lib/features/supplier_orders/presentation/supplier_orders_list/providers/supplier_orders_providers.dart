@@ -97,7 +97,7 @@ Future<List<SupplierOrder>> _enrichOrdersWithValidation(
   }).toList();
 }
 
-@riverpod
+@Riverpod(keepAlive: true)
 class PaginatedSupplierOrders extends _$PaginatedSupplierOrders {
   String? _searchQuery;
   String? _statusFilter;
@@ -115,17 +115,25 @@ class PaginatedSupplierOrders extends _$PaginatedSupplierOrders {
     if (_realtimeChannel != null) return;
 
     final channel = Supabase.instance.client
-        .channel('public:supplier_orders_changes')
+        .channel('public:supplier_orders_changes_${DateTime.now().millisecondsSinceEpoch}')
         .onPostgresChanges(
-          event: PostgresChangeEvent.update,
+          event: PostgresChangeEvent.all,
           schema: 'public',
           table: 'supplier_orders',
+          filter: PostgresChangeFilter(
+            type: PostgresChangeFilterType.eq,
+            column: 'user_id',
+            value: Supabase.instance.client.auth.currentUser?.id ?? '',
+          ),
           callback: (payload) {
+            // ignore: avoid_print
+            print('🔴 [REALTIME] supplier_orders change received: event=${payload.eventType}, new=${payload.newRecord}, old=${payload.oldRecord}');
             final updatedRecord = payload.newRecord;
-            final updatedId = updatedRecord['id'] as String?;
+            final updatedId = (updatedRecord['id'] ?? payload.oldRecord['id']) as String?;
             if (updatedId != null) {
               ref.invalidate(supplierOrderDetailProvider(updatedId));
             }
+            ref.invalidate(paginatedSupplierOrderSearchProvider);
             refresh();
           },
         )
@@ -341,7 +349,7 @@ Future<Map<String, dynamic>?> supplierBranchContactInfo(
 ) async {
   final response = await Supabase.instance.client
       .from('supplier_branches')
-      .select('id, email, phone')
+      .select('id, email, phone, supplier_id, order_reception_channel, suppliers(id, name, order_reception_channel)')
       .eq('id', branchId)
       .maybeSingle();
   return response;

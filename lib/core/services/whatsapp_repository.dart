@@ -61,7 +61,9 @@ class WhatsAppRepository {
   Future<void> sendMessage({
     required String phone,
     required String templateName,
-    required List<String> bodyVariables,
+    required List<dynamic> bodyVariables,
+    List<dynamic>? headerVariables,
+    String? buttonUrlParam,
   }) async {
     final response = await _client.functions.invoke(
       'send_whatsapp_message',
@@ -69,6 +71,10 @@ class WhatsAppRepository {
         'phone': phone,
         'templateName': templateName,
         'bodyVariables': bodyVariables,
+        if (headerVariables != null && headerVariables.isNotEmpty)
+          'headerVariables': headerVariables,
+        if (buttonUrlParam != null && buttonUrlParam.isNotEmpty)
+          'buttonUrlParam': buttonUrlParam,
       },
     );
 

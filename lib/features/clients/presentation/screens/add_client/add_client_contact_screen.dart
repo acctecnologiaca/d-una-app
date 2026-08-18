@@ -48,67 +48,56 @@ class _AddClientContactScreenState
     super.dispose();
   }
 
+  bool _isLoading = false;
+
   Future<void> _onFinish() async {
     if (_formKey.currentState!.validate()) {
-      // 1. Add Contact to Provider
-      final contactData = {
-        'name': _isPerson
-            ? ref.read(addClientProvider)['name'] ?? 'Cliente'
-            : _nameController
-                  .text, // If person, contact name is same as client? Or empty? Logic check.
-        // If it's a "Person" client, the contact info IS the client's contact info.
-        // If "Company", it's a contact person.
-        'role': _positionController.text,
-        'department': _departmentController.text,
-        'email': _emailController.text,
-        'phone':
-            '$_selectedCode${_phoneController.text.replaceAll(RegExp(r'\D'), '')}',
-        'isPrimary': true,
-      };
+      setState(() => _isLoading = true);
 
-      // For "Person" client type, we might want to update the main client info with this data as well.
-      // Re-reading logic: Person clients behave like their own contact.
-      // Provider `updateBasicInfo` had email/phone.
-      // If `_isPerson`, we should probably update the main client info with this data as well.
-
-      final notifier = ref.read(addClientProvider.notifier);
-
-      if (_isPerson) {
-        notifier.updateBasicInfo(
-          email: _emailController.text,
-          phone:
+      try {
+        // 1. Add Contact to Provider
+        final contactData = {
+          'name': _isPerson
+              ? ref.read(addClientProvider)['name'] ?? 'Cliente'
+              : _nameController.text,
+          'role': _positionController.text,
+          'department': _departmentController.text,
+          'email': _emailController.text,
+          'phone':
               '$_selectedCode${_phoneController.text.replaceAll(RegExp(r'\D'), '')}',
-        );
-      } else {
-        // Add as distinct contact
-        notifier.addContact(contactData);
-      }
+          'isPrimary': true,
+        };
 
-      // 2. Submit
-      final newClientId = await notifier.submit();
+        final notifier = ref.read(addClientProvider.notifier);
 
-      // Check for success (optional, or rely on ClientsProvider state)
-      // Since `addClient` (provider) awaits, we can check `ref.read(clientsProvider)` for value vs error
+        if (_isPerson) {
+          notifier.updateBasicInfo(
+            email: _emailController.text,
+            phone:
+                '$_selectedCode${_phoneController.text.replaceAll(RegExp(r'\D'), '')}',
+          );
+        } else {
+          notifier.addContact(contactData);
+        }
 
-      final clientsState = ref.read(clientsProvider);
+        // 2. Submit
+        final newClientId = await notifier.submit();
 
-      if (clientsState is AsyncData) {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(content: Text('Cliente agregado exitosamente')),
           );
 
           if (_returnTo != null && _returnTo!.contains('/quotes/create')) {
-            final clients = clientsState.value!;
-            final newClient = clients.firstWhere(
-              (c) => c.id == newClientId,
-              orElse: () => clients.last, // Fallback safely
-            );
-
-            // Auto-select client
-            // Auto-select client (this also handles primary contact auto-selection in the notifier)
-            ref.read(createQuoteProvider.notifier).setClient(newClient);
+            final client = await ref
+                .read(clientsRepositoryProvider)
+                .getClient(newClientId);
+            if (client != null && mounted) {
+              ref.read(createQuoteProvider.notifier).setClient(client);
+            }
           }
+
+          if (!mounted) return;
 
           if (_returnTo != null) {
             context.go(_returnTo!);
@@ -116,10 +105,11 @@ class _AddClientContactScreenState
             context.go('/clients');
           }
         }
-      } else if (clientsState is AsyncError) {
+      } catch (e) {
         if (mounted) {
+          setState(() => _isLoading = false);
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Error: ${clientsState.error}')),
+            SnackBar(content: Text('Error al guardar cliente: $e')),
           );
         }
       }
@@ -305,6 +295,7 @@ class _AddClientContactScreenState
                 onBack: () => context.pop(),
                 onNext: _onFinish,
                 isLastStep: true,
+                isLoading: _isLoading,
               ),
             ),
           ],

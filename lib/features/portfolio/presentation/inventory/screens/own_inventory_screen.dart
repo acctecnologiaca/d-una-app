@@ -203,7 +203,7 @@ class _OwnInventoryScreenState extends ConsumerState<OwnInventoryScreen> {
               padding: const EdgeInsets.only(bottom: 40.0),
               child: CustomExtendedFab(
                 onPressed: () {
-                  context.go('/portfolio/own-inventory/add');
+                  context.push('/portfolio/own-inventory/add');
                 },
                 label: 'Agregar',
                 icon: Icons.add,

@@ -17,6 +17,7 @@ import '../../../../../shared/widgets/custom_dialog.dart';
 import '../../../../supplier_orders/domain/models/supplier_order_status.dart';
 import '../../../../supplier_orders/presentation/supplier_orders_list/providers/supplier_orders_providers.dart';
 import '../../../domain/models/quote_model.dart' show QuoteStatus;
+import '../../quotes_list/providers/quotes_provider.dart';
 
 class CreateQuoteScreen extends ConsumerStatefulWidget {
   final String? quoteId;
@@ -45,10 +46,8 @@ class _CreateQuoteScreenState extends ConsumerState<CreateQuoteScreen>
       final currentState = ref.read(createQuoteProvider);
 
       if (widget.quoteId != null) {
-        // Modo EDICIÓN: Solo cargar si el ID es diferente
-        if (currentState.quote?.id != widget.quoteId) {
-          ref.read(createQuoteProvider.notifier).loadQuote(widget.quoteId!);
-        }
+        // Modo EDICIÓN: Cargar siempre datos frescos desde la base de datos
+        ref.read(createQuoteProvider.notifier).loadQuote(widget.quoteId!);
       } else {
         // Modo CREACIÓN:
         // 1. Si venimos de un estado con una cotización cargada (modo edición anterior), RESETEAR.
@@ -131,6 +130,19 @@ class _CreateQuoteScreenState extends ConsumerState<CreateQuoteScreen>
                     ? '${state.currentQuoteNumber}'
                     : 'Cargando...'),
           actions: [
+            if (widget.quoteId != null)
+              IconButton(
+                icon: Icon(
+                  Icons.save_outlined,
+                  color: state.hasChanges ? colors.onSurface : colors.outline,
+                ),
+                tooltip: state.hasChanges
+                    ? 'Guardar cambios'
+                    : 'Sin modificaciones',
+                onPressed: state.hasChanges
+                    ? () => _handleSaveInEditMode(ref)
+                    : null,
+              ),
             IconButton(
               icon: Icon(Icons.more_vert, color: colors.onSurface),
               onPressed: () => _showActionsMenu(ref),
@@ -372,6 +384,8 @@ class _CreateQuoteScreenState extends ConsumerState<CreateQuoteScreen>
             final savedQuote = ref.read(createQuoteProvider).quote;
             final quoteId = savedQuote?.id;
             ref.read(createQuoteProvider.notifier).reset();
+            ref.invalidate(paginatedQuotesListProvider);
+            ref.invalidate(paginatedQuoteSearchProvider);
             context.pop(); // Close sheet
             if (quoteId != null) {
               context.pushReplacement(
@@ -387,10 +401,65 @@ class _CreateQuoteScreenState extends ConsumerState<CreateQuoteScreen>
           onTap: () {
             context.pop(); // Close sheet
             ref.read(createQuoteProvider.notifier).reset();
+            ref.invalidate(paginatedQuotesListProvider);
+            ref.invalidate(paginatedQuoteSearchProvider);
             context.pop(); // Back to list
           },
         ),
       ],
     );
+  }
+
+  Future<void> _handleSaveInEditMode(WidgetRef ref) async {
+    final state = ref.read(createQuoteProvider);
+    final currentStatus = state.quote?.status;
+
+    if (currentStatus != null && currentStatus != QuoteStatus.draft.dbValue) {
+      final confirm =
+          await CustomDialog.show<bool>(
+            context: context,
+            dialog: CustomDialog.confirmation(
+              icon: Icons.warning_amber_rounded,
+              title: 'Cambio a estatus Borrador',
+              contentText:
+                  'La cotización se encuentra en estatus "${QuoteStatus.fromDbValue(currentStatus).label}". Al guardar las modificaciones, pasará automáticamente a estatus Borrador. ¿Deseas continuar?',
+              actions: [
+                TextButton(
+                  onPressed: () =>
+                      Navigator.of(context, rootNavigator: true).pop(false),
+                  child: const Text('Cancelar'),
+                ),
+                FilledButton(
+                  onPressed: () =>
+                      Navigator.of(context, rootNavigator: true).pop(true),
+                  child: const Text('Guardar'),
+                ),
+              ],
+            ),
+          ) ??
+          false;
+
+      if (!confirm) return;
+    }
+
+    final success = await ref
+        .read(createQuoteProvider.notifier)
+        .createQuote(status: 'draft');
+
+    if (success && mounted) {
+      final savedQuote = ref.read(createQuoteProvider).quote;
+      final quoteId = savedQuote?.id;
+      ref.invalidate(paginatedQuotesListProvider);
+      ref.invalidate(paginatedQuoteSearchProvider);
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Cotización guardada como Borrador')),
+      );
+
+      if (quoteId != null) {
+        ref.invalidate(viewQuoteProvider(quoteId));
+        context.pushReplacement('/quotes/view/$quoteId');
+      }
+    }
   }
 }

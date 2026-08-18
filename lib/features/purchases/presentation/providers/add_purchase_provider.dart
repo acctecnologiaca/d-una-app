@@ -340,7 +340,9 @@ class AddPurchaseNotifier extends StateNotifier<AddPurchaseState> {
         await _repository.createPurchase(purchase, dbProducts, state.serials);
       }
 
-      _ref.invalidate(purchasesProvider(null));
+      _ref.invalidate(paginatedPurchasesListProvider);
+      _ref.invalidate(paginatedPurchaseSearchProvider);
+      _ref.invalidate(purchasesProvider);
       if (state.purchaseId != null) {
         // Also invalidate details provider for this specific purchase
         _ref.invalidate(purchaseDetailsProvider(state.purchaseId!));

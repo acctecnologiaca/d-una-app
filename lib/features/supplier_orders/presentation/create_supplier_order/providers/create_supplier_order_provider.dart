@@ -56,6 +56,23 @@ class CreateSupplierOrderState extends Equatable {
   double get tax => subtotal * (taxRate / 100);
   double get total => subtotal + tax;
 
+  bool isDetailsValid({bool hasBranches = false}) {
+    final hasSupplier = supplierId != null && supplierId!.isNotEmpty;
+    final hasBranch = !hasBranches ||
+        (supplierBranchId != null && supplierBranchId!.isNotEmpty);
+    final hasShipping =
+        shippingMethodId != null && shippingMethodId!.isNotEmpty;
+    final hasReceiver =
+        receiverCollaboratorId != null && receiverCollaboratorId!.isNotEmpty;
+    final hasPayment = paymentMethod != null && paymentMethod!.isNotEmpty;
+
+    return hasSupplier &&
+        hasBranch &&
+        hasShipping &&
+        hasReceiver &&
+        hasPayment;
+  }
+
   CreateSupplierOrderState copyWith({
     String? id,
     String? supplierId,

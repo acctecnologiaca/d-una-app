@@ -314,7 +314,7 @@ class _SupplierBranchesProviderElement
 }
 
 String _$supplierBranchContactInfoHash() =>
-    r'd0db69d21e5a24135a4a4b7007aaa974c48022ad';
+    r'0dfc33fcf622b31aeffe046ccee896e28c79dd84';
 
 /// See also [supplierBranchContactInfo].
 @ProviderFor(supplierBranchContactInfo)
@@ -816,12 +816,12 @@ class _LinkedPurchaseProviderElement
 }
 
 String _$paginatedSupplierOrdersHash() =>
-    r'99fc9f721fc267617934f9d36b691e0c295ba323';
+    r'e413fdc78bda6a8888132f6a48b83b54b9f958f6';
 
 /// See also [PaginatedSupplierOrders].
 @ProviderFor(PaginatedSupplierOrders)
 final paginatedSupplierOrdersProvider =
-    AutoDisposeAsyncNotifierProvider<
+    AsyncNotifierProvider<
       PaginatedSupplierOrders,
       PaginatedState<SupplierOrder>
     >.internal(
@@ -835,6 +835,6 @@ final paginatedSupplierOrdersProvider =
     );
 
 typedef _$PaginatedSupplierOrders =
-    AutoDisposeAsyncNotifier<PaginatedState<SupplierOrder>>;
+    AsyncNotifier<PaginatedState<SupplierOrder>>;
 // ignore_for_file: type=lint
 // ignore_for_file: subtype_of_sealed_class, invalid_use_of_internal_member, invalid_use_of_visible_for_testing_member, deprecated_member_use_from_same_package

@@ -71,27 +71,30 @@ class _GenericSearchScreenState<T> extends State<GenericSearchScreen<T>> {
   void initState() {
     super.initState();
     _loadHistory();
-    _searchController.addListener(() {
-      setState(() {
-        _searchQuery = _searchController.text;
-      });
-      widget.onQueryChanged?.call(_searchController.text);
-      
-      if (widget.isPaginatedMode) {
-        if (_debounce?.isActive ?? false) _debounce!.cancel();
-        _debounce = Timer(const Duration(milliseconds: 500), () {
-          widget.onServerSearch?.call(_searchController.text);
-        });
-      }
-    });
-    // Pre-fill search if initialQuery is provided
+    // Pre-fill search if initialQuery is provided BEFORE attaching listener
     if (widget.initialQuery != null && widget.initialQuery!.isNotEmpty) {
       _searchController.text = widget.initialQuery!;
+      _searchQuery = widget.initialQuery!;
     }
+    _searchController.addListener(_onSearchInputChanged);
     // Request focus after build (only if not readOnly)
     if (!widget.readOnly) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
-        _focusNode.requestFocus();
+        if (mounted) _focusNode.requestFocus();
+      });
+    }
+  }
+
+  void _onSearchInputChanged() {
+    setState(() {
+      _searchQuery = _searchController.text;
+    });
+    widget.onQueryChanged?.call(_searchController.text);
+
+    if (widget.isPaginatedMode) {
+      if (_debounce?.isActive ?? false) _debounce!.cancel();
+      _debounce = Timer(const Duration(milliseconds: 500), () {
+        if (mounted) widget.onServerSearch?.call(_searchController.text);
       });
     }
   }

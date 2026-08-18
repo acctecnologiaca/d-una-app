@@ -16,7 +16,9 @@ enum SortOption {
   quantityDesc,
   dateIssued,
   orderNumberDesc,
-  orderNumberAsc;
+  orderNumberAsc,
+  quoteNumberDesc,
+  quoteNumberAsc;
 
   String get label {
     switch (this) {
@@ -50,6 +52,10 @@ enum SortOption {
         return 'Nº Orden (9-0)';
       case SortOption.orderNumberAsc:
         return 'Nº Orden (0-9)';
+      case SortOption.quoteNumberDesc:
+        return 'Nº Cotización (9-0)';
+      case SortOption.quoteNumberAsc:
+        return 'Nº Cotización (0-9)';
     }
   }
 }
@@ -237,6 +243,8 @@ class SortSelector extends StatelessWidget {
           SortOption.dateIssued => Icons.calendar_today_outlined,
           SortOption.orderNumberDesc => Icons.arrow_downward,
           SortOption.orderNumberAsc => Icons.arrow_upward,
+          SortOption.quoteNumberDesc => Icons.arrow_downward,
+          SortOption.quoteNumberAsc => Icons.arrow_upward,
         };
       },
     );

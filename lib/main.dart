@@ -6,6 +6,8 @@ import 'core/router/app_router.dart';
 import 'core/theme/app_theme.dart';
 import 'core/utils/session_manager.dart';
 import 'package:d_una_app/features/profile/presentation/providers/profile_provider.dart';
+import 'package:d_una_app/features/supplier_orders/presentation/supplier_orders_list/providers/supplier_orders_providers.dart';
+import 'package:d_una_app/features/purchases/presentation/providers/purchases_providers.dart';
 import 'package:d_una_app/shared/providers/pdf_preview_provider.dart';
 
 //import 'package:shared_preferences/shared_preferences.dart';
@@ -136,10 +138,12 @@ class _DUnaAppState extends ConsumerState<DUnaApp> with WidgetsBindingObserver {
           debugPrint('Fallo al refrescar sesión proactivamente: $e');
         }
 
-        // Invalidar providers realtime para forzar re-suscripción de WebSockets
+        // Invalidar providers realtime para forzar re-suscripción de WebSockets y actualización
         ref.invalidate(userProfileProvider);
         ref.invalidate(shippingMethodsProvider);
         ref.invalidate(verificationDocumentsProvider);
+        ref.invalidate(paginatedSupplierOrdersProvider);
+        ref.invalidate(paginatedPurchasesListProvider);
       }
     }
   }

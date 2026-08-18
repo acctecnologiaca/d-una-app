@@ -59,11 +59,37 @@ IconButton(
 )
 ```
 
-### B. Floating Action Button (FAB)
-Used for navigation to the **Edit** screen.
--   **Icon**: `Icons.edit`.
+### B. Floating Action Buttons (FABs) & Dynamic Bottom Padding
+Used for primary actions (e.g., Edit, WhatsApp Contact, Finalize/Register Purchase).
+-   **Icon**: `Icons.edit` (for Edit), WhatsApp icon, etc.
 -   **Color**: `colors.primaryContainer` (background), `colors.onPrimaryContainer` (icon).
--   **Position**: Bottom right (default).
+-   **Position**: Bottom right (default), with `bottom: 40.0` margin when embedded in a Scaffold with Bottom Navigation or tabs.
+-   **Stacked FABs**: When showing 2 FABs (e.g., WhatsApp + Edit or WhatsApp + Finalize), arrange them in a `Column` with `MainAxisSize.min` and `const SizedBox(height: 16)` separation.
+
+#### 📐 Dynamic Bottom Padding Rule for Scroll Views
+To ensure that single or multiple stacked FABs never obscure content at the bottom of the scroll view (`SingleChildScrollView` or `ListView`), compute and apply dynamic bottom padding:
+
+- **2 FABs active** ➔ **`184.0 px`** ($40\text{px base} + 56\text{px FAB 1} + 16\text{px gap} + 56\text{px FAB 2} + 16\text{px respiro}$).
+- **1 FAB active** ➔ **`112.0 px`** ($40\text{px base} + 56\text{px FAB} + 16\text{px respiro}$).
+- **0 FABs active** ➔ **`24.0 px`** (Standard clean edge padding).
+
+```dart
+// Example dynamic calculation in Details Screen:
+final hasTwoFabs = hasAction1 && hasAction2;
+final hasOneFab = hasAction1 ^ hasAction2;
+final double bottomPadding = hasTwoFabs ? 184.0 : (hasOneFab ? 112.0 : 24.0);
+
+// In the Tab/Body scroll view:
+SingleChildScrollView(
+  padding: EdgeInsets.only(
+    left: 16,
+    right: 16,
+    top: 24,
+    bottom: bottomPadding,
+  ),
+  child: ...
+)
+```
 
 ```dart
 FloatingActionButton(

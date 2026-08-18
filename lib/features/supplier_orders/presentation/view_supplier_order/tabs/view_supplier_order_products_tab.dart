@@ -11,11 +11,13 @@ import '../../supplier_orders_list/providers/supplier_orders_providers.dart';
 class ViewSupplierOrderProductsTab extends ConsumerStatefulWidget {
   final SupplierOrder order;
   final List<SupplierOrderItem> items;
+  final double bottomPadding;
 
   const ViewSupplierOrderProductsTab({
     super.key,
     required this.order,
     required this.items,
+    this.bottomPadding = 112.0,
   });
 
   @override
@@ -95,7 +97,7 @@ class _ViewSupplierOrderProductsTabState
             },
             child: ListView.builder(
               physics: const AlwaysScrollableScrollPhysics(),
-              padding: const EdgeInsets.only(left: 0, right: 0, top: 0, bottom: 100),
+              padding: EdgeInsets.only(left: 0, right: 0, top: 0, bottom: widget.bottomPadding),
               itemCount: keysList.length,
               itemBuilder: (context, index) {
                 final productKey = keysList[index];

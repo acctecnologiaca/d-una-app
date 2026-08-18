@@ -25,12 +25,36 @@ Deno.serve(async (req) => {
       emailContent,
       documentType = 'quote',
       documentId = null,
+      documentNumber = null,
+      actionToken = null,
+      validityDays = 15,
     } = body;
 
-    // Verify required fields
-    if (!recipientEmails || !emailContent) {
-      console.error('Error: Faltan campos obligatorios');
-      throw new Error('Missing required fields in payload');
+    const rawRecipients = Array.isArray(recipientEmails) 
+      ? recipientEmails 
+      : String(recipientEmails || '').split(/[,;]/);
+
+    const cleanRecipients = Array.from(
+      new Set(
+        rawRecipients
+          .map((e: string) => String(e).trim().toLowerCase())
+          .filter((e: string) => e.length > 0)
+      )
+    );
+
+    if (cleanRecipients.length === 0) {
+      throw new Error('Debe especificar al menos un destinatario válido');
+    }
+
+    if (cleanRecipients.length > 3) {
+      return new Response(JSON.stringify({ 
+        success: false, 
+        error: 'Máximo 3 destinatarios permitidos por envío',
+        errorCode: 'MAX_RECIPIENTS_EXCEEDED',
+      }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        status: 400,
+      });
     }
 
     // ============================================================
@@ -73,12 +97,12 @@ Deno.serve(async (req) => {
       }
 
       remainingCredits = creditStatus.remainingCredits || 0;
-      if (remainingCredits <= 0) {
+      if (remainingCredits < cleanRecipients.length) {
         return new Response(JSON.stringify({ 
           success: false, 
-          error: `Has alcanzado el límite de créditos de tu ciclo.`,
+          error: `No dispones de suficientes créditos (${remainingCredits}) para enviar a ${cleanRecipients.length} destinatarios.`,
           errorCode: 'INSUFFICIENT_CREDITS',
-          remainingCredits: 0,
+          remainingCredits: remainingCredits,
         }), {
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
           status: 429,
@@ -157,48 +181,105 @@ Deno.serve(async (req) => {
 
       // Construct HTML Body: para Órdenes de Compra (supplier_order / oc) se usa directamente bodyHtml sin firma duplicada
       const isSupplierOrder = documentType === 'supplier_order' || documentType === 'oc';
-      const fullBodyHtml = isSupplierOrder 
-        ? emailContent.bodyHtml
-        : `
-        <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; color: #333; line-height: 1.6;">
-          <div style="margin-bottom: 30px;">
-            ${emailContent.bodyHtml.replace(/\n/g, '<br>')}
-          </div>
-          
-          <div style="margin-top: 40px; border-top: 1px solid #eee; padding-top: 20px;">
-            <table cellpadding="0" cellspacing="0" style="width: 100%; border-collapse: collapse;">
-              <tr>
-                ${userContext.companyLogo ? `
-                <td style="width: 120px; vertical-align: top; padding-right: 15px;">
-                  <img src="${userContext.companyLogo}" width="120" height="120" style="border-radius: 12px; object-fit: contain;" alt="Logo">
-                </td>` : ''}
-                <td style="vertical-align: middle;">
-                  <div style="font-size: 16px; font-weight: bold; color: #1a1a1a;">${userContext.name}</div>
-                  ${userContext.companyName ? `<div style="font-size: 14px; color: #666;">${userContext.companyName}</div>` : ''}
-                  <div style="margin-top: 5px; font-size: 13px;">
-                    ${userContext.phone ? `<span style="color: #666;">Tel: </span><span style="color: #333;">${userContext.phone}</span><br>` : ''}
-                    <span style="color: #666;">Email: </span><a href="mailto:${userContext.replyToEmail}" style="color: #007bff; text-decoration: none;">${userContext.replyToEmail}</a>
-                  </div>
-                </td>
-              </tr>
-            </table>
-          </div>
+      let fullBodyHtml = '';
 
-          <div style="margin-top: 40px; text-align: center;">
-            <img src="https://fdkswvzrozijbizdthge.supabase.co/storage/v1/object/sign/app_images/creado_con_d_una.png?token=eyJraWQiOiJzdG9yYWdlLXVybC1zaWduaW5nLWtleV8yNjZhOWZkMS0xYWQyLTQ3OWEtOGNlYS1kYjQzMjA0OGNlMjkiLCJhbGciOiJIUzI1NiJ9.eyJ1cmwiOiJhcHBfaW1hZ2VzL2NyZWFkb19jb25fZF91bmEucG5nIiwiaWF0IjoxNzc4MjUwNzI0LCJleHAiOjQ5MzE4NTA3MjR9.sP-lgLmlurZ3oMZxk6IGFwaRQ6_OTKZgMmiZQ0CM4Mc" width="100" style="opacity: 0.7; display: inline-block;" alt="Creado con d'una">
-          </div>
-        </div>
-      `;
+      if (isSupplierOrder) {
+        fullBodyHtml = emailContent.bodyHtml;
+      } else {
+        const viewerUrl = actionToken 
+          ? `https://d-una.app/quote.html?token=${actionToken}` 
+          : 'https://d-una.app';
+        
+        const formattedUserBody = (emailContent.bodyHtml || '')
+          .split('\n')
+          .filter((line: string) => line.trim().length > 0)
+          .map((line: string) => `<p style="margin: 0 0 12px 0;">${line}</p>`)
+          .join('');
+
+        const logoHtml = userContext?.companyLogo ? `
+          <td style="width: 120px; vertical-align: middle; padding-right: 20px;">
+            <img src="${userContext.companyLogo}" style="max-width: 110px; max-height: 110px; border-radius: 8px; object-fit: contain; display: block;" alt="Logo">
+          </td>
+        ` : '';
+
+        const contactParts = [];
+        if (userContext?.phone) contactParts.push(`📞 ${userContext.phone}`);
+        if (userContext?.replyToEmail) contactParts.push(`✉️ <a href="mailto:${userContext.replyToEmail}" style="color: #36618E; text-decoration: none;">${userContext.replyToEmail}</a>`);
+        const contactInfoLine = contactParts.join('&nbsp;&bull;&nbsp;');
+
+        fullBodyHtml = `
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Cotización D-UNA</title>
+</head>
+<body style="font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; background-color: #F8FAFC; margin: 0; padding: 24px 16px; color: #1E293B; line-height: 1.6;">
+  <div style="max-width: 640px; margin: 0 auto; background-color: #FFFFFF; border-radius: 12px; overflow: hidden; border: 1px solid #E2E8F0; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);">
+    
+    <div style="padding: 28px 24px;">
+      <!-- CUERPO DEFINIDO POR EL USUARIO -->
+      <div style="font-size: 14px; color: #334155; margin-bottom: 20px;">
+        ${formattedUserBody}
+      </div>
+
+      <!-- NOTA DE VIGENCIA -->
+      <p style="font-size: 13px; color: #64748B; margin: 0 0 24px 0; background-color: #F8FAFC; padding: 10px 14px; border-radius: 8px; border-left: 3px solid #0F172A;">
+        📝 <strong>Validez:</strong> Esta cotización es válida durante <strong>${validityDays} días</strong> desde su emisión.
+      </p>
+
+      <!-- BOTÓN PRINCIPAL DE ACCIÓN -->
+      <div style="text-align: center; margin: 28px 0 14px 0;">
+        <a href="${viewerUrl}" style="background-color: #0F172A; color: #FFFFFF; text-decoration: none; padding: 14px 28px; border-radius: 10px; font-weight: 700; font-size: 14px; display: inline-block; box-shadow: 0 4px 12px rgba(15, 23, 42, 0.25);">
+          Ver cotización
+        </a>
+      </div>
+
+      <!-- RESPALDO CON ENLACE DIRECTO -->
+      <p style="font-size: 12px; color: #64748B; text-align: center; margin: 0 0 20px 0; line-height: 1.5;">
+        Si el botón no funciona en su gestor de correo, copie y pegue este enlace en su navegador:<br>
+        <a href="${viewerUrl}" style="color: #0284C7; word-break: break-all; text-decoration: underline;">${viewerUrl}</a>
+      </p>
+
+      <!-- FIRMA COMERCIAL DEL EMISOR -->
+      <div style="margin-top: 28px; border-top: 1px solid #E2E8F0; padding-top: 20px;">
+        <table cellpadding="0" cellspacing="0" style="width: 100%; border-collapse: collapse;">
+          <tr>
+            ${logoHtml}
+            <td style="vertical-align: middle;">
+              <div style="font-size: 15px; font-weight: 700; color: #0F172A;">${userContext?.name || 'Asesor Comercial'}</div>
+              ${userContext?.companyName ? `<div style="font-size: 13px; color: #64748B; margin-top: 2px;">${userContext.companyName}</div>` : ''}
+              <div style="margin-top: 6px; font-size: 12px; color: #64748B; line-height: 1.6;">
+                ${userContext?.phone ? `<div>📞 ${userContext.phone}</div>` : ''}
+                ${userContext?.replyToEmail ? `<div style="margin-top: 2px;">✉️ <a href="mailto:${userContext.replyToEmail}" style="color: #0284C7; text-decoration: none;">${userContext.replyToEmail}</a></div>` : ''}
+              </div>
+            </td>
+          </tr>
+        </table>
+      </div>
+    </div>
+
+    <!-- FOOTER INSTITUCIONAL -->
+    <div style="background-color: #F1F5F9; padding: 18px 20px; border-top: 1px solid #E2E8F0; text-align: center;">
+      <img src="https://fdkswvzrozijbizdthge.supabase.co/storage/v1/object/sign/app_images/creado_con_d_una.png?token=eyJraWQiOiJzdG9yYWdlLXVybC1zaWduaW5nLWtleV8yNjZhOWZkMS0xYWQyLTQ3OWEtOGNlYS1kYjQzMjA0OGNlMjkiLCJhbGciOiJIUzI1NiJ9.eyJ1cmwiOiJhcHBfaW1hZ2VzL2NyZWFkb19jb25fZF91bmEucG5nIiwiaWF0IjoxNzc4MjUwNzI0LCJleHAiOjQ5MzE4NTA3MjR9.sP-lgLmlurZ3oMZxk6IGFwaRQ6_OTKZgMmiZQ0CM4Mc" width="110" style="display: inline-block; opacity: 0.85;" alt="Creado con D-UNA">
+    </div>
+
+  </div>
+</body>
+</html>
+        `;
+      }
 
       const mailOptions = {
         from: `"${userContext.name}" <${smtpFrom}>`,
-        to: recipientEmails.join(', '),
+        to: cleanRecipients.join(', '),
         replyTo: userContext.replyToEmail,
         subject: emailContent.subject,
         html: fullBodyHtml,
         envelope: {
           from: smtpUser,
-          to: recipientEmails,
+          to: cleanRecipients,
         },
         attachments: documentBase64
           ? [
@@ -220,6 +301,92 @@ Deno.serve(async (req) => {
         throw new Error('RESEND_API_KEY not configured');
       }
 
+      const isSupplierOrder = documentType === 'supplier_order' || documentType === 'oc';
+      let fullBodyHtml = '';
+
+      if (isSupplierOrder) {
+        fullBodyHtml = emailContent.bodyHtml;
+      } else {
+        const viewerUrl = actionToken 
+          ? `https://d-una.app/quote.html?token=${actionToken}` 
+          : 'https://d-una.app';
+        
+        const formattedUserBody = (emailContent.bodyHtml || '')
+          .split('\n')
+          .filter((line: string) => line.trim().length > 0)
+          .map((line: string) => `<p style="margin: 0 0 12px 0;">${line}</p>`)
+          .join('');
+
+        const logoHtml = userContext?.companyLogo ? `
+          <td style="width: 120px; vertical-align: middle; padding-right: 20px;">
+            <img src="${userContext.companyLogo}" style="max-width: 110px; max-height: 110px; border-radius: 8px; object-fit: contain; display: block;" alt="Logo">
+          </td>
+        ` : '';
+
+        fullBodyHtml = `
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Cotización D-UNA</title>
+</head>
+<body style="font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; background-color: #F8FAFC; margin: 0; padding: 24px 16px; color: #1E293B; line-height: 1.6;">
+  <div style="max-width: 640px; margin: 0 auto; background-color: #FFFFFF; border-radius: 12px; overflow: hidden; border: 1px solid #E2E8F0; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);">
+    
+    <div style="padding: 28px 24px;">
+      <!-- CUERPO DEFINIDO POR EL USUARIO -->
+      <div style="font-size: 14px; color: #334155; margin-bottom: 20px;">
+        ${formattedUserBody}
+      </div>
+
+      <!-- NOTA DE VIGENCIA -->
+      <p style="font-size: 13px; color: #64748B; margin: 0 0 24px 0; background-color: #F8FAFC; padding: 10px 14px; border-radius: 8px; border-left: 3px solid #0F172A;">
+        📝 <strong>Validez:</strong> Esta cotización es válida durante <strong>${validityDays} días</strong> desde su emisión.
+      </p>
+
+      <!-- BOTÓN PRINCIPAL DE ACCIÓN -->
+      <div style="text-align: center; margin: 28px 0 14px 0;">
+        <a href="${viewerUrl}" style="background-color: #0F172A; color: #FFFFFF; text-decoration: none; padding: 14px 28px; border-radius: 10px; font-weight: 700; font-size: 14px; display: inline-block; box-shadow: 0 4px 12px rgba(15, 23, 42, 0.25);">
+          Ver cotización
+        </a>
+      </div>
+
+      <!-- RESPALDO CON ENLACE DIRECTO -->
+      <p style="font-size: 12px; color: #64748B; text-align: center; margin: 0 0 20px 0; line-height: 1.5;">
+        Si el botón no funciona en su gestor de correo, copie y pegue este enlace en su navegador:<br>
+        <a href="${viewerUrl}" style="color: #0284C7; word-break: break-all; text-decoration: underline;">${viewerUrl}</a>
+      </p>
+
+      <!-- FIRMA COMERCIAL DEL EMISOR -->
+      <div style="margin-top: 28px; border-top: 1px solid #E2E8F0; padding-top: 20px;">
+        <table cellpadding="0" cellspacing="0" style="width: 100%; border-collapse: collapse;">
+          <tr>
+            ${logoHtml}
+            <td style="vertical-align: middle;">
+              <div style="font-size: 15px; font-weight: 700; color: #0F172A;">${userContext?.name || 'Asesor Comercial'}</div>
+              ${userContext?.companyName ? `<div style="font-size: 13px; color: #64748B; margin-top: 2px;">${userContext.companyName}</div>` : ''}
+              <div style="margin-top: 6px; font-size: 12px; color: #64748B; line-height: 1.6;">
+                ${userContext?.phone ? `<div>📞 ${userContext.phone}</div>` : ''}
+                ${userContext?.replyToEmail ? `<div style="margin-top: 2px;">✉️ <a href="mailto:${userContext.replyToEmail}" style="color: #0284C7; text-decoration: none;">${userContext.replyToEmail}</a></div>` : ''}
+              </div>
+            </td>
+          </tr>
+        </table>
+      </div>
+    </div>
+
+    <!-- FOOTER INSTITUCIONAL -->
+    <div style="background-color: #F1F5F9; padding: 18px 20px; border-top: 1px solid #E2E8F0; text-align: center;">
+      <img src="https://fdkswvzrozijbizdthge.supabase.co/storage/v1/object/sign/app_images/creado_con_d_una.png?token=eyJraWQiOiJzdG9yYWdlLXVybC1zaWduaW5nLWtleV8yNjZhOWZkMS0xYWQyLTQ3OWEtOGNlYS1kYjQzMjA0OGNlMjkiLCJhbGciOiJIUzI1NiJ9.eyJ1cmwiOiJhcHBfaW1hZ2VzL2NyZWFkb19jb25fZF91bmEucG5nIiwiaWF0IjoxNzc4MjUwNzI0LCJleHAiOjQ5MzE4NTA3MjR9.sP-lgLmlurZ3oMZxk6IGFwaRQ6_OTKZgMmiZQ0CM4Mc" width="110" style="display: inline-block; opacity: 0.85;" alt="Creado con D-UNA">
+    </div>
+
+  </div>
+</body>
+</html>
+        `;
+      }
+
       const res = await fetch('https://api.resend.com/emails', {
         method: 'POST',
         headers: {
@@ -228,10 +395,10 @@ Deno.serve(async (req) => {
         },
         body: JSON.stringify({
           from: `"${userContext.name}" <notificaciones@tu-dominio-verificado.com>`, 
-          to: recipientEmails,
+          to: cleanRecipients,
           reply_to: userContext.replyToEmail,
           subject: emailContent.subject,
-          html: emailContent.bodyHtml,
+          html: fullBodyHtml,
           attachments: documentBase64
             ? [
                 {
@@ -260,20 +427,23 @@ Deno.serve(async (req) => {
     let newRemaining = remainingCredits;
 
     if (!isExemptFromCredits) {
-      const { data: updatedStatus, error: consumeError } = await supabaseAdmin.rpc(
-        'consume_user_credit',
-        {
-          p_user_id: userId,
-          p_doc_type: documentType,
-          p_channel: 'email',
-          p_ref_id: documentId,
-        }
-      );
+      for (const _recipient of cleanRecipients) {
+        const { data: updatedStatus, error: consumeError } = await supabaseAdmin.rpc(
+          'consume_user_credit',
+          {
+            p_user_id: userId,
+            p_doc_type: documentType,
+            p_channel: 'email',
+            p_ref_id: documentId,
+            p_doc_number: documentNumber,
+          }
+        );
 
-      if (consumeError) {
-        console.error('Warning: Failed to consume credit:', consumeError);
-      } else {
-        newRemaining = updatedStatus?.remainingCredits ?? (remainingCredits - 1);
+        if (consumeError) {
+          console.error('Warning: Failed to consume credit:', consumeError);
+        } else if (updatedStatus) {
+          newRemaining = updatedStatus.remainingCredits;
+        }
       }
     } else if (documentId) {
       // Para documentos exentos (OCs), se inserta un registro con monto 0 

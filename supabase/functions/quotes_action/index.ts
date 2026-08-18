@@ -13,13 +13,14 @@ Deno.serve(async (req) => {
   const url = new URL(req.url);
   let token = url.searchParams.get('token');
   let action = url.searchParams.get('action') || 'get_details';
+  let body: any = null;
 
   // Handle JSON body if POST
   if (req.method === 'POST') {
     try {
-      const body = await req.json();
-      if (body.token) token = body.token;
-      if (body.action) action = body.action;
+      body = await req.json();
+      if (body?.token) token = body.token;
+      if (body?.action) action = body.action;
     } catch (_e) {
       // Fallback to URL searchParams
     }
@@ -70,6 +71,22 @@ Deno.serve(async (req) => {
 
     // Handle 'get_details' action
     if (action === 'get_details' || action === 'view' || action === 'get') {
+      // Automatic telemetry tracking: transition to 'opened' if first time viewing after send
+      if (quote.status === 'sent' || quote.status === 'resent') {
+        try {
+          await supabaseAdmin
+            .from('quotes')
+            .update({
+              status: 'opened',
+              updated_at: new Date().toISOString(),
+            })
+            .eq('id', quote.id);
+          quote.status = 'opened';
+        } catch (statusUpdateErr) {
+          console.error('Error actualizando estatus a opened:', statusUpdateErr);
+        }
+      }
+
       return jsonResponse({
         status: 'success',
         is_expired: isExpired,
@@ -85,6 +102,8 @@ Deno.serve(async (req) => {
           notes: quote.notes,
           pdf_url: quote.pdf_url,
           expires_at: quote.action_token_expires_at,
+          client_feedback: quote.client_feedback || null,
+          client_feedback_at: quote.client_feedback_at || null,
         },
         client: {
           name: quote.clients?.name || 'Cliente',
@@ -117,6 +136,8 @@ Deno.serve(async (req) => {
             tax_amount: p.tax_amount,
             total_price: p.total_price,
             uom: p.uom || 'Und',
+            warranty_time: p.warranty_time,
+            warranty_unit: p.warranty_unit,
           })),
           services: (quote.quote_items_services || []).map((s: any) => ({
             name: s.name,
@@ -125,9 +146,62 @@ Deno.serve(async (req) => {
             unit_price: s.unit_price,
             tax_amount: s.tax_amount,
             total_price: s.total_price,
+            warranty_time: s.warranty_time,
+            warranty_unit: s.warranty_unit,
           })),
         },
         conditions: (quote.quote_conditions || []).map((c: any) => c.description || c.condition_text || c),
+      });
+    }
+
+    // Handle 'review' / 'evaluate' action
+    if (action === 'review' || action === 'evaluate') {
+      if (quote.status === 'approved' || quote.status === 'rejected') {
+        return jsonResponse({
+          status: 'already_processed',
+          quote_number: quote.quote_number,
+          current_status: quote.status,
+        });
+      }
+
+      if (isExpired) {
+        return jsonResponse({
+          status: 'expired',
+          quote_number: quote.quote_number,
+          expires_at: quote.action_token_expires_at,
+        });
+      }
+
+      const feedbackText: string | null =
+        body?.feedback ||
+        body?.notes ||
+        body?.reason ||
+        url.searchParams.get('feedback') ||
+        url.searchParams.get('notes') ||
+        null;
+
+      const updateData: Record<string, any> = {
+        status: 'review',
+        updated_at: new Date().toISOString(),
+      };
+      if (feedbackText && feedbackText.trim().length > 0) {
+        updateData.client_feedback = feedbackText.trim();
+        updateData.client_feedback_at = new Date().toISOString();
+      }
+
+      const { error: updateError } = await supabaseAdmin
+        .from('quotes')
+        .update(updateData)
+        .eq('id', quote.id);
+
+      if (updateError) {
+        throw new Error(`Error al actualizar estado a evaluación: ${updateError.message}`);
+      }
+
+      return jsonResponse({
+        status: 'review',
+        quote_number: quote.quote_number,
+        message: 'Cotización marcada en evaluación.',
       });
     }
 
@@ -154,13 +228,27 @@ Deno.serve(async (req) => {
       // C. Determine new status
       const newStatus = (action === 'approve' || action === 'confirm') ? 'approved' : 'rejected';
 
+      const feedbackText: string | null =
+        body?.feedback ||
+        body?.notes ||
+        body?.reason ||
+        url.searchParams.get('feedback') ||
+        url.searchParams.get('reason') ||
+        null;
+
+      const updateData: Record<string, any> = {
+        status: newStatus,
+        updated_at: new Date().toISOString(),
+      };
+      if (feedbackText && feedbackText.trim().length > 0) {
+        updateData.client_feedback = feedbackText.trim();
+        updateData.client_feedback_at = new Date().toISOString();
+      }
+
       // D. Update quote status in Supabase (Keep token for idempotency view)
       const { error: updateError } = await supabaseAdmin
         .from('quotes')
-        .update({
-          status: newStatus,
-          updated_at: new Date().toISOString(),
-        })
+        .update(updateData)
         .eq('id', quote.id);
 
       if (updateError) {

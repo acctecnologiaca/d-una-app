@@ -51,7 +51,7 @@ class QuoteCard extends StatelessWidget {
         onTap: onTap,
         onLongPress: onLongPress,
         overline: Text(
-          '#${quote.quoteNumber} (${dateFormat.format(quote.date)})',
+          '${quote.quoteNumber} (${dateFormat.format(quote.date)})',
         ),
         title: quote.clientName,
         subtitle: quote.quoteTag != null
@@ -103,6 +103,18 @@ class QuoteCard extends StatelessWidget {
                             quote.stockStatus.iconPath,
                             quote.stockStatus.label,
                           ),
+                      ],
+                      if (quote.clientFeedback != null &&
+                          quote.clientFeedback!.trim().isNotEmpty) ...[
+                        const SizedBox(width: 4),
+                        Tooltip(
+                          message: 'Comentario: ${quote.clientFeedback}',
+                          child: const Icon(
+                            Icons.chat_bubble_outline,
+                            size: 18,
+                            color: Color(0xFFFFB964),
+                          ),
+                        ),
                       ],
                       const SizedBox(width: 4),
                       _buildStatusIcon(

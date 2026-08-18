@@ -1,0 +1,371 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Respuesta de Cotización - D-UNA</title>
+  <style>
+    :root {
+      --bg: #F1F5F9;
+      --card: #FFFFFF;
+      --text: #1E293B;
+      --muted: #64748B;
+      --border: #E2E8F0;
+    }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+      padding: 20px;
+    }
+    .card {
+      background: var(--card);
+      border-radius: 20px;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.06);
+      max-width: 460px;
+      width: 100%;
+      padding: 40px 28px 32px;
+      text-align: center;
+    }
+    .badge {
+      width: 76px; height: 76px;
+      border-radius: 50%;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 36px;
+      margin-bottom: 24px;
+    }
+    h1 {
+      font-size: 21px;
+      font-weight: 700;
+      margin-bottom: 14px;
+      line-height: 1.3;
+    }
+    .msg {
+      font-size: 15px;
+      line-height: 1.6;
+      color: var(--muted);
+      margin-bottom: 28px;
+    }
+    .msg strong { color: var(--text); }
+    .footer {
+      border-top: 1px solid var(--border);
+      padding-top: 18px;
+      font-size: 11px;
+      color: #94A3B8;
+    }
+    .spinner {
+      width: 40px; height: 40px;
+      border: 4px solid var(--border);
+      border-top-color: #36618E;
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+      margin: 0 auto 20px;
+    }
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+    .btn {
+      display: inline-block;
+      padding: 12px 20px;
+      font-size: 14px;
+      font-weight: 600;
+      border-radius: 10px;
+      border: none;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      text-decoration: none;
+    }
+    .btn-approve {
+      background-color: #388E3C;
+      color: #FFFFFF;
+      box-shadow: 0 4px 12px rgba(56, 142, 60, 0.25);
+    }
+    .btn-approve:hover {
+      background-color: #2E7D32;
+    }
+    .btn-evaluate {
+      background-color: #FFB964;
+      color: #FFFFFF;
+      box-shadow: 0 4px 12px rgba(255, 185, 100, 0.35);
+    }
+    .btn-evaluate:hover {
+      background-color: #F5A548;
+    }
+    .btn-reject {
+      background-color: #F86F28;
+      color: #FFFFFF;
+      box-shadow: 0 4px 12px rgba(248, 111, 40, 0.25);
+    }
+    .btn-reject:hover {
+      background-color: #E65100;
+    }
+    .btn-secondary {
+      background-color: transparent;
+      color: #64748B;
+      border: 1px solid #CBD5E0;
+    }
+    .btn-secondary:hover {
+      background-color: #F8FAFC;
+      color: #1E293B;
+    }
+    .actions-row {
+      display: flex;
+      gap: 12px;
+      justify-content: center;
+      margin-top: 20px;
+    }
+    .feedback-box {
+      width: 100%;
+      margin-top: 16px;
+      text-align: left;
+    }
+    .feedback-box label {
+      display: block;
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--text);
+      margin-bottom: 6px;
+    }
+    .feedback-box textarea {
+      width: 100%;
+      min-height: 80px;
+      padding: 10px 12px;
+      font-family: inherit;
+      font-size: 13px;
+      color: var(--text);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      resize: vertical;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+    .feedback-box textarea:focus {
+      border-color: #36618E;
+    }
+    .feedback-counter {
+      display: block;
+      text-align: right;
+      font-size: 11px;
+      color: #94A3B8;
+      margin-top: 4px;
+    }
+  </style>
+</head>
+<body>
+  <div class="card" id="card">
+    <div class="spinner" id="spinner" style="display: none;"></div>
+    <h1 id="heading">Procesando solicitud...</h1>
+    <p class="msg" id="message">Validando su respuesta con el sistema D-UNA.</p>
+    <div id="actions-container"></div>
+    <div class="footer" style="margin-top: 24px;">
+      <img src="https://fdkswvzrozijbizdthge.supabase.co/storage/v1/object/sign/app_images/logo_d_una.png?token=eyJraWQiOiJzdG9yYWdlLXVybC1zaWduaW5nLWtleV8yNjZhOWZkMS0xYWQyLTQ3OWEtOGNlYS1kYjQzMjA0OGNlMjkiLCJhbGciOiJIUzI1NiJ9.eyJ1cmwiOiJhcHBfaW1hZ2VzL2xvZ29fZF91bmEucG5nIiwic2NvcGUiOiJkb3dubG9hZCIsImlhdCI6MTc4NTI2NTY0NSwiZXhwIjo0OTM4ODY1NjQ1fQ.2vHh0Q0-FA0ZQDV-HeBtlf6CKCS7jrPI5CIFjK7yPVw" alt="D-UNA" style="height: 24px; margin-bottom: 8px; vertical-align: middle;"><br>
+      Sistema Transaccional D-UNA &bull; Cotización Digital
+    </div>
+  </div>
+
+  <script>
+    (function() {
+      const params = new URLSearchParams(window.location.search);
+      const token = params.get('token');
+      const action = params.get('action');
+
+      const spinner = document.getElementById('spinner');
+      const heading = document.getElementById('heading');
+      const message = document.getElementById('message');
+      const card = document.getElementById('card');
+      const actionsContainer = document.getElementById('actions-container');
+
+      if (!token || !action) {
+        showResult('error', 'status_expired.png', 'Enlace Inválido',
+          'Los parámetros de seguridad requeridos no están presentes en la solicitud.');
+        return;
+      }
+
+      const isApprove = action === 'confirm' || action === 'approve';
+      const isReview = action === 'review' || action === 'evaluate';
+      const isReject = action === 'reject';
+
+      if (isApprove) {
+        showConfirmation(
+          'status_approved.png',
+          '¿Confirmar Aprobación de la Cotización?',
+          'Esta acción <strong>no se puede deshacer</strong>. Al aprobar esta cotización, usted confirma que acepta los términos, productos/servicios y precios detallados.',
+          'Aprobar Cotización',
+          'btn-approve',
+          null,
+          (feedback) => executeAction(token, 'approve', feedback)
+        );
+      } else if (isReview) {
+        showConfirmation(
+          'status_review.png',
+          '¿Marcar Cotización en Evaluación?',
+          'Esta acción notificará a su asesor comercial que la propuesta está siendo evaluada activamente.',
+          'Marcar en Evaluación',
+          'btn-evaluate',
+          'Comentarios o solicitud para su asesor (Opcional):',
+          (feedback) => executeAction(token, 'review', feedback)
+        );
+      } else if (isReject) {
+        showConfirmation(
+          'status_rejected.png',
+          '¿Confirmar Rechazo de la Cotización?',
+          'Esta acción marcará la propuesta como rechazada. Si lo desea, puede indicar el motivo para que su asesor lo tome en cuenta.',
+          'Rechazar Cotización',
+          'btn-reject',
+          'Motivo del rechazo (Opcional):',
+          (feedback) => executeAction(token, 'reject', feedback)
+        );
+      } else {
+        executeAction(token, action);
+      }
+
+      function showConfirmation(iconSrc, title, msgHtml, confirmBtnText, btnClass, feedbackLabel, onConfirm) {
+        heading.textContent = title;
+        message.innerHTML = msgHtml;
+        document.title = `${title} - D-UNA`;
+
+        const badgeEl = document.createElement('div');
+        badgeEl.className = 'badge';
+        badgeEl.style.backgroundColor = 'transparent';
+
+        const imgEl = document.createElement('img');
+        imgEl.src = iconSrc;
+        imgEl.style.width = '72px';
+        imgEl.style.height = '72px';
+        imgEl.style.objectFit = 'contain';
+        badgeEl.appendChild(imgEl);
+
+        card.insertBefore(badgeEl, heading);
+
+        actionsContainer.innerHTML = '';
+
+        let textareaEl = null;
+        if (feedbackLabel) {
+          const feedbackContainer = document.createElement('div');
+          feedbackContainer.className = 'feedback-box';
+          feedbackContainer.innerHTML = `
+            <label for="feedback-input">${esc(feedbackLabel)}</label>
+            <textarea id="feedback-input" maxlength="500" placeholder="Escriba aquí su mensaje (máx. 500 caracteres)..."></textarea>
+            <span class="feedback-counter" id="feedback-counter">0 / 500</span>
+          `;
+          actionsContainer.appendChild(feedbackContainer);
+          textareaEl = feedbackContainer.querySelector('textarea');
+          const counterEl = feedbackContainer.querySelector('#feedback-counter');
+          textareaEl.addEventListener('input', () => {
+            const currentLen = textareaEl.value.length;
+            counterEl.textContent = `${currentLen} / 500`;
+          });
+        }
+
+        const btnRow = document.createElement('div');
+        btnRow.className = 'actions-row';
+
+        const cancelBtn = document.createElement('button');
+        cancelBtn.className = 'btn btn-secondary';
+        cancelBtn.textContent = 'Cancelar';
+        cancelBtn.onclick = () => {
+          if (window.history.length > 1) {
+            window.history.back();
+          } else {
+            window.location.href = `quote.html?token=${encodeURIComponent(token)}`;
+          }
+        };
+
+        const confirmBtn = document.createElement('button');
+        confirmBtn.className = `btn ${btnClass}`;
+        confirmBtn.textContent = confirmBtnText;
+        confirmBtn.onclick = () => {
+          const feedbackVal = textareaEl ? textareaEl.value : null;
+          badgeEl.remove();
+          actionsContainer.innerHTML = '';
+          spinner.style.display = 'block';
+          heading.textContent = 'Procesando solicitud...';
+          message.innerHTML = 'Validando su respuesta con el sistema D-UNA.';
+          onConfirm(feedbackVal);
+        };
+
+        btnRow.appendChild(cancelBtn);
+        btnRow.appendChild(confirmBtn);
+        actionsContainer.appendChild(btnRow);
+      }
+
+      async function executeAction(token, action, feedback) {
+        try {
+          const apiUrl = 'https://fdkswvzrozijbizdthge.supabase.co/functions/v1/quotes_action';
+          const payload = { token, action, feedback };
+          const res = await fetch(apiUrl, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+          });
+          const data = await res.json();
+
+          if (data.status === 'approved') {
+            showResult('success', 'status_approved.png', '¡Cotización Aprobada Exitosamente!',
+              `Gracias por su respuesta. La cotización <strong>${esc(data.quote_number)}</strong> ha sido marcada como <strong>APROBADA</strong>.`);
+          } else if (data.status === 'review') {
+            showResult('review', 'status_review.png', 'Cotización en Evaluación',
+              `Su asesor comercial ha sido notificado de que la cotización <strong>${esc(data.quote_number)}</strong> está en evaluación. Puede volver a consultar el enlace cuando desee para aprobarla o rechazarla.`);
+          } else if (data.status === 'rejected') {
+            showResult('rejected', 'status_rejected.png', 'Cotización Rechazada',
+              `Gracias por su respuesta. La cotización <strong>${esc(data.quote_number)}</strong> ha sido marcada como <strong>RECHAZADA</strong>.`);
+          } else if (data.status === 'already_processed') {
+            const isApp = data.current_status === 'approved';
+            const iconImg = isApp ? 'status_approved.png' : 'status_rejected.png';
+            const st = isApp ? 'APROBADA' : 'RECHAZADA';
+            showResult(isApp ? 'success' : 'rejected', iconImg, `Cotización ${esc(data.quote_number)} ya registrada`,
+              `Esta cotización fue marcada como <strong>${st}</strong> anteriormente.`);
+          } else if (data.status === 'expired') {
+            showResult('warning', 'status_expired.png', 'Enlace Expirado',
+              `El plazo de validez para responder a la cotización <strong>${esc(data.quote_number)}</strong> ha vencido. Solicite un nuevo reenvío al emisor.`);
+          } else {
+            showResult('error', 'status_expired.png', 'Enlace Caducado o Inválido',
+              data.message || 'Este enlace ya no es válido o ha sido utilizado previamente.');
+          }
+        } catch (err) {
+          showResult('error', 'status_cancelled.png', 'Error de Conexión',
+            'No se pudo conectar con el servidor. Por favor intente nuevamente.');
+        }
+      }
+
+      function showResult(type, iconSrc, title, msg) {
+        spinner.style.display = 'none';
+
+        const oldBadge = card.querySelector('.badge');
+        if (oldBadge) oldBadge.remove();
+
+        const badgeEl = document.createElement('div');
+        badgeEl.className = 'badge';
+        badgeEl.style.backgroundColor = 'transparent';
+
+        const imgEl = document.createElement('img');
+        imgEl.src = iconSrc;
+        imgEl.style.width = '72px';
+        imgEl.style.height = '72px';
+        imgEl.style.objectFit = 'contain';
+        badgeEl.appendChild(imgEl);
+
+        card.insertBefore(badgeEl, heading);
+
+        heading.textContent = title;
+        message.innerHTML = msg;
+        document.title = `${title} - D-UNA`;
+      }
+
+      function esc(str) {
+        const d = document.createElement('div');
+        d.textContent = str || '';
+        return d.innerHTML;
+      }
+    })();
+  </script>
+</body>
+</html>

@@ -12,6 +12,7 @@ class Supplier extends Equatable {
   final double minimumPurchaseAmount;
   final String? legalName;
   final bool isRestricted;
+  final String orderReceptionChannel;
   final DateTime? updatedAt;
 
   const Supplier({
@@ -26,6 +27,7 @@ class Supplier extends Equatable {
     this.minimumPurchaseAmount = 0.0,
     this.legalName,
     this.isRestricted = false,
+    this.orderReceptionChannel = 'email',
     this.updatedAt,
   });
 
@@ -52,6 +54,7 @@ class Supplier extends Equatable {
       minimumPurchaseAmount: parseDouble(json['minimum_purchase_amount']),
       legalName: json['legal_name'],
       isRestricted: json['is_restricted'] ?? false,
+      orderReceptionChannel: json['order_reception_channel'] as String? ?? 'email',
       updatedAt: json['updated_at'] != null
           ? DateTime.tryParse(json['updated_at'].toString())
           : null,
@@ -75,6 +78,7 @@ class Supplier extends Equatable {
     minimumPurchaseAmount,
     legalName,
     isRestricted,
+    orderReceptionChannel,
     updatedAt,
   ];
 }

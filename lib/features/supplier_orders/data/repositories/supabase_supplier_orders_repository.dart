@@ -26,6 +26,7 @@ class SupabaseSupplierOrdersRepository implements SupplierOrdersRepository {
       supplier_branches(name),
       shipping_methods(label),
       collaborators(full_name),
+      purchases(verification_status),
       supplier_order_items(*, supplier_branch_stock(supplier_branches(name)))
     ''')
         .eq('user_id', currentUserId)
@@ -57,6 +58,7 @@ class SupabaseSupplierOrdersRepository implements SupplierOrdersRepository {
       supplier_branches(name),
       shipping_methods(label),
       collaborators(full_name),
+      purchases(verification_status),
       supplier_order_items(*, supplier_branch_stock(supplier_branches(name)))
     ''')
         .eq('user_id', currentUserId);
@@ -76,7 +78,9 @@ class SupabaseSupplierOrdersRepository implements SupplierOrdersRepository {
         final supplierResponse = await _supabase
             .from('suppliers')
             .select('id')
-            .or('name.ilike.%$cleanSearch%,legal_name.ilike.%$cleanSearch%');
+            .or(
+              'name.ilike."%$cleanSearch%",legal_name.ilike."%$cleanSearch%"',
+            );
         matchingSupplierIds = (supplierResponse as List)
             .map((e) => e['id'].toString())
             .toList();
@@ -85,8 +89,8 @@ class SupabaseSupplierOrdersRepository implements SupplierOrdersRepository {
       List<String> matchingQuoteIds = [];
       try {
         final quoteFilter = isUuid
-            ? 'quote_number.ilike.%$cleanSearch%,id.eq.$cleanSearch'
-            : 'quote_number.ilike.%$cleanSearch%';
+            ? 'quote_number.ilike."%$cleanSearch%",id.eq.$cleanSearch'
+            : 'quote_number.ilike."%$cleanSearch%"';
         final quoteResponse = await _supabase
             .from('quotes')
             .select('id')
@@ -96,9 +100,7 @@ class SupabaseSupplierOrdersRepository implements SupplierOrdersRepository {
             .toList();
       } catch (_) {}
 
-      final List<String> orClauses = [
-        'order_number.ilike.%$cleanSearch%',
-      ];
+      final List<String> orClauses = ['order_number.ilike."%$cleanSearch%"'];
 
       if (isUuid) {
         orClauses.add('quote_id.eq.$cleanSearch');
@@ -178,7 +180,8 @@ class SupabaseSupplierOrdersRepository implements SupplierOrdersRepository {
       suppliers(name, legal_name),
       supplier_branches(name),
       shipping_methods(label),
-      collaborators(full_name)
+      collaborators(full_name),
+      purchases(verification_status)
     ''')
         .eq('id', id)
         .eq('user_id', currentUserId)
@@ -328,6 +331,10 @@ class SupabaseSupplierOrdersRepository implements SupplierOrdersRepository {
     final headerMap = SupplierOrderDto.toJson(order);
     headerMap.remove('id');
     headerMap.remove('user_id');
+    headerMap['action_token'] = null;
+    headerMap['action_token_expires_at'] = null;
+    headerMap['supplier_feedback'] = null;
+    headerMap['supplier_feedback_at'] = null;
     headerMap['updated_at'] = DateTime.now().toUtc().toIso8601String();
     await _supabase
         .from('supplier_orders')
@@ -611,7 +618,8 @@ class SupabaseSupplierOrdersRepository implements SupplierOrdersRepository {
 
   @override
   Future<List<QuoteSupplierOcStatus>> getQuoteSuppliersOcStatus(
-      String quoteId) async {
+    String quoteId,
+  ) async {
     final currentUserId = _supabase.auth.currentUser?.id;
     if (currentUserId == null) throw Exception('Usuario no autenticado');
 
@@ -632,10 +640,11 @@ class SupabaseSupplierOrdersRepository implements SupplierOrdersRepository {
         .select('''
       *,
       supplier_branch_stock(branch_id, product_id, supplier_branches(supplier_id, suppliers(name, legal_name, is_affiliated, is_restricted)))
-    ''').eq('quote_id', quoteId);
+    ''')
+        .eq('quote_id', quoteId);
 
     final Map<String, ({String name, int count, double subtotal})>
-        supplierData = {};
+    supplierData = {};
 
     for (final qi in (quoteItemsResponse as List)) {
       final quantity = (qi['quantity'] ?? 0.0).toDouble();
@@ -653,7 +662,8 @@ class SupabaseSupplierOrdersRepository implements SupplierOrdersRepository {
           supplierId = sb['supplier_id'] as String?;
           final supplier = sb['suppliers'];
           if (supplier != null) {
-            supplierName = (supplier['name'] as String?) ??
+            supplierName =
+                (supplier['name'] as String?) ??
                 (supplier['legal_name'] as String?);
             isAffiliated = supplier['is_affiliated'] == true;
             isRestricted = supplier['is_restricted'] == true;
@@ -704,15 +714,17 @@ class SupabaseSupplierOrdersRepository implements SupplierOrdersRepository {
       final total = data.subtotal + (data.subtotal * (taxRate / 100));
       final existingOc = existingOcMap[sId];
 
-      result.add(QuoteSupplierOcStatus(
-        supplierId: sId,
-        supplierName: data.name,
-        itemCount: data.count,
-        total: total,
-        hasExistingOc: existingOc != null,
-        existingOrderNumber: existingOc?.orderNumber,
-        existingOrderId: existingOc?.id,
-      ));
+      result.add(
+        QuoteSupplierOcStatus(
+          supplierId: sId,
+          supplierName: data.name,
+          itemCount: data.count,
+          total: total,
+          hasExistingOc: existingOc != null,
+          existingOrderNumber: existingOc?.orderNumber,
+          existingOrderId: existingOc?.id,
+        ),
+      );
     }
 
     return result;
@@ -896,8 +908,10 @@ class SupabaseSupplierOrdersRepository implements SupplierOrdersRepository {
       final tax = subtotal * (taxRate / 100);
       final total = subtotal + tax;
 
-      final seqFormatted =
-          (nextSeq + generatedCount).toString().padLeft(3, '0');
+      final seqFormatted = (nextSeq + generatedCount).toString().padLeft(
+        3,
+        '0',
+      );
       final orderNumber = 'OC-$userCode-$yearPrefix$seqFormatted';
 
       final newOrderResponse = await _supabase
@@ -983,7 +997,9 @@ class SupabaseSupplierOrdersRepository implements SupplierOrdersRepository {
         .eq('quote_id', quoteId)
         .order('created_at', ascending: false);
 
-    return (response as List).map((json) => SupplierOrderDto.fromJson(json)).toList();
+    return (response as List)
+        .map((json) => SupplierOrderDto.fromJson(json))
+        .toList();
   }
 
   @override
@@ -1029,9 +1045,8 @@ class SupabaseSupplierOrdersRepository implements SupplierOrdersRepository {
   }
 
   @override
-  Future<Map<String, ({double price, double quantity})>> validateSupplierOrderItems({
-    required List<String> stockIds,
-  }) async {
+  Future<Map<String, ({double price, double quantity})>>
+  validateSupplierOrderItems({required List<String> stockIds}) async {
     if (stockIds.isEmpty) return {};
     final response = await _supabase
         .from('supplier_branch_stock')
@@ -1082,8 +1097,9 @@ class SupabaseSupplierOrdersRepository implements SupplierOrdersRepository {
     }
 
     final firstSupplierId = orders.first.supplierId;
-    final allSameSupplier =
-        orders.every((o) => o.supplierId == firstSupplierId);
+    final allSameSupplier = orders.every(
+      (o) => o.supplierId == firstSupplierId,
+    );
     if (!allSameSupplier) {
       throw Exception('Todas las órdenes deben pertenecer al mismo proveedor');
     }
@@ -1094,13 +1110,16 @@ class SupabaseSupplierOrdersRepository implements SupplierOrdersRepository {
     final secondaryOrders = orders.sublist(1);
 
     for (final secondary in secondaryOrders) {
-      await _supabase.from('supplier_orders').update({
-        'status': SupplierOrderStatus.merged.dbValue,
-        'parent_order_id': primaryOrder.id,
-        'action_token': null,
-        'action_token_expires_at': null,
-        'updated_at': DateTime.now().toIso8601String(),
-      }).eq('id', secondary.id);
+      await _supabase
+          .from('supplier_orders')
+          .update({
+            'status': SupplierOrderStatus.merged.dbValue,
+            'parent_order_id': primaryOrder.id,
+            'action_token': null,
+            'action_token_expires_at': null,
+            'updated_at': DateTime.now().toIso8601String(),
+          })
+          .eq('id', secondary.id);
     }
 
     final allOrderIds = [primaryOrder.id, ...secondaryOrders.map((s) => s.id)];
@@ -1157,8 +1176,7 @@ class SupabaseSupplierOrdersRepository implements SupplierOrdersRepository {
   }
 
   @override
-  Future<List<SupplierOrder>> getMergedChildOrders(
-      String parentOrderId) async {
+  Future<List<SupplierOrder>> getMergedChildOrders(String parentOrderId) async {
     final currentUserId = _supabase.auth.currentUser?.id;
     if (currentUserId == null) return [];
 
@@ -1208,11 +1226,14 @@ class SupabaseSupplierOrdersRepository implements SupplierOrdersRepository {
         .select('*')
         .eq('supplier_order_id', childOrderId);
 
-    await _supabase.from('supplier_orders').update({
-      'status': SupplierOrderStatus.draft.dbValue,
-      'parent_order_id': null,
-      'updated_at': DateTime.now().toIso8601String(),
-    }).eq('id', childOrderId);
+    await _supabase
+        .from('supplier_orders')
+        .update({
+          'status': SupplierOrderStatus.draft.dbValue,
+          'parent_order_id': null,
+          'updated_at': DateTime.now().toIso8601String(),
+        })
+        .eq('id', childOrderId);
 
     if (parentOrderId != null && (childItemsRes as List).isNotEmpty) {
       final parentItemsRes = await _supabase
@@ -1229,8 +1250,7 @@ class SupabaseSupplierOrdersRepository implements SupplierOrdersRepository {
           final parentKey =
               "${parentItem['product_id'] ?? ''}_${parentItem['supplier_branch_stock_id'] ?? ''}_${parentItem['name']}_${parentItem['brand'] ?? ''}_${parentItem['model'] ?? ''}_${parentItem['unit_price']}";
           if (childKey == parentKey) {
-            final parentQty =
-                (parentItem['quantity'] ?? 0.0 as num).toDouble();
+            final parentQty = (parentItem['quantity'] ?? 0.0 as num).toDouble();
             final remainingQty = parentQty - childQty;
             if (remainingQty <= 0) {
               await _supabase
@@ -1290,16 +1310,21 @@ class SupabaseSupplierOrdersRepository implements SupplierOrdersRepository {
     final newTaxAmount = newSubtotal * (taxRate / 100);
     final newTotal = newSubtotal + newTaxAmount;
 
-    await _supabase.from('supplier_orders').update({
-      'subtotal': newSubtotal,
-      'tax': newTaxAmount,
-      'total': newTotal,
-      'updated_at': DateTime.now().toIso8601String(),
-    }).eq('id', parentOrderId);
+    await _supabase
+        .from('supplier_orders')
+        .update({
+          'subtotal': newSubtotal,
+          'tax': newTaxAmount,
+          'total': newTotal,
+          'updated_at': DateTime.now().toIso8601String(),
+        })
+        .eq('id', parentOrderId);
   }
 
   @override
-  Future<Map<String, dynamic>?> getLinkedPurchase(String supplierOrderId) async {
+  Future<Map<String, dynamic>?> getLinkedPurchase(
+    String supplierOrderId,
+  ) async {
     final currentUserId = _supabase.auth.currentUser?.id;
     if (currentUserId == null) throw Exception('Usuario no autenticado');
 
@@ -1490,5 +1515,3 @@ class SupabaseSupplierOrdersRepository implements SupplierOrdersRepository {
     return purchaseId;
   }
 }
-
-

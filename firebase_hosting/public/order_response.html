@@ -27,7 +27,7 @@
       background: var(--card);
       border-radius: 20px;
       box-shadow: 0 10px 30px rgba(0,0,0,0.06);
-      max-width: 460px;
+      max-width: 480px;
       width: 100%;
       padding: 40px 28px 32px;
       text-align: center;
@@ -51,7 +51,7 @@
       font-size: 15px;
       line-height: 1.6;
       color: var(--muted);
-      margin-bottom: 28px;
+      margin-bottom: 24px;
     }
     .msg strong { color: var(--text); }
     .footer {
@@ -68,74 +68,268 @@
       animation: spin 0.8s linear infinite;
       margin: 0 auto 20px;
     }
-    @keyframes spin { to { transform: rotate(360deg); } }
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+    .btn {
+      display: inline-block;
+      padding: 12px 20px;
+      font-size: 14px;
+      font-weight: 600;
+      border-radius: 10px;
+      border: none;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      text-decoration: none;
+    }
+    .btn-approve {
+      background-color: #388E3C;
+      color: #FFFFFF;
+      box-shadow: 0 4px 12px rgba(56, 142, 60, 0.25);
+    }
+    .btn-approve:hover {
+      background-color: #2E7D32;
+    }
+    .btn-reject {
+      background-color: #F86F28;
+      color: #FFFFFF;
+      box-shadow: 0 4px 12px rgba(248, 111, 40, 0.25);
+    }
+    .btn-reject:hover {
+      background-color: #E65100;
+    }
+    .btn-secondary {
+      background-color: transparent;
+      color: #64748B;
+      border: 1px solid #CBD5E0;
+    }
+    .btn-secondary:hover {
+      background-color: #F8FAFC;
+      color: #1E293B;
+    }
+    .actions-row {
+      display: flex;
+      gap: 12px;
+      justify-content: center;
+      margin-top: 24px;
+    }
+    .feedback-box {
+      width: 100%;
+      margin-top: 16px;
+      text-align: left;
+    }
+    .feedback-box label {
+      display: block;
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--text);
+      margin-bottom: 6px;
+    }
+    .feedback-box textarea {
+      width: 100%;
+      min-height: 80px;
+      padding: 10px 12px;
+      font-family: inherit;
+      font-size: 13px;
+      color: var(--text);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      resize: vertical;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+    .feedback-box textarea:focus {
+      border-color: #0F172A;
+    }
+    .feedback-counter {
+      display: block;
+      text-align: right;
+      font-size: 11px;
+      color: #94A3B8;
+      margin-top: 4px;
+    }
   </style>
 </head>
 <body>
   <div class="card" id="card">
-    <div class="spinner" id="spinner"></div>
+    <div class="spinner" id="spinner" style="display: none;"></div>
     <h1 id="heading">Procesando solicitud...</h1>
     <p class="msg" id="message">Validando su respuesta con el sistema D-UNA.</p>
-    <div class="footer">
-      <img src="https://fdkswvzrozijbizdthge.supabase.co/storage/v1/object/sign/app_images/logo_d_una.png?token=eyJraWQiOiJzdG9yYWdlLXVybC1zaWduaW5nLWtleV8yNjZhOWZkMS0xYWQyLTQ3OWEtOGNlYS1kYjQzMjA0OGNlMjkiLCJhbGciOiJIUzI1NiJ9.eyJ1cmwiOiJhcHBfaW1hZ2VzL2xvZ29fZF91bmEucG5nIiwic2NvcGUiOiJkb3dubG9hZCIsImlhdCI6MTc4NTI2NTY0NSwiZXhwIjo0OTM4ODY1NjQ1fQ.2vHh0Q0-FA0ZQDV-HeBtlf6CKCS7jrPI5CIFjK7yPVw" alt="D-UNA" style="height: 24px; margin-bottom: 8px; vertical-align: middle;"><br>
+    <div id="actions-container"></div>
+    <div class="footer" style="margin-top: 24px;">
+      <img src="https://fdkswvzrozijbizdthge.supabase.co/storage/v1/object/public/app_images/logo_d_una.png" alt="D-UNA" style="height: 24px; margin-bottom: 8px; vertical-align: middle;"><br>
       Sistema Transaccional D-UNA &bull; Gestión Operativa
     </div>
   </div>
 
   <script>
-    (async function() {
+    (function() {
       const params = new URLSearchParams(window.location.search);
       const token = params.get('token');
       const action = params.get('action');
 
-      const badge = document.getElementById('badge');
       const spinner = document.getElementById('spinner');
       const heading = document.getElementById('heading');
       const message = document.getElementById('message');
       const card = document.getElementById('card');
+      const actionsContainer = document.getElementById('actions-container');
 
       if (!token || !action) {
-        showResult('error', '⚠️', 'Enlace Inválido',
+        showResult('error', 'status_expired.png', 'Enlace Inválido',
           'Los parámetros de seguridad requeridos no están presentes en la solicitud.');
         return;
       }
 
-      try {
-        const apiUrl = 'https://fdkswvzrozijbizdthge.supabase.co/functions/v1/orders_action';
-        const res = await fetch(`${apiUrl}?token=${encodeURIComponent(token)}&action=${encodeURIComponent(action)}`);
-        const data = await res.json();
+      const isApprove = action === 'confirm' || action === 'approve';
+      const isReject = action === 'reject';
 
-        if (data.status === 'approved') {
-          showResult('success', 'status_approved.png', '¡Orden Aprobada Exitosamente!',
-            `Gracias por su respuesta. La orden <strong>${esc(data.order_number)}</strong> ha sido marcada como <strong>APROBADA</strong> en el sistema D-UNA.`);
-        } else if (data.status === 'rejected') {
-          showResult('rejected', 'status_rejected.png', 'Orden Rechazada / Stock Incompleto',
-            `Gracias por su respuesta. La orden <strong>${esc(data.order_number)}</strong> ha sido marcada como <strong>RECHAZADA / STOCK INCOMPLETO</strong> en el sistema D-UNA.`);
-        } else if (data.status === 'already_processed') {
-          const isApp = data.current_status === 'approved';
-          const iconImg = isApp ? 'status_approved.png' : 'status_rejected.png';
-          const st = isApp ? 'APROBADA' : 'RECHAZADA';
-          showResult(isApp ? 'success' : 'rejected', iconImg, `Orden ${esc(data.order_number)} ya fue registrada`,
-            `Esta orden fue marcada como <strong>${st}</strong> anteriormente.`);
-        } else if (data.status === 'expired') {
-          showResult('warning', 'status_expired.png', 'Enlace Expirado (72h)',
-            `El plazo de 72 horas para responder a la orden <strong>${esc(data.order_number)}</strong> ha vencido. Solicite un nuevo reenvío al comprador.`);
-        } else {
-          showResult('error', 'status_expired.png', 'Enlace Caducado o Inválido',
-            data.message || 'Este enlace ya no es válido o ha sido utilizado previamente.');
-        }
-      } catch (err) {
-        showResult('error', 'status_cancelled.png', 'Error de Conexión',
-          'No se pudo conectar con el servidor. Por favor intente nuevamente.');
+      if (isApprove) {
+        showConfirmation(
+          'status_approved.png',
+          '¿Confirmar Aprobación de la Orden?',
+          'Esta acción <strong>no se puede deshacer</strong>. Al aprobar esta orden de compra, usted confirma que dispone del inventario completo y los precios validados.',
+          'Aprobar Orden',
+          'btn-approve',
+          false,
+          (feedback) => executeAction(token, action, feedback)
+        );
+      } else if (isReject) {
+        showConfirmation(
+          'status_rejected.png',
+          '¿Confirmar Rechazo de la Orden?',
+          'Esta acción <strong>no se puede deshacer</strong>. Si rechaza esta orden, puede indicar el motivo para notificar oportunamente al comprador.',
+          'Rechazar Orden',
+          'btn-reject',
+          true,
+          (feedback) => executeAction(token, action, feedback)
+        );
+      } else {
+        executeAction(token, action, null);
       }
 
-      function showResult(type, iconSrc, title, msg) {
-        spinner.remove();
+      function showConfirmation(iconSrc, title, msgHtml, confirmBtnText, btnClass, showFeedback, onConfirm) {
+        heading.textContent = title;
+        message.innerHTML = msgHtml;
+        document.title = `${title} - D-UNA`;
 
         const badgeEl = document.createElement('div');
         badgeEl.className = 'badge';
         badgeEl.style.backgroundColor = 'transparent';
-        
+
+        const imgEl = document.createElement('img');
+        imgEl.src = iconSrc;
+        imgEl.style.width = '72px';
+        imgEl.style.height = '72px';
+        imgEl.style.objectFit = 'contain';
+        badgeEl.appendChild(imgEl);
+
+        card.insertBefore(badgeEl, heading);
+
+        // Feedback Box (Rejection Motive max 500 characters)
+        let feedbackArea = null;
+        if (showFeedback) {
+          const feedbackContainer = document.createElement('div');
+          feedbackContainer.className = 'feedback-box';
+          feedbackContainer.innerHTML = `
+            <label for="feedback-input">Motivo del rechazo (opcional):</label>
+            <textarea id="feedback-input" maxlength="500" placeholder="Indique el motivo, ítems sin stock o variaciones de precio..."></textarea>
+            <span class="feedback-counter"><span id="char-count">0</span>/500</span>
+          `;
+          card.insertBefore(feedbackContainer, actionsContainer);
+
+          feedbackArea = feedbackContainer.querySelector('#feedback-input');
+          const charCount = feedbackContainer.querySelector('#char-count');
+          feedbackArea.addEventListener('input', () => {
+            charCount.textContent = feedbackArea.value.length;
+          });
+        }
+
+        actionsContainer.className = 'actions-row';
+        actionsContainer.innerHTML = '';
+
+        const cancelBtn = document.createElement('button');
+        cancelBtn.className = 'btn btn-secondary';
+        cancelBtn.textContent = 'Cancelar';
+        cancelBtn.onclick = () => {
+          if (token) {
+            window.location.href = `order.html?token=${encodeURIComponent(token)}`;
+          } else {
+            window.history.back();
+          }
+        };
+
+        const confirmBtn = document.createElement('button');
+        confirmBtn.className = `btn ${btnClass}`;
+        confirmBtn.textContent = confirmBtnText;
+        confirmBtn.onclick = () => {
+          const feedbackVal = feedbackArea ? feedbackArea.value.trim() : null;
+          badgeEl.remove();
+          const existingFeedback = card.querySelector('.feedback-box');
+          if (existingFeedback) existingFeedback.remove();
+          actionsContainer.innerHTML = '';
+          spinner.style.display = 'block';
+          heading.textContent = 'Procesando solicitud...';
+          message.innerHTML = 'Validando su respuesta con el sistema D-UNA.';
+          onConfirm(feedbackVal);
+        };
+
+        actionsContainer.appendChild(cancelBtn);
+        actionsContainer.appendChild(confirmBtn);
+      }
+
+      async function executeAction(token, action, feedback) {
+        try {
+          const apiUrl = 'https://fdkswvzrozijbizdthge.supabase.co/functions/v1/orders_action';
+          const res = await fetch(apiUrl, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              token: token,
+              action: action,
+              feedback: feedback,
+            }),
+          });
+          const data = await res.json();
+
+          if (data.status === 'approved') {
+            showResult('success', 'status_approved.png', '¡Orden Aprobada Exitosamente!',
+              `Gracias por su respuesta. La orden <strong>${esc(data.order_number)}</strong> ha sido marcada como <strong>APROBADA</strong> en el sistema D-UNA.`);
+          } else if (data.status === 'rejected') {
+            showResult('rejected', 'status_rejected.png', 'Orden Rechazada / Stock Incompleto',
+              `Gracias por su respuesta. La orden <strong>${esc(data.order_number)}</strong> ha sido marcada como <strong>RECHAZADA / STOCK INCOMPLETO</strong> en el sistema D-UNA.`);
+          } else if (data.status === 'already_processed') {
+            const isApp = data.current_status === 'approved';
+            const iconImg = isApp ? 'status_approved.png' : 'status_rejected.png';
+            const st = isApp ? 'APROBADA' : 'RECHAZADA';
+            showResult(isApp ? 'success' : 'rejected', iconImg, `Orden ${esc(data.order_number)} ya fue registrada`,
+              `Esta orden fue marcada como <strong>${st}</strong> anteriormente.`);
+          } else if (data.status === 'expired') {
+            showResult('warning', 'status_expired.png', 'Enlace Expirado (72h)',
+              `El plazo de 72 horas para responder a la orden <strong>${esc(data.order_number)}</strong> ha vencido. Solicite un nuevo reenvío al comprador.`);
+          } else {
+            showResult('error', 'status_expired.png', 'Enlace Caducado o Inválido',
+              data.message || 'Este enlace ya no es válido o ha sido utilizado previamente.');
+          }
+        } catch (err) {
+          showResult('error', 'status_cancelled.png', 'Error de Conexión',
+            'No se pudo conectar con el servidor. Por favor intente nuevamente.');
+        }
+      }
+
+      function showResult(type, iconSrc, title, msg) {
+        spinner.style.display = 'none';
+
+        // Clean up previous badge if any
+        const oldBadge = card.querySelector('.badge');
+        if (oldBadge) oldBadge.remove();
+
+        const badgeEl = document.createElement('div');
+        badgeEl.className = 'badge';
+        badgeEl.style.backgroundColor = 'transparent';
+
         const imgEl = document.createElement('img');
         imgEl.src = iconSrc;
         imgEl.style.width = '72px';
@@ -148,6 +342,17 @@
         heading.textContent = title;
         message.innerHTML = msg;
         document.title = `${title} - D-UNA`;
+
+        // Back to order viewer button
+        if (token) {
+          actionsContainer.className = 'actions-row';
+          actionsContainer.innerHTML = '';
+          const backBtn = document.createElement('a');
+          backBtn.className = 'btn btn-secondary';
+          backBtn.href = `order.html?token=${encodeURIComponent(token)}`;
+          backBtn.textContent = 'Ver Orden de Compra';
+          actionsContainer.appendChild(backBtn);
+        }
       }
 
       function esc(str) {

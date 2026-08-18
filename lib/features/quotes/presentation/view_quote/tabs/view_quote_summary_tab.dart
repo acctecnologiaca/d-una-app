@@ -315,8 +315,77 @@ class ViewQuoteSummaryTab extends ConsumerWidget {
                 ),
               ],
             ),
+            if (quote.clientFeedback != null &&
+                quote.clientFeedback!.trim().isNotEmpty) ...[
+              const SizedBox(height: 12),
+              _buildClientFeedbackBanner(context, quote, status),
+            ],
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _buildClientFeedbackBanner(
+    BuildContext context,
+    data.Quote quote,
+    QuoteStatus status,
+  ) {
+    final colors = Theme.of(context).colorScheme;
+    final statusCol = status.statusColor(colors);
+    final feedbackDateStr = quote.clientFeedbackAt != null
+        ? DateFormat(
+            'dd/MM/yyyy - hh:mm a',
+          ).format(quote.clientFeedbackAt!.toLocal())
+        : null;
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: statusCol.withValues(alpha: 0.08),
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: statusCol.withValues(alpha: 0.3)),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(Icons.chat_bubble_outline, size: 16, color: statusCol),
+          const SizedBox(width: 8),
+          Column(
+            mainAxisAlignment: MainAxisAlignment.start,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Comentario del cliente:',
+                style: TextStyle(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 13,
+                  color: colors.onSurfaceVariant,
+                ),
+              ),
+              const SizedBox(height: 6),
+              Text(
+                quote.clientFeedback!,
+                style: TextStyle(
+                  fontSize: 13,
+                  color: colors.onSurface,
+                  height: 1.4,
+                ),
+              ),
+              if (feedbackDateStr != null) ...[
+                const SizedBox(height: 6),
+                Text(
+                  'Recibido: $feedbackDateStr',
+                  style: TextStyle(
+                    fontSize: 11,
+                    color: colors.onSurfaceVariant,
+                  ),
+                ),
+              ],
+            ],
+          ),
+        ],
       ),
     );
   }

@@ -25,8 +25,10 @@ class PurchaseListItem extends StatelessWidget {
         ? Icons.receipt_long
         : Icons.list_alt;
 
-    // Background Color logic - red tint if missing serials
-    final backgroundColor = purchase.hasMissingSerials
+    // Background Color logic - red tint if missing serials or support rejected
+    final isSupportRejected = purchase.verificationStatus == 'rejected';
+    final hasWarning = purchase.hasMissingSerials || isSupportRejected;
+    final backgroundColor = hasWarning
         ? colors.errorContainer.withValues(alpha: 0.8)
         : Colors.transparent;
 
@@ -86,6 +88,17 @@ class PurchaseListItem extends StatelessWidget {
                   Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
+                      if (isSupportRejected) ...[
+                        Tooltip(
+                          message: 'Soporte digital rechazado (créditos revocados)',
+                          child: Icon(
+                            Icons.error_outline,
+                            size: 20,
+                            color: colors.error,
+                          ),
+                        ),
+                        const SizedBox(width: 4),
+                      ],
                       if (purchase.hasMissingSerials) ...[
                         Tooltip(
                           message: 'Faltan seriales por registrar',

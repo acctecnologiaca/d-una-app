@@ -24,6 +24,26 @@ final creditsRepositoryProvider =
 @Deprecated('Will be removed in 3.0. Use Ref instead')
 // ignore: unused_element
 typedef CreditsRepositoryRef = AutoDisposeProviderRef<CreditsRepository>;
+String _$creditTransactionsHistoryHash() =>
+    r'f508cc178edb91bf6434c88368d9bdc0e01a8b9a';
+
+/// See also [creditTransactionsHistory].
+@ProviderFor(creditTransactionsHistory)
+final creditTransactionsHistoryProvider =
+    AutoDisposeFutureProvider<List<CreditTransactionModel>>.internal(
+      creditTransactionsHistory,
+      name: r'creditTransactionsHistoryProvider',
+      debugGetCreateSourceHash: const bool.fromEnvironment('dart.vm.product')
+          ? null
+          : _$creditTransactionsHistoryHash,
+      dependencies: null,
+      allTransitiveDependencies: null,
+    );
+
+@Deprecated('Will be removed in 3.0. Use Ref instead')
+// ignore: unused_element
+typedef CreditTransactionsHistoryRef =
+    AutoDisposeFutureProviderRef<List<CreditTransactionModel>>;
 String _$userCreditsStatusHash() => r'1c3c79641a0c455ca02be7fa47a4319834aa63e6';
 
 /// See also [UserCreditsStatus].

@@ -72,12 +72,14 @@ class QuoteProductSelectionRepository {
   Future<List<QuoteValidationResult>> validateQuoteItems({
     List<String> supplierBranchStockIds = const [],
     List<String> productIds = const [],
+    String? quoteId,
   }) async {
     final response = await _supabase.rpc(
       'validate_quote_items',
       params: {
         'p_supplier_product_ids': supplierBranchStockIds,
         'p_product_ids': productIds,
+        'p_quote_id': ?quoteId,
       },
     );
 

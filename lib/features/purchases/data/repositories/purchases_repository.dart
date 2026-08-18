@@ -65,6 +65,8 @@ class PurchasesRepository {
     if (searchQuery != null && searchQuery.trim().isNotEmpty) {
       final searchClean = searchQuery.trim();
       List<String> matchingSupplierIds = [];
+      List<String> matchingPurchaseIdsFromProducts = [];
+
       try {
         final supplierResponse = await _supabase
             .from('suppliers')
@@ -75,12 +77,34 @@ class PurchasesRepository {
         // ignore
       }
 
+      try {
+        final itemsResponse = await _supabase
+            .from('purchase_items')
+            .select('purchase_id')
+            .or('name.ilike.%$searchClean%,model.ilike.%$searchClean%,brand.ilike.%$searchClean%');
+        matchingPurchaseIdsFromProducts = (itemsResponse as List)
+            .map((e) => e['purchase_id'].toString())
+            .toSet()
+            .toList();
+      } catch (e) {
+        // ignore
+      }
+
+      List<String> orClauses = [
+        'document_number.ilike.%$searchClean%',
+      ];
+
       if (matchingSupplierIds.isNotEmpty) {
         final idsStr = matchingSupplierIds.join(',');
-        query = query.or('document_number.ilike.%$searchClean%,supplier_id.in.($idsStr)');
-      } else {
-        query = query.or('document_number.ilike.%$searchClean%');
+        orClauses.add('supplier_id.in.($idsStr)');
       }
+
+      if (matchingPurchaseIdsFromProducts.isNotEmpty) {
+        final pIdsStr = matchingPurchaseIdsFromProducts.join(',');
+        orClauses.add('id.in.($pIdsStr)');
+      }
+
+      query = query.or(orClauses.join(','));
     }
 
     if (statusFilter != null) {
@@ -212,7 +236,7 @@ class PurchasesRepository {
       final supplier = headerResponse['suppliers'] as Map<String, dynamic>;
       supplierName =
           (supplier['legal_name'] as String?) ?? (supplier['name'] as String?);
-      supplierTaxId = supplier['tax_id'] as String?;
+      supplierTaxId = (supplier['tax_id'] as String?)?.trim();
     }
 
     final purchaseMap = Map<String, dynamic>.from(headerResponse);

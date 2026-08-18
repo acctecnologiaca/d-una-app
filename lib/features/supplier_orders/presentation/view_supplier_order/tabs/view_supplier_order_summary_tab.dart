@@ -10,25 +10,36 @@ import '../../../domain/models/supplier_order_status.dart';
 import 'package:d_una_app/features/portfolio/presentation/providers/suppliers_provider.dart';
 import 'package:d_una_app/features/portfolio/domain/models/supplier_model.dart';
 import 'package:go_router/go_router.dart';
-import 'package:d_una_app/features/supplier_orders/domain/utils/oc_credit_helper.dart';
+import 'package:d_una_app/features/supplier_orders/presentation/widgets/supplier_order_credit_banner_card.dart';
 import 'package:d_una_app/features/supplier_orders/presentation/supplier_orders_list/providers/supplier_orders_providers.dart';
 
 class ViewSupplierOrderSummaryTab extends ConsumerWidget {
   final SupplierOrder order;
   final List<SupplierOrderItem> items;
   final Function(int) onNavigateToTab;
+  final double bottomPadding;
 
   const ViewSupplierOrderSummaryTab({
     super.key,
     required this.order,
     required this.items,
     required this.onNavigateToTab,
+    this.bottomPadding = 112.0,
   });
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final colors = Theme.of(context).colorScheme;
     final textTheme = Theme.of(context).textTheme;
+
+    final linkedPurchaseAsync = ref.watch(linkedPurchaseProvider(order.id));
+    final linkedPurchase = linkedPurchaseAsync.valueOrNull;
+    final verificationStatus =
+        linkedPurchase?['verification_status'] as String? ??
+        order.verificationStatus;
+    final isLinkedPurchaseLoading =
+        (order.status == SupplierOrderStatus.finalized) &&
+        linkedPurchaseAsync.isLoading;
 
     // Obtener proveedores y resolver nombre formateado
     final suppliers = ref.watch(suppliersProvider).valueOrNull ?? [];
@@ -63,11 +74,11 @@ class ViewSupplierOrderSummaryTab extends ConsumerWidget {
     return Scaffold(
       backgroundColor: colors.surface,
       body: SingleChildScrollView(
-        padding: const EdgeInsets.only(
+        padding: EdgeInsets.only(
           left: 16,
           right: 16,
           top: 16,
-          bottom: 120,
+          bottom: bottomPadding,
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -107,7 +118,17 @@ class ViewSupplierOrderSummaryTab extends ConsumerWidget {
               ),
               const SizedBox(height: 16),
             ],
-            // 0. Status & Last Mod Card
+            // 0. Banner Destacado de Créditos (Posición 1)
+            SupplierOrderCreditBannerCard(
+              orderTotal: order.total,
+              status: order.status,
+              verificationStatus: verificationStatus,
+              isCreateOrEdit: false,
+              isLoading: isLinkedPurchaseLoading,
+            ),
+            const SizedBox(height: 16),
+
+            // 1. Status & Last Mod Card
             _buildInfoCard(context, ref, order),
             const SizedBox(height: 16),
 
@@ -346,12 +367,6 @@ class ViewSupplierOrderSummaryTab extends ConsumerWidget {
     final dateFormat = DateFormat('dd/MM/yyyy - hh:mm a');
     final status = order.status;
 
-    final linkedPurchaseAsync = ref.watch(linkedPurchaseProvider(order.id));
-    final linkedPurchase = linkedPurchaseAsync.valueOrNull;
-    final verificationStatus =
-        linkedPurchase?['verification_status'] as String? ??
-        order.verificationStatus;
-
     return Card(
       elevation: 0,
       shape: RoundedRectangleBorder(
@@ -421,84 +436,6 @@ class ViewSupplierOrderSummaryTab extends ConsumerWidget {
                 _buildStatusBadge(context, status),
               ],
             ),
-            if (order.status != SupplierOrderStatus.merged) ...[
-              const SizedBox(height: 12),
-              Row(
-                children: [
-                  Icon(
-                    Icons.star_border_outlined,
-                    size: 20,
-                    color: colors.onSurfaceVariant,
-                  ),
-                  const SizedBox(width: 8),
-                  Text(
-                    'Créditos:',
-                    style: TextStyle(
-                      fontWeight: FontWeight.bold,
-                      color: colors.onSurface,
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  Builder(
-                    builder: (context) {
-                      final earned = OCCreditHelper.calculateEarnedCredits(
-                        order.total,
-                      );
-                      final isRejected = verificationStatus == 'rejected';
-                      final isCreditsGranted =
-                          (order.status == SupplierOrderStatus.approved ||
-                              order.status == SupplierOrderStatus.finalized) &&
-                          !isRejected;
-
-                      final String creditsDisplay;
-                      final Color creditsColor;
-                      final String tooltipMessage;
-
-                      if (isRejected) {
-                        creditsDisplay = '$earned (revocados)';
-                        creditsColor = colors.error;
-                        tooltipMessage =
-                            'Créditos revocados por inconsistencia entre la orden y el soporte cargado al registrar la compra';
-                      } else if (isCreditsGranted) {
-                        creditsDisplay = '$earned (aprobados)';
-                        creditsColor = const Color(0xFF388E3C);
-                        tooltipMessage =
-                            'El proveedor ha aprobado la orden de compra';
-                      } else {
-                        creditsDisplay = '0 ($earned pendientes)';
-                        creditsColor = colors.secondary;
-                        tooltipMessage =
-                            'Acreditados una vez el proveedor apruebe la orden de compra';
-                      }
-
-                      return Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Text(
-                            creditsDisplay,
-                            style: TextStyle(
-                              fontSize: 16,
-                              color: creditsColor,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                          const SizedBox(width: 6),
-                          Tooltip(
-                            message: tooltipMessage,
-                            triggerMode: TooltipTriggerMode.tap,
-                            child: Icon(
-                              Icons.info_outline_rounded,
-                              size: 16,
-                              color: colors.onSurfaceVariant,
-                            ),
-                          ),
-                        ],
-                      );
-                    },
-                  ),
-                ],
-              ),
-            ],
             const SizedBox(height: 20),
             Row(
               children: [
@@ -518,8 +455,77 @@ class ViewSupplierOrderSummaryTab extends ConsumerWidget {
                 ),
               ],
             ),
+            if (order.supplierFeedback != null &&
+                order.supplierFeedback!.trim().isNotEmpty) ...[
+              const SizedBox(height: 14),
+              _buildSupplierFeedbackBanner(context, order),
+            ],
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _buildSupplierFeedbackBanner(
+    BuildContext context,
+    SupplierOrder order,
+  ) {
+    final colors = Theme.of(context).colorScheme;
+    final statusCol = const Color(0xFFF86F28);
+    final feedbackDateStr = order.supplierFeedbackAt != null
+        ? DateFormat(
+            'dd/MM/yyyy - hh:mm a',
+          ).format(order.supplierFeedbackAt!.toLocal())
+        : null;
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: statusCol.withValues(alpha: 0.08),
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: statusCol.withValues(alpha: 0.3)),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(Icons.chat_bubble_outline, size: 16, color: statusCol),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Motivo del proveedor:',
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 13,
+                    color: colors.onSurfaceVariant,
+                  ),
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  order.supplierFeedback!,
+                  style: TextStyle(
+                    fontSize: 13,
+                    color: colors.onSurface,
+                    height: 1.4,
+                  ),
+                ),
+                if (feedbackDateStr != null) ...[
+                  const SizedBox(height: 6),
+                  Text(
+                    'Recibido: $feedbackDateStr',
+                    style: TextStyle(
+                      fontSize: 11,
+                      color: colors.onSurfaceVariant.withValues(alpha: 0.8),
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }

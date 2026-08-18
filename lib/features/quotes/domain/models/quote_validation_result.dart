@@ -22,4 +22,9 @@ class QuoteValidationResult {
       reservedStock: (map['reserved_stock'] as num?)?.toDouble() ?? 0.0,
     );
   }
+
+  /// Returns the actual stock available for new/unapproved quotes.
+  /// For OWN inventory, it subtracts the reserved stock (stock in approved quotes).
+  double get availableStock =>
+      itemType == 'OWN' ? (currentStock - reservedStock) : currentStock;
 }

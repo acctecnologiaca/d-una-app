@@ -137,6 +137,7 @@ class SupabaseQuotesRepository implements QuotesRepository {
     DateTimeRange? dateRange,
     bool includeArchived = false,
     String? productId,
+    String? clientId,
   }) async {
     final userId = _client.auth.currentUser?.id;
     if (userId == null) throw Exception('Usuario no autenticado');
@@ -154,9 +155,15 @@ class SupabaseQuotesRepository implements QuotesRepository {
       query = query.eq('quote_items_products.product_id', productId);
     }
 
+    if (clientId != null) {
+      query = query.eq('client_id', clientId);
+    }
+
     if (searchQuery != null && searchQuery.isNotEmpty) {
       final searchQueryClean = searchQuery.trim();
       List<String> matchingClientIds = [];
+      List<String> matchingQuoteIdsFromProducts = [];
+
       try {
         final clientResponse = await _client
             .from('clients')
@@ -168,12 +175,35 @@ class SupabaseQuotesRepository implements QuotesRepository {
         // ignore
       }
 
+      try {
+        final itemsResponse = await _client
+            .from('quote_items_products')
+            .select('quote_id')
+            .or('name.ilike.%$searchQueryClean%,model.ilike.%$searchQueryClean%,brand.ilike.%$searchQueryClean%');
+        matchingQuoteIdsFromProducts = (itemsResponse as List)
+            .map((e) => e['quote_id'].toString())
+            .toSet()
+            .toList();
+      } catch (e) {
+        // ignore
+      }
+
+      List<String> orClauses = [
+        'quote_number.ilike.%$searchQueryClean%',
+        'quote_tag.ilike.%$searchQueryClean%',
+      ];
+
       if (matchingClientIds.isNotEmpty) {
         final idsStr = matchingClientIds.join(',');
-        query = query.or('quote_number.ilike.%$searchQueryClean%,quote_tag.ilike.%$searchQueryClean%,client_id.in.($idsStr)');
-      } else {
-        query = query.or('quote_number.ilike.%$searchQueryClean%,quote_tag.ilike.%$searchQueryClean%');
+        orClauses.add('client_id.in.($idsStr)');
       }
+
+      if (matchingQuoteIdsFromProducts.isNotEmpty) {
+        final quoteIdsStr = matchingQuoteIdsFromProducts.join(',');
+        orClauses.add('id.in.($quoteIdsStr)');
+      }
+
+      query = query.or(orClauses.join(','));
     }
 
     if (statusFilter != null) {
@@ -194,9 +224,11 @@ class SupabaseQuotesRepository implements QuotesRepository {
       query = query.eq('is_archived', false);
     }
 
-    final response = await query
-        .order(orderBy, ascending: ascending)
-        .range(offset, offset + limit - 1);
+    var orderQuery = query.order(orderBy, ascending: ascending);
+    if (orderBy == 'date_issued' || orderBy == 'quote_number') {
+      orderQuery = orderQuery.order('created_at', ascending: false);
+    }
+    final response = await orderQuery.range(offset, offset + limit - 1);
 
     return (response as List).map((e) => Quote.fromJson(e)).toList();
   }
@@ -380,6 +412,7 @@ class SupabaseQuotesRepository implements QuotesRepository {
           'contact_id': quote.contactId,
           'advisor_id': quote.advisorId,
           'category_id': quote.categoryId,
+          'date_issued': quote.dateIssued.toIso8601String(),
           'validity_days': quote.validityDays,
           'notes': quote.notes,
           'quote_tag': quote.quoteTag,
@@ -387,6 +420,9 @@ class SupabaseQuotesRepository implements QuotesRepository {
           'subtotal': quote.subtotal,
           'tax_amount': quote.taxAmount,
           'total': quote.total,
+          'client_feedback': null,
+          'client_feedback_at': null,
+          'updated_at': DateTime.now().toIso8601String(),
         })
         .eq('id', quote.id);
 
@@ -514,7 +550,15 @@ class SupabaseQuotesRepository implements QuotesRepository {
         throw InsufficientStockException(names);
       }
     }
-    await _client.from('quotes').update({'status': status}).eq('id', id);
+    final updateData = <String, dynamic>{
+      'status': status,
+      'updated_at': DateTime.now().toIso8601String(),
+    };
+    if (status == 'sent' || status == 'resent') {
+      updateData['client_feedback'] = null;
+      updateData['client_feedback_at'] = null;
+    }
+    await _client.from('quotes').update(updateData).eq('id', id);
   }
 
   @override
@@ -592,10 +636,20 @@ class SupabaseQuotesRepository implements QuotesRepository {
           ),
         );
 
-    // 2. Generate Signed URL (15 days validity fallback)
+    // 2. Generate Signed URL (dinámico según validity_days de la cotización, min 1 día = 86400s)
+    final quoteResponse = await _client
+        .from('quotes')
+        .select('validity_days')
+        .eq('id', quoteId)
+        .maybeSingle();
+    final validityDays = (quoteResponse != null && quoteResponse['validity_days'] != null)
+        ? (quoteResponse['validity_days'] as int)
+        : 15;
+    final expiresInSeconds = (validityDays > 0 ? validityDays : 15) * 86400;
+
     final signedUrl = await _client.storage
         .from('quote_documents')
-        .createSignedUrl(path, 1296000); // 15 days in seconds
+        .createSignedUrl(path, expiresInSeconds);
 
     // 3. Update pdf_url on quotes table
     await _client

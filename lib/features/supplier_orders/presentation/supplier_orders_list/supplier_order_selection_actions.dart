@@ -1,7 +1,5 @@
-import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:pdf/pdf.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:material_symbols_icons/symbols.dart';
 import 'package:go_router/go_router.dart';
@@ -18,11 +16,7 @@ import 'package:d_una_app/features/supplier_orders/presentation/supplier_orders_
 import 'package:d_una_app/features/supplier_orders/presentation/create_supplier_order/providers/create_supplier_order_provider.dart';
 import 'package:d_una_app/features/quotes/domain/models/quote_model.dart'
     show StockStatus;
-import 'package:d_una_app/core/pdf/pdf_helpers.dart';
-import 'package:d_una_app/core/pdf/templates/supplier_order_pdf_template.dart';
-import 'package:d_una_app/features/settings/data/models/shipping_method.dart';
 import 'package:d_una_app/features/supplier_orders/presentation/supplier_orders_list/widgets/merge_supplier_orders_sheet.dart';
-import 'package:d_una_app/features/collaborators/domain/models/collaborator.dart';
 import 'package:d_una_app/features/supplier_orders/domain/utils/oc_email_template_builder.dart';
 
 class SupplierOrderSelectionActions {
@@ -204,12 +198,14 @@ class SupplierOrderSelectionActions {
         .where((o) => selection.selectedIds.contains(o.id))
         .toList();
 
-    // Validar si todos son borradores, enviados o reenviados para permitir cancelar masivamente
+    // Validar si todos son borradores, enviados, reenviados, abiertos o vencidos para permitir cancelar masivamente
     final canCancelAll = selectedOrders.every(
       (o) =>
           o.status == SupplierOrderStatus.draft ||
           o.status == SupplierOrderStatus.sent ||
-          o.status == SupplierOrderStatus.resent,
+          o.status == SupplierOrderStatus.resent ||
+          o.status == SupplierOrderStatus.opened ||
+          o.status == SupplierOrderStatus.expired,
     );
 
     final canMerge =
@@ -474,31 +470,12 @@ class SupplierOrderSelectionActions {
           final email = contact?['email'] as String?;
 
           if (email != null && email.trim().isNotEmpty) {
-            final results = await Future.wait([
-              PdfHelpers.fetchShippingMethodById(order.shippingMethodId),
-              PdfHelpers.fetchCollaboratorById(order.receiverCollaboratorId),
-            ]);
-            final shippingMethod = results[0] as ShippingMethod?;
-            final receiverCollaborator = results[1] as Collaborator?;
-
-            final pdfBytes = await SupplierOrderPdfTemplate(
-              order: order,
-              items: details.items,
-              userProfile: profile,
-              userEmail: userEmail,
-              shippingMethod: shippingMethod,
-              receiverCollaborator: receiverCollaborator,
-            ).generate(PdfPageFormat.a4);
-
-            final base64Pdf = base64Encode(pdfBytes);
             final userName =
                 '${profile.firstName ?? ''} ${profile.lastName ?? ''}'.trim();
 
             final actionToken = await ref
                 .read(supplierOrdersRepositoryProvider)
                 .generateActionToken(order.id);
-            const apiBaseUrl =
-                'https://fdkswvzrozijbizdthge.supabase.co/functions';
 
             final bodyHtml = OcEmailTemplateBuilder.buildHtmlBody(
               order: order,
@@ -506,16 +483,13 @@ class SupplierOrderSelectionActions {
               userProfile: profile,
               userEmail: userEmail ?? '',
               actionToken: actionToken,
-              apiBaseUrl: apiBaseUrl,
-              shippingMethod: shippingMethod,
-              receiverCollaborator: receiverCollaborator,
             );
 
             await Supabase.instance.client.functions.invoke(
               'send_document_email',
               body: {
-                'documentBase64': base64Pdf,
-                'fileName': 'Orden_${order.orderNumber}.pdf',
+                'documentBase64': null,
+                'fileName': null,
                 'documentType': 'supplier_order',
                 'documentId': order.id,
                 'recipientEmails': [email.trim()],

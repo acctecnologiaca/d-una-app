@@ -8,8 +8,13 @@ import 'package:d_una_app/features/portfolio/domain/models/supplier_model.dart';
 
 class ViewSupplierOrderDetailsTab extends ConsumerWidget {
   final SupplierOrder order;
+  final double bottomPadding;
 
-  const ViewSupplierOrderDetailsTab({super.key, required this.order});
+  const ViewSupplierOrderDetailsTab({
+    super.key,
+    required this.order,
+    this.bottomPadding = 112.0,
+  });
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -31,11 +36,11 @@ class ViewSupplierOrderDetailsTab extends ConsumerWidget {
     return Scaffold(
       backgroundColor: Colors.transparent,
       body: SingleChildScrollView(
-        padding: const EdgeInsets.only(
+        padding: EdgeInsets.only(
           left: 16,
           right: 16,
           top: 24,
-          bottom: 100,
+          bottom: bottomPadding,
         ),
         child: Column(
           children: [
@@ -81,6 +86,15 @@ class ViewSupplierOrderDetailsTab extends ConsumerWidget {
                 icon: Icons.payment,
                 label: 'Condiciones de pago',
                 value: order.paymentMethod!,
+              ),
+            ],
+            if (order.supplierFeedback != null &&
+                order.supplierFeedback!.trim().isNotEmpty) ...[
+              const SizedBox(height: 24),
+              InfoBlock.text(
+                icon: Icons.chat_bubble_outline,
+                label: 'Motivo de rechazo (Proveedor)',
+                value: order.supplierFeedback!,
               ),
             ],
           ],

@@ -20,7 +20,7 @@
       
       /* Acciones */
       --btn-success-bg: #16A34A;
-      --btn-danger-bg: #DC2626;
+      --btn-danger-bg: #F86F28;
     }
     * { margin: 0; padding: 0; box-sizing: border-box; }
     body {
@@ -282,7 +282,9 @@
     }
     .btn:active { transform: scale(0.98); }
     .btn-success { background: var(--btn-success-bg); color: #FFF; box-shadow: 0 3px 10px rgba(22, 163, 74, 0.2); }
-    .btn-danger { background: var(--btn-danger-bg); color: #FFF; box-shadow: 0 3px 10px rgba(220, 38, 38, 0.2); }
+    .btn-evaluate { background: #FFB964; color: #FFFFFF; box-shadow: 0 3px 10px rgba(255, 185, 100, 0.35); }
+    .btn-evaluate:hover { background: #F5A548; }
+    .btn-danger { background: var(--btn-danger-bg); color: #FFF; box-shadow: 0 3px 10px rgba(248, 111, 40, 0.25); }
     .btn-secondary { width: 100%; background: #FFFFFF; color: var(--neutral-dark); border: 1.5px solid var(--neutral-dark); }
     .alert-banner {
       padding: 18px 24px;
@@ -376,8 +378,47 @@
         const conditions = data.conditions || [];
         const isExpired = data.is_expired;
 
-        const formattedDate = new Date(q.date_issued).toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit', year: 'numeric' });
-        const expiresDate = q.expires_at ? new Date(q.expires_at).toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit', year: 'numeric' }) : '-';
+        function parseDateParts(dateStr) {
+          if (!dateStr) return null;
+          const parts = String(dateStr).split('T')[0].split('-');
+          if (parts.length === 3) {
+            const year = parseInt(parts[0], 10);
+            const month = parseInt(parts[1], 10) - 1;
+            const day = parseInt(parts[2], 10);
+            return new Date(year, month, day);
+          }
+          return new Date(dateStr);
+        }
+
+        function formatDate(dateObj) {
+          if (!dateObj || isNaN(dateObj.getTime())) return '-';
+          const dd = String(dateObj.getDate()).padStart(2, '0');
+          const mm = String(dateObj.getMonth() + 1).padStart(2, '0');
+          const yyyy = dateObj.getFullYear();
+          return `${dd}/${mm}/${yyyy}`;
+        }
+
+        // 1. Fecha de Emisión Real (sin desfase UTC)
+        const issuedDate = parseDateParts(q.date_issued);
+        const formattedDate = formatDate(issuedDate);
+
+        // 2. Fecha de Vencimiento Comercial (Fecha de Emisión + validity_days)
+        const validityDays = Number(q.validity_days) || 15;
+        let commercialExpirationDate = null;
+        if (issuedDate) {
+          commercialExpirationDate = new Date(issuedDate);
+          commercialExpirationDate.setDate(commercialExpirationDate.getDate() + validityDays);
+        }
+        const commercialExpiresDate = formatDate(commercialExpirationDate);
+
+        // 3. Fecha Límite de Descarga del PDF (Expiración del enlace del token)
+        const tokenExpireDate = q.expires_at ? parseDateParts(q.expires_at) : null;
+        const downloadExpiresDate = tokenExpireDate ? formatDate(tokenExpireDate) : commercialExpiresDate;
+
+        // 4. Verificación de Vencimiento Comercial
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        const isCommerciallyExpired = commercialExpirationDate ? commercialExpirationDate < today : isExpired;
 
         // Dynamic tax calculation
         const sub = Number(q.subtotal) || 0;
@@ -387,6 +428,22 @@
         let itemsHtml = '';
         let totalItems = 0;
 
+        function formatWarranty(item) {
+          if (!item) return '---';
+          const time = Number(item.warranty_time);
+          if (!time || isNaN(time) || time <= 0) return '---';
+          const unit = String(item.warranty_unit || '').toLowerCase().trim();
+          let unitStr = 'Días';
+          if (unit === 'days' || unit === 'días' || unit === 'dias' || unit === 'day' || unit === 'día' || unit === 'dia') {
+            unitStr = time === 1 ? 'Día' : 'Días';
+          } else if (unit === 'months' || unit === 'meses' || unit === 'month' || unit === 'mes') {
+            unitStr = time === 1 ? 'Mes' : 'Meses';
+          } else if (unit === 'years' || unit === 'años' || unit === 'year' || unit === 'año' || unit === 'anio' || unit === 'anios') {
+            unitStr = time === 1 ? 'Año' : 'Años';
+          }
+          return `${time} ${unitStr}`;
+        }
+
         // Render Products (Columna Total = Cantidad * Precio Unitario sin IVA)
         (items.products || []).forEach(p => {
           totalItems++;
@@ -395,6 +452,7 @@
           itemsHtml += `
             <tr>
               <td><strong>${esc(p.name)}</strong>${subtitle ? `<br><small style="color:var(--neutral-muted);">${esc(subtitle)}</small>` : ''}</td>
+              <td class="text-center">${esc(formatWarranty(p))}</td>
               <td class="text-right">${p.quantity} ${esc(p.uom || '')}</td>
               <td class="text-right">$${fmt(p.unit_price)}</td>
               <td class="text-right">$${fmt(lineSubtotal)}</td>
@@ -408,15 +466,16 @@
           itemsHtml += `
             <tr>
               <td><strong>${esc(s.name)}</strong>${s.description ? `<br><small style="color:var(--neutral-muted);">${esc(s.description)}</small>` : ''}</td>
+              <td class="text-center">${esc(formatWarranty(s))}</td>
               <td class="text-right">${s.quantity} Serv.</td>
               <td class="text-right">$${fmt(s.unit_price)}</td>
               <td class="text-right">$${fmt(lineSubtotal)}</td>
             </tr>`;
         });
 
-        const statusBadge = isExpired
-          ? `<div class="validity-badge" style="color:#DC2626; background:#FEF2F2; border-color:#FCA5A5;">⚠️ Expiró el ${expiresDate}</div>`
-          : `<div class="validity-badge">⌛ Válida hasta: ${expiresDate}</div>`;
+        const statusBadge = isCommerciallyExpired
+          ? `<div class="validity-badge" style="color:#DC2626; background:#FEF2F2; border-color:#FCA5A5;">⚠️ Oferta Vencida (${commercialExpiresDate})</div>`
+          : `<div class="validity-badge">⌛ Válida hasta: ${commercialExpiresDate}</div>`;
 
         let actionHtml = '';
 
@@ -436,12 +495,26 @@
                 Esta cotización fue marcada como rechazada. Si desea solicitar una reconsideración o ajuste en la propuesta, por favor comuníquese con su asesor comercial.
               </span>
             </div>`;
-        } else if (isExpired) {
+        } else if (q.status === 'review') {
+          actionHtml = `
+            <div class="alert-banner" style="background:#FFFBEB; border:1px solid #FDE68A; color:#92400E;">
+              ⏳ <strong>Cotización en Evaluación</strong><br>
+              <span style="font-size: 13px; font-weight: normal; display: inline-block; margin-top: 6px;">
+                Ha marcado esta propuesta como en evaluación. Su asesor comercial ha sido notificado. Si desea concretar o dar una respuesta definitiva, puede aprobar o rechazar a continuación:
+              </span>
+            </div>
+            <div class="action-container" style="margin-top: 12px;">
+              <div class="btn-group">
+                <button class="btn btn-success" id="btn-approve">Aprobar</button>
+                <button class="btn btn-danger" id="btn-reject">Rechazar</button>
+              </div>
+            </div>`;
+        } else if (isCommerciallyExpired) {
           actionHtml = `
             <div class="alert-banner alert-warning">
               ⚠️ <strong>Cotización Vencida</strong><br>
               <span style="font-size: 13px; font-weight: normal; display: inline-block; margin-top: 6px;">
-                Esta oferta venció el <strong>${expiresDate}</strong>. Los precios y condiciones ya no están vigentes. Por favor contacte a su asesor comercial para solicitar una actualización.
+                Esta oferta venció el <strong>${commercialExpiresDate}</strong>. Los precios y condiciones ya no están vigentes. Por favor contacte a su asesor comercial para solicitar una actualización.
               </span>
             </div>`;
         } else {
@@ -449,6 +522,7 @@
             <div class="action-container">
               <div class="btn-group">
                 <button class="btn btn-success" id="btn-approve">Aprobar</button>
+                <button class="btn btn-evaluate" id="btn-evaluate">En evaluación</button>
                 <button class="btn btn-danger" id="btn-reject">Rechazar</button>
               </div>
             </div>`;
@@ -457,12 +531,12 @@
         // PDF download button (secondary) with download expiration notice
         if (q.pdf_url) {
           const downloadBtnHtml = `
-            <div class="action-container" style="${(q.status === 'approved' || q.status === 'rejected' || isExpired) ? 'margin-top: 12px;' : 'margin-top: 2px;'}">
+            <div class="action-container" style="${(q.status === 'approved' || q.status === 'rejected' || isCommerciallyExpired) ? 'margin-top: 12px;' : 'margin-top: 2px;'}">
               <a href="${esc(q.pdf_url)}" target="_blank" class="btn btn-secondary">
                 Descargar versión PDF
               </a>
               <p style="font-size: 11px; color: var(--neutral-muted); margin-top: 4px;">
-                Disponible para descarga hasta el ${expiresDate}
+                Disponible para descarga hasta el ${downloadExpiresDate}
               </p>
             </div>`;
           actionHtml += downloadBtnHtml;
@@ -534,13 +608,14 @@
                 <thead>
                   <tr>
                     <th>Producto / Servicio</th>
+                    <th class="text-center">Garantía</th>
                     <th class="text-right">Cant.</th>
                     <th class="text-right">P. Unit</th>
                     <th class="text-right">Total</th>
                   </tr>
                 </thead>
                 <tbody>
-                  ${itemsHtml || '<tr><td colspan="4" style="text-align:center;">Sin ítems agregados</td></tr>'}
+                  ${itemsHtml || '<tr><td colspan="5" style="text-align:center;">Sin ítems agregados</td></tr>'}
                 </tbody>
               </table>
             </div>
@@ -562,12 +637,18 @@
               </div>
             </div>
 
-            ${conditions.length > 0 ? `
+            ${(conditions.length > 0 || (q.notes && q.notes.trim() !== '')) ? `
               <div class="conditions-box">
                 <h4>Condiciones Comerciales y Observaciones</h4>
                 <ul>
+                  <li>Validez de la oferta: ${validityDays} días continuos a partir de su emisión (Válida hasta el ${commercialExpiresDate}).</li>
                   ${conditions.map(cond => `<li>${esc(cond)}</li>`).join('')}
                 </ul>
+                ${(q.notes && q.notes.trim() !== '') ? `
+                  <p style="margin-top: 12px; font-size: 12px; color: var(--neutral-medium); font-weight: 500; line-height: 1.5;">
+                    <strong>Notas adicionales:</strong> ${esc(q.notes)}
+                  </p>
+                ` : ''}
               </div>
             ` : ''}
           </div>
@@ -579,43 +660,25 @@
 
         content.style.display = 'block';
 
-        // Event listeners for Approve / Reject
+        // Event listeners for Approve / Evaluate / Reject (redirect to custom confirmation card screen)
         const btnApprove = document.getElementById('btn-approve');
+        const btnEvaluate = document.getElementById('btn-evaluate');
         const btnReject = document.getElementById('btn-reject');
 
-        if (btnApprove) btnApprove.addEventListener('click', () => processAction('approve'));
-        if (btnReject) btnReject.addEventListener('click', () => processAction('reject'));
-      }
-
-      async function processAction(actionType) {
-        const confirmMsg = actionType === 'approve'
-          ? '¿Está seguro de que desea APROBAR esta cotización?'
-          : '¿Está seguro de que desea RECHAZAR esta cotización?';
-
-        if (!confirm(confirmMsg)) return;
-
-        try {
-          const res = await fetch(apiUrl, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ token: token, action: actionType }),
+        if (btnApprove) {
+          btnApprove.addEventListener('click', () => {
+            window.location.href = `quote_response.html?token=${encodeURIComponent(token)}&action=approve`;
           });
-          const result = await res.json();
-
-          if (result.status === 'approved') {
-            alert('¡Cotización Aprobada Exitosamente!');
-            window.location.reload();
-          } else if (result.status === 'rejected') {
-            alert('Cotización marcada como Rechazada.');
-            window.location.reload();
-          } else if (result.status === 'expired') {
-            alert('Esta cotización ya ha expirado.');
-            window.location.reload();
-          } else {
-            alert(result.message || 'No se pudo procesar la respuesta.');
-          }
-        } catch (e) {
-          alert('Error de comunicación con el servidor.');
+        }
+        if (btnEvaluate) {
+          btnEvaluate.addEventListener('click', () => {
+            window.location.href = `quote_response.html?token=${encodeURIComponent(token)}&action=review`;
+          });
+        }
+        if (btnReject) {
+          btnReject.addEventListener('click', () => {
+            window.location.href = `quote_response.html?token=${encodeURIComponent(token)}&action=reject`;
+          });
         }
       }
 

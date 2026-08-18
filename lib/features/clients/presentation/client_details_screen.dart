@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:d_una_app/shared/widgets/friendly_error_widget.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -12,8 +11,13 @@ import 'package:d_una_app/core/utils/contact_utils.dart';
 
 class ClientDetailsScreen extends ConsumerWidget {
   final String clientId;
+  final Client? initialClient;
 
-  const ClientDetailsScreen({super.key, required this.clientId});
+  const ClientDetailsScreen({
+    super.key,
+    required this.clientId,
+    this.initialClient,
+  });
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -22,29 +26,46 @@ class ClientDetailsScreen extends ConsumerWidget {
 
     final clientsAsync = ref.watch(clientsProvider);
 
-    return clientsAsync.when(
-      loading: () =>
-          const Scaffold(body: Center(child: CircularProgressIndicator())),
-      error: (err, stack) => Scaffold(body: FriendlyErrorWidget(error: err)),
-      data: (clientsList) {
-        final client = clientsList.firstWhere(
+    final client = clientsAsync.valueOrNull?.firstWhere(
           (c) => c.id == clientId,
-          orElse: () => Client(
-            id: '',
-            userId: '',
-            name: '',
-            type: '',
-            createdAt: DateTime.now(),
-            contacts: [],
-          ),
+          orElse: () =>
+              initialClient ??
+              Client(
+                id: '',
+                userId: '',
+                name: '',
+                type: '',
+                createdAt: DateTime.now(),
+                contacts: [],
+              ),
+        ) ??
+        initialClient ??
+        Client(
+          id: '',
+          userId: '',
+          name: '',
+          type: '',
+          createdAt: DateTime.now(),
+          contacts: [],
         );
 
-        if (client.id.isEmpty) {
-          return Scaffold(
-            appBar: AppBar(title: const Text('Error')),
-            body: const Center(child: Text('Cliente no encontrado')),
-          );
-        }
+    if (client.id.isEmpty) {
+      if (clientsAsync.isLoading) {
+        return Scaffold(
+          backgroundColor: colors.surface,
+          body: const Center(child: CircularProgressIndicator()),
+        );
+      }
+      return Scaffold(
+        backgroundColor: colors.surface,
+        appBar: AppBar(
+          backgroundColor: colors.surface,
+          foregroundColor: colors.onSurface,
+          elevation: 0,
+        ),
+        body: const Center(child: Text('Cliente no encontrado')),
+      );
+    }
 
         final isCompany = client.type == 'company';
         final fullAddress = [
@@ -57,6 +78,12 @@ class ClientDetailsScreen extends ConsumerWidget {
         final title = isCompany
             ? 'Detalles de la empresa'
             : 'Detalles del cliente';
+
+        final hasLinkedDocsAsync =
+            ref.watch(clientHasLinkedDocumentsProvider(clientId));
+        final hasLinkedDocs = hasLinkedDocsAsync.value ?? true;
+        final isCheckingDocs = hasLinkedDocsAsync.isLoading;
+        final canDelete = !hasLinkedDocs && !isCheckingDocs;
 
         return Scaffold(
           appBar: AppBar(
@@ -72,44 +99,56 @@ class ClientDetailsScreen extends ConsumerWidget {
             ),
             centerTitle: false,
             actions: [
-              IconButton(
-                icon: const Icon(Icons.delete_outline),
-                onPressed: () async {
-                  final confirm = await CustomDialog.show<bool>(
-                    context: context,
-                    dialog: CustomDialog.destructive(
-                      title: 'Eliminar Cliente',
-                      contentText:
-                          '¿Estás seguro de que deseas eliminar este cliente?',
-                      actions: [
-                        TextButton(
-                          onPressed: () => Navigator.of(
-                            context,
-                            rootNavigator: true,
-                          ).pop(false),
-                          child: const Text('Cancelar'),
-                        ),
-                        FilledButton(
-                          style: FilledButton.styleFrom(
-                            backgroundColor: colors.error,
-                          ),
-                          onPressed: () => Navigator.of(
-                            context,
-                            rootNavigator: true,
-                          ).pop(true),
-                          child: const Text('Eliminar'),
-                        ),
-                      ],
-                    ),
-                  );
+              Tooltip(
+                message: canDelete
+                    ? 'Eliminar cliente'
+                    : 'No se puede eliminar: tiene cotizaciones asociadas',
+                child: IconButton(
+                  icon: Icon(
+                    Icons.delete_outline,
+                    color: canDelete
+                        ? colors.onSurface
+                        : colors.onSurface.withValues(alpha: 0.38),
+                  ),
+                  onPressed: canDelete
+                      ? () async {
+                          final confirm = await CustomDialog.show<bool>(
+                            context: context,
+                            dialog: CustomDialog.destructive(
+                              title: 'Eliminar Cliente',
+                              contentText:
+                                  '¿Estás seguro de que deseas eliminar este cliente?',
+                              actions: [
+                                TextButton(
+                                  onPressed: () => Navigator.of(
+                                    context,
+                                    rootNavigator: true,
+                                  ).pop(false),
+                                  child: const Text('Cancelar'),
+                                ),
+                                FilledButton(
+                                  style: FilledButton.styleFrom(
+                                    backgroundColor: colors.error,
+                                  ),
+                                  onPressed: () => Navigator.of(
+                                    context,
+                                    rootNavigator: true,
+                                  ).pop(true),
+                                  child: const Text('Eliminar'),
+                                ),
+                              ],
+                            ),
+                          );
 
-                  if (confirm == true) {
-                    await ref
-                        .read(clientsProvider.notifier)
-                        .deleteClient(client.id);
-                    if (context.mounted) context.pop();
-                  }
-                },
+                          if (confirm == true) {
+                            await ref
+                                .read(clientsProvider.notifier)
+                                .deleteClient(client.id);
+                            if (context.mounted) context.pop();
+                          }
+                        }
+                      : null,
+                ),
               ),
             ],
           ),
@@ -141,21 +180,29 @@ class ClientDetailsScreen extends ConsumerWidget {
                   child: Row(
                     children: [
                       OutlinedButton.icon(
-                        onPressed: () {},
+                        onPressed: () {
+                          final encodedName = Uri.encodeComponent(client.name);
+                          context.push(
+                            '/quotes/search?clientId=${client.id}&clientName=$encodedName&readOnly=true',
+                          );
+                        },
                         icon: const Icon(Icons.description_outlined, size: 18),
                         label: const Text('Cotizaciones'),
                       ),
                       const SizedBox(width: 12),
                       OutlinedButton.icon(
-                        onPressed: () {},
+                        onPressed: () {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text(
+                                'El módulo de reportes estará disponible próximamente.',
+                              ),
+                              duration: Duration(seconds: 2),
+                            ),
+                          );
+                        },
                         icon: const Icon(Icons.analytics_outlined, size: 18),
                         label: const Text('Reportes'),
-                      ),
-                      const SizedBox(width: 12),
-                      OutlinedButton.icon(
-                        onPressed: () {},
-                        icon: const Icon(Icons.receipt_long_outlined, size: 18),
-                        label: const Text('Recibos'),
                       ),
                     ],
                   ),
@@ -333,8 +380,6 @@ class ClientDetailsScreen extends ConsumerWidget {
             ),
           ),
         );
-      },
-    );
   }
 
   String _formatPhone(String? phone) {

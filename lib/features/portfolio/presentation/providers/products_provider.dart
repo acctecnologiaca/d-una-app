@@ -37,6 +37,7 @@ class ProductsNotifier extends AsyncNotifier<List<Product>> {
             imageExtension: imageExtension,
           );
       ref.invalidate(paginatedProductsProvider);
+      ref.invalidate(paginatedProductSearchProvider);
       return ref.read(productsRepositoryProvider).getProducts();
     });
     if (state.hasError) throw state.error!;
@@ -57,6 +58,7 @@ class ProductsNotifier extends AsyncNotifier<List<Product>> {
             imageExtension: imageExtension,
           );
       ref.invalidate(paginatedProductsProvider);
+      ref.invalidate(paginatedProductSearchProvider);
       return ref.read(productsRepositoryProvider).getProducts();
     });
     if (state.hasError) throw state.error!;
@@ -67,6 +69,8 @@ class ProductsNotifier extends AsyncNotifier<List<Product>> {
     state = await AsyncValue.guard(() async {
       await ref.read(productsRepositoryProvider).deleteProduct(id);
       ref.invalidate(paginatedProductsProvider);
+      ref.invalidate(paginatedProductSearchProvider);
+      ref.invalidate(productHasLinkedDocumentsProvider(id));
       return ref.read(productsRepositoryProvider).getProducts();
     });
   }
@@ -247,3 +251,8 @@ class PaginatedProductSearch
     refresh();
   }
 }
+
+final productHasLinkedDocumentsProvider =
+    FutureProvider.family<bool, String>((ref, productId) async {
+  return ref.read(productsRepositoryProvider).hasLinkedDocuments(productId);
+});

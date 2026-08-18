@@ -66,8 +66,9 @@ class QuoteSelectionActions {
           icon: Icons.edit_outlined,
           label: 'Modificar',
           enabled: !isFinalized,
-          subtitle:
-              isFinalized ? 'Cotización finalizada. No se puede editar' : null,
+          subtitle: isFinalized
+              ? 'Cotización finalizada. No se puede editar'
+              : null,
           onTap: () {
             context.pop();
             ref.read(quoteSelectionProvider.notifier).clearSelection();
@@ -77,7 +78,9 @@ class QuoteSelectionActions {
         (() {
           final isSentOrResent =
               quote.status == QuoteStatus.sent ||
-              quote.status == QuoteStatus.resent;
+              quote.status == QuoteStatus.resent ||
+              quote.status == QuoteStatus.opened ||
+              quote.status == QuoteStatus.inReview;
           return BottomSheetActionItem(
             icon: isSentOrResent ? Symbols.forward : Icons.send,
             label: isSentOrResent ? 'Reenviar' : 'Enviar',
@@ -217,14 +220,18 @@ class QuoteSelectionActions {
                 try {
                   final repo = ref.read(supplierOrdersRepositoryProvider);
 
-                  final statuses = await repo.getQuoteSuppliersOcStatus(quote.id);
+                  final statuses = await repo.getQuoteSuppliersOcStatus(
+                    quote.id,
+                  );
 
                   if (!context.mounted) return;
 
                   // Close the action sheet
                   Navigator.of(context).pop();
 
-                  final availableSuppliers = statuses.where((s) => !s.hasExistingOc).toList();
+                  final availableSuppliers = statuses
+                      .where((s) => !s.hasExistingOc)
+                      .toList();
 
                   if (availableSuppliers.isEmpty && statuses.isNotEmpty) {
                     await CustomDialog.show(
@@ -325,7 +332,7 @@ class QuoteSelectionActions {
             );
           },
         ),
-        BottomSheetActionItem(
+        /* BottomSheetActionItem(
           icon: Icons.receipt_outlined,
           label: 'Generar nota de entrega',
           enabled: !isBlockedForOcNe,
@@ -336,7 +343,7 @@ class QuoteSelectionActions {
             context.pop();
             showComingSoon(context, 'Generar nota de entrega');
           },
-        ),
+        ), */
         const Divider(height: 1, indent: 16, endIndent: 16),
         BottomSheetActionItem(
           icon: Icons.content_copy_outlined,
@@ -578,7 +585,8 @@ class QuoteSelectionActions {
 
     final now = DateTime.now();
     final issueDate = quote.date;
-    final isSameDate = issueDate.year == now.year &&
+    final isSameDate =
+        issueDate.year == now.year &&
         issueDate.month == now.month &&
         issueDate.day == now.day;
 
@@ -645,7 +653,9 @@ class QuoteSelectionActions {
     } else if (action == 'modify') {
       if (context.mounted) {
         ref.read(quoteSelectionProvider.notifier).clearSelection();
-        context.push('/quotes/edit/${quote.id}');
+        await context.push('/quotes/edit/${quote.id}?tab=3');
+        ref.invalidate(quotesListProvider);
+        ref.invalidate(viewQuoteProvider(quote.id));
       }
     }
   }

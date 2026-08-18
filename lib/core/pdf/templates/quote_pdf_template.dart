@@ -1,4 +1,5 @@
 import 'dart:typed_data';
+import 'package:intl/intl.dart';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import '../pdf_theme.dart';
@@ -50,7 +51,9 @@ class QuotePdfTemplate {
     final logoImage = await PdfHelpers.loadNetworkImage(senderInfo.logoUrl);
 
     // Cargar imagen de marca para el footer
-    final footerImage = await PdfHelpers.loadAssetImage('assets/images/creado_con_d_una.png');
+    final footerImage = await PdfHelpers.loadAssetImage(
+      'assets/images/creado_con_d_una.png',
+    );
 
     pdf.addPage(
       pw.MultiPage(
@@ -60,10 +63,12 @@ class QuotePdfTemplate {
           title: 'COTIZACIÓN',
           documentNumber: quote.quoteNumber ?? '-',
           date: quote.dateIssued,
+          dateLabel: 'Fecha de Emisión',
           senderInfo: senderInfo,
           logoImage: logoImage,
         ),
-        footer: (context) => PdfCommonSections.buildFooter(context, footerImage: footerImage),
+        footer: (context) =>
+            PdfCommonSections.buildFooter(context, footerImage: footerImage),
         build: (context) => [
           _buildInfoGrid(senderInfo),
           pw.SizedBox(height: 20),
@@ -185,8 +190,8 @@ class QuotePdfTemplate {
       'CANT.',
       'PRODUCTO / SERVICIO',
       'GARANTÍA',
-      'PRECIO UNIT.',
-      'SUB-TOTAL',
+      'P. UNIT',
+      'TOTAL',
     ];
 
     final columnWidths = {
@@ -413,12 +418,20 @@ class QuotePdfTemplate {
 
   /// Condiciones comerciales y notas
   pw.Widget _buildConditionsBlock() {
+    final dateFormat = DateFormat('dd/MM/yyyy');
+    final expirationDate =
+        quote.dateIssued.add(Duration(days: quote.validityDays));
+
     return pw.Column(
       crossAxisAlignment: pw.CrossAxisAlignment.start,
       children: [
         pw.Text(
           'Condiciones comerciales:',
           style: PdfThemeConfig.bodyBoldStyle,
+        ),
+        pw.Text(
+          '- Validez de la oferta: ${quote.validityDays} días continuos a partir de su emisión (Válida hasta el ${dateFormat.format(expirationDate)}).',
+          style: PdfThemeConfig.smallStyle,
         ),
         ...conditions.map((c) {
           final isImportant =

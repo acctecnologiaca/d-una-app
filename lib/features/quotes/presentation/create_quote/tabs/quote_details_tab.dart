@@ -52,6 +52,25 @@ class _QuoteDetailsTabState extends ConsumerState<QuoteDetailsTab> {
 
   @override
   Widget build(BuildContext context) {
+    ref.listen<QuoteState>(createQuoteProvider, (previous, next) {
+      final formattedDate = _dateFormat.format(next.dateIssued);
+      if (_dateController.text != formattedDate) {
+        _dateController.text = formattedDate;
+      }
+      final validityText = next.validityDays.toString();
+      if (_validityQuantityController.text != validityText) {
+        _validityQuantityController.text = validityText;
+      }
+      if (previous?.label != next.label &&
+          _labelController.text != (next.label ?? '')) {
+        _labelController.text = next.label ?? '';
+      }
+      if (previous?.notes != next.notes &&
+          _notesController.text != (next.notes ?? '')) {
+        _notesController.text = next.notes ?? '';
+      }
+    });
+
     final state = ref.watch(createQuoteProvider);
     final categoriesAsync = ref.watch(categoriesProvider);
     final collaboratorsAsync = ref.watch(collaboratorsProvider);

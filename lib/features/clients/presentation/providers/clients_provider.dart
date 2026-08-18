@@ -30,6 +30,8 @@ class Clients extends _$Clients {
           .addClient(clientData);
       return ref.read(clientsRepositoryProvider).getClients();
     });
+    ref.invalidate(paginatedClientsProvider);
+    ref.invalidate(paginatedClientSearchProvider);
     return newClientId!;
   }
 
@@ -39,6 +41,8 @@ class Clients extends _$Clients {
       await ref.read(clientsRepositoryProvider).updateClient(id, updates);
       return ref.read(clientsRepositoryProvider).getClients();
     });
+    ref.invalidate(paginatedClientsProvider);
+    ref.invalidate(paginatedClientSearchProvider);
   }
 
   Future<void> deleteClient(String id) async {
@@ -47,6 +51,8 @@ class Clients extends _$Clients {
       await ref.read(clientsRepositoryProvider).deleteClient(id);
       return ref.read(clientsRepositoryProvider).getClients();
     });
+    ref.invalidate(paginatedClientsProvider);
+    ref.invalidate(paginatedClientSearchProvider);
   }
 
   Future<void> addContact(
@@ -60,6 +66,8 @@ class Clients extends _$Clients {
           .addContact(clientId, contactData);
       return ref.read(clientsRepositoryProvider).getClients();
     });
+    ref.invalidate(paginatedClientsProvider);
+    ref.invalidate(paginatedClientSearchProvider);
   }
 
   Future<void> updateContact(String id, Map<String, dynamic> updates) async {
@@ -68,6 +76,8 @@ class Clients extends _$Clients {
       await ref.read(clientsRepositoryProvider).updateContact(id, updates);
       return ref.read(clientsRepositoryProvider).getClients();
     });
+    ref.invalidate(paginatedClientsProvider);
+    ref.invalidate(paginatedClientSearchProvider);
   }
 
   Future<void> deleteContact(String id) async {
@@ -76,6 +86,8 @@ class Clients extends _$Clients {
       await ref.read(clientsRepositoryProvider).deleteContact(id);
       return ref.read(clientsRepositoryProvider).getClients();
     });
+    ref.invalidate(paginatedClientsProvider);
+    ref.invalidate(paginatedClientSearchProvider);
   }
 
   Future<bool> checkClientExists(String taxId, {String? excludeId}) async {
@@ -268,5 +280,10 @@ class PaginatedClientSearch extends _$PaginatedClientSearch {
     state = await AsyncValue.guard(() => _fetchPage(0));
   }
 }
+
+final clientHasLinkedDocumentsProvider =
+    FutureProvider.family<bool, String>((ref, clientId) async {
+  return ref.read(clientsRepositoryProvider).hasLinkedDocuments(clientId);
+});
 
 

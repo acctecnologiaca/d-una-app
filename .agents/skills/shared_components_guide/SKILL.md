@@ -39,6 +39,10 @@ Use this skill to identify and leverage existing components in the `/lib/shared/
 ### Buttons & Feedback
 - **[custom_button.dart](file:///c:/Users/aleja/flutter_apps/MVP/d_una_app/lib/shared/widgets/custom_button.dart)**: Primary and secondary action buttons with loading states and optional icons.
 - **[custom_extended_fab.dart](file:///c:/Users/aleja/flutter_apps/MVP/d_una_app/lib/shared/widgets/custom_extended_fab.dart)**: The standard Floating Action Button (extended version) for main screen actions.
+- **Floating Action Buttons (FABs) & Scroll Clearance**: When views feature floating action buttons, scrollable content (`SingleChildScrollView` or `ListView`) must declare matching `bottomPadding` so content is not obscured:
+  - **2 FABs stacked**: `184.0 px` ($40\text{px base} + 56\text{px FAB 1} + 16\text{px gap} + 56\text{px FAB 2} + 16\text{px respiro}$).
+  - **1 FAB**: `112.0 px` ($40\text{px base} + 56\text{px FAB} + 16\text{px respiro}$).
+  - **0 FABs**: `24.0 px` (Standard clean edge padding).
 - **[form_bottom_bar.dart](file:///c:/Users/aleja/flutter_apps/MVP/d_una_app/lib/shared/widgets/form_bottom_bar.dart)**: Sticky bottom bar for forms with Cancel/Save actions.
 
 ### Overlays & Bottom Sheets

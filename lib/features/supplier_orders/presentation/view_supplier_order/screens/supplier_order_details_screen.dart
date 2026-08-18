@@ -20,16 +20,12 @@ import '../../../../../shared/widgets/custom_action_sheet.dart';
 import '../../../../../shared/widgets/bottom_sheet_action_item.dart';
 import '../../../../../shared/widgets/custom_dialog.dart';
 import 'package:material_symbols_icons/symbols.dart';
-import 'package:pdf/pdf.dart';
-import 'package:d_una_app/core/pdf/pdf_helpers.dart';
-import 'package:d_una_app/core/pdf/templates/supplier_order_pdf_template.dart';
 import 'package:d_una_app/features/profile/presentation/providers/profile_provider.dart';
-import 'package:d_una_app/features/settings/data/models/shipping_method.dart';
-import 'package:d_una_app/features/collaborators/domain/models/collaborator.dart';
 import 'package:d_una_app/features/supplier_orders/domain/utils/oc_email_template_builder.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import 'dart:convert';
 import 'package:d_una_app/core/utils/contact_utils.dart';
+import 'package:d_una_app/core/utils/phone_utils.dart';
+import 'package:d_una_app/core/services/whatsapp_repository.dart';
 import 'package:d_una_app/features/quotes/domain/models/quote_model.dart'
     show StockStatus;
 import '../../create_supplier_order/providers/supplier_order_validation_provider.dart';
@@ -52,18 +48,60 @@ class SupplierOrderDetailsScreen extends ConsumerStatefulWidget {
 
 class _SupplierOrderDetailsScreenState
     extends ConsumerState<SupplierOrderDetailsScreen>
-    with SingleTickerProviderStateMixin {
+    with SingleTickerProviderStateMixin, WidgetsBindingObserver {
   late TabController _tabController;
   bool _hasTriggeredSend = false;
+  RealtimeChannel? _singleOrderChannel;
 
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _tabController = TabController(length: 3, vsync: this, initialIndex: 2);
+    _initSingleOrderRealtime();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed && mounted) {
+      ref.invalidate(supplierOrderDetailProvider(widget.orderId));
+    }
+  }
+
+  void _initSingleOrderRealtime() {
+    _singleOrderChannel = Supabase.instance.client
+        .channel(
+          'public:supplier_order_${widget.orderId}_${DateTime.now().millisecondsSinceEpoch}',
+        )
+        .onPostgresChanges(
+          event: PostgresChangeEvent.all,
+          schema: 'public',
+          table: 'supplier_orders',
+          filter: PostgresChangeFilter(
+            type: PostgresChangeFilterType.eq,
+            column: 'id',
+            value: widget.orderId,
+          ),
+          callback: (payload) {
+            // ignore: avoid_print
+            print(
+              '🔴 [REALTIME DETAIL SCREEN] supplier_order single change: event=${payload.eventType}, new=${payload.newRecord}, old=${payload.oldRecord}',
+            );
+            final recId =
+                (payload.newRecord['id'] ?? payload.oldRecord['id']) as String?;
+            if (recId == widget.orderId && mounted) {
+              ref.invalidate(supplierOrderDetailProvider(widget.orderId));
+            }
+          },
+        )
+        .subscribe();
   }
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    _singleOrderChannel?.unsubscribe();
+    _singleOrderChannel = null;
     _tabController.dispose();
     super.dispose();
   }
@@ -83,8 +121,18 @@ class _SupplierOrderDetailsScreenState
         final isDraft = order.status == SupplierOrderStatus.draft;
         final isSentOrResent =
             order.status == SupplierOrderStatus.sent ||
-            order.status == SupplierOrderStatus.resent;
+            order.status == SupplierOrderStatus.resent ||
+            order.status == SupplierOrderStatus.opened ||
+            order.status == SupplierOrderStatus.expired;
         final canSendOrResend = isDraft || isSentOrResent;
+
+        final hasTwoFabs =
+            (order.status == SupplierOrderStatus.approved) ||
+            (canEdit && isSentOrResent);
+        final hasOneFab = canEdit && isDraft;
+        final double tabBottomPadding = hasTwoFabs
+            ? 184.0
+            : (hasOneFab ? 112.0 : 24.0);
 
         if (widget.triggerSend && !_hasTriggeredSend) {
           _hasTriggeredSend = true;
@@ -317,12 +365,20 @@ class _SupplierOrderDetailsScreenState
           body: TabBarView(
             controller: _tabController,
             children: [
-              ViewSupplierOrderDetailsTab(order: order),
-              ViewSupplierOrderProductsTab(order: order, items: items),
+              ViewSupplierOrderDetailsTab(
+                order: order,
+                bottomPadding: tabBottomPadding,
+              ),
+              ViewSupplierOrderProductsTab(
+                order: order,
+                items: items,
+                bottomPadding: tabBottomPadding,
+              ),
               ViewSupplierOrderSummaryTab(
                 order: order,
                 items: items,
                 onNavigateToTab: (index) => _tabController.animateTo(index),
+                bottomPadding: tabBottomPadding,
               ),
             ],
           ),
@@ -479,28 +535,89 @@ class _SupplierOrderDetailsScreenState
       final email = branchInfo['email'] as String?;
       final phone = branchInfo['phone'] as String?;
 
-      final hasEmail = email != null && email.trim().isNotEmpty;
+      // Determinar canal de recepción configurado (Prioridad: Sucursal -> Proveedor -> 'email')
+      final branchChannel = branchInfo['order_reception_channel'] as String?;
+      final supplierData = branchInfo['suppliers'] as Map<String, dynamic>?;
+      final supplierChannel =
+          supplierData?['order_reception_channel'] as String?;
 
-      if (!hasEmail) {
-        CustomDialog.show(
-          context: context,
-          dialog: CustomDialog.confirmation(
-            title: 'Error de envío',
-            contentText:
-                'La sucursal seleccionada no cuenta con un correo electrónico registrado en la plataforma para el envío automático de la orden. Por favor, contacta al administrador.',
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(context),
-                child: const Text('OK'),
-              ),
-            ],
-          ),
-        );
-        return;
+      String channel = branchChannel ?? supplierChannel ?? 'email';
+      if (branchChannel == null && supplierChannel == null) {
+        // Fallback buscando en la lista local de proveedores
+        final suppliersList = ref.read(suppliersProvider).value ?? [];
+        final matchedSupplier = suppliersList
+            .where((s) => s.id == order.supplierId)
+            .firstOrNull;
+        if (matchedSupplier != null) {
+          channel = matchedSupplier.orderReceptionChannel;
+        }
       }
 
-      // Enviar directamente por correo
-      _sendViaEmail(context, order, items, email.trim(), phone?.trim());
+      final hasEmail = email != null && email.trim().isNotEmpty;
+      final hasPhone = phone != null && phone.trim().isNotEmpty;
+
+      if (channel == 'whatsapp') {
+        if (!hasPhone) {
+          CustomDialog.show(
+            context: context,
+            dialog: CustomDialog.confirmation(
+              title: 'Error de envío',
+              contentText:
+                  'La sucursal seleccionada está configurada para recibir órdenes por WhatsApp pero no cuenta con un número de teléfono registrado.',
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(context),
+                  child: const Text('OK'),
+                ),
+              ],
+            ),
+          );
+          return;
+        }
+        _sendViaWhatsApp(context, order, items, phone.trim(), email?.trim());
+      } else if (channel == 'both') {
+        // Si tiene ambos, enviamos por correo prioritariamente y si tiene teléfono se le notifica
+        if (hasEmail) {
+          _sendViaEmail(context, order, items, email.trim(), phone?.trim());
+        } else if (hasPhone) {
+          _sendViaWhatsApp(context, order, items, phone.trim(), null);
+        } else {
+          CustomDialog.show(
+            context: context,
+            dialog: CustomDialog.confirmation(
+              title: 'Error de envío',
+              contentText:
+                  'La sucursal no cuenta con correo ni teléfono registrado.',
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(context),
+                  child: const Text('OK'),
+                ),
+              ],
+            ),
+          );
+        }
+      } else {
+        // Canal por defecto: email
+        if (!hasEmail) {
+          CustomDialog.show(
+            context: context,
+            dialog: CustomDialog.confirmation(
+              title: 'Error de envío',
+              contentText:
+                  'La sucursal seleccionada no cuenta con un correo electrónico registrado en la plataforma para el envío automático de la orden. Por favor, contacta al administrador.',
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(context),
+                  child: const Text('OK'),
+                ),
+              ],
+            ),
+          );
+          return;
+        }
+        _sendViaEmail(context, order, items, email.trim(), phone?.trim());
+      }
     } catch (e) {
       if (context.mounted) {
         if (isLoadingShowing) {
@@ -512,6 +629,111 @@ class _SupplierOrderDetailsScreenState
             title: 'Error',
             contentText:
                 'Ocurrió un error al consultar los datos de la sucursal: $e',
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text('OK'),
+              ),
+            ],
+          ),
+        );
+      }
+    }
+  }
+
+  Future<void> _sendViaWhatsApp(
+    BuildContext context,
+    SupplierOrder order,
+    List<SupplierOrderItem> items,
+    String phone,
+    String? email,
+  ) async {
+    var isLoadingShowing = true;
+
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => const Center(child: CircularProgressIndicator()),
+    );
+
+    try {
+      final userProfile = ref.read(userProfileProvider).value;
+      if (userProfile == null) {
+        throw Exception('No se pudo cargar el perfil del usuario.');
+      }
+
+      // 1. Generar token de acción único de 72h
+      final actionToken = await ref
+          .read(supplierOrdersRepositoryProvider)
+          .generateActionToken(order.id);
+
+      final cleanPhone = PhoneUtils.normalizeForWhatsApp(phone);
+      if (cleanPhone == null) {
+        throw Exception(
+          'El número de teléfono del proveedor ($phone) no tiene un formato válido para WhatsApp.',
+        );
+      }
+
+      // Extraer datos del comprador
+      final hasCompany =
+          userProfile.companyName != null &&
+          userProfile.companyName!.trim().isNotEmpty;
+      final buyerName = hasCompany
+          ? userProfile.companyName!.trim()
+          : '${userProfile.firstName ?? ''} ${userProfile.lastName ?? ''}'
+                .trim();
+      final finalBuyerName = buyerName.isEmpty ? 'Cliente' : buyerName;
+
+      final userPhone = userProfile.phone?.trim() ?? '';
+
+      // Truncar para el header si es necesario (Meta limita el header total a 60 chars; "Nueva OC de " usa 12 chars)
+      final headerBuyerName = finalBuyerName.length > 48
+          ? finalBuyerName.substring(0, 48).trim()
+          : finalBuyerName;
+
+      // 2. Invocación WhatsApp Cloud API vía Repositorio
+      await ref
+          .read(whatsappRepositoryProvider)
+          .sendMessage(
+            phone: cleanPhone,
+            templateName: 'd_una_envio_orden_compra',
+            headerVariables: [
+              {'name': 'usuario', 'text': headerBuyerName},
+            ],
+            bodyVariables: [
+              {'name': 'nro_orden_compra', 'text': order.orderNumber},
+              {'name': 'usuario', 'text': finalBuyerName},
+              {'name': 'telefono', 'text': userPhone},
+            ],
+            buttonUrlParam: 'order.html?token=$actionToken',
+          );
+
+      // 3. Actualizar estado de la orden a sent / resent
+      final newStatus = order.status == SupplierOrderStatus.draft
+          ? SupplierOrderStatus.sent
+          : SupplierOrderStatus.resent;
+
+      await ref
+          .read(paginatedSupplierOrdersProvider.notifier)
+          .updateSupplierOrderStatus(order.id, newStatus.dbValue);
+
+      ref.invalidate(supplierOrderDetailProvider(order.id));
+
+      if (!context.mounted) return;
+      Navigator.pop(context); // Dismiss loading dialog
+      isLoadingShowing = false;
+
+      _showDisclaimerDialog(context, 'WhatsApp', phone, order);
+    } catch (e) {
+      if (context.mounted) {
+        if (isLoadingShowing) {
+          Navigator.pop(context);
+        }
+        CustomDialog.show(
+          context: context,
+          dialog: CustomDialog.confirmation(
+            title: 'Error al enviar WhatsApp',
+            contentText: 'Ocurrió un error al enviar la orden por WhatsApp: $e',
             actions: [
               TextButton(
                 onPressed: () => Navigator.pop(context),
@@ -547,24 +769,6 @@ class _SupplierOrderDetailsScreenState
         throw Exception('No se pudo cargar el perfil del usuario.');
       }
 
-      final results = await Future.wait([
-        PdfHelpers.fetchShippingMethodById(order.shippingMethodId),
-        PdfHelpers.fetchCollaboratorById(order.receiverCollaboratorId),
-      ]);
-      final shippingMethod = results[0] as ShippingMethod?;
-      final receiverCollaborator = results[1] as Collaborator?;
-
-      final pdfBytes = await SupplierOrderPdfTemplate(
-        order: order,
-        items: items,
-        userProfile: userProfile,
-        userEmail: userEmail,
-        shippingMethod: shippingMethod,
-        receiverCollaborator: receiverCollaborator,
-      ).generate(PdfPageFormat.a4);
-
-      final base64Pdf = base64Encode(pdfBytes);
-      final fileName = 'Orden_${order.orderNumber}.pdf';
       final userName =
           '${userProfile.firstName ?? ''} ${userProfile.lastName ?? ''}'.trim();
 
@@ -573,24 +777,19 @@ class _SupplierOrderDetailsScreenState
           .read(supplierOrdersRepositoryProvider)
           .generateActionToken(order.id);
 
-      const apiBaseUrl = 'https://fdkswvzrozijbizdthge.supabase.co/functions';
-
       final bodyHtml = OcEmailTemplateBuilder.buildHtmlBody(
         order: order,
         items: items,
         userProfile: userProfile,
         userEmail: userEmail ?? '',
         actionToken: actionToken,
-        apiBaseUrl: apiBaseUrl,
-        shippingMethod: shippingMethod,
-        receiverCollaborator: receiverCollaborator,
       );
 
       final response = await Supabase.instance.client.functions.invoke(
         'send_document_email',
         body: {
-          'documentBase64': base64Pdf,
-          'fileName': fileName,
+          'documentBase64': null,
+          'fileName': null,
           'documentType': 'supplier_order',
           'documentId': order.id,
           'recipientEmails': [email],
@@ -598,7 +797,6 @@ class _SupplierOrderDetailsScreenState
             'name': userName.isEmpty ? 'Usuario' : userName,
             'companyName': userProfile.companyName,
             'phone': userProfile.phone,
-            'replyToEmail': userEmail,
             'companyLogo': userProfile.companyLogoUrl,
           },
           'emailContent': {

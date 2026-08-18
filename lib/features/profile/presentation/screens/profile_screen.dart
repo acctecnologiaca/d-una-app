@@ -35,7 +35,7 @@ class ProfileScreen extends ConsumerWidget {
                 // Perform sign out
                 await Supabase.instance.client.auth.signOut();
                 await SessionManager().clearSessionData();
-                
+
                 // Nuclear reset of Riverpod state using the GlobalKey
                 // This must happen to clear keepAlive providers
                 RootApp.restart(null);
@@ -219,6 +219,14 @@ class ProfileScreen extends ConsumerWidget {
                   title: 'Dirección principal',
                   subtitle: 'Tu dirección principal o fiscal',
                   onTap: () => context.push('/profile/main-address'),
+                ),
+                CustomMenuTile(
+                  icon: Icons.star_border_outlined,
+                  title: 'Historial de créditos',
+                  subtitle: 'Saldo disponible y movimientos.',
+                  onTap: () {
+                    context.push('/profile/credits-history');
+                  },
                 ),
                 CustomMenuTile(
                   icon: Icons.manage_accounts_outlined,

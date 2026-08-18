@@ -11,8 +11,12 @@ import '../../../../../core/utils/phone_utils.dart';
 import '../../../../../core/services/whatsapp_repository.dart';
 import '../../../../../core/providers/credits_providers.dart';
 import 'package:d_una_app/features/quotes/presentation/quotes_list/providers/quotes_provider.dart';
+import '../../../../../shared/widgets/credit_banner_card.dart';
 import '../../../../../shared/widgets/info_block.dart';
 import '../../../data/models/quote.dart';
+import 'package:d_una_app/features/quotes/domain/models/quote_model.dart'
+    show QuoteStatus;
+import '../providers/view_quote_provider.dart';
 import 'package:d_una_app/core/pdf/templates/quote_pdf_template.dart';
 
 class SendWhatsAppBottomSheet extends ConsumerStatefulWidget {
@@ -106,8 +110,7 @@ class _SendWhatsAppBottomSheetState
         userEmail: userEmail,
       ).generate(PdfPageFormat.a4);
 
-      final fileName =
-          '${widget.quote.quoteNumber ?? widget.quote.id}.pdf';
+      final fileName = '${widget.quote.quoteNumber ?? widget.quote.id}.pdf';
 
       // 2. Upload PDF & Generate Action Token for WebViewer
       final quotesRepo = ref.read(quotesRepositoryProvider);
@@ -118,56 +121,122 @@ class _SendWhatsAppBottomSheetState
       );
 
       final actionToken = await quotesRepo.generateActionToken(widget.quote.id);
-      final webViewerUrl = 'https://d-una.app/quote.html?token=$actionToken';
 
       final userName =
           '${userProfile.firstName ?? ''} ${userProfile.lastName ?? ''}'.trim();
-      final userDisplayName =
-          (userProfile.companyName != null &&
-              userProfile.companyName!.isNotEmpty)
-          ? userProfile.companyName!
-          : (userName.isEmpty ? 'Usuario' : userName);
+      final isCompany =
+          userProfile.companyName != null &&
+          userProfile.companyName!.trim().isNotEmpty;
 
-      // Construct the final note with WebViewer interactive link
+      // Header: Nombre de empresa si aplica, o nombre de usuario
+      final headerUser = isCompany
+          ? userProfile.companyName!.trim()
+          : (userName.isEmpty ? 'D-UNA' : userName);
+
+      // Contacto (cliente o contacto asignado)
+      final contactName =
+          widget.quote.contactName ?? widget.quote.clientName ?? 'Cliente';
+
+      // Categoría
+      final categoryName = widget.quote.categoryName ?? 'General';
+
+      // Body usuario: Asesor comercial si es empresa, o nombre de usuario
+      final bodyUser =
+          (isCompany &&
+              widget.quote.advisorName != null &&
+              widget.quote.advisorName!.trim().isNotEmpty)
+          ? widget.quote.advisorName!.trim()
+          : (userName.isEmpty ? headerUser : userName);
+
+      // Teléfono del usuario
+      final userPhone = userProfile.phone ?? '';
+
+      // Nota personalizada (nunca vacía para cumplir validación de Meta)
       final userNote = _messageController.text.trim();
-      final webViewerDisclaimer =
-          'Ver y aprobar cotización interactiva: $webViewerUrl (Válida por ${widget.quote.validityDays} días)';
+      final defaultValidity =
+          'Cotización válida por ${widget.quote.validityDays} días desde su emisión.';
       final finalNote = userNote.isEmpty
-          ? webViewerDisclaimer
-          : '$userNote. $webViewerDisclaimer';
+          ? defaultValidity
+          : '$userNote (Válida por ${widget.quote.validityDays} días)';
+
+      final cleanPhone = phone.replaceAll(RegExp(r'[^\d]'), '');
 
       // 3. Send via Cloud API Repository (sin adjuntar archivo PDF)
       await ref
           .read(whatsappRepositoryProvider)
           .sendMessage(
-            phone: phone,
-            templateName: 'enviar_documento_pdf',
-            bodyVariables: [
-              _sanitizeParam(
-                widget.quote.contactName ??
-                    widget.quote.clientName ??
-                    'Cliente',
-              ),
-              'cotización',
-              _sanitizeParam(userDisplayName),
-              _sanitizeParam(userProfile.phone ?? ''),
-              _sanitizeParam(finalNote),
+            phone: cleanPhone,
+            templateName: 'd_una_envio_cotizacion_formal',
+            headerVariables: [
+              {
+                'name': 'usuario',
+                'text': _sanitizeHeaderParam(headerUser),
+              },
             ],
+            bodyVariables: [
+              {
+                'name': 'contacto',
+                'text': _sanitizeParam(contactName),
+              },
+              {
+                'name': 'categoria',
+                'text': _sanitizeParam(categoryName),
+              },
+              {
+                'name': 'usuario',
+                'text': _sanitizeParam(bodyUser),
+              },
+              {
+                'name': 'telefono',
+                'text': _sanitizeParam(userPhone),
+              },
+              {
+                'name': 'nota_personalizada',
+                'text': _sanitizeParam(finalNote),
+              },
+            ],
+            buttonUrlParam: 'quote.html?token=$actionToken',
           );
 
-      // 3. Consumir crédito tras el envío exitoso
+      // 4. Consumir crédito tras el envío exitoso
       await ref
           .read(creditsRepositoryProvider)
           .consumeCredit(
             documentType: 'quote',
             channel: 'whatsapp',
             referenceId: widget.quote.id,
+            documentNumber: widget.quote.quoteNumber,
           );
-      ref.read(userCreditsStatusProvider.notifier).refreshStatus();
+
+      // 5. Actualizar el estado de la cotización en BD ('sent' / 'resent')
+      final currentStatus = widget.quote.status;
+      final newStatus =
+          (currentStatus == QuoteStatus.sent.dbValue ||
+              currentStatus == QuoteStatus.resent.dbValue)
+          ? QuoteStatus.resent.dbValue
+          : QuoteStatus.sent.dbValue;
+
+      await ref
+          .read(quotesListProvider.notifier)
+          .updateQuoteStatus(widget.quote.id, newStatus);
+
+      // Invalidate quote view provider so UI updates quote status badge
+      ref.invalidate(viewQuoteProvider(widget.quote.id));
+
+      // 6. Obtener saldo fresco de créditos y refrescar la caché en Riverpod
+      final freshCreditStatus = await ref
+          .read(creditsRepositoryProvider)
+          .getCreditStatus();
+      ref.invalidate(userCreditsStatusProvider);
+      ref.invalidate(creditTransactionsHistoryProvider);
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Cotización enviada exitosamente')),
+          SnackBar(
+            content: Text(
+              'Cotización enviada exitosamente (créditos restantes: ${freshCreditStatus.remainingCredits})',
+            ),
+          ),
         );
         Navigator.of(context).pop();
       }
@@ -192,36 +261,6 @@ class _SendWhatsAppBottomSheetState
     }
   }
 
-  Widget _buildCreditsIndicatorWidget(int remaining) {
-    final colors = Theme.of(context).colorScheme;
-
-    final Color color = remaining > 0 ? colors.secondary : colors.error;
-    final IconData icon = remaining > 0
-        ? Icons.check_circle_outline
-        : Icons.error_outline;
-
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 12),
-      child: Row(
-        children: [
-          Icon(Icons.star_border_outlined, size: 20, color: colors.secondary),
-          const SizedBox(width: 4),
-          Text(
-            remaining > 0
-                ? 'Créditos disponibles: $remaining'
-                : 'Créditos agotados (0 disponibles)',
-            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-              color: color,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-          const SizedBox(width: 6),
-          Icon(icon, size: 16, color: color),
-        ],
-      ),
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
     final creditsAsync = ref.watch(userCreditsStatusProvider);
@@ -236,8 +275,13 @@ class _SendWhatsAppBottomSheetState
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           creditsAsync.when(
-            data: (status) =>
-                _buildCreditsIndicatorWidget(status.remainingCredits),
+            data: (status) => Padding(
+              padding: const EdgeInsets.only(bottom: 16),
+              child: CreditBannerCard(
+                remainingCredits: status.remainingCredits,
+                cost: 1,
+              ),
+            ),
             loading: () => const SizedBox.shrink(),
             error: (_, _) => const SizedBox.shrink(),
           ),
@@ -255,7 +299,7 @@ class _SendWhatsAppBottomSheetState
             minLines: 4,
             maxLength: 120,
             helperText:
-                'Este texto se insertará en el mensaje de WhatsApp que se le enviará a tu cliente.',
+                'Este texto se insertará como una "Nota" en el mensaje de WhatsApp que se le enviará a tu cliente.',
           ),
           const SizedBox(height: 8),
         ],
@@ -288,5 +332,15 @@ class _SendWhatsAppBottomSheetState
         .replaceAll(RegExp(r'[\n\t\r]'), ' ') // Remove newlines and tabs
         .replaceAll(RegExp(r' {2,}'), ' ') // Collapse 2+ spaces into 1
         .trim();
+  }
+
+  /// Sanitizes and truncates a header parameter to ensure the overall header
+  /// ("Ha recibido una cotización de {{usuario}}") stays within Meta's 60-character limit.
+  String _sanitizeHeaderParam(String text, {int maxLength = 30}) {
+    final clean = _sanitizeParam(text);
+    if (clean.length > maxLength) {
+      return '${clean.substring(0, maxLength - 3)}...';
+    }
+    return clean;
   }
 }

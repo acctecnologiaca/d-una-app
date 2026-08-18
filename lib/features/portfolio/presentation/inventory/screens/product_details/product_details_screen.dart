@@ -40,6 +40,13 @@ class _ProductDetailsScreenState extends ConsumerState<ProductDetailsScreen> {
     final colors = Theme.of(context).colorScheme;
     final textTheme = Theme.of(context).textTheme;
 
+    final hasLinkedDocsAsync = ref.watch(
+      productHasLinkedDocumentsProvider(currentProduct.id),
+    );
+    final hasLinkedDocs = hasLinkedDocsAsync.value ?? true;
+    final isCheckingDocs = hasLinkedDocsAsync.isLoading;
+    final canDelete = !hasLinkedDocs && !isCheckingDocs;
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('Detalles del producto'),
@@ -59,42 +66,60 @@ class _ProductDetailsScreenState extends ConsumerState<ProductDetailsScreen> {
           onPressed: () => context.pop(),
         ),
         actions: [
-          IconButton(
-            icon: const Icon(Icons.delete_outline),
-            onPressed: () async {
-              final confirm = await CustomDialog.show<bool>(
-                context: context,
-                dialog: CustomDialog.destructive(
-                  title: 'Eliminar Producto',
-                  contentText:
-                      '¿Estás seguro de que deseas eliminar este producto?',
-                  actions: [
-                    TextButton(
-                      onPressed: () =>
-                          Navigator.of(context, rootNavigator: true).pop(false),
-                      child: const Text('Cancelar'),
-                    ),
-                    FilledButton(
-                      style: FilledButton.styleFrom(
-                        backgroundColor: colors.error,
-                      ),
-                      onPressed: () =>
-                          Navigator.of(context, rootNavigator: true).pop(true),
-                      child: const Text('Eliminar'),
-                    ),
-                  ],
-                ),
-              );
+          Tooltip(
+            message: canDelete
+                ? 'Eliminar producto'
+                : 'No se puede eliminar: tiene documentos asociados',
+            child: IconButton(
+              icon: Icon(
+                Icons.delete_outline,
+                color: canDelete
+                    ? colors.onSurface
+                    : colors.onSurface.withValues(alpha: 0.38),
+              ),
+              onPressed: canDelete
+                  ? () async {
+                      final confirm = await CustomDialog.show<bool>(
+                        context: context,
+                        dialog: CustomDialog.destructive(
+                          title: 'Eliminar Producto',
+                          contentText:
+                              '¿Estás seguro de que deseas eliminar este producto?',
+                          actions: [
+                            TextButton(
+                              onPressed: () => Navigator.of(
+                                context,
+                                rootNavigator: true,
+                              ).pop(false),
+                              child: const Text('Cancelar'),
+                            ),
+                            FilledButton(
+                              style: FilledButton.styleFrom(
+                                backgroundColor: colors.error,
+                              ),
+                              onPressed: () => Navigator.of(
+                                context,
+                                rootNavigator: true,
+                              ).pop(true),
+                              child: const Text('Eliminar'),
+                            ),
+                          ],
+                        ),
+                      );
 
-              if (confirm == true) {
-                await ref
-                    .read(productsProvider.notifier)
-                    .deleteProduct(currentProduct.id);
-                if (context.mounted) {
-                  context.pop(); // Pop details screen
-                }
-              }
-            },
+                      if (confirm == true) {
+                        await ref
+                            .read(productsProvider.notifier)
+                            .deleteProduct(currentProduct.id);
+                        ref.invalidate(paginatedProductsProvider);
+                        ref.invalidate(paginatedProductSearchProvider);
+                        if (context.mounted) {
+                          context.pop(); // Pop details screen
+                        }
+                      }
+                    }
+                  : null,
+            ),
           ),
           const SizedBox(width: 8),
         ],
@@ -103,7 +128,7 @@ class _ProductDetailsScreenState extends ConsumerState<ProductDetailsScreen> {
         padding: const EdgeInsets.only(bottom: 40.0),
         child: FloatingActionButton(
           onPressed: () {
-            context.go(
+            context.push(
               '/portfolio/own-inventory/details/${currentProduct.id}/edit',
               extra: currentProduct,
             );
@@ -114,6 +139,7 @@ class _ProductDetailsScreenState extends ConsumerState<ProductDetailsScreen> {
         ),
       ),
       body: SingleChildScrollView(
+        padding: const EdgeInsets.only(bottom: 112.0),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
@@ -127,52 +153,30 @@ class _ProductDetailsScreenState extends ConsumerState<ProductDetailsScreen> {
                 children: [
                   OutlinedButton.icon(
                     onPressed: () {
+                      final queryText = currentProduct.model?.isNotEmpty == true
+                          ? currentProduct.model!
+                          : currentProduct.name;
+                      final encodedQuery = Uri.encodeComponent(queryText);
                       context.push(
-                        '/my-purchases/search?productId=${currentProduct.id}',
+                        '/my-purchases/search?productId=${currentProduct.id}&productModel=$encodedQuery&readOnly=true',
                       );
                     },
                     icon: const Icon(Icons.receipt_long_outlined, size: 18),
-                    label: const Text('Registro de compras'),
+                    label: const Text('Registros de compra'),
                   ),
                   const SizedBox(width: 12),
                   OutlinedButton.icon(
                     onPressed: () {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text(
-                            'El módulo de Órdenes de compra estará disponible próximamente',
-                          ),
-                          behavior: SnackBarBehavior.floating,
-                        ),
-                      );
-                    },
-                    icon: const Icon(Icons.shopping_bag_outlined, size: 18),
-                    label: const Text('Ordenes de compra'),
-                  ),
-                  const SizedBox(width: 12),
-                  OutlinedButton.icon(
-                    onPressed: () {
+                      final queryText = currentProduct.model?.isNotEmpty == true
+                          ? currentProduct.model!
+                          : currentProduct.name;
+                      final encodedQuery = Uri.encodeComponent(queryText);
                       context.push(
-                        '/quotes/search?productId=${currentProduct.id}',
+                        '/quotes/search?productId=${currentProduct.id}&productModel=$encodedQuery&readOnly=true',
                       );
                     },
                     icon: const Icon(Icons.description_outlined, size: 18),
                     label: const Text('Cotizaciones'),
-                  ),
-                  const SizedBox(width: 12),
-                  OutlinedButton.icon(
-                    onPressed: () {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text(
-                            'El módulo de Reportes estará disponible próximamente',
-                          ),
-                          behavior: SnackBarBehavior.floating,
-                        ),
-                      );
-                    },
-                    icon: const Icon(Icons.analytics_outlined, size: 18),
-                    label: const Text('Reportes'),
                   ),
                 ],
               ),
@@ -392,7 +396,7 @@ class _ProductDetailsScreenState extends ConsumerState<ProductDetailsScreen> {
                       ],
                     ),
                   ),
-                  const SizedBox(height: 80),
+                  const SizedBox(height: 16),
                 ],
               ),
             ),

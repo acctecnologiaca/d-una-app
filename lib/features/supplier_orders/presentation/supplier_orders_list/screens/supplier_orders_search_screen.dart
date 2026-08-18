@@ -25,7 +25,6 @@ import '../widgets/supplier_order_card.dart';
 class SupplierOrdersSearchScreen extends ConsumerStatefulWidget {
   final bool selectionMode;
   final Set<SupplierOrderStatus>? allowedStatuses;
-  final String? supplierNameFilter;
   final String? initialQuery;
   final bool isSearchQueryReadOnly;
 
@@ -33,7 +32,6 @@ class SupplierOrdersSearchScreen extends ConsumerStatefulWidget {
     super.key,
     this.selectionMode = false,
     this.allowedStatuses,
-    this.supplierNameFilter,
     this.initialQuery,
     this.isSearchQueryReadOnly = false,
   });
@@ -56,16 +54,12 @@ class _SupplierOrdersSearchScreenState
   @override
   void initState() {
     super.initState();
-    if (widget.supplierNameFilter != null &&
-        widget.supplierNameFilter!.isNotEmpty) {
-      _selectedSupplierNames.add(widget.supplierNameFilter!);
-    }
     if (widget.allowedStatuses != null &&
         widget.allowedStatuses!.isNotEmpty) {
       _selectedStatuses.addAll(widget.allowedStatuses!.map((s) => s.dbValue));
     }
     if (widget.initialQuery != null && widget.initialQuery!.isNotEmpty) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
+      Future.microtask(() {
         ref
             .read(paginatedSupplierOrderSearchProvider.notifier)
             .updateSearch(widget.initialQuery);
@@ -75,10 +69,7 @@ class _SupplierOrdersSearchScreenState
 
   @override
   void dispose() {
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted) return;
-      ref.read(supplierOrderSelectionProvider.notifier).clearSelection();
-    });
+    ref.read(supplierOrderSelectionProvider.notifier).clearSelection();
     super.dispose();
   }
 
@@ -408,8 +399,6 @@ class _SupplierOrdersSearchScreenState
         FilterChipData(
           label: _getChipLabel(_selectedSupplierNames, 'Proveedor'),
           isActive: _selectedSupplierNames.isNotEmpty,
-          isEnabled: widget.supplierNameFilter == null ||
-              widget.supplierNameFilter!.isEmpty,
           onTap: () {
             final currentOrders = paginatedAsync.valueOrNull?.items ?? [];
             _showSupplierFilter(

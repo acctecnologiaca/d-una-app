@@ -1,0 +1,743 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Orden de Compra - D-UNA</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      /* Paleta Slate Ejecutiva Neutra */
+      --neutral-dark: #0F172A;
+      --neutral-medium: #334155;
+      --neutral-muted: #64748B;
+      --neutral-border: #E2E8F0;
+      --neutral-border-dark: #CBD5E1;
+      --neutral-bg-subtle: #F8FAFC;
+      --neutral-bg-header: #F1F5F9;
+      
+      /* Acciones */
+      --btn-approve: #388E3C;
+      --btn-reject: #F86F28;
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      background-color: #F1F5F9;
+      color: var(--neutral-dark);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 24px 16px;
+    }
+
+    .container {
+      max-width: 680px;
+      width: 100%;
+      margin: 0 auto;
+    }
+
+    .card {
+      background-color: #FFFFFF;
+      border: 1px solid var(--neutral-border);
+      border-radius: 16px;
+      overflow: hidden;
+      box-shadow: 0 10px 25px -5px rgba(15, 23, 42, 0.05);
+    }
+
+    .spinner {
+      width: 44px;
+      height: 44px;
+      border: 4px solid var(--neutral-border);
+      border-top-color: var(--neutral-dark);
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+      margin: 60px auto;
+    }
+
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+
+    /* 1. BANNER SUPERIOR (Logo D-Una a la izquierda / Metadatos a la derecha) */
+    .header-banner {
+      background-color: #FFFFFF;
+      padding: 20px 24px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 16px;
+      border-bottom: 2px solid var(--neutral-dark);
+    }
+
+    .header-banner .brand img {
+      max-height: 48px;
+      object-fit: contain;
+    }
+
+    .header-banner .doc-meta {
+      text-align: right;
+    }
+
+    .header-banner .doc-meta h2 {
+      margin: 0;
+      font-size: 18px;
+      font-weight: 800;
+      color: var(--neutral-dark);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .header-banner .doc-meta .order-num {
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--neutral-muted);
+      margin-top: 2px;
+    }
+
+    .header-banner .doc-meta .date-loc {
+      font-size: 11px;
+      color: var(--neutral-muted);
+      margin-top: 4px;
+    }
+
+    .body-content {
+      padding: 24px;
+    }
+
+    /* 2. GRILLA DE INFORMACIÓN (2 Tarjetas: Datos del Cliente y Condiciones de Envío) */
+    .info-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+      margin-bottom: 24px;
+    }
+
+    @media (max-width: 600px) {
+      .info-grid { grid-template-columns: 1fr; }
+      .header-banner { flex-direction: column; align-items: flex-start; text-align: left; }
+      .header-banner .doc-meta { text-align: left; }
+      .body-content { padding: 16px; }
+    }
+
+    .info-card {
+      background-color: var(--neutral-bg-subtle);
+      border: 1px solid var(--neutral-border);
+      border-radius: 12px;
+      padding: 16px;
+    }
+
+    .info-card h4 {
+      margin: 0 0 10px 0;
+      font-size: 11px;
+      font-weight: 700;
+      color: var(--neutral-dark);
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+      border-bottom: 2px solid var(--neutral-border-dark);
+      padding-bottom: 4px;
+    }
+
+    .info-card p {
+      margin: 3px 0;
+      font-size: 12px;
+      line-height: 1.4;
+      color: var(--neutral-dark);
+    }
+
+    .info-card p strong {
+      color: var(--neutral-dark);
+      font-weight: 700;
+    }
+
+    /* 3. TABLA DE PRODUCTOS (Producto | Cant. | P. Unit. | Total) */
+    .table-container {
+      border: 1px solid var(--neutral-border);
+      border-radius: 12px;
+      overflow: hidden;
+      margin-bottom: 24px;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 12px;
+    }
+
+    thead tr {
+      background-color: var(--neutral-bg-header);
+      color: var(--neutral-dark);
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.6px;
+    }
+
+    th {
+      padding: 10px 12px;
+      border-bottom: 2px solid var(--neutral-border-dark);
+      font-weight: 700;
+    }
+
+    th.text-left { text-align: left; }
+    th.text-center { text-align: center; width: 55px; }
+    th.text-right { text-align: right; width: 90px; }
+
+    td {
+      padding: 10px 12px;
+      border-bottom: 1px solid var(--neutral-border);
+      color: var(--neutral-dark);
+      vertical-align: top;
+    }
+
+    tr:last-child td { border-bottom: none; }
+
+    .product-title {
+      font-weight: 700;
+      color: var(--neutral-dark);
+    }
+
+    .product-brand {
+      font-size: 11px;
+      color: var(--neutral-muted);
+      font-style: italic;
+    }
+
+    .product-branches {
+      font-size: 11px;
+      color: var(--neutral-muted);
+      line-height: 1.3;
+    }
+
+    /* 4. TOTALES Y CONDICIONES DE PAGO */
+    .totals-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+      margin-bottom: 24px;
+    }
+
+    @media (max-width: 600px) {
+      .totals-grid { grid-template-columns: 1fr; }
+    }
+
+    .totals-table-card {
+      background-color: var(--neutral-bg-subtle);
+      border: 1px solid var(--neutral-border);
+      border-radius: 12px;
+      overflow: hidden;
+    }
+
+    .totals-table-card table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+
+    .totals-table-card td {
+      padding: 8px 14px;
+      font-size: 12px;
+      color: var(--neutral-muted);
+      border-bottom: none;
+    }
+
+    .totals-table-card td.val {
+      color: var(--neutral-dark);
+      font-weight: 700;
+      text-align: right;
+    }
+
+    .grand-total-row {
+      border-top: 2px solid var(--neutral-dark);
+      background-color: var(--neutral-dark);
+      color: #FFFFFF !important;
+    }
+
+    .grand-total-row td {
+      color: #FFFFFF !important;
+      font-size: 13px !important;
+      font-weight: 800 !important;
+      padding: 10px 14px !important;
+    }
+
+    /* 5. PANEL DE ACCIONES */
+    .action-panel {
+      text-align: center;
+      margin: 20px 0 8px 0;
+      padding: 20px 16px;
+      background-color: var(--neutral-bg-subtle);
+      border: 1px dashed var(--neutral-border-dark);
+      border-radius: 12px;
+    }
+
+    .action-title {
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--neutral-dark);
+      margin-bottom: 12px;
+    }
+
+    .btn-group {
+      display: inline-flex;
+      gap: 12px;
+      margin-bottom: 14px;
+      flex-wrap: wrap;
+      justify-content: center;
+    }
+
+    .btn {
+      padding: 12px 28px;
+      border-radius: 10px;
+      font-weight: 700;
+      font-size: 13px;
+      text-decoration: none;
+      display: inline-block;
+      cursor: pointer;
+      border: none;
+      transition: transform 0.15s ease, box-shadow 0.15s ease;
+    }
+
+    .btn:active { transform: scale(0.98); }
+
+    .btn-approve {
+      background-color: var(--btn-approve);
+      color: #FFFFFF;
+      box-shadow: 0 4px 12px rgba(56, 142, 60, 0.25);
+    }
+
+    .btn-reject {
+      background-color: var(--btn-reject);
+      color: #FFFFFF;
+      box-shadow: 0 4px 12px rgba(248, 111, 40, 0.25);
+    }
+
+    .btn-secondary {
+      background-color: #FFFFFF;
+      color: var(--neutral-dark);
+      border: 1px solid var(--neutral-border-dark);
+    }
+
+    .alert-banner {
+      padding: 14px 18px;
+      border-radius: 10px;
+      font-size: 13px;
+      line-height: 1.5;
+      margin-bottom: 12px;
+      text-align: center;
+    }
+
+    .alert-success {
+      background-color: #F0FDF4;
+      border: 1px solid #BBF7D0;
+      color: #166534;
+    }
+
+    .alert-danger {
+      background-color: #FEF2F2;
+      border: 1px solid #FECACA;
+      color: #991B1B;
+    }
+
+    .alert-warning {
+      background-color: #FFFBEB;
+      border: 1px solid #FDE68A;
+      color: #92400E;
+    }
+
+    .action-notice {
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--neutral-muted);
+      margin-bottom: 10px;
+      line-height: 1.4;
+      max-width: 520px;
+      margin-left: auto;
+      margin-right: auto;
+    }
+
+    .expiration-badge {
+      font-size: 11px;
+      font-weight: 800;
+      color: #DC2626;
+      letter-spacing: 0.5px;
+    }
+
+    /* 6. AVISO DE CONFIDENCIALIDAD & FOOTER */
+    .disclaimer-card {
+      margin-top: 16px;
+      padding: 14px 18px;
+      background: #FFFFFF;
+      border: 1px solid var(--neutral-border);
+      border-radius: 12px;
+      font-size: 11px;
+      color: var(--neutral-muted);
+      line-height: 1.5;
+    }
+
+    .disclaimer-card strong {
+      color: var(--neutral-dark);
+    }
+
+    .footer {
+      text-align: center;
+      padding: 20px 10px;
+      font-size: 11px;
+      color: var(--neutral-muted);
+    }
+
+    .footer img {
+      height: 20px;
+      margin-bottom: 6px;
+      vertical-align: middle;
+      object-fit: contain;
+    }
+
+    @media print {
+      body {
+        background: #FFFFFF !important;
+        padding: 0 !important;
+      }
+      .container {
+        max-width: 100% !important;
+        width: 100% !important;
+        margin: 0 !important;
+      }
+      .card {
+        border: none !important;
+        box-shadow: none !important;
+        border-radius: 0 !important;
+      }
+      .action-panel,
+      .alert-banner,
+      .expiration-badge,
+      .btn-pdf-download,
+      .modal-overlay,
+      .footer {
+        display: none !important;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <div class="container">
+    <div class="card" id="main-card">
+      <div class="spinner" id="spinner"></div>
+      <div id="content" style="display: none;"></div>
+    </div>
+
+    <!-- TARJETA DE AVISO DE CONFIDENCIALIDAD -->
+    <div class="disclaimer-card" id="disclaimer-block" style="display: none;">
+      <strong>Aviso de Confidencialidad y Términos Comerciales:</strong><br>
+      La presente orden de compra y su confirmación electrónica constituyen una solicitud formal de suministro emitida directamente por el comprador identificado. D-UNA opera exclusivamente como plataforma tecnológica de gestión y no asume responsabilidad por acuerdos comerciales entre las partes.
+    </div>
+
+    <div class="footer" id="footer-block" style="display: none;">
+      <img src="https://fdkswvzrozijbizdthge.supabase.co/storage/v1/object/public/app_images/logo_d_una.png" alt="D-UNA Logo"><br>
+      Tecnología D-UNA &bull; Plataforma de Gestión Transaccional &bull; &copy; 2026 Todos los derechos reservados.
+    </div>
+  </div>
+
+  <script>
+    (async function() {
+      const params = new URLSearchParams(window.location.search);
+      const token = params.get('token');
+
+      const spinner = document.getElementById('spinner');
+      const content = document.getElementById('content');
+      const disclaimerBlock = document.getElementById('disclaimer-block');
+      const footerBlock = document.getElementById('footer-block');
+
+      if (!token) {
+        showError('Enlace Inválido', 'No se ha proporcionado el parámetro de seguridad requerido para visualizar esta orden de compra.');
+        return;
+      }
+
+      try {
+        const apiUrl = `https://fdkswvzrozijbizdthge.supabase.co/functions/v1/orders_action?token=${encodeURIComponent(token)}&action=get_details`;
+        const res = await fetch(apiUrl);
+        const data = await res.json();
+
+        if (data.status !== 'success' || !data.order) {
+          showError(
+            'Enlace Caducado o Inválido',
+            data.message || 'Esta orden de compra ya no está disponible o el enlace ha expirado.'
+          );
+          return;
+        }
+
+        renderOrder(data);
+      } catch (err) {
+        showError('Error de Conexión', 'No se pudo cargar la orden de compra. Por favor verifique su conexión a internet e intente nuevamente.');
+      }
+
+      function renderOrder(data) {
+        spinner.style.display = 'none';
+
+        const o = data.order;
+        const b = data.buyer || {};
+        const s = data.supplier || {};
+        const sh = data.shipping || {};
+        const items = data.items || [];
+        const isExpired = Boolean(data.is_expired);
+
+        document.title = `Orden de Compra ${esc(o.order_number)} - D-UNA`;
+
+        // Format Date
+        let formattedDate = o.date || '';
+        try {
+          if (o.date) {
+            const parts = o.date.split('-');
+            if (parts.length === 3) {
+              formattedDate = `${parts[2]}/${parts[1]}/${parts[0]}`;
+            }
+          }
+        } catch (_) {}
+
+        const locationDateStr = b.city && b.city !== '-' ? `${esc(b.city)}, ${formattedDate}` : formattedDate;
+
+        // Group items if multiple
+        const itemsMap = {};
+        items.forEach(item => {
+          const key = `${item.name}|${item.model || ''}|${item.brand || ''}`;
+          if (!itemsMap[key]) itemsMap[key] = [];
+          itemsMap[key].push(item);
+        });
+
+        const itemsRowsHtml = Object.values(itemsMap).map(group => {
+          const first = group[0];
+          const totalQty = group.reduce((acc, it) => acc + Number(it.quantity || 0), 0);
+          const totalPrice = group.reduce((acc, it) => acc + Number(it.total_price || 0), 0);
+
+          const hasModel = first.model && first.model.trim().length > 0;
+          const productTitle = hasModel ? `[${esc(first.model.trim())}] ${esc(first.name)}` : esc(first.name);
+
+          const branchLinesHtml = group.map(it => {
+            const bName = it.branch_name || sh.branch_name || 'Sucursal Principal';
+            const qtyStr = Number(it.quantity || 0) % 1 === 0 ? Number(it.quantity).toString() : Number(it.quantity).toFixed(2);
+            return `&bull; ${esc(bName)}: ${qtyStr} ${esc(it.uom || 'Ud')}`;
+          }).join('<br>');
+
+          const totalQtyStr = totalQty % 1 === 0 ? totalQty.toString() : totalQty.toFixed(2);
+
+          return `
+            <tr>
+              <td>
+                <div class="product-title">${productTitle}</div>
+                ${first.brand && first.brand.trim().length > 0 ? `<div class="product-brand">Marca: ${esc(first.brand)}</div>` : ''}
+                <div class="product-branches">${branchLinesHtml}</div>
+              </td>
+              <td style="text-align: center; font-weight: 700;">${totalQtyStr}</td>
+              <td style="text-align: right;">$${fmt(first.unit_price)}</td>
+              <td style="text-align: right; font-weight: 700;">$${fmt(totalPrice)}</td>
+            </tr>
+          `;
+        }).join('');
+
+        // Action Panel dynamic logic
+        let actionHtml = '';
+        if (o.status === 'approved') {
+          actionHtml = `
+            <div class="alert-banner alert-success">
+              ✅ <strong>Orden Aprobada Exitosamente</strong><br>
+              <span style="font-size: 12px;">Se ha confirmado la disponibilidad de inventario y precios. El comprador ha sido notificado para la entrega y facturación.</span>
+            </div>
+          `;
+        } else if (o.status === 'rejected') {
+          actionHtml = `
+            <div class="alert-banner alert-danger">
+              ❌ <strong>Orden Rechazada / Stock Incompleto</strong><br>
+              <span style="font-size: 12px;">Esta orden fue marcada como no disponible por el proveedor.</span>
+              ${o.supplier_feedback ? `<div style="margin-top: 8px; font-size: 12px; font-weight: 600; text-align: left; background: #FFFFFF; padding: 8px 12px; border-radius: 8px; border: 1px solid #FECACA;"><strong>Motivo reportado:</strong> ${esc(o.supplier_feedback)}</div>` : ''}
+            </div>
+          `;
+        } else if (o.status === 'finalized') {
+          actionHtml = `
+            <div class="alert-banner alert-success" style="background:#F1F5F9; border-color:#CBD5E1; color:#0F172A;">
+              📦 <strong>Orden Finalizada</strong><br>
+              <span style="font-size: 12px;">La compra ha sido registrada satisfactoriamente en el sistema D-UNA.</span>
+            </div>
+          `;
+        } else if (isExpired) {
+          actionHtml = `
+            <div class="alert-banner alert-warning">
+              ⚠️ <strong>Enlace Expirado (72h)</strong><br>
+              <span style="font-size: 12px;">El plazo de 72 horas para responder a esta orden de compra ha vencido. Contacte al comprador para solicitar un nuevo envío.</span>
+            </div>
+          `;
+        } else {
+          actionHtml = `
+            <div class="action-title">Por favor confirme la disponibilidad de esta orden:</div>
+            
+            <div class="btn-group">
+              <button class="btn btn-approve" id="btn-approve">Aprobar</button>
+              <button class="btn btn-reject" id="btn-reject">Rechazar</button>
+            </div>
+
+            <div class="action-notice">
+              Agradecemos aprobar esta orden solo si se cuenta con el inventario completo y los precios validados; de lo contrario, por favor, rechazarla.
+            </div>
+            <div class="expiration-badge">
+              ESTA ORDEN CADUCA EN 72 H
+            </div>
+            <div style="margin-top: 10px; text-align: center;">
+              <button onclick="window.print()" class="btn-pdf-download" style="background: none; border: none; color: var(--neutral-muted); font-size: 12px; font-weight: 500; cursor: pointer; text-decoration: underline; display: inline-flex; align-items: center; gap: 4px;">
+                Descargar versión PDF
+              </button>
+            </div>
+          `;
+        }
+
+        const taxRatePct = o.subtotal > 0 ? ((o.tax / o.subtotal) * 100).toFixed(0) : '16';
+
+        content.innerHTML = `
+          <!-- 1. BANNER SUPERIOR -->
+          <div class="header-banner">
+            <div class="brand">
+              <img src="https://fdkswvzrozijbizdthge.supabase.co/storage/v1/object/public/app_images/logo_d_una.png" alt="D-Una">
+            </div>
+            <div class="doc-meta">
+              <h2>Orden de Compra</h2>
+              <div class="order-num">${esc(o.order_number)}</div>
+              <div class="date-loc"><strong>Fecha y Lugar:</strong> ${locationDateStr}</div>
+            </div>
+          </div>
+
+          <div class="body-content">
+
+            <!-- 2. GRILLA DE INFORMACIÓN -->
+            <div class="info-grid">
+              <!-- Tarjeta 1: Datos del Cliente / Comprador -->
+              <div class="info-card">
+                <h4>Datos del Cliente</h4>
+                <p><strong>${b.has_company ? 'Razón Social:' : 'Nombre:'}</strong> ${esc(b.display_name)}</p>
+                <p><strong>${b.has_company ? 'RIF/ID Fiscal:' : 'C.I. / ID:'}</strong> ${esc(b.tax_id)}</p>
+                <p><strong>Dirección:</strong> ${esc(b.address)}</p>
+                <p><strong>Contacto:</strong> ${esc(b.contact_name)}</p>
+                <p><strong>Teléfono:</strong> ${esc(b.phone)}</p>
+              </div>
+
+              <!-- Tarjeta 2: Condiciones de Envío y Retiro -->
+              <div class="info-card">
+                <h4>Condiciones de Envío / Entrega</h4>
+                ${!sh.is_personal_pickup ? `
+                  <p><strong>Empresa de Envío:</strong> ${esc(sh.company_name)}</p>
+                  ${sh.branch_code ? `<p><strong>Código Sucursal:</strong> ${esc(sh.branch_code)}</p>` : ''}
+                  <p><strong>Dirección Envío:</strong> ${esc(sh.address)}</p>
+                ` : ''}
+                <p><strong>Opción de Entrega:</strong> ${esc(sh.delivery_option)}</p>
+
+                <h4 style="margin-top: 14px;">Persona que Retira</h4>
+                <p><strong>Nombre:</strong> ${esc(sh.receiver_name)}</p>
+                ${sh.receiver_id ? `<p><strong>ID:</strong> ${esc(sh.receiver_id)}</p>` : ''}
+                ${sh.receiver_phone ? `<p><strong>Teléfono:</strong> ${esc(sh.receiver_phone)}</p>` : ''}
+              </div>
+            </div>
+
+            <!-- 3. TABLA DE PRODUCTOS -->
+            <div class="table-container">
+              <table>
+                <thead>
+                  <tr>
+                    <th class="text-left">Producto</th>
+                    <th class="text-center">Cant.</th>
+                    <th class="text-right">P. Unit.</th>
+                    <th class="text-right">Total</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  ${itemsRowsHtml || '<tr><td colspan="4" style="text-align:center;">Sin ítems agregados</td></tr>'}
+                </tbody>
+              </table>
+            </div>
+
+            <!-- 4. TOTALES Y CONDICIONES DE PAGO -->
+            <div class="totals-grid">
+              <div class="info-card">
+                <h4>Condiciones de Pago</h4>
+                <p style="margin-top: 4px;"><strong>Método:</strong> ${esc(o.payment_method)}</p>
+              </div>
+
+              <div class="totals-table-card">
+                <table>
+                  <tr>
+                    <td>Sub-Total (USD):</td>
+                    <td class="val">$${fmt(o.subtotal)}</td>
+                  </tr>
+                  <tr>
+                    <td>IVA (${taxRatePct}%):</td>
+                    <td class="val">$${fmt(o.tax)}</td>
+                  </tr>
+                  <tr class="grand-total-row">
+                    <td>Total (USD):</td>
+                    <td class="val" style="color: #FFFFFF;">$${fmt(o.total)}</td>
+                  </tr>
+                </table>
+              </div>
+            </div>
+
+            <!-- 5. PANEL DE ACCIONES -->
+            <div class="action-panel">
+              ${actionHtml}
+            </div>
+
+          </div>
+
+          <!-- FOOTER INSTITUCIONAL -->
+          <div style="background-color: var(--neutral-bg-header); padding: 14px 20px; border-top: 1px solid var(--neutral-border); text-align: center; font-size: 11px; color: var(--neutral-muted);">
+            Enviado con D-UNA &bull; Gestión Operativa de Órdenes de Compra
+          </div>
+        `;
+
+        content.style.display = 'block';
+        disclaimerBlock.style.display = 'block';
+        footerBlock.style.display = 'block';
+
+        // Bind Action Buttons
+        const btnApprove = document.getElementById('btn-approve');
+        const btnReject = document.getElementById('btn-reject');
+
+        if (btnApprove) {
+          btnApprove.addEventListener('click', () => {
+            window.location.href = `order_response.html?token=${encodeURIComponent(token)}&action=confirm`;
+          });
+        }
+
+        if (btnReject) {
+          btnReject.addEventListener('click', () => {
+            window.location.href = `order_response.html?token=${encodeURIComponent(token)}&action=reject`;
+          });
+        }
+      }
+
+      function showError(title, msg) {
+        spinner.style.display = 'none';
+        content.innerHTML = `
+          <div style="padding: 40px 24px; text-align: center;">
+            <div style="font-size: 48px; margin-bottom: 16px;">⚠️</div>
+            <h2 style="font-size: 18px; margin-bottom: 10px; color: var(--neutral-dark);">${esc(title)}</h2>
+            <p style="color: var(--neutral-muted); font-size: 13px; line-height: 1.5; max-width: 480px; margin: 0 auto;">${esc(msg)}</p>
+          </div>
+        `;
+        content.style.display = 'block';
+        footerBlock.style.display = 'block';
+      }
+
+      function fmt(val) {
+        return (Number(val) || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+      }
+
+      function esc(str) {
+        const d = document.createElement('div');
+        d.textContent = str || '';
+        return d.innerHTML;
+      }
+    })();
+  </script>
+</body>
+</html>

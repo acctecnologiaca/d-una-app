@@ -45,13 +45,14 @@ class ViewQuoteScreen extends ConsumerStatefulWidget {
 }
 
 class _ViewQuoteScreenState extends ConsumerState<ViewQuoteScreen>
-    with SingleTickerProviderStateMixin {
+    with SingleTickerProviderStateMixin, WidgetsBindingObserver {
   late final TabController _tabController;
   bool _hasTriggeredSend = false;
 
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     // Inicializamos con 6 pestañas, empezando en la última (Resúmen = índice 5)
     _tabController = TabController(length: 6, vsync: this, initialIndex: 5);
 
@@ -70,7 +71,15 @@ class _ViewQuoteScreenState extends ConsumerState<ViewQuoteScreen>
   }
 
   @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed && mounted) {
+      ref.invalidate(viewQuoteProvider(widget.quoteId));
+    }
+  }
+
+  @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _tabController.dispose();
     super.dispose();
   }
@@ -83,7 +92,9 @@ class _ViewQuoteScreenState extends ConsumerState<ViewQuoteScreen>
         final quote = next.quote!;
         final isSentOrResent =
             quote.status == QuoteStatus.sent.dbValue ||
-            quote.status == QuoteStatus.resent.dbValue;
+            quote.status == QuoteStatus.resent.dbValue ||
+            quote.status == QuoteStatus.opened.dbValue ||
+            quote.status == QuoteStatus.inReview.dbValue;
         WidgetsBinding.instance.addPostFrameCallback((_) {
           if (mounted) {
             _showSendOptions(context, quote, isSentOrResent);
@@ -98,14 +109,20 @@ class _ViewQuoteScreenState extends ConsumerState<ViewQuoteScreen>
     final isSentOrResent =
         quote != null &&
         (quote.status == QuoteStatus.sent.dbValue ||
-            quote.status == QuoteStatus.resent.dbValue);
+            quote.status == QuoteStatus.resent.dbValue ||
+            quote.status == QuoteStatus.opened.dbValue ||
+            quote.status == QuoteStatus.inReview.dbValue);
 
-    final isFinalized = quote?.status == QuoteStatus.finalized.dbValue;
+    final isSendDisabled = quote == null ||
+        quote.status == QuoteStatus.approved.dbValue ||
+        quote.status == QuoteStatus.rejected.dbValue ||
+        quote.status == QuoteStatus.cancelled.dbValue ||
+        quote.status == QuoteStatus.finalized.dbValue;
 
     if (widget.triggerSend &&
         !_hasTriggeredSend &&
         quote != null &&
-        !isFinalized) {
+        !isSendDisabled) {
       _hasTriggeredSend = true;
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (mounted) {
@@ -122,15 +139,15 @@ class _ViewQuoteScreenState extends ConsumerState<ViewQuoteScreen>
             : (state.currentQuoteNumber ?? 'Cargando...'),
         actions: [
           IconButton(
-            onPressed: (isFinalized || quote == null)
+            onPressed: isSendDisabled
                 ? null
                 : () => _showSendOptions(context, quote, isSentOrResent),
             icon: Icon(
               isSentOrResent ? Symbols.forward : Icons.send,
-              color: isFinalized ? colors.outline : colors.onSurfaceVariant,
+              color: isSendDisabled ? colors.outline : colors.onSurfaceVariant,
             ),
-            tooltip: isFinalized
-                ? 'Cotización finalizada. No se puede enviar'
+            tooltip: isSendDisabled
+                ? 'Cotización ${quote != null ? QuoteStatus.fromDbValue(quote.status).label.toLowerCase() : ''}. No se puede enviar'
                 : (isSentOrResent ? 'Reenviar' : 'Enviar'),
           ),
           IconButton(
@@ -457,7 +474,7 @@ class _ViewQuoteScreenState extends ConsumerState<ViewQuoteScreen>
                       );
                     },
                   ),
-                  Builder(
+                  /* Builder(
                     builder: (context) {
                       final statusStr = state.quote?.status;
                       final isBlockedForOcNe =
@@ -477,7 +494,7 @@ class _ViewQuoteScreenState extends ConsumerState<ViewQuoteScreen>
                         },
                       );
                     },
-                  ),
+                  ), */
                   const Divider(height: 1, indent: 16, endIndent: 16),
                   BottomSheetActionItem(
                     icon: Icons.content_copy_outlined,
@@ -710,6 +727,7 @@ class _ViewQuoteScreenState extends ConsumerState<ViewQuoteScreen>
         status == QuoteStatus.draft ||
         status == QuoteStatus.sent ||
         status == QuoteStatus.resent ||
+        status == QuoteStatus.opened ||
         status == QuoteStatus.inReview;
 
     if (!isPending) return false;
@@ -725,10 +743,26 @@ class _ViewQuoteScreenState extends ConsumerState<ViewQuoteScreen>
     Quote quote,
     bool isSentOrResent,
   ) {
-    if (quote.status == QuoteStatus.finalized.dbValue) {
+    // Obtener la versión más reciente de la cotización si está disponible en el provider
+    final currentQuote =
+        ref.read(viewQuoteProvider(widget.quoteId)).quote ?? quote;
+    final currentIsSentOrResent =
+        currentQuote.status == QuoteStatus.sent.dbValue ||
+        currentQuote.status == QuoteStatus.resent.dbValue ||
+        currentQuote.status == QuoteStatus.opened.dbValue ||
+        currentQuote.status == QuoteStatus.inReview.dbValue;
+
+    final isSendDisabled = currentQuote.status == QuoteStatus.approved.dbValue ||
+        currentQuote.status == QuoteStatus.rejected.dbValue ||
+        currentQuote.status == QuoteStatus.cancelled.dbValue ||
+        currentQuote.status == QuoteStatus.finalized.dbValue;
+
+    if (isSendDisabled) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('La cotización está finalizada y no se puede enviar.'),
+        SnackBar(
+          content: Text(
+            'La cotización está ${QuoteStatus.fromDbValue(currentQuote.status).label.toLowerCase()} y no se puede enviar.',
+          ),
         ),
       );
       return;
@@ -736,15 +770,15 @@ class _ViewQuoteScreenState extends ConsumerState<ViewQuoteScreen>
 
     _checkDateAndSend(
       context: context,
-      quote: quote,
+      quote: currentQuote,
       onSend: (targetQuote) {
         CustomActionSheet.show(
           context: context,
-          title: isSentOrResent ? 'Reenviar cotización' : 'Enviar cotización',
+          title: currentIsSentOrResent ? 'Reenviar cotización' : 'Enviar cotización',
           actions: [
             BottomSheetActionItem(
               icon: Icons.email_outlined,
-              label: isSentOrResent
+              label: currentIsSentOrResent
                   ? 'Reenviar por correo electrónico'
                   : 'Enviar por correo electrónico',
               onTap: () {
@@ -754,7 +788,7 @@ class _ViewQuoteScreenState extends ConsumerState<ViewQuoteScreen>
             ),
             BottomSheetActionItem(
               icon: 'assets/icons/whatsapp_icon.png',
-              label: isSentOrResent
+              label: currentIsSentOrResent
                   ? 'Reenviar por WhatsApp'
                   : 'Enviar por WhatsApp',
               onTap: () {
@@ -834,7 +868,22 @@ class _ViewQuoteScreenState extends ConsumerState<ViewQuoteScreen>
       }
     } else if (action == 'modify') {
       if (context.mounted) {
-        context.push('/quotes/edit/${quote.id}');
+        await context.push('/quotes/edit/${quote.id}?tab=3');
+        if (!context.mounted) return;
+
+        // 1. Invalidar provider para que la pantalla ViewQuote se actualice
+        ref.invalidate(viewQuoteProvider(quote.id));
+        ref.read(quoteValidationProvider(quote.id).notifier).validate();
+
+        // 2. Obtener cotización fresca directamente de la base de datos
+        final freshQuote =
+            await ref.read(quotesRepositoryProvider).getQuoteWithDetails(quote.id);
+        if (context.mounted) {
+          final isSentOrResent =
+              freshQuote.status == QuoteStatus.sent.dbValue ||
+              freshQuote.status == QuoteStatus.resent.dbValue;
+          _showSendOptions(context, freshQuote, isSentOrResent);
+        }
       }
     }
   }

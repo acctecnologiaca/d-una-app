@@ -56,8 +56,10 @@ final clientRoutes = <RouteBase>[
       ),
       GoRoute(
         path: ':id', // /clients/:id
-        builder: (context, state) =>
-            ClientDetailsScreen(clientId: state.pathParameters['id']!),
+        builder: (context, state) => ClientDetailsScreen(
+          clientId: state.pathParameters['id']!,
+          initialClient: state.extra as Client?,
+        ),
         routes: [
           GoRoute(
             path: 'edit-company', // /clients/:id/edit-company

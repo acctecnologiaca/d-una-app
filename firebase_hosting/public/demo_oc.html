@@ -3,31 +3,31 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Vista Previa - Orden de Compra Neutra D-UNA</title>
+  <title>Orden de Compra - D-UNA</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <style>
     :root {
-      /* Paleta Neutra Ejecutiva (Grayscale / Slate Universal) */
-      --neutral-dark: #0F172A;        /* Negro Slate 900 */
-      --neutral-medium: #334155;      /* Gris Slate 700 */
-      --neutral-muted: #64748B;       /* Gris Slate 500 */
-      --neutral-border: #E2E8F0;      /* Gris Slate 200 */
-      --neutral-border-dark: #CBD5E1; /* Gris Slate 300 */
-      --neutral-bg-subtle: #F8FAFC;   /* Gris Slate 50 */
-      --neutral-bg-header: #F1F5F9;   /* Gris Slate 100 */
+      /* Paleta Slate Ejecutiva Neutra */
+      --neutral-dark: #0F172A;
+      --neutral-medium: #334155;
+      --neutral-muted: #64748B;
+      --neutral-border: #E2E8F0;
+      --neutral-border-dark: #CBD5E1;
+      --neutral-bg-subtle: #F8FAFC;
+      --neutral-bg-header: #F1F5F9;
       
       /* Acciones */
-      --btn-success-bg: #16A34A;
-      --btn-danger-bg: #DC2626;
+      --btn-approve: #388E3C;
+      --btn-reject: #F86F28;
     }
 
     * { margin: 0; padding: 0; box-sizing: border-box; }
     
     body {
-      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
-      background: #F1F5F9;
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      background-color: #F1F5F9;
       color: var(--neutral-dark);
       min-height: 100vh;
       display: flex;
@@ -37,23 +37,23 @@
     }
 
     .container {
-      max-width: 780px;
+      max-width: 680px;
       width: 100%;
       margin: 0 auto;
     }
 
     .card {
-      background: #FFFFFF;
-      border-radius: 16px;
-      box-shadow: 0 10px 25px -5px rgba(15, 23, 42, 0.05);
-      overflow: hidden;
+      background-color: #FFFFFF;
       border: 1px solid var(--neutral-border);
+      border-radius: 16px;
+      overflow: hidden;
+      box-shadow: 0 10px 25px -5px rgba(15, 23, 42, 0.05);
     }
 
-    /* 1. MEMBRETE 100% NEUTRO BLANCO CON DIVISOR NEGRO EJECUTIVO */
+    /* 1. BANNER SUPERIOR (Logo D-Una a la izquierda / Metadatos a la derecha) */
     .header-banner {
-      background: #FFFFFF;
-      padding: 28px 32px;
+      background-color: #FFFFFF;
+      padding: 20px 24px;
       display: flex;
       justify-content: space-between;
       align-items: center;
@@ -62,250 +62,291 @@
       border-bottom: 2px solid var(--neutral-dark);
     }
 
-    .header-banner .brand {
-      display: flex;
-      align-items: center;
-      gap: 16px;
-    }
-
     .header-banner .brand img {
-      max-height: 54px;
-      width: auto;
+      max-height: 48px;
       object-fit: contain;
     }
 
-    .header-banner .title-block h1 {
-      font-size: 22px;
+    .header-banner .doc-meta {
+      text-align: right;
+    }
+
+    .header-banner .doc-meta h2 {
+      margin: 0;
+      font-size: 18px;
       font-weight: 800;
       color: var(--neutral-dark);
+      text-transform: uppercase;
       letter-spacing: 0.5px;
     }
 
-    .header-banner .title-block .doc-num {
+    .header-banner .doc-meta .order-num {
       font-size: 13px;
+      font-weight: 700;
       color: var(--neutral-muted);
-      font-weight: 600;
       margin-top: 2px;
     }
 
-    .status-badge {
-      background: var(--neutral-bg-subtle);
-      border: 1px solid var(--neutral-border-dark);
-      color: var(--neutral-dark);
-      padding: 8px 16px;
-      border-radius: 20px;
-      font-size: 13px;
-      font-weight: 600;
-      display: inline-flex;
-      align-items: center;
-      gap: 6px;
+    .header-banner .doc-meta .date-loc {
+      font-size: 11px;
+      color: var(--neutral-muted);
+      margin-top: 4px;
     }
 
     .body-content {
-      padding: 32px 32px 24px;
+      padding: 24px;
     }
 
-    /* 2. GRID DE INFORMACIÓN PROVEEDOR Y DESPACHO */
+    /* 2. GRILLA DE INFORMACIÓN (2 Tarjetas: Datos del Cliente y Condiciones de Envío) */
     .info-grid {
       display: grid;
       grid-template-columns: 1fr 1fr;
-      gap: 20px;
-      margin-bottom: 32px;
+      gap: 16px;
+      margin-bottom: 24px;
     }
 
-    @media (max-width: 640px) {
+    @media (max-width: 600px) {
       .info-grid { grid-template-columns: 1fr; }
-      .header-banner, .body-content { padding: 20px 16px; }
+      .header-banner { flex-direction: column; align-items: flex-start; text-align: left; }
+      .header-banner .doc-meta { text-align: left; }
+      .body-content { padding: 16px; }
     }
 
-    .info-box {
-      background: var(--neutral-bg-subtle);
+    .info-card {
+      background-color: var(--neutral-bg-subtle);
       border: 1px solid var(--neutral-border);
       border-radius: 12px;
-      padding: 18px;
+      padding: 16px;
     }
 
-    .info-box h3 {
-      font-size: 12px;
+    .info-card h4 {
+      margin: 0 0 10px 0;
+      font-size: 11px;
       font-weight: 700;
       color: var(--neutral-dark);
       text-transform: uppercase;
       letter-spacing: 0.8px;
-      margin-bottom: 12px;
       border-bottom: 2px solid var(--neutral-border-dark);
-      padding-bottom: 6px;
+      padding-bottom: 4px;
     }
 
-    .info-box p {
-      font-size: 13px;
+    .info-card p {
+      margin: 3px 0;
+      font-size: 12px;
+      line-height: 1.4;
       color: var(--neutral-dark);
-      line-height: 1.65;
     }
 
-    .info-box p strong {
-      color: var(--neutral-muted);
-      font-weight: 500;
+    .info-card p strong {
+      color: var(--neutral-dark);
+      font-weight: 700;
     }
 
-    /* 3. TABLA DE ÍTEMS DE LA ORDEN DE COMPRA */
+    /* 3. TABLA DE PRODUCTOS (Producto | Cant. | P. Unit. | Total) */
     .table-container {
-      overflow-x: auto;
-      margin-bottom: 28px;
       border: 1px solid var(--neutral-border);
       border-radius: 12px;
+      overflow: hidden;
+      margin-bottom: 24px;
     }
 
     table {
       width: 100%;
       border-collapse: collapse;
-      font-size: 13px;
+      font-size: 12px;
     }
 
-    th {
-      background: var(--neutral-bg-header);
+    thead tr {
+      background-color: var(--neutral-bg-header);
       color: var(--neutral-dark);
-      font-weight: 700;
-      text-align: left;
-      padding: 12px 16px;
-      border-bottom: 2px solid var(--neutral-border-dark);
-      text-transform: uppercase;
       font-size: 11px;
+      text-transform: uppercase;
       letter-spacing: 0.6px;
     }
 
-    td {
-      padding: 14px 16px;
-      border-bottom: 1px solid var(--neutral-border);
-      color: var(--neutral-dark);
+    th {
+      padding: 10px 12px;
+      border-bottom: 2px solid var(--neutral-border-dark);
+      font-weight: 700;
     }
 
-    tr:nth-child(even) {
-      background: var(--neutral-bg-subtle);
+    th.text-left { text-align: left; }
+    th.text-center { text-align: center; width: 55px; }
+    th.text-right { text-align: right; width: 90px; }
+
+    td {
+      padding: 10px 12px;
+      border-bottom: 1px solid var(--neutral-border);
+      color: var(--neutral-dark);
+      vertical-align: top;
     }
 
     tr:last-child td { border-bottom: none; }
-    .text-right { text-align: right; }
 
-    /* 4. TOTALES DESTACADOS */
-    .totals-block {
-      display: flex;
-      justify-content: flex-end;
-      margin-bottom: 28px;
+    .product-title {
+      font-weight: 700;
+      color: var(--neutral-dark);
     }
 
-    .totals-card {
-      width: 300px;
-      background: var(--neutral-bg-subtle);
+    .product-brand {
+      font-size: 11px;
+      color: var(--neutral-muted);
+      font-style: italic;
+    }
+
+    .product-branches {
+      font-size: 11px;
+      color: var(--neutral-muted);
+      line-height: 1.3;
+    }
+
+    /* 4. TOTALES Y CONDICIONES DE PAGO */
+    .totals-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+      margin-bottom: 24px;
+    }
+
+    @media (max-width: 600px) {
+      .totals-grid { grid-template-columns: 1fr; }
+    }
+
+    .totals-table-card {
+      background-color: var(--neutral-bg-subtle);
       border: 1px solid var(--neutral-border);
       border-radius: 12px;
       overflow: hidden;
     }
 
-    .totals-row {
-      display: flex;
-      justify-content: space-between;
-      font-size: 13px;
-      padding: 10px 16px;
-      color: var(--neutral-muted);
+    .totals-table-card table {
+      width: 100%;
+      border-collapse: collapse;
     }
 
-    .totals-row.grand-total {
-      font-size: 15px;
-      font-weight: 800;
-      color: var(--neutral-dark);
-      background: #FFFFFF;
-      border-top: 2px solid var(--neutral-dark);
-      padding: 14px 16px;
-    }
-
-    /* 5. CONDICIONES DE PAGO Y DESPACHO */
-    .conditions-box {
-      background: var(--neutral-bg-subtle);
-      border: 1px solid var(--neutral-border);
-      border-radius: 12px;
-      padding: 18px;
-      margin-bottom: 24px;
-    }
-
-    .conditions-box h4 {
+    .totals-table-card td {
+      padding: 8px 14px;
       font-size: 12px;
+      color: var(--neutral-muted);
+      border-bottom: none;
+    }
+
+    .totals-table-card td.val {
+      color: var(--neutral-dark);
+      font-weight: 700;
+      text-align: right;
+    }
+
+    .grand-total-row {
+      border-top: 2px solid var(--neutral-dark);
+      background-color: var(--neutral-dark);
+      color: #FFFFFF !important;
+    }
+
+    .grand-total-row td {
+      color: #FFFFFF !important;
+      font-size: 13px !important;
+      font-weight: 800 !important;
+      padding: 10px 14px !important;
+    }
+
+    /* 5. PANEL DE ACCIONES */
+    .action-panel {
+      text-align: center;
+      margin: 20px 0 8px 0;
+      padding: 20px 16px;
+      background-color: var(--neutral-bg-subtle);
+      border: 1px dashed var(--neutral-border-dark);
+      border-radius: 12px;
+    }
+
+    .action-title {
+      font-size: 13px;
       font-weight: 700;
       color: var(--neutral-dark);
-      text-transform: uppercase;
-      letter-spacing: 0.5px;
-      margin-bottom: 8px;
-    }
-
-    .conditions-box ul {
-      padding-left: 18px;
-      font-size: 12px;
-      color: var(--neutral-medium);
-      line-height: 1.6;
-    }
-
-    /* 6. PANEL DE ACCIONES DEL PROVEEDOR */
-    .action-panel {
-      border-top: 1px solid var(--neutral-border);
-      padding: 24px 32px;
-      background: var(--neutral-bg-subtle);
-      display: flex;
-      flex-direction: column;
-      gap: 12px;
-      align-items: center;
+      margin-bottom: 12px;
     }
 
     .btn-group {
-      display: flex;
-      gap: 14px;
-      width: 100%;
-      max-width: 480px;
-    }
-
-    @media (max-width: 480px) {
-      .btn-group { flex-direction: column; }
+      display: inline-flex;
+      gap: 12px;
+      margin-bottom: 14px;
+      flex-wrap: wrap;
+      justify-content: center;
     }
 
     .btn {
-      flex: 1;
-      padding: 14px 20px;
+      padding: 12px 28px;
       border-radius: 10px;
-      font-weight: 600;
-      font-size: 14px;
+      font-weight: 700;
+      font-size: 13px;
+      text-decoration: none;
+      display: inline-block;
       cursor: pointer;
       border: none;
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      gap: 8px;
-      text-decoration: none;
-      transition: transform 0.15s ease;
+      transition: transform 0.15s ease, box-shadow 0.15s ease;
     }
 
     .btn:active { transform: scale(0.98); }
 
-    .btn-success {
-      background: var(--btn-success-bg);
+    .btn-approve {
+      background-color: var(--btn-approve);
       color: #FFFFFF;
-      box-shadow: 0 4px 12px rgba(22, 163, 74, 0.2);
+      box-shadow: 0 4px 12px rgba(56, 142, 60, 0.25);
     }
 
-    .btn-danger {
-      background: var(--btn-danger-bg);
+    .btn-reject {
+      background-color: var(--btn-reject);
       color: #FFFFFF;
-      box-shadow: 0 4px 12px rgba(220, 38, 38, 0.2);
+      box-shadow: 0 4px 12px rgba(248, 111, 40, 0.25);
     }
 
-    .btn-secondary {
+    .action-notice {
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--neutral-muted);
+      margin-bottom: 10px;
+      line-height: 1.4;
+      max-width: 520px;
+      margin-left: auto;
+      margin-right: auto;
+    }
+
+    .expiration-badge {
+      font-size: 11px;
+      font-weight: 800;
+      color: #DC2626;
+      letter-spacing: 0.5px;
+    }
+
+    /* 6. AVISO DE CONFIDENCIALIDAD & FOOTER */
+    .disclaimer-card {
+      margin-top: 16px;
+      padding: 14px 18px;
       background: #FFFFFF;
+      border: 1px solid var(--neutral-border);
+      border-radius: 12px;
+      font-size: 11px;
+      color: var(--neutral-muted);
+      line-height: 1.5;
+    }
+
+    .disclaimer-card strong {
       color: var(--neutral-dark);
-      border: 1.5px solid var(--neutral-dark);
     }
 
     .footer {
       text-align: center;
-      padding: 24px;
-      font-size: 12px;
+      padding: 20px 10px;
+      font-size: 11px;
       color: var(--neutral-muted);
+    }
+
+    .footer img {
+      height: 20px;
+      margin-bottom: 6px;
+      vertical-align: middle;
+      object-fit: contain;
     }
   </style>
 </head>
@@ -313,119 +354,148 @@
 
   <div class="container">
     <div class="card">
-      <!-- 1. ENCABEZADO MONOCROMÁTICO NEUTRO BLANCO -->
+      
+      <!-- 1. BANNER SUPERIOR (2 Columnas: Logo D-Una a la Izquierda vs Metadatos de Orden a la Derecha) -->
       <div class="header-banner">
         <div class="brand">
-          <img src="https://fdkswvzrozijbizdthge.supabase.co/storage/v1/object/sign/app_images/logo_d_una.png?token=eyJraWQiOiJzdG9yYWdlLXVybC1zaWduaW5nLWtleV8yNjZhOWZkMS0xYWQyLTQ3OWEtOGNlYS1kYjQzMjA0OGNlMjkiLCJhbGciOiJIUzI1NiJ9.eyJ1cmwiOiJhcHBfaW1hZ2VzL2xvZ29fZF91bmEucG5nIiwic2NvcGUiOiJkb3dubG9hZCIsImlhdCI6MTc4NTI2NTY0NSwiZXhwIjo4OTM4ODY1NjQ1fQ.2vHh0Q0-FA0ZQDV-HeBtlf6CKCS7jrPI5CIFjK7yPVw" alt="Logo Comprador">
-          <div class="title-block">
-            <h1>ORDEN DE COMPRA</h1>
-            <div class="doc-num">OC-26001 &bull; 30/07/2026</div>
-          </div>
+          <img src="https://fdkswvzrozijbizdthge.supabase.co/storage/v1/object/public/app_images/logo_d_una.png" alt="D-Una">
         </div>
-        <div class="status-badge">
-          📋 Estado: Emitida / Pendiente
+        <div class="doc-meta">
+          <h2>Orden de Compra</h2>
+          <div class="order-num">OC-VE0001-26001</div>
+          <div class="date-loc"><strong>Fecha y Lugar:</strong> Caracas, 16/08/2026</div>
         </div>
       </div>
 
       <div class="body-content">
-        <!-- 2. DATOS PROVEEDOR Y DESPACHO EN NEUTRO -->
+
+        <!-- 2. GRILLA DE INFORMACIÓN (2 Tarjetas Estilizadas) -->
         <div class="info-grid">
-          <div class="info-box">
-            <h3>Datos del Proveedor</h3>
-            <p><strong>Razón Social:</strong> Mayorista Tecnológico del Este C.A.</p>
-            <p><strong>RIF:</strong> J-30982741-2</p>
-            <p><strong>Contacto Ventas:</strong> Lic. Mariana Rivas</p>
-            <p><strong>Teléfono:</strong> +58 212 9998877</p>
-            <p><strong>Email:</strong> pedidos@mayoristatec.com</p>
+          <!-- Tarjeta 1: Datos del Cliente / Comprador -->
+          <div class="info-card">
+            <h4>Datos del Cliente</h4>
+            <p><strong>Razón Social:</strong> AC Tecnología C.A.</p>
+            <p><strong>RIF/ID Fiscal:</strong> J-12345678-9</p>
+            <p><strong>Dirección:</strong> Av. Francisco de Miranda, Torre Alfa, Piso 4, Caracas</p>
+            <p><strong>Contacto:</strong> Ing. Alejandro Pérez</p>
+            <p><strong>Teléfono:</strong> +58 412 1234567</p>
           </div>
 
-          <div class="info-box">
-            <h3>Lugar de Entrega / Despacho</h3>
-            <p><strong>Empresa Compradora:</strong> Servicios Integrales D-UNA</p>
-            <p><strong>Dirección:</strong> Av. Principal Los Ruices, Edif. Centro, Piso 3, Caracas</p>
-            <p><strong>Receptor:</strong> Ing. Alejandro Pérez</p>
-            <p><strong>TeléfonoContacto:</strong> +58 414 1234567</p>
+          <!-- Tarjeta 2: Condiciones de Envío y Retiro -->
+          <div class="info-card">
+            <h4>Condiciones de Envío / Entrega</h4>
+            <p><strong>Empresa de Envío:</strong> MRW</p>
+            <p><strong>Código Sucursal:</strong> MRW-CC-01</p>
+            <p><strong>Dirección Envío:</strong> Av. Casanova, Agencia Principal MRW</p>
+            <p><strong>Opción de Entrega:</strong> Envío a Sucursal</p>
+
+            <h4 style="margin-top: 14px;">Persona que Retira</h4>
+            <p><strong>Nombre:</strong> Carlos Rodríguez</p>
+            <p><strong>ID:</strong> V-18.765.432</p>
+            <p><strong>Teléfono:</strong> +58 414 9876543</p>
           </div>
         </div>
 
-        <!-- 3. TABLA DE ÍTEMS DE LA ORDEN DE COMPRA -->
+        <!-- 3. TABLA DE PRODUCTOS (Orden: Producto, Cant., P. Unit., Total) -->
         <div class="table-container">
           <table>
             <thead>
               <tr>
-                <th>Código / Descripción del Producto</th>
-                <th class="text-right">Cant.</th>
-                <th class="text-right">P. Costo Unit</th>
-                <th class="text-right">Subtotal</th>
+                <th class="text-left">Producto</th>
+                <th class="text-center">Cant.</th>
+                <th class="text-right">P. Unit.</th>
+                <th class="text-right">Total</th>
               </tr>
             </thead>
             <tbody>
               <tr>
                 <td>
-                  <strong>CAM-HIK-1080P</strong><br>
-                  <small style="color: var(--neutral-muted);">Cámara IP Exterior Full HD 1080p Hikvision (DS-2CD2143G0-I)</small>
+                  <div class="product-title">[EZ9F56240] Breaker Termomagnético 2x40A</div>
+                  <div class="product-brand">Marca: Schneider Electric</div>
+                  <div class="product-branches">&bull; Sucursal Valencia: 6 Und<br>&bull; Sucursal Maracay: 4 Und</div>
                 </td>
-                <td class="text-right">4 Und</td>
-                <td class="text-right">$45.00</td>
-                <td class="text-right">$180.00</td>
+                <td style="text-align: center; font-weight: 700;">10</td>
+                <td style="text-align: right;">$15.00</td>
+                <td style="text-align: right; font-weight: 700;">$150.00</td>
               </tr>
               <tr>
                 <td>
-                  <strong>DVR-DAH-8CH</strong><br>
-                  <small style="color: var(--neutral-muted);">DVR Grabador 8 Canales 4K Dahua (XVR5108HS-X)</small>
+                  <div class="product-title">[DS-2CD2143G0-I] Cámara Domo IP Exterior 4MP</div>
+                  <div class="product-brand">Marca: Hikvision</div>
+                  <div class="product-branches">&bull; Sucursal Caracas: 2 Und</div>
                 </td>
-                <td class="text-right">1 Und</td>
-                <td class="text-right">$90.00</td>
-                <td class="text-right">$90.00</td>
+                <td style="text-align: center; font-weight: 700;">2</td>
+                <td style="text-align: right;">$65.00</td>
+                <td style="text-align: right; font-weight: 700;">$130.00</td>
               </tr>
             </tbody>
           </table>
         </div>
 
-        <!-- 4. TOTALES DE LA ORDEN DE COMPRA -->
-        <div class="totals-block">
-          <div class="totals-card">
-            <div class="totals-row">
-              <span>Subtotal Costo:</span>
-              <span>$270.00</span>
-            </div>
-            <div class="totals-row">
-              <span>Impuesto / IVA (16%):</span>
-              <span>$43.20</span>
-            </div>
-            <div class="totals-row grand-total">
-              <span>TOTAL OC USD:</span>
-              <span>$313.20</span>
-            </div>
+        <!-- 4. TOTALES Y CONDICIONES DE PAGO -->
+        <div class="totals-grid">
+          <div class="info-card">
+            <h4>Condiciones de Pago</h4>
+            <p style="margin-top: 4px;"><strong>Método:</strong> Transferencia Bancaria / Contado</p>
+          </div>
+
+          <div class="totals-table-card">
+            <table>
+              <tr>
+                <td>Sub-Total (USD):</td>
+                <td class="val">$280.00</td>
+              </tr>
+              <tr>
+                <td>IVA (16%):</td>
+                <td class="val">$44.80</td>
+              </tr>
+              <tr class="grand-total-row">
+                <td>Total (USD):</td>
+                <td class="val" style="color: #FFFFFF;">$324.80</td>
+              </tr>
+            </table>
           </div>
         </div>
 
-        <!-- 5. CONDICIONES DE PAGO Y DESPACHO -->
-        <div class="conditions-box">
-          <h4>Condiciones de Compra y Entrega</h4>
-          <ul>
-            <li>Tiempo límite de despacho: 48 horas posteriores a la confirmación.</li>
-            <li>Método de Pago: Transferencia Zelle / Crédito Comercial 15 días.</li>
-            <li>Garantía requerida: Seriales físicos legibles e inventariados al recibir.</li>
-          </ul>
+        <!-- 5. BOTONES DE ACCIÓN TRANSACCIONAL -->
+        <div class="action-panel">
+          <div class="action-title">Por favor confirme la disponibilidad de esta orden:</div>
+          
+          <div class="btn-group">
+            <a href="order_response.html?token=demo&action=confirm" class="btn btn-approve">
+              Aprobar
+            </a>
+            <a href="order_response.html?token=demo&action=reject" class="btn btn-reject">
+              Rechazar
+            </a>
+          </div>
+
+          <div class="action-notice">
+            Agradecemos aprobar esta orden solo si se cuenta con el inventario completo y los precios validados; de lo contrario, por favor, rechazarla.
+          </div>
+          <div class="expiration-badge">
+            ESTA ORDEN CADUCA EN 72 H
+          </div>
         </div>
+
       </div>
 
-      <!-- 6. PANEL DE ACCIONES PARA EL PROVEEDOR -->
-      <div class="action-panel">
-        <div class="btn-group">
-          <button class="btn btn-success">🟩 Confirmar Orden</button>
-          <button class="btn btn-danger">🟥 Rechazar Orden</button>
-        </div>
-        <button class="btn btn-secondary" style="width: 100%; max-width: 480px; margin-top: 4px;">
-          📄 Descargar Orden en PDF
-        </button>
+      <!-- FOOTER INSTITUCIONAL -->
+      <div style="background-color: var(--neutral-bg-header); padding: 14px 20px; border-top: 1px solid var(--neutral-border); text-align: center; font-size: 11px; color: var(--neutral-muted);">
+        Enviado con D-UNA &bull; Gestión Operativa de Órdenes de Compra
       </div>
+
+    </div>
+
+    <!-- TARJETA DE AVISO DE CONFIDENCIALIDAD -->
+    <div class="disclaimer-card">
+      <strong>Aviso de Confidencialidad y Términos Comerciales:</strong><br>
+      La presente orden de compra y su confirmación electrónica constituyen una solicitud formal de suministro emitida directamente por el comprador identificado. D-UNA opera exclusivamente como plataforma tecnológica de gestión y no asume responsabilidad por acuerdos comerciales entre las partes.
     </div>
 
     <div class="footer">
-      <img src="https://fdkswvzrozijbizdthge.supabase.co/storage/v1/object/sign/app_images/logo_d_una.png?token=eyJraWQiOiJzdG9yYWdlLXVybC1zaWduaW5nLWtleV8yNjZhOWZkMS0xYWQyLTQ3OWEtOGNlYS1kYjQzMjA0OGNlMjkiLCJhbGciOiJIUzI1NiJ9.eyJ1cmwiOiJhcHBfaW1hZ2VzL2xvZ29fZF91bmEucG5nIiwic2NvcGUiOiJkb3dubG9hZCIsImlhdCI6MTc4NTI2NTY0NSwiZXhwIjo4OTM4ODY1NjQ1fQ.2vHh0Q0-FA0ZQDV-HeBtlf6CKCS7jrPI5CIFjK7yPVw" alt="D-UNA" style="height: 22px; margin-bottom: 6px; vertical-align: middle;"><br>
-      Sistema Transaccional D-UNA &bull; Gestión Operativa de Compras
+      <img src="https://fdkswvzrozijbizdthge.supabase.co/storage/v1/object/public/app_images/logo_d_una.png" alt="D-UNA Logo"><br>
+      Tecnología D-UNA &bull; Plataforma de Gestión Transaccional &bull; &copy; 2026 Todos los derechos reservados.
     </div>
   </div>
 

@@ -36,6 +36,17 @@ class SupplierOrderDto {
       }).toList();
     }
 
+    String? verificationStatus = json['verification_status'] as String?;
+    if (verificationStatus == null && json['purchases'] != null) {
+      if (json['purchases'] is List && (json['purchases'] as List).isNotEmpty) {
+        verificationStatus =
+            (json['purchases'] as List).first['verification_status'] as String?;
+      } else if (json['purchases'] is Map) {
+        verificationStatus =
+            (json['purchases'] as Map)['verification_status'] as String?;
+      }
+    }
+
     return SupplierOrder(
       id: json['id'],
       userId: json['user_id'],
@@ -54,7 +65,11 @@ class SupplierOrderDto {
       total: (json['total'] ?? 0).toDouble(),
       invoicePhotoUrl: json['invoice_photo_url'],
       isArchived: json['is_archived'] as bool? ?? false,
-      verificationStatus: json['verification_status'] as String? ?? 'pending_review',
+      verificationStatus: verificationStatus ?? 'pending_review',
+      supplierFeedback: json['supplier_feedback'] as String?,
+      supplierFeedbackAt: json['supplier_feedback_at'] != null
+          ? DateTime.tryParse(json['supplier_feedback_at'].toString())?.toLocal()
+          : null,
       createdAt: DateTime.parse(json['created_at']).toLocal(),
       updatedAt: DateTime.parse(json['updated_at']).toLocal(),
       supplierName: supplierName ?? 'Desconocido',

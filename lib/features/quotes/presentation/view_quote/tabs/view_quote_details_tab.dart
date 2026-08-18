@@ -35,6 +35,7 @@ class ViewQuoteDetailsTab extends ConsumerWidget {
         status == QuoteStatus.draft ||
         status == QuoteStatus.sent ||
         status == QuoteStatus.resent ||
+        status == QuoteStatus.opened ||
         status == QuoteStatus.inReview;
 
     final isExpired = isPending && expirationDate.isBefore(DateTime.now());
@@ -91,6 +92,15 @@ class ViewQuoteDetailsTab extends ConsumerWidget {
             label: 'Etiqueta',
             value: quote.quoteTag ?? 'Sin etiqueta',
           ),
+          if (quote.clientFeedback != null &&
+              quote.clientFeedback!.trim().isNotEmpty) ...[
+            const SizedBox(height: 24),
+            InfoBlock.text(
+              icon: Icons.chat_bubble_outline,
+              label: 'Comentario del Cliente',
+              value: quote.clientFeedback!,
+            ),
+          ],
 
           const SizedBox(height: 32),
 

@@ -333,6 +333,7 @@ class AddPurchaseSummaryTab extends ConsumerWidget {
                   CurrencyFormatter.format(finalTotal),
                   style: textTheme.headlineSmall?.copyWith(
                     fontWeight: FontWeight.w900,
+                    color: colors.primary,
                   ),
                 ),
               ],

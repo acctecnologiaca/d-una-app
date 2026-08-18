@@ -48,6 +48,9 @@ class Quote {
   final String? clientState;
   final String? clientCountry;
 
+  final String? clientFeedback;
+  final DateTime? clientFeedbackAt;
+
   Quote({
     required this.id,
     required this.userId,
@@ -88,6 +91,8 @@ class Quote {
     this.clientState,
     this.clientCountry,
     this.contact,
+    this.clientFeedback,
+    this.clientFeedbackAt,
   });
 
   Quote copyWith({
@@ -130,6 +135,8 @@ class Quote {
     String? clientCity,
     String? clientState,
     String? clientCountry,
+    String? clientFeedback,
+    DateTime? clientFeedbackAt,
   }) {
     return Quote(
       id: id ?? this.id,
@@ -171,6 +178,8 @@ class Quote {
       clientCity: clientCity ?? this.clientCity,
       clientState: clientState ?? this.clientState,
       clientCountry: clientCountry ?? this.clientCountry,
+      clientFeedback: clientFeedback ?? this.clientFeedback,
+      clientFeedbackAt: clientFeedbackAt ?? this.clientFeedbackAt,
     );
   }
 
@@ -200,6 +209,10 @@ class Quote {
       actionToken: json['action_token'] as String?,
       actionTokenExpiresAt: json['action_token_expires_at'] != null
           ? DateTime.parse(json['action_token_expires_at'] as String)
+          : null,
+      clientFeedback: json['client_feedback'] as String?,
+      clientFeedbackAt: json['client_feedback_at'] != null
+          ? DateTime.tryParse(json['client_feedback_at'] as String)
           : null,
 
       // Handle joined client name (robust mapping for Map or List)
@@ -266,6 +279,8 @@ class Quote {
       'pdf_url': pdfUrl,
       'action_token': actionToken,
       'action_token_expires_at': actionTokenExpiresAt?.toIso8601String(),
+      'client_feedback': clientFeedback,
+      'client_feedback_at': clientFeedbackAt?.toIso8601String(),
       'created_at': createdAt.toIso8601String(),
       'updated_at': updatedAt.toIso8601String(),
     };

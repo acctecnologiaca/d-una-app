@@ -158,7 +158,53 @@ class SupabaseProductsRepository {
     }
   }
 
+  Future<bool> hasLinkedDocuments(String productId) async {
+    final userId = _supabase.auth.currentUser?.id;
+    if (userId == null) return false;
+
+    try {
+      // 1. Check in quotes
+      final quotes = await _supabase
+          .from('quote_items_products')
+          .select('id')
+          .eq('product_id', productId)
+          .limit(1);
+      if ((quotes as List).isNotEmpty) return true;
+
+      // 2. Check in purchases
+      final purchases = await _supabase
+          .from('purchase_items')
+          .select('id')
+          .eq('product_id', productId)
+          .limit(1);
+      if ((purchases as List).isNotEmpty) return true;
+
+      // 3. Check in supplier orders
+      try {
+        final supplierOrders = await _supabase
+            .from('supplier_order_items')
+            .select('id')
+            .eq('product_id', productId)
+            .limit(1);
+        if ((supplierOrders as List).isNotEmpty) return true;
+      } catch (_) {
+        // Table may not exist or error, continue
+      }
+
+      return false;
+    } catch (e) {
+      return false;
+    }
+  }
+
   Future<void> deleteProduct(String id) async {
+    final hasDocs = await hasLinkedDocuments(id);
+    if (hasDocs) {
+      throw Exception(
+        'No se puede eliminar el producto porque está vinculado a documentos existentes (cotizaciones, compras u órdenes).',
+      );
+    }
+
     try {
       await _supabase.from('products').delete().eq('id', id);
     } catch (e) {

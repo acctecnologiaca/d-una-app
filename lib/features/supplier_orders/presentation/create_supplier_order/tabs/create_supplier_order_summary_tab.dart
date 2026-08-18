@@ -6,17 +6,21 @@ import '../../../../../shared/widgets/custom_extended_fab.dart';
 import '../../../domain/models/supplier_order_item.dart';
 import '../providers/create_supplier_order_provider.dart';
 import 'package:d_una_app/features/portfolio/presentation/providers/suppliers_provider.dart';
+import 'package:d_una_app/features/supplier_orders/presentation/supplier_orders_list/providers/supplier_orders_providers.dart';
 import 'package:d_una_app/features/portfolio/domain/models/supplier_model.dart';
 import '../../../../../shared/widgets/custom_action_sheet.dart';
 import '../../../../../shared/widgets/bottom_sheet_action_item.dart';
-import 'package:d_una_app/features/supplier_orders/domain/utils/oc_credit_helper.dart';
+import 'package:d_una_app/features/supplier_orders/domain/models/supplier_order_status.dart';
+import 'package:d_una_app/features/supplier_orders/presentation/widgets/supplier_order_credit_banner_card.dart';
 
 class CreateSupplierOrderSummaryTab extends ConsumerWidget {
   final Function(int) onNavigateToTab;
+  final bool editMode;
 
   const CreateSupplierOrderSummaryTab({
     super.key,
     required this.onNavigateToTab,
+    this.editMode = false,
   });
 
   @override
@@ -126,40 +130,12 @@ class CreateSupplierOrderSummaryTab extends ConsumerWidget {
               const SizedBox(height: 16),
             ],
             // Indicador de créditos generados por esta OC
-            Padding(
-              padding: const EdgeInsets.only(bottom: 8.0, top: 4.0),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-
-                children: [
-                  Icon(
-                    Icons.star_border_outlined,
-                    size: 20,
-                    color: colors.secondary,
-                  ),
-                  const SizedBox(width: 4),
-                  Text(
-                    'Créditos a recibir:',
-                    textAlign: TextAlign.center,
-                    style: textTheme.titleSmall?.copyWith(
-                      color: colors.secondary,
-                      fontSize: 14,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  const SizedBox(width: 4),
-                  Text(
-                    '${OCCreditHelper.calculateEarnedCredits(state.total)}',
-                    textAlign: TextAlign.center,
-                    style: textTheme.titleSmall?.copyWith(
-                      color: colors.secondary,
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ],
-              ),
+            SupplierOrderCreditBannerCard(
+              orderTotal: state.total,
+              status: SupplierOrderStatus.draft,
+              isCreateOrEdit: true,
             ),
+            const SizedBox(height: 16),
             // 1. Proveedor Section
             _buildSectionHeader(context, Icons.warehouse, 'Proveedor'),
             Card(
@@ -384,32 +360,55 @@ class CreateSupplierOrderSummaryTab extends ConsumerWidget {
           ],
         ),
       ),
-      floatingActionButton: Padding(
-        padding: const EdgeInsets.only(bottom: 40.0),
-        child: CustomExtendedFab(
-          label: state.isLoading ? 'Guardando...' : 'Guardar',
-          icon: state.isLoading ? Icons.hourglass_empty : Icons.save_outlined,
-          isEnabled:
-              !state.isLoading &&
+      floatingActionButton: Builder(
+        builder: (context) {
+          final branchesAsync = state.supplierId != null
+              ? ref.watch(supplierBranchesProvider(state.supplierId!))
+              : null;
+          final branches = branchesAsync?.valueOrNull ?? [];
+          final hasBranches = branches.isNotEmpty;
+          final isDetailsValid = state.isDetailsValid(hasBranches: hasBranches);
+          final canSave = !state.isLoading &&
               state.items.isNotEmpty &&
-              state.supplierId != null,
-          onPressed: () async {
-            final createdOrderId = await ref
-                .read(createSupplierOrderProvider.notifier)
-                .saveOrder();
-            if (!context.mounted) return;
-            if (createdOrderId != null) {
-              _showPostSaveOptions(context, ref, createdOrderId);
-            } else {
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text(state.error ?? 'Error al guardar la orden'),
-                  backgroundColor: Colors.red,
-                ),
-              );
-            }
-          },
-        ),
+              isDetailsValid &&
+              (!editMode || state.isDirty);
+
+          return Padding(
+            padding: const EdgeInsets.only(bottom: 40.0),
+            child: CustomExtendedFab(
+              label: state.isLoading ? 'Guardando...' : 'Guardar',
+              icon: state.isLoading ? Icons.hourglass_empty : Icons.save_outlined,
+              isEnabled: canSave,
+              onPressed: () async {
+                if (!isDetailsValid) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text(
+                        'Por favor complete todos los campos obligatorios.',
+                      ),
+                      backgroundColor: Colors.orange,
+                    ),
+                  );
+                  return;
+                }
+                final createdOrderId = await ref
+                    .read(createSupplierOrderProvider.notifier)
+                    .saveOrder();
+                if (!context.mounted) return;
+                if (createdOrderId != null) {
+                  _showPostSaveOptions(context, ref, createdOrderId);
+                } else {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text(state.error ?? 'Error al guardar la orden'),
+                      backgroundColor: Colors.red,
+                    ),
+                  );
+                }
+              },
+            ),
+          );
+        },
       ),
     );
   }

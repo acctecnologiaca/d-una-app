@@ -6,7 +6,6 @@ import '../../../../../shared/widgets/generic_search_screen.dart';
 import '../../../../../shared/widgets/filter_bottom_sheet.dart';
 import '../../../../../shared/widgets/horizontal_filter_bar.dart';
 import '../../../../../shared/widgets/sort_selector.dart';
-import '../../../../../core/utils/search_utils.dart';
 import '../../../../../core/utils/string_extensions.dart';
 import '../../../domain/models/quote_model.dart';
 import '../widgets/quote_card.dart';
@@ -18,12 +17,18 @@ class QuotesSearchScreen extends ConsumerStatefulWidget {
   final bool selectionMode;
   final Set<String>? excludeStatuses;
   final String? productId;
+  final String? clientId;
+  final String? initialQuery;
+  final bool isSearchQueryReadOnly;
 
   const QuotesSearchScreen({
     super.key,
     this.selectionMode = false,
     this.excludeStatuses,
     this.productId,
+    this.clientId,
+    this.initialQuery,
+    this.isSearchQueryReadOnly = false,
   });
 
   @override
@@ -36,7 +41,12 @@ class _QuotesSearchScreenState extends ConsumerState<QuotesSearchScreen> {
   final Set<String> _selectedCategories = {};
   DateTimeRange? _selectedDateRange;
   String _searchQuery = '';
-  SortOption _currentSort = SortOption.recent;
+  SortOption _currentSort = SortOption.quoteNumberDesc;
+
+  QuoteSearchArgs get _searchArgs => QuoteSearchArgs(
+        productId: widget.productId,
+        clientId: widget.clientId,
+      );
 
   String _getChipLabel(Set<String> selected, String defaultLabel) {
     if (selected.isEmpty) return defaultLabel;
@@ -48,12 +58,7 @@ class _QuotesSearchScreenState extends ConsumerState<QuotesSearchScreen> {
 
   @override
   void dispose() {
-    // Clear selection when leaving this screen
-    // Use post-frame callback to avoid calling during build
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted) return; // Already disposed
-      ref.read(quoteSelectionProvider.notifier).clearSelection();
-    });
+    ref.read(quoteSelectionProvider.notifier).clearSelection();
     super.dispose();
   }
 
@@ -178,20 +183,24 @@ class _QuotesSearchScreenState extends ConsumerState<QuotesSearchScreen> {
   @override
   Widget build(BuildContext context) {
     final paginatedAsync = ref.watch(
-      paginatedQuoteSearchProvider(widget.productId),
+      paginatedQuoteSearchProvider(_searchArgs),
     );
     final selection = ref.watch(quoteSelectionProvider);
     final allQuotes = paginatedAsync.valueOrNull?.items ?? [];
 
     return GenericSearchScreen<Quote>(
-      title: widget.selectionMode
-          ? 'Seleccionar cotización'
-          : 'Buscar cotización',
-      hintText: 'Cliente, número o etiqueta...',
+      title:
+          widget.selectionMode ? 'Seleccionar cotización' : 'Buscar cotización',
+      hintText: 'Cliente, número o producto...',
       historyKey: 'quotes_search_history',
+      initialQuery: widget.initialQuery,
+      readOnly: widget.isSearchQueryReadOnly,
       isPaginatedMode: true,
       paginatedDataAsync: paginatedAsync,
-      showHistory: !widget.selectionMode && widget.productId == null,
+      showHistory: !widget.selectionMode &&
+          widget.productId == null &&
+          widget.clientId == null &&
+          widget.initialQuery == null,
       appBarOverride: selection.isSelectionMode
           ? _buildSelectionHeader(context, ref, selection, allQuotes)
           : null,
@@ -200,26 +209,26 @@ class _QuotesSearchScreenState extends ConsumerState<QuotesSearchScreen> {
           _selectedStatuses.clear();
           _selectedCategories.clear();
           _selectedDateRange = null;
-          _currentSort = SortOption.recent;
+          _currentSort = SortOption.quoteNumberDesc;
         });
         ref
-            .read(paginatedQuoteSearchProvider(widget.productId).notifier)
+            .read(paginatedQuoteSearchProvider(_searchArgs).notifier)
             .updateSearch(null);
         ref
-            .read(paginatedQuoteSearchProvider(widget.productId).notifier)
+            .read(paginatedQuoteSearchProvider(_searchArgs).notifier)
             .updateFilters(status: null, categoryId: null);
         ref
-            .read(paginatedQuoteSearchProvider(widget.productId).notifier)
-            .updateSort('date_issued', false);
+            .read(paginatedQuoteSearchProvider(_searchArgs).notifier)
+            .updateSort('quote_number', false);
       },
       onServerSearch: (query) {
         ref
-            .read(paginatedQuoteSearchProvider(widget.productId).notifier)
+            .read(paginatedQuoteSearchProvider(_searchArgs).notifier)
             .updateSearch(query);
       },
       onLoadMore: () {
         ref
-            .read(paginatedQuoteSearchProvider(widget.productId).notifier)
+            .read(paginatedQuoteSearchProvider(_searchArgs).notifier)
             .loadMore();
       },
       onQueryChanged: (query) {
@@ -234,15 +243,26 @@ class _QuotesSearchScreenState extends ConsumerState<QuotesSearchScreen> {
           child: SortSelector(
             currentSort: _currentSort,
             options: const [
+              SortOption.quoteNumberDesc,
+              SortOption.quoteNumberAsc,
               SortOption.recent,
               SortOption.nameAZ,
               SortOption.nameZA,
             ],
             onSortChanged: (val) {
               setState(() => _currentSort = val);
-              String orderBy = 'date_issued';
+              String orderBy = 'quote_number';
               bool ascending = false;
-              if (val == SortOption.nameAZ) {
+              if (val == SortOption.quoteNumberDesc) {
+                orderBy = 'quote_number';
+                ascending = false;
+              } else if (val == SortOption.quoteNumberAsc) {
+                orderBy = 'quote_number';
+                ascending = true;
+              } else if (val == SortOption.recent) {
+                orderBy = 'created_at';
+                ascending = false;
+              } else if (val == SortOption.nameAZ) {
                 orderBy = 'clients(name)';
                 ascending = true;
               } else if (val == SortOption.nameZA) {
@@ -250,7 +270,7 @@ class _QuotesSearchScreenState extends ConsumerState<QuotesSearchScreen> {
                 ascending = false;
               }
               ref
-                  .read(paginatedQuoteSearchProvider(widget.productId).notifier)
+                  .read(paginatedQuoteSearchProvider(_searchArgs).notifier)
                   .updateSort(orderBy, ascending);
             },
           ),
@@ -306,12 +326,6 @@ class _QuotesSearchScreenState extends ConsumerState<QuotesSearchScreen> {
           return false;
         }
 
-        final matchesText = SearchUtils.matchesCombo(query, [
-          quote.clientName,
-          quote.quoteNumber,
-          quote.quoteTag,
-        ]);
-
         // Separate 'Archivadas' from regular status labels
         final wantsArchived = _selectedStatuses.contains(_archivedLabel);
         final regularStatuses = _selectedStatuses
@@ -366,7 +380,7 @@ class _QuotesSearchScreenState extends ConsumerState<QuotesSearchScreen> {
               quote.date.isBefore(end.add(const Duration(seconds: 1)));
         }
 
-        return matchesText && matchesArchive && matchesCategory && matchesDate;
+        return matchesArchive && matchesCategory && matchesDate;
       },
     );
   }

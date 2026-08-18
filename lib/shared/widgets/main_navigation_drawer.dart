@@ -29,7 +29,7 @@ class MainNavigationDrawer extends StatelessWidget {
                 alignment: Alignment.centerLeft,
                 child: Image.asset(
                   'assets/images/logo_d_una.png',
-                  height: 48,
+                  height: 40,
                   // Adjust fit or size if needed based on the actual asset
                 ),
               ),
@@ -40,7 +40,7 @@ class MainNavigationDrawer extends StatelessWidget {
               child: ListView(
                 padding: const EdgeInsets.symmetric(horizontal: 12.0),
                 children: [
-                  _buildMenuItem(
+                  /* _buildMenuItem(
                     context: context,
                     icon: Symbols.list_alt,
                     label: 'Notas de entrega',
@@ -58,14 +58,14 @@ class MainNavigationDrawer extends StatelessWidget {
                     padding: EdgeInsets.symmetric(vertical: 8.0),
                     child: Divider(height: 1),
                   ),
-                  /* Padding(
+                  Padding(
                     padding: EdgeInsets.symmetric(
                       vertical: 8.0,
                       horizontal: 16.0,
                     ),
                     child: Text(
                       'Proveedores',
-                      style: textTheme.titleMedium?.copyWith(
+                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
                         color: colors.onSurfaceVariant,
                         fontWeight: FontWeight.bold,
                       ),

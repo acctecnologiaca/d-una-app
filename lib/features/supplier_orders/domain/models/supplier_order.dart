@@ -22,6 +22,8 @@ class SupplierOrder extends Equatable {
   final String? invoicePhotoUrl;
   final bool isArchived;
   final String verificationStatus; // 'pending_review' | 'approved' | 'rejected'
+  final String? supplierFeedback;
+  final DateTime? supplierFeedbackAt;
   final DateTime createdAt;
   final DateTime updatedAt;
 
@@ -55,6 +57,8 @@ class SupplierOrder extends Equatable {
     this.invoicePhotoUrl,
     this.isArchived = false,
     this.verificationStatus = 'pending_review',
+    this.supplierFeedback,
+    this.supplierFeedbackAt,
     required this.createdAt,
     required this.updatedAt,
     this.supplierName = 'Desconocido',
@@ -98,6 +102,8 @@ class SupplierOrder extends Equatable {
     invoicePhotoUrl,
     isArchived,
     verificationStatus,
+    supplierFeedback,
+    supplierFeedbackAt,
     createdAt,
     updatedAt,
     supplierName,

@@ -47,10 +47,15 @@ class QuoteValidationNotifier extends StateNotifier<QuoteValidationState> {
   final QuoteProductSelectionRepository _repository;
   final Ref _ref;
   final ProviderListenable<QuoteState> _quoteProvider;
+  final String? quoteId;
   Timer? _debounceTimer;
 
-  QuoteValidationNotifier(this._repository, this._ref, this._quoteProvider)
-    : super(QuoteValidationState());
+  QuoteValidationNotifier(
+    this._repository,
+    this._ref,
+    this._quoteProvider, {
+    this.quoteId,
+  }) : super(QuoteValidationState());
 
   void startValidation() {
     _debounceTimer?.cancel();
@@ -97,6 +102,7 @@ class QuoteValidationNotifier extends StateNotifier<QuoteValidationState> {
         results = await _repository.validateQuoteItems(
           supplierBranchStockIds: supplierBranchStockIds,
           productIds: productIds,
+          quoteId: quoteId,
         );
 
         debugPrint('   - RPC respondió con ${results.length} resultados');
@@ -138,10 +144,12 @@ class QuoteValidationNotifier extends StateNotifier<QuoteValidationState> {
         final firstResult = result.first;
         final Set<QuoteValidationStatus> statuses = {};
 
+        final effectiveStock = firstResult.availableStock;
+
         // Evaluate stock independently
-        if (firstResult.currentStock <= 0) {
+        if (effectiveStock <= 0) {
           statuses.add(QuoteValidationStatus.outOfStock);
-        } else if (firstResult.currentStock < product.quantity) {
+        } else if (effectiveStock < product.quantity) {
           statuses.add(QuoteValidationStatus.lowStock);
         }
 
@@ -151,7 +159,7 @@ class QuoteValidationNotifier extends StateNotifier<QuoteValidationState> {
         }
 
         debugPrint(
-          '     ✅ Statuses: $statuses (Stock DB: ${firstResult.currentStock})',
+          '     ✅ Statuses: $statuses (Stock DB: ${firstResult.currentStock}, Reservado Previo: ${firstResult.reservedStock}, Disponible: ${firstResult.availableStock})',
         );
 
         newValidationMap[product.id] = QuoteValidationItem(
@@ -186,5 +194,10 @@ final quoteValidationProvider = StateNotifierProvider.autoDispose
           ? viewQuoteProvider(quoteId)
           : createQuoteProvider;
 
-      return QuoteValidationNotifier(repository, ref, targetQuoteProvider);
+      return QuoteValidationNotifier(
+        repository,
+        ref,
+        targetQuoteProvider,
+        quoteId: quoteId,
+      );
     });

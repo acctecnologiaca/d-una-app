@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import '../../../../../shared/widgets/credit_banner_card.dart';
 import '../../../../../shared/widgets/custom_text_field.dart';
 import '../../../../../shared/widgets/custom_button.dart';
 import '../../../../../shared/widgets/custom_action_sheet.dart';
@@ -12,7 +13,22 @@ import 'package:d_una_app/features/quotes/presentation/quotes_list/providers/quo
 import '../../../data/models/quote.dart';
 import 'package:d_una_app/core/pdf/templates/quote_pdf_template.dart';
 import 'package:d_una_app/core/providers/credits_providers.dart';
+import 'package:d_una_app/features/quotes/domain/models/quote_model.dart'
+    show QuoteStatus;
+import '../providers/view_quote_provider.dart';
 import 'package:pdf/pdf.dart';
+
+class EmailValidationResult {
+  final List<String> recipients;
+  final String? errorMessage;
+  final bool isValid;
+
+  const EmailValidationResult({
+    required this.recipients,
+    this.errorMessage,
+    required this.isValid,
+  });
+}
 
 class SendEmailBottomSheet extends ConsumerStatefulWidget {
   final Quote quote;
@@ -47,11 +63,84 @@ class _SendEmailBottomSheetState extends ConsumerState<SendEmailBottomSheet> {
     final initialRecipient =
         widget.quote.contactEmail ?? widget.quote.clientEmail ?? '';
     _recipientsController = TextEditingController(text: initialRecipient);
+    _recipientsController.addListener(_onRecipientsChanged);
     _subjectController = TextEditingController();
     _bodyController = TextEditingController();
 
     // Cargar plantilla y generar contenido inicial
     _loadInitialContent();
+  }
+
+  void _onRecipientsChanged() {
+    setState(() {});
+  }
+
+  EmailValidationResult get _validation {
+    final text = _recipientsController.text.trim();
+    if (text.isEmpty) {
+      return const EmailValidationResult(
+        recipients: [],
+        errorMessage: null,
+        isValid: false,
+      );
+    }
+
+    final rawTokens = text
+        .split(RegExp(r'[,;]'))
+        .map((e) => e.trim())
+        .where((e) => e.isNotEmpty)
+        .toList();
+
+    if (rawTokens.isEmpty) {
+      return const EmailValidationResult(
+        recipients: [],
+        errorMessage: null,
+        isValid: false,
+      );
+    }
+
+    // 1. Check syntax / format of every email
+    final emailRegex = RegExp(
+      r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$',
+    );
+    for (final token in rawTokens) {
+      if (!emailRegex.hasMatch(token)) {
+        return EmailValidationResult(
+          recipients: [],
+          errorMessage: 'El correo "$token" no es válido',
+          isValid: false,
+        );
+      }
+    }
+
+    // 2. Check duplicate emails
+    final lowerTokens = rawTokens.map((e) => e.toLowerCase()).toList();
+    final duplicates = lowerTokens
+        .where((e) => lowerTokens.indexOf(e) != lowerTokens.lastIndexOf(e))
+        .toSet();
+    if (duplicates.isNotEmpty) {
+      return EmailValidationResult(
+        recipients: [],
+        errorMessage: 'Correo repetido: ${duplicates.join(", ")}',
+        isValid: false,
+      );
+    }
+
+    // 3. Check maximum 3 recipients
+    if (lowerTokens.length > 3) {
+      return EmailValidationResult(
+        recipients: [],
+        errorMessage:
+            'Máximo 3 destinatarios permitidos (ingresados: ${lowerTokens.length})',
+        isValid: false,
+      );
+    }
+
+    return EmailValidationResult(
+      recipients: lowerTokens,
+      errorMessage: null,
+      isValid: true,
+    );
   }
 
   Future<void> _loadInitialContent() async {
@@ -97,6 +186,7 @@ class _SendEmailBottomSheetState extends ConsumerState<SendEmailBottomSheet> {
 
   @override
   void dispose() {
+    _recipientsController.removeListener(_onRecipientsChanged);
     _recipientsController.dispose();
     _subjectController.dispose();
     _bodyController.dispose();
@@ -104,36 +194,23 @@ class _SendEmailBottomSheetState extends ConsumerState<SendEmailBottomSheet> {
   }
 
   Future<void> _sendEmail() async {
-    if (_recipientsController.text.isEmpty) {
+    final validation = _validation;
+    if (!validation.isValid) return;
+
+    final recipients = validation.recipients;
+
+    // Check available credits vs required credits
+    final creditsAsync = ref.read(userCreditsStatusProvider);
+    final remainingCredits = creditsAsync.valueOrNull?.remainingCredits ?? 0;
+    final requiredCredits = recipients.length;
+
+    if (remainingCredits < requiredCredits) {
       CustomDialog.show(
         context: context,
         dialog: CustomDialog.confirmation(
-          title: 'Campo requerido',
-          contentText: 'Por favor, ingresa al menos un destinatario',
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(),
-              child: const Text('OK'),
-            ),
-          ],
-        ),
-      );
-      return;
-    }
-
-    // Validate max 3 recipients
-    final recipients = _recipientsController.text
-        .split(',')
-        .map((e) => e.trim())
-        .where((e) => e.isNotEmpty)
-        .toList();
-
-    if (recipients.length > 3) {
-      CustomDialog.show(
-        context: context,
-        dialog: CustomDialog.confirmation(
-          title: 'Límite excedido',
-          contentText: 'Máximo 3 destinatarios por envío',
+          title: 'Créditos insuficientes',
+          contentText:
+              'No dispones de suficientes créditos ($remainingCredits disponibles) para enviar a $requiredCredits destinatario${requiredCredits > 1 ? 's' : ''}.',
           actions: [
             TextButton(
               onPressed: () => Navigator.of(context).pop(),
@@ -165,8 +242,7 @@ class _SendEmailBottomSheetState extends ConsumerState<SendEmailBottomSheet> {
         userEmail: userEmail,
       ).generate(PdfPageFormat.a4);
 
-      final fileName =
-          '${widget.quote.quoteNumber ?? widget.quote.id}.pdf';
+      final fileName = '${widget.quote.quoteNumber ?? widget.quote.id}.pdf';
 
       // 2. Subir PDF a Supabase Storage & Generar Action Token
       final quotesRepo = ref.read(quotesRepositoryProvider);
@@ -177,31 +253,18 @@ class _SendEmailBottomSheetState extends ConsumerState<SendEmailBottomSheet> {
       );
 
       final actionToken = await quotesRepo.generateActionToken(widget.quote.id);
-      final webViewerUrl = 'https://d-una.app/quote.html?token=$actionToken';
 
-      // Append WebViewer interactive button to email body HTML
-      final rawBodyHtml = _bodyController.text.trim();
-      final webViewerButtonHtml = '''
-<br><br>
-<div style="text-align: center; margin: 24px 0;">
-  <a href="$webViewerUrl" style="background-color: #2563EB; color: #ffffff; padding: 14px 28px; text-decoration: none; border-radius: 8px; font-weight: bold; display: inline-block; font-size: 15px;">Ver y Aprobar Cotización Interactivamente</a>
-  <p style="font-size: 12px; color: #64748B; margin-top: 10px;">Esta cotización es válida durante ${widget.quote.validityDays} días desde su emisión.</p>
-</div>
-''';
-      final finalBodyHtml = '$rawBodyHtml$webViewerButtonHtml';
-
-      // 3. Llamar a Edge Function send_document_email (sin adjuntar PDF en el correo)
+      // 3. Llamar a Edge Function send_document_email
       final response = await Supabase.instance.client.functions.invoke(
         'send_document_email',
         body: {
           'fileName': fileName,
           'documentType': 'quote',
           'documentId': widget.quote.id,
+          'documentNumber': widget.quote.quoteNumber,
           'actionToken': actionToken,
-          'recipientEmails': _recipientsController.text
-              .split(',')
-              .map((e) => e.trim())
-              .toList(),
+          'validityDays': widget.quote.validityDays,
+          'recipientEmails': recipients,
           'userContext': {
             'name':
                 '${userProfile.firstName ?? ''} ${userProfile.lastName ?? ''}'
@@ -213,7 +276,7 @@ class _SendEmailBottomSheetState extends ConsumerState<SendEmailBottomSheet> {
           },
           'emailContent': {
             'subject': _subjectController.text.trim(),
-            'bodyHtml': finalBodyHtml,
+            'bodyHtml': _bodyController.text.trim(),
           },
         },
       );
@@ -222,16 +285,35 @@ class _SendEmailBottomSheetState extends ConsumerState<SendEmailBottomSheet> {
         throw Exception('Error del servidor: ${response.data}');
       }
 
-      // Read updated credits from response
-      final responseData = response.data as Map<String, dynamic>?;
-      final updatedRemaining = responseData?['remainingCredits'] as int?;
+      // 4. Actualizar el estado de la cotización en BD ('sent' / 'resent')
+      final currentStatus = widget.quote.status;
+      final newStatus =
+          (currentStatus == QuoteStatus.sent.dbValue ||
+              currentStatus == QuoteStatus.resent.dbValue)
+          ? QuoteStatus.resent.dbValue
+          : QuoteStatus.sent.dbValue;
+
+      await ref
+          .read(quotesListProvider.notifier)
+          .updateQuoteStatus(widget.quote.id, newStatus);
+
+      // Invalidate quote view provider so UI updates quote status badge
+      ref.invalidate(viewQuoteProvider(widget.quote.id));
+
+      // 6. Obtener saldo fresco de créditos y refrescar la caché en Riverpod
+      final freshCreditStatus = await ref
+          .read(creditsRepositoryProvider)
+          .getCreditStatus();
+      ref.invalidate(userCreditsStatusProvider);
+      ref.invalidate(creditTransactionsHistoryProvider);
 
       if (mounted) {
-        final creditInfo = updatedRemaining != null
-            ? ' (créditos restantes: $updatedRemaining)'
-            : '';
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Correo enviado exitosamente$creditInfo')),
+          SnackBar(
+            content: Text(
+              'Correo enviado exitosamente (créditos restantes: ${freshCreditStatus.remainingCredits})',
+            ),
+          ),
         );
         Navigator.of(context).pop();
       }
@@ -241,7 +323,7 @@ class _SendEmailBottomSheetState extends ConsumerState<SendEmailBottomSheet> {
 
         final errorStr = e.toString();
         if (errorStr.contains('MAX_RECIPIENTS_EXCEEDED')) {
-          errorMessage = 'Máximo 3 destinatarios por envío';
+          errorMessage = 'Máximo 3 destinatarios permitidos por envío';
         } else if (errorStr.contains('INSUFFICIENT_CREDITS') ||
             errorStr.contains('DAILY_LIMIT_EXCEEDED')) {
           errorMessage = 'Has alcanzado el límite de créditos de tu ciclo';
@@ -271,49 +353,18 @@ class _SendEmailBottomSheetState extends ConsumerState<SendEmailBottomSheet> {
     }
   }
 
-  Widget _buildCreditsIndicatorWidget(int remaining) {
-    final Color indicatorColor;
-    final IconData indicatorIcon;
-    final colors = Theme.of(context).colorScheme;
-
-    if (remaining > 5) {
-      indicatorColor = colors.secondary;
-      indicatorIcon = Icons.check_circle_outline;
-    } else if (remaining > 0) {
-      indicatorColor = Colors.orange;
-      indicatorIcon = Icons.warning_amber_rounded;
-    } else {
-      indicatorColor = colors.error;
-      indicatorIcon = Icons.error_outline;
-    }
-
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 4),
-      child: Row(
-        children: [
-          Icon(Icons.star_border_outlined, size: 20, color: colors.secondary),
-          const SizedBox(width: 4),
-          Text(
-            remaining > 0
-                ? 'Créditos disponibles: $remaining'
-                : 'Créditos agotados (0 disponibles)',
-            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-              color: indicatorColor,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-          const SizedBox(width: 6),
-          Icon(indicatorIcon, size: 16, color: indicatorColor),
-        ],
-      ),
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
     final creditsAsync = ref.watch(userCreditsStatusProvider);
     final remainingCredits = creditsAsync.valueOrNull?.remainingCredits ?? 0;
     final isZeroCredits = remainingCredits <= 0;
+    final validation = _validation;
+    final cost = validation.isValid ? validation.recipients.length : 1;
+    final isSendEnabled =
+        validation.isValid &&
+        !isZeroCredits &&
+        (remainingCredits >= validation.recipients.length) &&
+        !_isSending;
 
     return CustomActionSheet(
       title: 'Enviar cotización por correo',
@@ -323,17 +374,20 @@ class _SendEmailBottomSheetState extends ConsumerState<SendEmailBottomSheet> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           creditsAsync.when(
-            data: (status) =>
-                _buildCreditsIndicatorWidget(status.remainingCredits),
+            data: (status) => CreditBannerCard(
+              remainingCredits: status.remainingCredits,
+              cost: cost,
+            ),
             loading: () => const SizedBox.shrink(),
             error: (_, _) => const SizedBox.shrink(),
           ),
           const SizedBox(height: 24),
           CustomTextField(
-            label: 'Destinatarios (separados por coma)',
+            label: 'Destinatarios (máximo 3, separados por coma)',
             controller: _recipientsController,
             hintText: 'ejemplo@correo.com, otro@correo.com',
             keyboardType: TextInputType.emailAddress,
+            errorText: validation.errorMessage,
           ),
           const SizedBox(height: 24),
           CustomTextField(label: 'Asunto', controller: _subjectController),
@@ -357,7 +411,7 @@ class _SendEmailBottomSheetState extends ConsumerState<SendEmailBottomSheet> {
                 text: isZeroCredits ? 'Sin créditos' : 'Enviar',
                 isFullWidth: false,
                 isLoading: _isSending,
-                onPressed: (!isZeroCredits && !_isSending) ? _sendEmail : null,
+                onPressed: isSendEnabled ? _sendEmail : null,
               ),
             ],
           ),

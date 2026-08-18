@@ -51,13 +51,16 @@ class SupplierOrderCard extends ConsumerWidget {
         canShowAlerts && order.stockStatus == StockStatus.unavailable;
     final hasLowStock =
         canShowAlerts && order.stockStatus == StockStatus.lowStock;
+    final isSupportRejected = order.verificationStatus == 'rejected';
+    final hasInventoryAlert =
+        canShowAlerts && (hasPriceIncrease || hasOutOfStock || hasLowStock);
+    final hasWarning = hasInventoryAlert || isSupportRejected;
 
     return Container(
       decoration: BoxDecoration(
         color: isSelected
             ? colors.primaryContainer.withValues(alpha: 0.3)
-            : (canShowAlerts &&
-                      (hasPriceIncrease || hasOutOfStock || hasLowStock)
+            : (hasWarning
                   ? colors.errorContainer.withValues(alpha: 0.8)
                   : null),
       ),
@@ -100,6 +103,18 @@ class SupplierOrderCard extends ConsumerWidget {
                 : Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
+                      if (isSupportRejected) ...[
+                        Tooltip(
+                          message:
+                              'Soporte digital rechazado (créditos revocados)',
+                          child: Icon(
+                            Icons.replay_rounded,
+                            size: 20,
+                            color: colors.error,
+                          ),
+                        ),
+                        const SizedBox(width: 4),
+                      ],
                       if (canShowAlerts) ...[
                         if (hasPriceIncrease)
                           _buildAlertIcon(
@@ -116,6 +131,18 @@ class SupplierOrderCard extends ConsumerWidget {
                             'assets/icons/stock_down.png',
                             'Stock bajo',
                           ),
+                        const SizedBox(width: 4),
+                      ],
+                      if (order.supplierFeedback != null &&
+                          order.supplierFeedback!.trim().isNotEmpty) ...[
+                        Tooltip(
+                          message: 'Motivo: ${order.supplierFeedback}',
+                          child: Icon(
+                            Icons.chat_bubble_outline,
+                            size: 16,
+                            color: Colors.red.shade700,
+                          ),
+                        ),
                         const SizedBox(width: 4),
                       ],
                       _buildStatusIcon(

@@ -33,6 +33,7 @@ abstract class QuotesRepository {
     DateTimeRange? dateRange,
     bool includeArchived = false,
     String? productId,
+    String? clientId,
   });
   Future<Quote> getQuoteById(String id);
   Future<Quote> getQuoteWithDetails(String id);

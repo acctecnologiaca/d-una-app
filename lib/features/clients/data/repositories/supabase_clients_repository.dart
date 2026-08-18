@@ -163,6 +163,12 @@ class SupabaseClientsRepository {
   }
 
   Future<void> deleteClient(String id) async {
+    final hasDocs = await hasLinkedDocuments(id);
+    if (hasDocs) {
+      throw Exception(
+        'No se puede eliminar el cliente porque tiene cotizaciones u otros documentos asociados.',
+      );
+    }
     await _supabase.from('clients').delete().eq('id', id);
   }
 
@@ -246,5 +252,20 @@ class SupabaseClientsRepository {
 
     final response = await query.maybeSingle();
     return response != null;
+  }
+
+  Future<bool> hasLinkedDocuments(String clientId) async {
+    final userId = _supabase.auth.currentUser?.id;
+    if (userId == null) return false;
+
+    // Check quotes associated with this client
+    final quotes = await _supabase
+        .from('quotes')
+        .select('id')
+        .eq('client_id', clientId)
+        .eq('user_id', userId)
+        .limit(1);
+
+    return (quotes as List).isNotEmpty;
   }
 }

@@ -38,7 +38,7 @@ class UnaffiliatedSupplier extends Equatable {
       legalName: json['legal_name'],
       phone: json['phone'],
       email: json['email'],
-      taxId: json['tax_id'],
+      taxId: (json['tax_id'] as String?)?.trim(),
       userId: json['user_id'],
       isVerified: json['is_verified'] ?? false,
       minimumPurchaseAmount: parseDouble(json['minimum_purchase_amount']),

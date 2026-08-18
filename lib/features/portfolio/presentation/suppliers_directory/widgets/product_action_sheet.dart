@@ -117,6 +117,7 @@ class ProductActionSheet {
                   SupplierOrderStatus.draft,
                   SupplierOrderStatus.sent,
                   SupplierOrderStatus.resent,
+                  SupplierOrderStatus.opened,
                 },
                 'supplierName': supplierName,
               },

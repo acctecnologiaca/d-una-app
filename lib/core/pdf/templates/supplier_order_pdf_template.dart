@@ -276,7 +276,7 @@ class SupplierOrderPdfTemplate {
   }
 
   pw.Widget _buildItemsTable() {
-    final headers = ['CANT.', 'PRODUCTOS', 'PRECIO UNIT.', 'SUB-TOTAL'];
+    final headers = ['CANT.', 'PRODUCTOS', 'P. UNIT', 'TOTAL'];
     final columnWidths = {
       0: const pw.FixedColumnWidth(40),
       1: const pw.FlexColumnWidth(1),

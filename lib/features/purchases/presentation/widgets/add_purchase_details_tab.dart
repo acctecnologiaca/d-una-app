@@ -74,12 +74,12 @@ class _AddPurchaseDetailsTabState extends ConsumerState<AddPurchaseDetailsTab> {
             label: 'Fecha de compra*',
             controller: _dateController,
             readOnly: true,
-            onTap: isLinkedToOrder ? null : () => _selectDate(context),
+            onTap: () => _selectDate(context),
             suffixIcon: Icon(
               Icons.calendar_today_outlined,
               color: colors.onSurfaceVariant,
             ),
-            enabled: !isLinkedToOrder,
+            enabled: true,
           ),
           const SizedBox(height: 24),
 
@@ -99,7 +99,7 @@ class _AddPurchaseDetailsTabState extends ConsumerState<AddPurchaseDetailsTab> {
                 value: selectedSupplier,
                 items: suppliers,
                 searchable: true,
-                showAddOption: !isLinkedToOrder,
+                showAddOption: true,
                 addOptionLabel: 'Agregar proveedor',
                 addOptionValue: UnaffiliatedSupplier(
                   id: '___ADD___',
@@ -107,7 +107,7 @@ class _AddPurchaseDetailsTabState extends ConsumerState<AddPurchaseDetailsTab> {
                 ),
                 itemLabelBuilder: (UnaffiliatedSupplier item) =>
                     item.legalName ?? item.name,
-                enabled: !isLinkedToOrder,
+                enabled: true,
                 onAddPressed: () async {
                   final result =
                       await showModalBottomSheet<UnaffiliatedSupplier>(

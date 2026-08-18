@@ -16,11 +16,15 @@ import '../../domain/models/purchase_model.dart';
 class PurchasesSearchScreen extends ConsumerStatefulWidget {
   final bool selectionMode;
   final String? productId;
+  final String? initialQuery;
+  final bool isSearchQueryReadOnly;
 
   const PurchasesSearchScreen({
     super.key,
     this.selectionMode = false,
     this.productId,
+    this.initialQuery,
+    this.isSearchQueryReadOnly = false,
   });
 
   @override
@@ -167,9 +171,13 @@ class _PurchasesSearchScreenState extends ConsumerState<PurchasesSearchScreen> {
       title: widget.selectionMode ? 'Seleccionar compra' : 'Buscar compra',
       hintText: 'Proveedor o número...',
       historyKey: 'purchases_search_history',
+      initialQuery: widget.initialQuery,
+      readOnly: widget.isSearchQueryReadOnly,
       isPaginatedMode: true,
       paginatedDataAsync: paginatedAsync,
-      showHistory: !widget.selectionMode && widget.productId == null,
+      showHistory: !widget.selectionMode &&
+          widget.productId == null &&
+          widget.initialQuery == null,
       onResetFilters: () {
         setState(() {
           _selectedSupplierNames.clear();
