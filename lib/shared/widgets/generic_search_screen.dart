@@ -25,6 +25,8 @@ class GenericSearchScreen<T> extends StatefulWidget {
   final bool readOnly;
   final bool showHistory;
   final PreferredSizeWidget? appBarOverride;
+  final Widget? floatingActionButton;
+  final FloatingActionButtonLocation? floatingActionButtonLocation;
   
   // Paginated Mode
   final bool isPaginatedMode;
@@ -50,6 +52,8 @@ class GenericSearchScreen<T> extends StatefulWidget {
     this.readOnly = false,
     this.showHistory = true,
     this.appBarOverride,
+    this.floatingActionButton,
+    this.floatingActionButtonLocation,
     this.isPaginatedMode = false,
     this.paginatedDataAsync,
     this.onServerSearch,
@@ -162,6 +166,8 @@ class _GenericSearchScreenState<T> extends State<GenericSearchScreen<T>> {
 
     return Scaffold(
       backgroundColor: colors.surface,
+      floatingActionButtonLocation: widget.floatingActionButtonLocation,
+      floatingActionButton: widget.floatingActionButton,
       appBar: widget.appBarOverride ?? AppBar(
         backgroundColor: colors.surfaceContainerHigh,
         elevation: 0,

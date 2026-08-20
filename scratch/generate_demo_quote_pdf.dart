@@ -58,7 +58,10 @@ void main() async {
                   ],
                 ),
                 pw.Container(
-                  padding: const pw.EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  padding: const pw.EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 6,
+                  ),
                   decoration: pw.BoxDecoration(
                     color: neutralBgSubtle,
                     borderRadius: pw.BorderRadius.circular(16),
@@ -103,10 +106,38 @@ void main() async {
                       ),
                       pw.Divider(color: neutralBorderDark, thickness: 1),
                       pw.SizedBox(height: 4),
-                      pw.Text('Razón Social: Corporación Tecnológica C.A.', style: pw.TextStyle(font: baseFont, fontSize: 9, color: neutralDark)),
-                      pw.Text('RIF: J-40192837-5', style: pw.TextStyle(font: baseFont, fontSize: 9, color: neutralDark)),
-                      pw.Text('Atención: Ing. Alejandro Pérez', style: pw.TextStyle(font: baseFont, fontSize: 9, color: neutralDark)),
-                      pw.Text('Teléfono: +58 414 1234567', style: pw.TextStyle(font: baseFont, fontSize: 9, color: neutralDark)),
+                      pw.Text(
+                        'Razón Social: Corporación Tecnológica C.A.',
+                        style: pw.TextStyle(
+                          font: baseFont,
+                          fontSize: 9,
+                          color: neutralDark,
+                        ),
+                      ),
+                      pw.Text(
+                        'RIF: J-40192837-5',
+                        style: pw.TextStyle(
+                          font: baseFont,
+                          fontSize: 9,
+                          color: neutralDark,
+                        ),
+                      ),
+                      pw.Text(
+                        'Atención: Ing. Alejandro Pérez',
+                        style: pw.TextStyle(
+                          font: baseFont,
+                          fontSize: 9,
+                          color: neutralDark,
+                        ),
+                      ),
+                      pw.Text(
+                        'Teléfono: +58 414 1234567',
+                        style: pw.TextStyle(
+                          font: baseFont,
+                          fontSize: 9,
+                          color: neutralDark,
+                        ),
+                      ),
                     ],
                   ),
                 ),
@@ -133,10 +164,38 @@ void main() async {
                       ),
                       pw.Divider(color: neutralBorderDark, thickness: 1),
                       pw.SizedBox(height: 4),
-                      pw.Text('Empresa: Servicios Integrales D-UNA', style: pw.TextStyle(font: baseFont, fontSize: 9, color: neutralDark)),
-                      pw.Text('Vendedor: Asesor Técnico Principal', style: pw.TextStyle(font: baseFont, fontSize: 9, color: neutralDark)),
-                      pw.Text('Teléfono: +58 412 9876543', style: pw.TextStyle(font: baseFont, fontSize: 9, color: neutralDark)),
-                      pw.Text('Email: asesor@d-una.app', style: pw.TextStyle(font: baseFont, fontSize: 9, color: neutralDark)),
+                      pw.Text(
+                        'Empresa: Servicios Integrales D-UNA',
+                        style: pw.TextStyle(
+                          font: baseFont,
+                          fontSize: 9,
+                          color: neutralDark,
+                        ),
+                      ),
+                      pw.Text(
+                        'Vendedor: Asesor Técnico Principal',
+                        style: pw.TextStyle(
+                          font: baseFont,
+                          fontSize: 9,
+                          color: neutralDark,
+                        ),
+                      ),
+                      pw.Text(
+                        'Teléfono: +58 412 9876543',
+                        style: pw.TextStyle(
+                          font: baseFont,
+                          fontSize: 9,
+                          color: neutralDark,
+                        ),
+                      ),
+                      pw.Text(
+                        'Email: asesor@d-una.app',
+                        style: pw.TextStyle(
+                          font: baseFont,
+                          fontSize: 9,
+                          color: neutralDark,
+                        ),
+                      ),
                     ],
                   ),
                 ),
@@ -161,19 +220,50 @@ void main() async {
                 children: [
                   pw.Padding(
                     padding: const pw.EdgeInsets.all(8),
-                    child: pw.Text('Descripción de Productos / Servicios', style: pw.TextStyle(font: boldFont, fontSize: 8, color: neutralDark)),
+                    child: pw.Text(
+                      'Descripción de Productos / Servicios',
+                      style: pw.TextStyle(
+                        font: boldFont,
+                        fontSize: 8,
+                        color: neutralDark,
+                      ),
+                    ),
                   ),
                   pw.Padding(
                     padding: const pw.EdgeInsets.all(8),
-                    child: pw.Text('Cant.', style: pw.TextStyle(font: boldFont, fontSize: 8, color: neutralDark), textAlign: pw.TextAlign.right),
+                    child: pw.Text(
+                      'Cant.',
+                      style: pw.TextStyle(
+                        font: boldFont,
+                        fontSize: 8,
+                        color: neutralDark,
+                      ),
+                      textAlign: pw.TextAlign.right,
+                    ),
                   ),
                   pw.Padding(
                     padding: const pw.EdgeInsets.all(8),
-                    child: pw.Text('P. Unit USD', style: pw.TextStyle(font: boldFont, fontSize: 8, color: neutralDark), textAlign: pw.TextAlign.right),
+                    child: pw.Text(
+                      'P. Unit USD',
+                      style: pw.TextStyle(
+                        font: boldFont,
+                        fontSize: 8,
+                        color: neutralDark,
+                      ),
+                      textAlign: pw.TextAlign.right,
+                    ),
                   ),
                   pw.Padding(
                     padding: const pw.EdgeInsets.all(8),
-                    child: pw.Text('Total USD', style: pw.TextStyle(font: boldFont, fontSize: 8, color: neutralDark), textAlign: pw.TextAlign.right),
+                    child: pw.Text(
+                      'Total USD',
+                      style: pw.TextStyle(
+                        font: boldFont,
+                        fontSize: 8,
+                        color: neutralDark,
+                      ),
+                      textAlign: pw.TextAlign.right,
+                    ),
                   ),
                 ],
               ),
@@ -185,22 +275,48 @@ void main() async {
                     child: pw.Column(
                       crossAxisAlignment: pw.CrossAxisAlignment.start,
                       children: [
-                        pw.Text('Cámara IP Exterior Full HD 1080p', style: pw.TextStyle(font: boldFont, fontSize: 8, color: neutralDark)),
-                        pw.Text('Marca: Hikvision - Modelo: DS-2CD2143G0-I', style: pw.TextStyle(font: baseFont, fontSize: 7, color: neutralMuted)),
+                        pw.Text(
+                          'Cámara IP Exterior Full HD 1080p',
+                          style: pw.TextStyle(
+                            font: boldFont,
+                            fontSize: 8,
+                            color: neutralDark,
+                          ),
+                        ),
+                        pw.Text(
+                          'Marca: Hikvision - Modelo: DS-2CD2143G0-I',
+                          style: pw.TextStyle(
+                            font: baseFont,
+                            fontSize: 7,
+                            color: neutralMuted,
+                          ),
+                        ),
                       ],
                     ),
                   ),
                   pw.Padding(
                     padding: const pw.EdgeInsets.all(8),
-                    child: pw.Text('4 Und', style: pw.TextStyle(font: baseFont, fontSize: 8), textAlign: pw.TextAlign.right),
+                    child: pw.Text(
+                      '4 Und',
+                      style: pw.TextStyle(font: baseFont, fontSize: 8),
+                      textAlign: pw.TextAlign.right,
+                    ),
                   ),
                   pw.Padding(
                     padding: const pw.EdgeInsets.all(8),
-                    child: pw.Text('\$65.00', style: pw.TextStyle(font: baseFont, fontSize: 8), textAlign: pw.TextAlign.right),
+                    child: pw.Text(
+                      '\$65.00',
+                      style: pw.TextStyle(font: baseFont, fontSize: 8),
+                      textAlign: pw.TextAlign.right,
+                    ),
                   ),
                   pw.Padding(
                     padding: const pw.EdgeInsets.all(8),
-                    child: pw.Text('\$260.00', style: pw.TextStyle(font: baseFont, fontSize: 8), textAlign: pw.TextAlign.right),
+                    child: pw.Text(
+                      '\$260.00',
+                      style: pw.TextStyle(font: baseFont, fontSize: 8),
+                      textAlign: pw.TextAlign.right,
+                    ),
                   ),
                 ],
               ),
@@ -213,22 +329,48 @@ void main() async {
                     child: pw.Column(
                       crossAxisAlignment: pw.CrossAxisAlignment.start,
                       children: [
-                        pw.Text('DVR Grabador 8 Canales 4K', style: pw.TextStyle(font: boldFont, fontSize: 8, color: neutralDark)),
-                        pw.Text('Marca: Dahua - Modelo: XVR5108HS-X', style: pw.TextStyle(font: baseFont, fontSize: 7, color: neutralMuted)),
+                        pw.Text(
+                          'DVR Grabador 8 Canales 4K',
+                          style: pw.TextStyle(
+                            font: boldFont,
+                            fontSize: 8,
+                            color: neutralDark,
+                          ),
+                        ),
+                        pw.Text(
+                          'Marca: Dahua - Modelo: XVR5108HS-X',
+                          style: pw.TextStyle(
+                            font: baseFont,
+                            fontSize: 7,
+                            color: neutralMuted,
+                          ),
+                        ),
                       ],
                     ),
                   ),
                   pw.Padding(
                     padding: const pw.EdgeInsets.all(8),
-                    child: pw.Text('1 Und', style: pw.TextStyle(font: baseFont, fontSize: 8), textAlign: pw.TextAlign.right),
+                    child: pw.Text(
+                      '1 Und',
+                      style: pw.TextStyle(font: baseFont, fontSize: 8),
+                      textAlign: pw.TextAlign.right,
+                    ),
                   ),
                   pw.Padding(
                     padding: const pw.EdgeInsets.all(8),
-                    child: pw.Text('\$120.00', style: pw.TextStyle(font: baseFont, fontSize: 8), textAlign: pw.TextAlign.right),
+                    child: pw.Text(
+                      '\$120.00',
+                      style: pw.TextStyle(font: baseFont, fontSize: 8),
+                      textAlign: pw.TextAlign.right,
+                    ),
                   ),
                   pw.Padding(
                     padding: const pw.EdgeInsets.all(8),
-                    child: pw.Text('\$120.00', style: pw.TextStyle(font: baseFont, fontSize: 8), textAlign: pw.TextAlign.right),
+                    child: pw.Text(
+                      '\$120.00',
+                      style: pw.TextStyle(font: baseFont, fontSize: 8),
+                      textAlign: pw.TextAlign.right,
+                    ),
                   ),
                 ],
               ),
@@ -240,22 +382,48 @@ void main() async {
                     child: pw.Column(
                       crossAxisAlignment: pw.CrossAxisAlignment.start,
                       children: [
-                        pw.Text('Servicio de Instalación y Configuración', style: pw.TextStyle(font: boldFont, fontSize: 8, color: neutralDark)),
-                        pw.Text('Incluye cableado estructurado UTP Cat6 y conectores', style: pw.TextStyle(font: baseFont, fontSize: 7, color: neutralMuted)),
+                        pw.Text(
+                          'Servicio de Instalación y Configuración',
+                          style: pw.TextStyle(
+                            font: boldFont,
+                            fontSize: 8,
+                            color: neutralDark,
+                          ),
+                        ),
+                        pw.Text(
+                          'Incluye cableado estructurado UTP Cat6 y conectores',
+                          style: pw.TextStyle(
+                            font: baseFont,
+                            fontSize: 7,
+                            color: neutralMuted,
+                          ),
+                        ),
                       ],
                     ),
                   ),
                   pw.Padding(
                     padding: const pw.EdgeInsets.all(8),
-                    child: pw.Text('1 Serv.', style: pw.TextStyle(font: baseFont, fontSize: 8), textAlign: pw.TextAlign.right),
+                    child: pw.Text(
+                      '1 Serv.',
+                      style: pw.TextStyle(font: baseFont, fontSize: 8),
+                      textAlign: pw.TextAlign.right,
+                    ),
                   ),
                   pw.Padding(
                     padding: const pw.EdgeInsets.all(8),
-                    child: pw.Text('\$150.00', style: pw.TextStyle(font: baseFont, fontSize: 8), textAlign: pw.TextAlign.right),
+                    child: pw.Text(
+                      '\$150.00',
+                      style: pw.TextStyle(font: baseFont, fontSize: 8),
+                      textAlign: pw.TextAlign.right,
+                    ),
                   ),
                   pw.Padding(
                     padding: const pw.EdgeInsets.all(8),
-                    child: pw.Text('\$150.00', style: pw.TextStyle(font: baseFont, fontSize: 8), textAlign: pw.TextAlign.right),
+                    child: pw.Text(
+                      '\$150.00',
+                      style: pw.TextStyle(font: baseFont, fontSize: 8),
+                      textAlign: pw.TextAlign.right,
+                    ),
                   ),
                 ],
               ),
@@ -280,24 +448,66 @@ void main() async {
                     pw.Row(
                       mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
                       children: [
-                        pw.Text('Subtotal:', style: pw.TextStyle(font: baseFont, fontSize: 8, color: neutralMuted)),
-                        pw.Text('\$530.00', style: pw.TextStyle(font: baseFont, fontSize: 8, color: neutralDark)),
+                        pw.Text(
+                          'Subtotal:',
+                          style: pw.TextStyle(
+                            font: baseFont,
+                            fontSize: 8,
+                            color: neutralMuted,
+                          ),
+                        ),
+                        pw.Text(
+                          '\$530.00',
+                          style: pw.TextStyle(
+                            font: baseFont,
+                            fontSize: 8,
+                            color: neutralDark,
+                          ),
+                        ),
                       ],
                     ),
                     pw.SizedBox(height: 4),
                     pw.Row(
                       mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
                       children: [
-                        pw.Text('IVA (16%):', style: pw.TextStyle(font: baseFont, fontSize: 8, color: neutralMuted)),
-                        pw.Text('\$84.80', style: pw.TextStyle(font: baseFont, fontSize: 8, color: neutralDark)),
+                        pw.Text(
+                          'IVA (16%):',
+                          style: pw.TextStyle(
+                            font: baseFont,
+                            fontSize: 8,
+                            color: neutralMuted,
+                          ),
+                        ),
+                        pw.Text(
+                          '\$84.80',
+                          style: pw.TextStyle(
+                            font: baseFont,
+                            fontSize: 8,
+                            color: neutralDark,
+                          ),
+                        ),
                       ],
                     ),
                     pw.Divider(color: neutralDark, thickness: 1),
                     pw.Row(
                       mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
                       children: [
-                        pw.Text('TOTAL USD:', style: pw.TextStyle(font: boldFont, fontSize: 10, color: neutralDark)),
-                        pw.Text('\$614.80', style: pw.TextStyle(font: boldFont, fontSize: 10, color: neutralDark)),
+                        pw.Text(
+                          'TOTAL USD:',
+                          style: pw.TextStyle(
+                            font: boldFont,
+                            fontSize: 10,
+                            color: neutralDark,
+                          ),
+                        ),
+                        pw.Text(
+                          '\$614.80',
+                          style: pw.TextStyle(
+                            font: boldFont,
+                            fontSize: 10,
+                            color: neutralDark,
+                          ),
+                        ),
                       ],
                     ),
                   ],
@@ -318,11 +528,39 @@ void main() async {
             child: pw.Column(
               crossAxisAlignment: pw.CrossAxisAlignment.start,
               children: [
-                pw.Text('CONDICIONES COMERCIALES', style: pw.TextStyle(font: boldFont, fontSize: 9, color: neutralDark)),
+                pw.Text(
+                  'CONDICIONES COMERCIALES',
+                  style: pw.TextStyle(
+                    font: boldFont,
+                    fontSize: 9,
+                    color: neutralDark,
+                  ),
+                ),
                 pw.SizedBox(height: 4),
-                pw.Text('• Tiempo de entrega estimado: 3 a 5 días hábiles tras recibir la aprobación.', style: pw.TextStyle(font: baseFont, fontSize: 8, color: neutralMedium)),
-                pw.Text('• Forma de Pago: 50% al aprobar la cotización y 50% contra entrega e instalación.', style: pw.TextStyle(font: baseFont, fontSize: 8, color: neutralMedium)),
-                pw.Text('• Garantía de equipos: 12 meses contra defectos de fábrica.', style: pw.TextStyle(font: baseFont, fontSize: 8, color: neutralMedium)),
+                pw.Text(
+                  '• Tiempo de entrega estimado: 3 a 5 días hábiles tras recibir la aprobación.',
+                  style: pw.TextStyle(
+                    font: baseFont,
+                    fontSize: 8,
+                    color: neutralMedium,
+                  ),
+                ),
+                pw.Text(
+                  '• Forma de Pago: 50% al aprobar la cotización y 50% contra entrega e instalación.',
+                  style: pw.TextStyle(
+                    font: baseFont,
+                    fontSize: 8,
+                    color: neutralMedium,
+                  ),
+                ),
+                pw.Text(
+                  '• Garantía de equipos: 12 meses contra defectos de fábrica.',
+                  style: pw.TextStyle(
+                    font: baseFont,
+                    fontSize: 8,
+                    color: neutralMedium,
+                  ),
+                ),
               ],
             ),
           ),
@@ -334,7 +572,11 @@ void main() async {
           margin: const pw.EdgeInsets.only(top: 20),
           child: pw.Text(
             'Sistema Transaccional D-UNA • Cotización Oficial',
-            style: pw.TextStyle(font: baseFont, fontSize: 8, color: neutralMuted),
+            style: pw.TextStyle(
+              font: baseFont,
+              fontSize: 8,
+              color: neutralMuted,
+            ),
           ),
         );
       },
@@ -343,5 +585,5 @@ void main() async {
 
   final file = File('firebase_hosting/public/demo_quote.pdf');
   await file.writeAsBytes(await pdf.save());
-  print('PDF de demostración generado exitosamente en: ${file.path}');
+  // print('PDF de demostración generado exitosamente en: ${file.path}');
 }

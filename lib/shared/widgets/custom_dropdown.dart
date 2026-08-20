@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'searchable_selection_sheet.dart';
 
 class CustomDropdown<T extends Object> extends StatefulWidget {
   final T? value;
@@ -40,53 +41,7 @@ class CustomDropdown<T extends Object> extends StatefulWidget {
 }
 
 class _CustomDropdownState<T extends Object> extends State<CustomDropdown<T>> {
-  // Used in searchable mode to keep the text field in sync when value changes externally.
-  late TextEditingController _textController;
   int _resetCounter = 0;
-
-  @override
-  void initState() {
-    super.initState();
-    _textController = TextEditingController(
-      text: widget.value != null
-          ? widget.itemLabelBuilder(widget.value as T)
-          : '',
-    );
-    _textController.addListener(_onTextChanged);
-  }
-
-  @override
-  void didUpdateWidget(covariant CustomDropdown<T> oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    if (widget.searchable && widget.value != oldWidget.value) {
-      final newText = widget.value != null
-          ? widget.itemLabelBuilder(widget.value as T)
-          : '';
-      // Only sync if the external value actually changed.
-      if (_textController.text != newText) {
-        WidgetsBinding.instance.addPostFrameCallback((_) {
-          if (mounted) {
-            _textController.text = newText;
-          }
-        });
-      }
-    }
-  }
-
-  void _onTextChanged() {
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted) {
-        setState(() {}); // Rebuild to toggle clear button visibility
-      }
-    });
-  }
-
-  @override
-  void dispose() {
-    _textController.removeListener(_onTextChanged);
-    _textController.dispose();
-    super.dispose();
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -177,201 +132,116 @@ class _CustomDropdownState<T extends Object> extends State<CustomDropdown<T>> {
     );
   }
 
-  // ── Searchable (Autocomplete) ────────────────────────────────────────────────
+  // ── Searchable (Modal Bottom Sheet) ──────────────────────────────────────────
 
   Widget _buildSearchable(BuildContext context) {
     final colors = Theme.of(context).colorScheme;
     final textTheme = Theme.of(context).textTheme;
+
     return FormField<T>(
+      key: ValueKey('${widget.value.hashCode}_${widget.enabled}'),
       initialValue: widget.value,
       validator: widget.validator,
       builder: (FormFieldState<T> state) {
-        return LayoutBuilder(
-          builder: (context, constraints) {
-            return Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                DropdownMenu<T>(
-                  width: constraints.maxWidth,
-                  initialSelection: widget.value,
-                  controller: _textController,
-                  label: Text('${widget.label}*'),
-                  enabled: widget.enabled && widget.onChanged != null,
-                  errorText: state.errorText,
-                  enableFilter: true,
-                  enableSearch:
-                      false, // We use custom filter callback instead of native search string jump
-                  filterCallback:
-                      (List<DropdownMenuEntry<T>> entries, String filter) {
-                        final filtered = entries.where((entry) {
-                          // Always show the Add option
-                          if (widget.showAddOption &&
-                              entry.value == widget.addOptionValue) {
-                            return true;
-                          }
-                          // Otherwise match text
-                          return entry.label.toLowerCase().contains(
-                            filter.toLowerCase(),
-                          );
-                        }).toList();
-                        return filtered;
-                      },
-                  requestFocusOnTap: true,
-                  textStyle: TextStyle(
-                    fontWeight: FontWeight.w500,
-                    color: colors.onSurface,
-                  ),
-                  menuHeight: 240,
-                  expandedInsets: EdgeInsets.zero,
-                  menuStyle: MenuStyle(
-                    backgroundColor: WidgetStatePropertyAll(colors.surface),
-                    elevation: const WidgetStatePropertyAll(4),
-                    shape: WidgetStatePropertyAll(
-                      RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(8.0),
-                      ),
-                    ),
-                  ),
-                  dropdownMenuEntries: [
-                    if (widget.showAddOption && widget.addOptionValue != null)
-                      DropdownMenuEntry<T>(
-                        value: widget.addOptionValue as T,
-                        label: widget.addOptionLabel,
-                        labelWidget: Row(
-                          children: [
-                            Icon(Icons.add, color: colors.onSurface),
-                            const SizedBox(width: 8),
-                            Expanded(
-                              child: Text(
-                                widget.addOptionLabel,
-                                style: TextStyle(
-                                  fontWeight: FontWeight.w600,
-                                  color: colors.primary,
-                                  fontSize: 16,
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ...widget.items.map((item) {
-                      return DropdownMenuEntry<T>(
-                        value: item,
-                        label: widget.itemLabelBuilder(item),
-                        labelWidget: Text(
-                          widget.itemLabelBuilder(item),
-                          style: TextStyle(
-                            color: colors.onSurface,
-                            fontSize: 16,
-                            fontWeight: FontWeight.w500,
-                          ),
-                        ),
-                      );
-                    }),
-                  ],
-                  onSelected: (T? selection) {
-                    if (selection == widget.addOptionValue &&
-                        widget.showAddOption) {
-                      // Restore old text to avoid showing the 'Add' placeholder text
-                      _textController.text = widget.value != null
-                          ? widget.itemLabelBuilder(widget.value as T)
-                          : '';
-                      widget.onAddPressed?.call();
-                    } else {
-                      state.didChange(selection);
-                      widget.onChanged?.call(selection);
-                    }
-                  },
-                  trailingIcon: _buildSearchableTrailingIcons(state),
-                  selectedTrailingIcon: _buildSearchableTrailingIcons(
-                    state,
-                    isSelected: true,
-                  ),
-                  inputDecorationTheme: InputDecorationTheme(
-                    isDense: true,
-                    constraints: const BoxConstraints(
-                      minHeight: 56,
-                      maxHeight: 56,
-                    ),
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(8.0),
-                    ),
-                    enabledBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(8.0),
-                      borderSide: BorderSide(color: Colors.grey.shade400),
-                    ),
-                    disabledBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(8.0),
-                      borderSide: BorderSide(color: Colors.grey.shade300),
-                    ),
+        final hasValue = widget.value != null;
+        final displayText =
+            hasValue ? widget.itemLabelBuilder(widget.value as T) : '';
 
-                    contentPadding: const EdgeInsets.symmetric(
-                      horizontal: 16,
-                      vertical: 16,
-                    ),
-                    filled: !widget.enabled,
-                    fillColor: widget.enabled
-                        ? Colors.transparent
-                        : colors.surfaceContainerHighest,
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            InkWell(
+              borderRadius: BorderRadius.circular(8.0),
+              onTap: widget.enabled
+                  ? () async {
+                      final selected =
+                          await SearchableSelectionSheet.show<T>(
+                        context: context,
+                        title: widget.label,
+                        items: widget.items,
+                        selectedValue: widget.value,
+                        itemLabelBuilder: widget.itemLabelBuilder,
+                        showAddOption: widget.showAddOption,
+                        addOptionLabel: widget.addOptionLabel,
+                        onAddPressed: widget.onAddPressed,
+                      );
+
+                      if (selected != null) {
+                        state.didChange(selected);
+                        widget.onChanged?.call(selected);
+                      }
+                    }
+                  : null,
+              child: InputDecorator(
+                decoration: InputDecoration(
+                  labelText: '${widget.label}*',
+                  errorText: state.errorText,
+                  floatingLabelBehavior: FloatingLabelBehavior.auto,
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(8.0),
+                  ),
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(8.0),
+                    borderSide: BorderSide(color: Colors.grey.shade400),
+                  ),
+                  disabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(8.0),
+                    borderSide: BorderSide(color: Colors.grey.shade300),
+                  ),
+                  contentPadding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 16,
+                  ),
+                  filled: !widget.enabled,
+                  fillColor: widget.enabled
+                      ? Colors.transparent
+                      : colors.surfaceContainerHighest,
+                  suffixIcon: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      if (hasValue && widget.enabled)
+                        IconButton(
+                          icon: const Icon(Icons.cancel_outlined, size: 20),
+                          splashRadius: 16,
+                          onPressed: () {
+                            state.didChange(null);
+                            widget.onChanged?.call(null);
+                          },
+                        ),
+                      const Icon(Icons.arrow_drop_down),
+                      const SizedBox(width: 8),
+                    ],
                   ),
                 ),
-                if (widget.helperText != null && state.errorText == null)
-                  Padding(
-                    padding: const EdgeInsets.only(top: 8.0, left: 12.0),
-                    child: Text(
-                      widget.helperText!,
-                      style: textTheme.bodySmall?.copyWith(
-                        color: colors.onSurfaceVariant,
-                      ).merge(widget.helperStyle),
-                    ),
+                isEmpty: !hasValue,
+                child: Text(
+                  displayText,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w500,
+                    color: widget.enabled
+                        ? colors.onSurface
+                        : colors.onSurface.withValues(alpha: 0.38),
                   ),
-              ],
-            );
-          },
+                ),
+              ),
+            ),
+            if (widget.helperText != null && state.errorText == null)
+              Padding(
+                padding: const EdgeInsets.only(top: 8.0, left: 12.0),
+                child: Text(
+                  widget.helperText!,
+                  style: textTheme.bodySmall?.copyWith(
+                    color: colors.onSurfaceVariant,
+                  ).merge(widget.helperStyle),
+                ),
+              ),
+          ],
         );
       },
-    );
-  }
-
-  Widget _buildSearchableTrailingIcons(
-    FormFieldState<T> state, {
-    bool isSelected = false,
-  }) {
-    final arrowIcon = Icon(
-      isSelected ? Icons.arrow_drop_up : Icons.arrow_drop_down,
-    );
-
-    // If no text is typed/selected, just show the arrow
-    if (_textController.text.isEmpty) {
-      return arrowIcon;
-    }
-
-    // If there is text, show a Clear button + Arrow
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      crossAxisAlignment: CrossAxisAlignment.center,
-      children: [
-        InkWell(
-          borderRadius: BorderRadius.circular(16),
-          onTap: () {
-            // Clear the text UI
-            _textController.clear();
-            // Clear the form field state
-            state.didChange(null);
-            // Notify external listeners
-            widget.onChanged?.call(null);
-            // Rebuild so the "X" disappears
-            setState(() {});
-          },
-          child: const Padding(
-            padding: EdgeInsets.all(4.0),
-            child: Icon(Icons.cancel_outlined, size: 20),
-          ),
-        ),
-        const SizedBox(width: 4),
-        arrowIcon,
-      ],
     );
   }
 

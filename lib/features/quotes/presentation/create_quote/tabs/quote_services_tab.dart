@@ -116,6 +116,7 @@ class _QuoteServicesTabState extends ConsumerState<QuoteServicesTab>
             final result = await QuoteServiceSaleDetailsSheet.show(
               context,
               service: serviceModel,
+              selectedQuantity: serviceItem.quantity,
               existingItem: serviceItem,
             );
             if (result != null) {

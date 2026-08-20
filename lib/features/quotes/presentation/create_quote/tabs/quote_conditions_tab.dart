@@ -33,12 +33,25 @@ class QuoteConditionsTab extends ConsumerWidget {
       );
     }
 
-    return ListView.builder(
-      padding: const EdgeInsets.fromLTRB(0, 12, 0, 12),
+    return ReorderableListView.builder(
+      padding: const EdgeInsets.only(
+        top: 12,
+        left: 0,
+        right: 0,
+        bottom: 88,
+      ),
       itemCount: state.conditions.length,
+      onReorder: (oldIndex, newIndex) {
+        ref
+            .read(createQuoteProvider.notifier)
+            .reorderConditions(oldIndex, newIndex);
+      },
       itemBuilder: (context, index) {
         final condition = state.conditions[index];
         return Card(
+          key: ValueKey(
+            condition.id.isNotEmpty ? condition.id : index.toString(),
+          ),
           margin: const EdgeInsets.only(bottom: 8),
           elevation: 0,
           color: Theme.of(context).colorScheme.surfaceContainerLow,
@@ -47,6 +60,10 @@ class QuoteConditionsTab extends ConsumerWidget {
             side: BorderSide.none,
           ),
           child: ListTile(
+            leading: Icon(
+              Icons.drag_handle,
+              color: Theme.of(context).colorScheme.onSurfaceVariant,
+            ),
             title: Text(condition.description),
             trailing: IconButton(
               icon: Icon(

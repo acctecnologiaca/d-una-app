@@ -1,35 +1,35 @@
 import 'package:flutter/material.dart';
-import 'package:d_una_app/core/utils/string_extensions.dart';
 import 'package:d_una_app/shared/widgets/friendly_error_widget.dart';
 import '../../../../../shared/widgets/custom_button.dart';
 import '../../../../../shared/widgets/custom_text_field.dart';
 import '../../../../../shared/widgets/custom_dropdown.dart';
 import '../../../../../shared/widgets/custom_action_sheet.dart';
-import '../../../../../shared/widgets/custom_stepper.dart';
 import '../../../../../shared/utils/currency_formatter.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../portfolio/data/models/service_model.dart';
 import '../../../data/models/quote_item_service.dart';
 import '../../../../portfolio/data/models/delivery_time_model.dart';
 import '../../../../portfolio/presentation/providers/lookup_providers.dart';
-import '../../../../../shared/widgets/service_list_item.dart';
 import '../providers/create_quote_provider.dart';
 import '../../../../../features/settings/presentation/widgets/add_edit_delivery_time_sheet.dart';
 import 'package:flutter/services.dart';
 
 class QuoteServiceSaleDetailsSheet extends ConsumerStatefulWidget {
   final ServiceModel service;
+  final double selectedQuantity;
   final QuoteItemService? existingItem;
 
   const QuoteServiceSaleDetailsSheet({
     super.key,
     required this.service,
+    this.selectedQuantity = 1.0,
     this.existingItem,
   });
 
   static Future<QuoteItemService?> show(
     BuildContext context, {
     required ServiceModel service,
+    double selectedQuantity = 1.0,
     QuoteItemService? existingItem,
   }) {
     return showModalBottomSheet<QuoteItemService?>(
@@ -41,6 +41,7 @@ class QuoteServiceSaleDetailsSheet extends ConsumerStatefulWidget {
       ),
       builder: (context) => QuoteServiceSaleDetailsSheet(
         service: service,
+        selectedQuantity: selectedQuantity,
         existingItem: existingItem,
       ),
     );
@@ -53,7 +54,6 @@ class QuoteServiceSaleDetailsSheet extends ConsumerStatefulWidget {
 
 class _QuoteServiceSaleDetailsSheetState
     extends ConsumerState<QuoteServiceSaleDetailsSheet> {
-  final _quantityController = TextEditingController(text: '1');
   final _descriptionController = TextEditingController();
   final _costPriceController = TextEditingController();
   final _customPriceController = TextEditingController();
@@ -66,20 +66,19 @@ class _QuoteServiceSaleDetailsSheetState
   String? _selectedExecutionTimeId;
 
   // Warranty state
-  bool _noWarranty = false;
+  bool _offerWarranty = false;
   final _warrantyQtyController = TextEditingController(text: '7');
   String _warrantyPeriod = 'Días';
 
   @override
   void initState() {
     super.initState();
+    _quantity = widget.existingItem != null
+        ? widget.existingItem!.quantity
+        : widget.selectedQuantity;
+
     if (widget.existingItem != null) {
       final item = widget.existingItem!;
-      _quantity = item.quantity;
-      _quantityController.text = _quantity.truncateToDouble() == _quantity
-          ? _quantity.toInt().toString()
-          : _quantity.toStringAsFixed(1);
-
       _descriptionController.text =
           item.description ?? widget.service.description ?? '';
       _modifyDescription =
@@ -110,25 +109,29 @@ class _QuoteServiceSaleDetailsSheetState
     // Initialize warranty
     if (widget.existingItem != null) {
       final item = widget.existingItem!;
-      if (item.warrantyTime != null) {
+      if (item.warrantyTime != null && item.warrantyTime! > 0) {
         _warrantyQtyController.text = item.warrantyTime.toString();
         _warrantyPeriod = _warrantyUnitToDisplay(item.warrantyUnit);
-        _noWarranty = false;
+        _offerWarranty = true;
       } else {
-        _noWarranty = true;
+        _warrantyQtyController.text = '7';
+        _warrantyPeriod = 'Días';
+        _offerWarranty = false;
       }
-    } else if (widget.service.warrantyTime != null) {
+    } else if (widget.service.warrantyTime != null &&
+        widget.service.warrantyTime! > 0) {
       _warrantyQtyController.text = widget.service.warrantyTime.toString();
       _warrantyPeriod = _warrantyUnitToDisplay(widget.service.warrantyUnit);
-      _noWarranty = widget.service.hasWarranty == false;
+      _offerWarranty = widget.service.hasWarranty;
     } else {
-      _noWarranty = !widget.service.hasWarranty;
+      _warrantyQtyController.text = '7';
+      _warrantyPeriod = 'Días';
+      _offerWarranty = widget.service.hasWarranty;
     }
   }
 
   @override
   void dispose() {
-    _quantityController.dispose();
     _descriptionController.dispose();
     _costPriceController.dispose();
     _customPriceController.dispose();
@@ -149,20 +152,6 @@ class _QuoteServiceSaleDetailsSheetState
         name.contains('dia') ||
         name.contains('mes') ||
         name.contains('año');
-  }
-
-  String _getRateLabel() {
-    final rate = widget.service.serviceRate;
-    if (rate != null && rate.name.isNotEmpty) {
-      return rate.name.toTitleCase;
-    }
-
-    final existingSymbol = widget.existingItem?.rateSymbol;
-    if (existingSymbol != null && existingSymbol.isNotEmpty) {
-      return existingSymbol.toTitleCase;
-    }
-
-    return 'Ud.';
   }
 
   Future<void> _showAddExecutionTimeSheet() async {
@@ -224,10 +213,12 @@ class _QuoteServiceSaleDetailsSheetState
       taxRate: globalTaxRate,
       taxAmount: taxAmount,
       totalPrice: unitPriceIncludingTax * _quantity,
-      warrantyTime: _noWarranty
-          ? null
-          : int.tryParse(_warrantyQtyController.text),
-      warrantyUnit: _noWarranty ? null : _warrantyPeriodToDb(_warrantyPeriod),
+      warrantyTime: _offerWarranty
+          ? int.tryParse(_warrantyQtyController.text)
+          : null,
+      warrantyUnit: _offerWarranty
+          ? _warrantyPeriodToDb(_warrantyPeriod)
+          : null,
       rateSymbol: widget.service.serviceRate?.symbol ?? 'ud.',
       rateIconName: widget.service.serviceRate?.iconName,
       categoryName: widget.service.category?.name,
@@ -271,11 +262,10 @@ class _QuoteServiceSaleDetailsSheetState
     final colors = Theme.of(context).colorScheme;
     final textTheme = Theme.of(context).textTheme;
 
-    final rateLabel = _getRateLabel();
     final bool isTimeBased = _isRateTimeBased();
 
     return CustomActionSheet(
-      title: 'Servicio a agregar',
+      title: 'Detalles del servicio',
       showDivider: false,
       isContentScrollable: true,
       actions: [
@@ -295,60 +285,7 @@ class _QuoteServiceSaleDetailsSheetState
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            // Service Info Header
-            ServiceListItem(
-              service: widget.service,
-              onTap: () {}, // No action in sheet
-            ),
-            const SizedBox(height: 16),
-            Divider(color: colors.outlineVariant, height: 1),
-            const SizedBox(height: 16),
-
-            // Cantidad
-            Row(
-              children: [
-                Icon(
-                  Icons.inventory_2_outlined,
-                  color: colors.onSurfaceVariant,
-                  size: 20,
-                ),
-                const SizedBox(width: 8),
-                Text(
-                  'Cantidad',
-                  style: textTheme.titleSmall?.copyWith(
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 12),
-            Center(
-              child: CustomStepper(
-                controller: _quantityController,
-                label: rateLabel,
-                onIncrement: () {
-                  setState(() {
-                    _quantity++;
-                    _quantityController.text = _quantity.toInt().toString();
-                  });
-                },
-                onDecrement: () {
-                  if (_quantity > 1) {
-                    setState(() {
-                      _quantity--;
-                      _quantityController.text = _quantity.toInt().toString();
-                    });
-                  }
-                },
-                onChanged: (val) {
-                  setState(() {
-                    _quantity = double.tryParse(val) ?? 0;
-                  });
-                },
-              ),
-            ),
             if (!isTimeBased) ...[
-              const SizedBox(height: 24),
               // Tiempo de ejecución
               Row(
                 children: [
@@ -427,15 +364,15 @@ class _QuoteServiceSaleDetailsSheetState
             SwitchListTile(
               contentPadding: EdgeInsets.zero,
               title: const Text(
-                'Este servicio no tiene garantía',
+                'Ofrecer tiempo de garantía',
                 style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
               ),
-              value: _noWarranty,
-              onChanged: (v) => setState(() => _noWarranty = v),
+              value: _offerWarranty,
+              onChanged: (v) => setState(() => _offerWarranty = v),
               activeThumbColor: colors.onPrimary,
               activeTrackColor: colors.primary,
             ),
-            if (!_noWarranty) ...[
+            if (_offerWarranty) ...[
               const SizedBox(height: 8),
               Row(
                 children: [

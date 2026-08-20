@@ -1,0 +1,507 @@
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:uuid/uuid.dart';
+import '../../../../../shared/widgets/friendly_error_widget.dart';
+import '../../../../../shared/widgets/custom_button.dart';
+import '../../../../../shared/widgets/custom_text_field.dart';
+import '../../../../../shared/widgets/custom_dropdown.dart';
+import '../../../../../shared/widgets/custom_action_sheet.dart';
+import '../../../../../shared/utils/currency_formatter.dart';
+import '../../../../portfolio/data/models/service_model.dart';
+import '../../../../portfolio/data/models/delivery_time_model.dart';
+import '../../../../portfolio/presentation/providers/lookup_providers.dart';
+import '../../../../settings/presentation/widgets/add_edit_delivery_time_sheet.dart';
+import '../../../data/models/service_report_item_service.dart';
+import '../providers/create_report_provider.dart';
+
+class ReportServiceSaleDetailsSheet extends ConsumerStatefulWidget {
+  final ServiceModel service;
+  final double selectedQuantity;
+  final ServiceReportItemService? existingItem;
+
+  const ReportServiceSaleDetailsSheet({
+    super.key,
+    required this.service,
+    this.selectedQuantity = 1.0,
+    this.existingItem,
+  });
+
+  static Future<ServiceReportItemService?> show(
+    BuildContext context, {
+    required ServiceModel service,
+    double selectedQuantity = 1.0,
+    ServiceReportItemService? existingItem,
+  }) {
+    return showModalBottomSheet<ServiceReportItemService?>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Theme.of(context).colorScheme.surfaceContainer,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+      ),
+      builder: (context) => ReportServiceSaleDetailsSheet(
+        service: service,
+        selectedQuantity: selectedQuantity,
+        existingItem: existingItem,
+      ),
+    );
+  }
+
+  @override
+  ConsumerState<ReportServiceSaleDetailsSheet> createState() =>
+      _ReportServiceSaleDetailsSheetState();
+}
+
+class _ReportServiceSaleDetailsSheetState
+    extends ConsumerState<ReportServiceSaleDetailsSheet> {
+  final _descriptionController = TextEditingController();
+  final _costPriceController = TextEditingController();
+  final _customPriceController = TextEditingController();
+
+  double _quantity = 1.0;
+  bool _modifyDescription = false;
+  bool _modifyPrice = false;
+  bool _isOutsourced = false;
+
+  String? _selectedExecutionTimeId;
+
+  // Warranty state
+  bool _offerWarranty = false;
+  final _warrantyQtyController = TextEditingController(text: '7');
+  String _warrantyPeriod = 'Días';
+
+  @override
+  void initState() {
+    super.initState();
+    _quantity = widget.existingItem != null
+        ? widget.existingItem!.quantity
+        : widget.selectedQuantity;
+
+    if (widget.existingItem != null) {
+      final item = widget.existingItem!;
+      _descriptionController.text =
+          item.description ?? widget.service.description ?? '';
+      _modifyDescription =
+          item.description != null &&
+          item.description != widget.service.description;
+
+      _isOutsourced = item.costPrice > 0;
+      _costPriceController.text = _isOutsourced
+          ? CurrencyFormatter.formatNumber(item.costPrice)
+          : '';
+
+      _modifyPrice = item.unitPrice != widget.service.price;
+      _customPriceController.text = CurrencyFormatter.formatNumber(
+        item.unitPrice,
+      );
+
+      if (item.executionTimeId != null) {
+        _selectedExecutionTimeId = item.executionTimeId;
+      }
+    } else {
+      _descriptionController.text = widget.service.description ?? '';
+      _costPriceController.text = '';
+      _customPriceController.text = CurrencyFormatter.formatNumber(
+        widget.service.price,
+      );
+    }
+
+    // Initialize warranty
+    if (widget.existingItem != null) {
+      final item = widget.existingItem!;
+      if (item.warrantyTime != null && item.warrantyTime! > 0) {
+        _warrantyQtyController.text = item.warrantyTime.toString();
+        _warrantyPeriod = _warrantyUnitToDisplay(item.warrantyUnit);
+        _offerWarranty = true;
+      } else {
+        _warrantyQtyController.text = '7';
+        _warrantyPeriod = 'Días';
+        _offerWarranty = false;
+      }
+    } else if (widget.service.warrantyTime != null &&
+        widget.service.warrantyTime! > 0) {
+      _warrantyQtyController.text = widget.service.warrantyTime.toString();
+      _warrantyPeriod = _warrantyUnitToDisplay(widget.service.warrantyUnit);
+      _offerWarranty = widget.service.hasWarranty;
+    } else {
+      _warrantyQtyController.text = '7';
+      _warrantyPeriod = 'Días';
+      _offerWarranty = widget.service.hasWarranty;
+    }
+  }
+
+  @override
+  void dispose() {
+    _descriptionController.dispose();
+    _costPriceController.dispose();
+    _customPriceController.dispose();
+    _warrantyQtyController.dispose();
+    super.dispose();
+  }
+
+  bool _isRateTimeBased() {
+    final name = widget.service.serviceRate?.name.toLowerCase() ?? '';
+    final symbol = widget.service.serviceRate?.symbol.toLowerCase() ?? '';
+    return symbol == 'h' ||
+        symbol == 'hr' ||
+        symbol == 'hrs' ||
+        name.contains('segundo') ||
+        name.contains('minuto') ||
+        name.contains('hora') ||
+        name.contains('día') ||
+        name.contains('dia') ||
+        name.contains('mes') ||
+        name.contains('año');
+  }
+
+  Future<void> _showAddExecutionTimeSheet() async {
+    final newTime = await showModalBottomSheet<DeliveryTime>(
+      context: context,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
+      backgroundColor: Theme.of(context).colorScheme.surfaceContainer,
+      builder: (context) => const AddEditDeliveryTimeSheet(),
+    );
+
+    if (newTime != null && mounted) {
+      setState(() {
+        _selectedExecutionTimeId = newTime.id;
+      });
+      ref.invalidate(deliveryTimesProvider);
+    }
+  }
+
+  void _onConfirm() {
+    final reportState = ref.read(createReportProvider);
+
+    final finalCost = _isOutsourced
+        ? (CurrencyFormatter.parse(_costPriceController.text) ?? 0.0)
+        : 0.0;
+
+    final finalDescription = _modifyDescription
+        ? _descriptionController.text
+        : widget.service.description;
+
+    final finalUnitPrice = _modifyPrice
+        ? (CurrencyFormatter.parse(_customPriceController.text) ??
+              widget.service.price)
+        : widget.service.price;
+
+    final globalTaxRate = reportState.globalTaxRate;
+    final taxRate = globalTaxRate / 100;
+    final taxAmount = (finalUnitPrice * _quantity) * taxRate;
+    final totalPrice = finalUnitPrice * _quantity;
+
+    final executionTimes =
+        ref.read(deliveryTimesForExecutionProvider).valueOrNull ?? [];
+    final executionTimeLabel = executionTimes
+        .where((e) => e.id == _selectedExecutionTimeId)
+        .map((e) => e.name)
+        .firstOrNull;
+
+    final item = ServiceReportItemService(
+      id: widget.existingItem?.id ?? const Uuid().v4(),
+      reportId: reportState.report?.id ?? '',
+      serviceId: widget.service.id,
+      executionTimeId: _isRateTimeBased() ? null : _selectedExecutionTimeId,
+      name: widget.service.name,
+      description: finalDescription,
+      quantity: _quantity,
+      costPrice: finalCost,
+      profitMargin: finalCost > 0
+          ? ((finalUnitPrice - finalCost) / finalCost) * 100
+          : 0.0,
+      unitPrice: finalUnitPrice,
+      taxRate: globalTaxRate,
+      taxAmount: taxAmount,
+      totalPrice: totalPrice,
+      warrantyTime: _offerWarranty
+          ? int.tryParse(_warrantyQtyController.text)
+          : null,
+      warrantyUnit: _offerWarranty
+          ? _warrantyPeriodToDb(_warrantyPeriod)
+          : null,
+      rateSymbol: widget.service.serviceRate?.symbol ?? 'ud.',
+      rateIconName: widget.service.serviceRate?.iconName,
+      categoryName: widget.service.category?.name,
+      executionTimeLabel: executionTimeLabel,
+      orderIndex: widget.existingItem?.orderIndex ?? reportState.nextGroupIndex,
+    );
+
+    Navigator.of(context).pop(item);
+  }
+
+  String _warrantyPeriodToDb(String displayPeriod) {
+    return switch (displayPeriod) {
+      'Días' => 'days',
+      'Meses' => 'months',
+      'Años' => 'years',
+      _ => 'days',
+    };
+  }
+
+  String _warrantyUnitToDisplay(String? dbUnit) {
+    if (dbUnit == null) return 'Meses';
+    final normalized = dbUnit.toLowerCase().trim();
+    if (normalized == 'days' ||
+        normalized == 'días' ||
+        normalized == 'dias' ||
+        normalized == 'dia') {
+      return 'Días';
+    }
+    if (normalized == 'months' ||
+        normalized == 'meses' ||
+        normalized == 'mes') {
+      return 'Meses';
+    }
+    if (normalized == 'years' || normalized == 'años' || normalized == 'año') {
+      return 'Años';
+    }
+    return 'Meses';
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
+    final textTheme = Theme.of(context).textTheme;
+    final bool isTimeBased = _isRateTimeBased();
+
+    return CustomActionSheet(
+      title: 'Detalles del servicio',
+      showDivider: false,
+      isContentScrollable: true,
+      actions: [
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16.0),
+          child: Align(
+            alignment: Alignment.centerRight,
+            child: SizedBox(
+              width: 140,
+              child: CustomButton(onPressed: _onConfirm, text: 'Confirmar'),
+            ),
+          ),
+        ),
+      ],
+      content: SingleChildScrollView(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            if (!isTimeBased) ...[
+              // Tiempo de ejecución
+              Row(
+                children: [
+                  Icon(
+                    Icons.timer_outlined,
+                    color: colors.onSurfaceVariant,
+                    size: 20,
+                  ),
+                  const SizedBox(width: 8),
+                  Text(
+                    'Tiempo de ejecución',
+                    style: textTheme.titleSmall?.copyWith(
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
+              ref
+                  .watch(deliveryTimesForExecutionProvider)
+                  .when(
+                    data: (executionTimes) {
+                      if (_selectedExecutionTimeId == null &&
+                          executionTimes.isNotEmpty) {
+                        WidgetsBinding.instance.addPostFrameCallback((_) {
+                          if (mounted) {
+                            setState(() {
+                              _selectedExecutionTimeId =
+                                  executionTimes.first.id;
+                            });
+                          }
+                        });
+                      }
+
+                      return CustomDropdown<DeliveryTime>(
+                        value:
+                            executionTimes.any(
+                              (e) => e.id == _selectedExecutionTimeId,
+                            )
+                            ? executionTimes.firstWhere(
+                                (e) => e.id == _selectedExecutionTimeId,
+                              )
+                            : (executionTimes.isNotEmpty
+                                  ? executionTimes.first
+                                  : null),
+                        items: executionTimes,
+                        label: 'Seleccionar tiempo',
+                        searchable: true,
+                        itemLabelBuilder: (dt) => dt.name,
+                        onChanged: (val) {
+                          if (val != null && val.id != '___ADD___') {
+                            setState(() => _selectedExecutionTimeId = val.id);
+                          }
+                        },
+                        showAddOption: true,
+                        addOptionLabel: 'Agregar tiempo de ejecución',
+                        addOptionValue: DeliveryTime(
+                          id: '___ADD___',
+                          name: '___ADD___',
+                          unit: '',
+                          type: '',
+                          orderIdx: 0,
+                        ),
+                        onAddPressed: _showAddExecutionTimeSheet,
+                      );
+                    },
+                    loading: () =>
+                        const Center(child: CircularProgressIndicator()),
+                    error: (err, stack) => FriendlyErrorWidget(error: err),
+                  ),
+              const SizedBox(height: 24),
+            ],
+
+            // --- WARRANTY SECTION ---
+            SwitchListTile(
+              contentPadding: EdgeInsets.zero,
+              title: const Text(
+                'Ofrecer tiempo de garantía',
+                style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
+              ),
+              value: _offerWarranty,
+              onChanged: (v) => setState(() => _offerWarranty = v),
+              activeThumbColor: colors.onPrimary,
+              activeTrackColor: colors.primary,
+            ),
+            if (_offerWarranty) ...[
+              const SizedBox(height: 8),
+              Row(
+                children: [
+                  Icon(
+                    Icons.verified_user_outlined,
+                    color: colors.onSurfaceVariant,
+                    size: 20,
+                  ),
+                  const SizedBox(width: 8),
+                  Text(
+                    'Garantía',
+                    style: textTheme.titleSmall?.copyWith(
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Expanded(
+                    child: CustomTextField(
+                      controller: _warrantyQtyController,
+                      label: 'Tiempo',
+                      keyboardType: TextInputType.number,
+                    ),
+                  ),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: CustomDropdown<String>(
+                      value: _warrantyPeriod,
+                      items: const ['Días', 'Meses', 'Años'],
+                      label: 'Período',
+                      itemLabelBuilder: (item) => item,
+                      onChanged: (val) {
+                        if (val != null) {
+                          setState(() => _warrantyPeriod = val);
+                        }
+                      },
+                    ),
+                  ),
+                ],
+              ),
+            ],
+
+            const SizedBox(height: 24),
+            // Modificar Descripción
+            SwitchListTile(
+              contentPadding: EdgeInsets.zero,
+              title: const Text(
+                'Modificar descripción',
+                style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
+              ),
+              value: _modifyDescription,
+              onChanged: (v) => setState(() => _modifyDescription = v),
+              activeThumbColor: colors.onPrimary,
+              activeTrackColor: colors.primary,
+            ),
+            if (_modifyDescription) ...[
+              const SizedBox(height: 8),
+              CustomTextField(
+                controller: _descriptionController,
+                label: 'Descripción personalizada',
+                maxLines: 3,
+              ),
+            ],
+
+            const SizedBox(height: 24),
+            // Servicio Tercerizado
+            SwitchListTile(
+              contentPadding: EdgeInsets.zero,
+              title: const Text(
+                'Servicio tercerizado',
+                style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
+              ),
+              value: _isOutsourced,
+              onChanged: (v) => setState(() => _isOutsourced = v),
+              activeThumbColor: colors.onPrimary,
+              activeTrackColor: colors.primary,
+            ),
+            if (_isOutsourced) ...[
+              const SizedBox(height: 8),
+              CustomTextField(
+                controller: _costPriceController,
+                label: 'Costo propio unitario',
+                prefixText: '\$ ',
+                keyboardType: const TextInputType.numberWithOptions(
+                  decimal: true,
+                ),
+                inputFormatters: [CurrencyInputFormatter()],
+                helperText: 'Sin impuesto',
+              ),
+            ],
+
+            const SizedBox(height: 24),
+            // Modificar Precio
+            SwitchListTile(
+              contentPadding: EdgeInsets.zero,
+              title: const Text(
+                'Modificar precio de cobro',
+                style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
+              ),
+              value: _modifyPrice,
+              onChanged: (v) => setState(() => _modifyPrice = v),
+              activeThumbColor: colors.onPrimary,
+              activeTrackColor: colors.primary,
+            ),
+            if (_modifyPrice) ...[
+              const SizedBox(height: 8),
+              CustomTextField(
+                controller: _customPriceController,
+                label: 'Precio unitario personalizado',
+                prefixText: '\$ ',
+                keyboardType: const TextInputType.numberWithOptions(
+                  decimal: true,
+                ),
+                inputFormatters: [CurrencyInputFormatter()],
+                helperText: 'Sin impuesto',
+              ),
+            ],
+
+            const SizedBox(height: 24),
+          ],
+        ),
+      ),
+    );
+  }
+}

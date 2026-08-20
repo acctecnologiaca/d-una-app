@@ -1,0 +1,139 @@
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
+import '../../../../../shared/widgets/generic_list_screen.dart';
+import '../../../../settings/presentation/widgets/add_edit_commercial_condition_sheet.dart';
+import '../../../../quotes/data/models/commercial_condition.dart';
+import '../../../../portfolio/presentation/providers/lookup_providers.dart';
+import '../providers/create_report_provider.dart';
+
+class SelectReportConditionScreen extends ConsumerStatefulWidget {
+  const SelectReportConditionScreen({super.key});
+
+  @override
+  ConsumerState<SelectReportConditionScreen> createState() =>
+      _SelectReportConditionScreenState();
+}
+
+class _SelectReportConditionScreenState
+    extends ConsumerState<SelectReportConditionScreen> {
+  final Set<CommercialCondition> _selectedConditions = {};
+
+  void _toggleSelection(CommercialCondition condition) {
+    setState(() {
+      if (_selectedConditions.contains(condition)) {
+        _selectedConditions.remove(condition);
+      } else {
+        _selectedConditions.add(condition);
+      }
+    });
+  }
+
+  void _confirmSelection() {
+    if (_selectedConditions.isNotEmpty) {
+      ref
+          .read(createReportProvider.notifier)
+          .addConditions(_selectedConditions.toList());
+    }
+
+    final returnTo = GoRouterState.of(context).uri.queryParameters['returnTo'];
+
+    if (context.canPop()) {
+      context.pop(true);
+    } else if (returnTo != null) {
+      context.go(Uri.decodeComponent(returnTo));
+    } else {
+      context.go('/reports/create?tab=3');
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = Theme.of(context).colorScheme;
+    final conditionsAsync = ref.watch(commercialConditionsProvider);
+    final reportState = ref.watch(createReportProvider);
+    final reportNumber =
+        reportState.report?.reportNumber ??
+        reportState.currentReportNumber ??
+        '';
+
+    return GenericListScreen<CommercialCondition>(
+      title: 'Agregar condiciones',
+      subtitle: 'Reporte #$reportNumber',
+      itemsAsync: conditionsAsync,
+      emptyListMessage: 'No hay condiciones predefinidas.',
+      onSearch: (condition, query) =>
+          condition.description.toLowerCase().contains(query.toLowerCase()),
+      preFilter: (items) {
+        final existingIds = ref
+            .read(createReportProvider)
+            .conditions
+            .where((c) => c.conditionId != null)
+            .map((c) => c.conditionId!)
+            .toSet();
+        return items.where((c) => !existingIds.contains(c.id)).toList();
+      },
+      headerWidget: Padding(
+        padding: const EdgeInsets.fromLTRB(16.0, 16.0, 16.0, 8.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Text(
+              'Agrega las condiciones o términos que creas necesarios para que tu cliente las tenga en cuenta al momento de evaluar el reporte de servicio',
+              style: TextStyle(color: colors.onSurfaceVariant, fontSize: 14),
+            ),
+            const SizedBox(height: 16),
+            OutlinedButton(
+              onPressed: () {
+                showModalBottomSheet(
+                  context: context,
+                  isScrollControlled: true,
+                  builder: (context) => const AddEditCommercialConditionSheet(),
+                );
+              },
+              style: OutlinedButton.styleFrom(
+                padding: const EdgeInsets.symmetric(vertical: 12),
+                side: BorderSide(color: colors.outlineVariant),
+                minimumSize: const Size.fromHeight(48),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(24),
+                ),
+                foregroundColor: colors.onSurface,
+              ),
+              child: const Text(
+                'Agregar nueva condición comercial',
+                style: TextStyle(fontWeight: FontWeight.w600),
+              ),
+            ),
+          ],
+        ),
+      ),
+      itemBuilder: (context, condition) {
+        final isSelected = _selectedConditions.contains(condition);
+        return CheckboxListTile(
+          value: isSelected,
+          onChanged: (val) => _toggleSelection(condition),
+          title: Text(
+            condition.description,
+            style: TextStyle(color: colors.onSurface, fontSize: 16),
+          ),
+          controlAffinity: ListTileControlAffinity.trailing,
+          activeColor: colors.primary,
+          checkboxShape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(4),
+          ),
+          contentPadding: const EdgeInsets.symmetric(
+            horizontal: 16,
+            vertical: 4,
+          ),
+        );
+      },
+      onAddPressed: _confirmSelection,
+      fabLabel: _selectedConditions.isNotEmpty
+          ? 'Confirmar (${_selectedConditions.length})'
+          : 'Confirmar',
+      fabIcon: Icons.check,
+      isFabEnabled: _selectedConditions.isNotEmpty,
+    );
+  }
+}

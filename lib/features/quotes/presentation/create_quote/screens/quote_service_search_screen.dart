@@ -1,16 +1,17 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
 import '../../../../../shared/widgets/generic_search_screen.dart';
 import '../../../../../shared/widgets/filter_bottom_sheet.dart';
 import '../../../../../shared/widgets/horizontal_filter_bar.dart';
 import '../../../../../shared/widgets/price_filter_sheet.dart';
 import '../../../../../shared/widgets/sort_selector.dart';
+import '../../../../../shared/widgets/custom_extended_fab.dart';
+import '../../../../../shared/utils/currency_formatter.dart';
 import '../../../../portfolio/data/models/service_model.dart';
 import '../providers/quote_service_selection_provider.dart';
 import '../providers/create_quote_provider.dart';
+import '../widgets/quote_service_selection_card.dart';
 import '../widgets/quote_service_sale_details_sheet.dart';
-import '../../../../../shared/widgets/service_list_item.dart';
 
 class QuoteServiceSearchScreen extends ConsumerStatefulWidget {
   const QuoteServiceSearchScreen({super.key});
@@ -29,6 +30,11 @@ class _QuoteServiceSearchScreenState
   Set<String> _selectedRates = {};
   double? _minPrice;
   double? _maxPrice;
+
+  // Selection State
+  String? _selectedServiceId;
+  double _selectedQuantity = 0.0;
+  ServiceModel? _selectedService;
 
   @override
   void dispose() {
@@ -130,8 +136,6 @@ class _QuoteServiceSearchScreenState
             _minPrice = min;
             _maxPrice = max;
           });
-          // Min/Max price filtering not yet fully supported on server for services (only products).
-          // But kept in state for future.
         },
       ),
     );
@@ -139,7 +143,7 @@ class _QuoteServiceSearchScreenState
 
   void _applyFiltersToServer() {
     ref.read(paginatedQuoteServiceSearchProvider.notifier).updateFilters(
-      categoryId: _selectedCategories.isNotEmpty ? _selectedCategories.first : null, // Assuming singles or you can map names to IDs
+      categoryId: _selectedCategories.isNotEmpty ? _selectedCategories.first : null,
       rateId: _selectedRates.isNotEmpty ? _selectedRates.first : null,
     );
   }
@@ -156,6 +160,16 @@ class _QuoteServiceSearchScreenState
     final colors = Theme.of(context).colorScheme;
 
     final originalItems = suggestionsAsync.valueOrNull ?? [];
+
+    final hasSelection = _selectedQuantity > 0 && _selectedService != null;
+
+    final formattedQty =
+        _selectedQuantity.truncateToDouble() == _selectedQuantity
+            ? _selectedQuantity.toInt().toString()
+            : _selectedQuantity.toStringAsFixed(2);
+    final totalPrice = (_selectedService?.price ?? 0.0) * _selectedQuantity;
+    final formattedTotal = CurrencyFormatter.format(totalPrice);
+    final rateSymbol = _selectedService?.serviceRate?.symbol ?? 'ud.';
 
     return GenericSearchScreen<ServiceModel>(
       title: 'Buscar Servicio',
@@ -251,47 +265,63 @@ class _QuoteServiceSearchScreenState
         final isAlreadyInQuote = quoteServices.any(
           (s) => s.serviceId == service.id,
         );
+        final isThisSelected = _selectedServiceId == service.id;
+        final currentQty = isThisSelected ? _selectedQuantity : 0.0;
+        final isLocked =
+            _selectedServiceId != null && _selectedServiceId != service.id;
 
-        return Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16.0),
-          child: Column(
-            children: [
-              ServiceListItem(
-                service: service,
-                isAlreadyAdded: isAlreadyInQuote,
-                onTap: () async {
-                  if (isAlreadyInQuote) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text(
-                          'Este servicio ya se encuentra en la cotización',
-                        ),
-                      ),
-                    );
+        return QuoteServiceSelectionCard(
+          key: ValueKey(service.id),
+          service: service,
+          selectedQty: currentQty,
+          isLocked: isLocked,
+          isAlreadyInQuote: isAlreadyInQuote,
+          onQtyChanged: (qty) {
+            setState(() {
+              if (qty > 0) {
+                _selectedServiceId = service.id;
+                _selectedQuantity = qty;
+                _selectedService = service;
+              } else {
+                if (_selectedServiceId == service.id) {
+                  _selectedServiceId = null;
+                  _selectedQuantity = 0.0;
+                  _selectedService = null;
+                }
+              }
+            });
+          },
+        );
+      },
+      floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
+      floatingActionButton: hasSelection
+          ? Padding(
+              padding: const EdgeInsets.only(bottom: 40.0),
+              child: CustomExtendedFab(
+                icon: Icons.check,
+                label:
+                    'Confirmar ($formattedQty $rateSymbol - $formattedTotal)',
+                isEnabled: true,
+                onPressed: () async {
+                  if (_selectedService == null || _selectedQuantity <= 0) {
                     return;
                   }
 
-                  final addedService = await QuoteServiceSaleDetailsSheet.show(
+                  final item = await QuoteServiceSaleDetailsSheet.show(
                     context,
-                    service: service,
+                    service: _selectedService!,
+                    selectedQuantity: _selectedQuantity,
                   );
 
-                  if (addedService != null) {
-                    ref
-                        .read(createQuoteProvider.notifier)
-                        .addService(addedService);
-                    if (context.mounted) {
-                      context.pop(); // Pop the search screen
-                      context.pop(); // Pop the selection screen
-                    }
+                  if (item != null && context.mounted) {
+                    ref.read(createQuoteProvider.notifier).addService(item);
+                    Navigator.pop(context, true);
                   }
                 },
               ),
-              const Divider(height: 1, color: Colors.transparent),
-            ],
-          ),
-        );
-      },
+            )
+          : null,
     );
   }
 }
+

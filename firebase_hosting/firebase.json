@@ -21,6 +21,10 @@
       {
         "source": "/quote",
         "destination": "/quote.html"
+      },
+      {
+        "source": "/report",
+        "destination": "/report.html"
       }
     ]
   }

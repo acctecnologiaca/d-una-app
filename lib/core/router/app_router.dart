@@ -40,7 +40,7 @@ import '../../features/collaborators/domain/models/collaborator.dart';
 import '../../features/quotes/domain/models/quote_aggregated_product.dart';
 import '../../features/quotes/data/models/quote_item_product.dart';
 import '../../features/quotes/data/models/quote_item_service.dart';
-import 'package:d_una_app/features/reports/presentation/reports_screen.dart';
+import 'package:d_una_app/features/reports/presentation/report_routes.dart';
 import 'package:d_una_app/features/profile/presentation/screens/profile_screen.dart';
 import 'package:d_una_app/features/profile/presentation/screens/basic_data_screen.dart';
 import 'package:d_una_app/features/profile/presentation/screens/contact_data_screen.dart';
@@ -409,12 +409,7 @@ final routerProvider = Provider<GoRouter>((ref) {
         // Branch Reports
         StatefulShellBranch(
           navigatorKey: _shellNavigatorReportsKey,
-          routes: [
-            GoRoute(
-              path: '/reports',
-              builder: (context, state) => const ReportsScreen(),
-            ),
-          ],
+          routes: serviceReportsRoutes(rootNavigatorKey),
         ),
         // Branch Clients
         StatefulShellBranch(

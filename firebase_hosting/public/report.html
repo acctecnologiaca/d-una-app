@@ -1,0 +1,621 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Reporte de Servicio - D-UNA</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --neutral-dark: #0F172A;
+      --neutral-medium: #334155;
+      --neutral-muted: #64748B;
+      --neutral-border: #E2E8F0;
+      --neutral-border-dark: #CBD5E1;
+      --neutral-bg-subtle: #F8FAFC;
+      --neutral-bg-header: #F1F5F9;
+      --primary-color: #2563EB;
+      --primary-subtle: #EFF6FF;
+    }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background: #F1F5F9;
+      color: var(--neutral-dark);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 24px 16px;
+    }
+    .container {
+      max-width: 780px;
+      width: 100%;
+      margin: 0 auto;
+    }
+    .card {
+      background: #FFFFFF;
+      border-radius: 16px;
+      box-shadow: 0 10px 25px -5px rgba(15, 23, 42, 0.05);
+      overflow: hidden;
+      border: 1px solid var(--neutral-border);
+    }
+    .header-banner {
+      background: #FFFFFF;
+      padding: 24px 32px;
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      flex-wrap: wrap;
+      gap: 16px;
+      border-bottom: 2px solid var(--neutral-dark);
+    }
+    .header-banner .brand-container {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .header-banner .brand-logo-row {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+    }
+    .header-banner .brand-logo-row img {
+      max-height: 48px;
+      width: auto;
+      object-fit: contain;
+    }
+    .header-banner .doc-meta h1 {
+      font-size: 22px;
+      font-weight: 800;
+      color: var(--neutral-dark);
+      letter-spacing: 0.5px;
+      line-height: 1.2;
+    }
+    .header-banner .doc-meta .doc-num {
+      font-size: 13px;
+      color: var(--neutral-muted);
+      font-weight: 600;
+      margin-top: 2px;
+    }
+    .issuer-letterhead {
+      font-size: 11px;
+      color: var(--neutral-muted);
+      line-height: 1.4;
+      margin-top: 4px;
+    }
+    .issuer-letterhead strong {
+      color: var(--neutral-dark);
+      font-size: 12px;
+      font-weight: 700;
+    }
+    .status-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 12px;
+      border-radius: 9999px;
+      font-size: 12px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    .status-badge.opened { background: #EEF2FF; color: #4F46E5; }
+    .status-badge.finalized { background: #F3E8FF; color: #7E22CE; }
+    .status-badge.draft { background: #F1F5F9; color: #475569; }
+
+    .content-body {
+      padding: 32px;
+    }
+
+    /* Client & Service Info Row */
+    .info-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 24px;
+      background: var(--neutral-bg-subtle);
+      border: 1px solid var(--neutral-border);
+      border-radius: 12px;
+      padding: 20px;
+      margin-bottom: 24px;
+    }
+    @media (max-width: 600px) {
+      .info-grid { grid-template-columns: 1fr; }
+    }
+    .info-block h3 {
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: var(--neutral-muted);
+      margin-bottom: 6px;
+      font-weight: 700;
+    }
+    .info-block p {
+      font-size: 13px;
+      color: var(--neutral-dark);
+      line-height: 1.4;
+    }
+    .info-block .client-name {
+      font-size: 15px;
+      font-weight: 700;
+      color: var(--neutral-dark);
+      margin-bottom: 2px;
+    }
+
+    /* Technical details banner */
+    .tech-box {
+      border: 1px solid var(--neutral-border);
+      border-left: 4px solid var(--primary-color);
+      border-radius: 8px;
+      background: #FFFFFF;
+      padding: 16px;
+      margin-bottom: 24px;
+    }
+    .tech-box .tech-row {
+      display: flex;
+      justify-content: space-between;
+      font-size: 12px;
+      margin-bottom: 8px;
+      padding-bottom: 8px;
+      border-bottom: 1px solid var(--neutral-border);
+    }
+    .tech-box .tech-title {
+      font-size: 12px;
+      font-weight: 700;
+      color: var(--neutral-muted);
+      margin-top: 8px;
+      margin-bottom: 4px;
+    }
+    .tech-box .tech-desc {
+      font-size: 13px;
+      color: var(--neutral-dark);
+      line-height: 1.5;
+    }
+
+    /* Section Tables */
+    .section-title {
+      font-size: 14px;
+      font-weight: 700;
+      color: var(--neutral-dark);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 12px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-bottom: 24px;
+    }
+    th {
+      background: var(--neutral-bg-header);
+      color: var(--neutral-medium);
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      font-weight: 700;
+      text-align: left;
+      padding: 10px 12px;
+      border-bottom: 1px solid var(--neutral-border-dark);
+    }
+    td {
+      padding: 12px;
+      font-size: 13px;
+      border-bottom: 1px solid var(--neutral-border);
+      color: var(--neutral-dark);
+    }
+    .text-right { text-align: right; }
+    .text-center { text-align: center; }
+
+    /* Totals Box */
+    .totals-wrapper {
+      display: flex;
+      justify-content: flex-end;
+      margin-bottom: 24px;
+    }
+    .totals-box {
+      width: 280px;
+      background: var(--neutral-bg-subtle);
+      border: 1px solid var(--neutral-border);
+      border-radius: 10px;
+      padding: 16px;
+    }
+    .totals-row {
+      display: flex;
+      justify-content: space-between;
+      font-size: 13px;
+      margin-bottom: 8px;
+      color: var(--neutral-medium);
+    }
+    .totals-row.final {
+      border-top: 1px solid var(--neutral-border-dark);
+      padding-top: 8px;
+      margin-bottom: 0;
+      font-size: 16px;
+      font-weight: 800;
+      color: var(--neutral-dark);
+    }
+
+    /* Actions Bar */
+    .actions-bar {
+      display: flex;
+      justify-content: center;
+      gap: 16px;
+      padding: 20px 32px;
+      background: var(--neutral-bg-subtle);
+      border-top: 1px solid var(--neutral-border);
+    }
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 12px 24px;
+      border-radius: 8px;
+      font-size: 14px;
+      font-weight: 700;
+      cursor: pointer;
+      text-decoration: none;
+      border: none;
+      transition: all 0.2s ease;
+    }
+    .btn-primary {
+      background: var(--neutral-dark);
+      color: #FFFFFF;
+    }
+    .btn-primary:hover {
+      background: #1E293B;
+    }
+
+    .footer-brand {
+      margin-top: 24px;
+      text-align: center;
+      font-size: 12px;
+      color: var(--neutral-muted);
+    }
+    .footer-brand img {
+      max-height: 24px;
+      margin-top: 6px;
+      opacity: 0.7;
+    }
+
+    /* States */
+    .state-container {
+      text-align: center;
+      padding: 60px 24px;
+    }
+    .spinner {
+      border: 3px solid rgba(15, 23, 42, 0.1);
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      border-left-color: var(--neutral-dark);
+      animation: spin 1s linear infinite;
+      margin: 0 auto 16px;
+    }
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="card" id="mainCard">
+      <!-- Loading State -->
+      <div class="state-container" id="loadingState">
+        <div class="spinner"></div>
+        <p style="color: var(--neutral-muted); font-size: 14px;">Cargando reporte de servicio...</p>
+      </div>
+
+      <!-- Error State -->
+      <div class="state-container" id="errorState" style="display: none;">
+        <h2 style="font-size: 18px; font-weight: 700; color: #EF4444; margin-bottom: 8px;">Enlace no disponible</h2>
+        <p id="errorMessage" style="color: var(--neutral-muted); font-size: 14px;"></p>
+      </div>
+
+      <!-- Report View Content -->
+      <div id="reportContent" style="display: none;">
+        <!-- Header -->
+        <div class="header-banner">
+          <div class="brand-container">
+            <div class="brand-logo-row">
+              <img id="issuerLogo" src="" alt="Logo" style="display: none;">
+              <div>
+                <div class="issuer-letterhead">
+                  <strong id="issuerName"></strong><br>
+                  <span id="issuerTaxId"></span><br>
+                  <span id="issuerAddress"></span><br>
+                  <span id="issuerContact"></span>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="doc-meta" style="text-align: right;">
+            <h1>REPORTE DE SERVICIO</h1>
+            <div class="doc-num" id="reportNumber"></div>
+            <div style="font-size: 12px; color: var(--neutral-muted); margin-top: 4px;" id="reportDate"></div>
+            <div style="margin-top: 8px;">
+              <span class="status-badge" id="statusBadge"></span>
+            </div>
+          </div>
+        </div>
+
+        <div class="content-body">
+          <!-- Client & Technician Info -->
+          <div class="info-grid">
+            <div class="info-block">
+              <h3>Cliente</h3>
+              <div class="client-name" id="clientName"></div>
+              <p id="clientTaxId"></p>
+              <p id="clientAddress"></p>
+              <p id="clientContact"></p>
+            </div>
+            <div class="info-block">
+              <h3>Datos de Ejecución</h3>
+              <p><strong>Técnico:</strong> <span id="advisorName"></span></p>
+              <p><strong>Categoría:</strong> <span id="categoryName"></span></p>
+              <p><strong>Intervención:</strong> <span id="interventionType"></span></p>
+              <p id="serviceTimesRow"></p>
+            </div>
+          </div>
+
+          <!-- Diagnostic & Work Box -->
+          <div class="tech-box">
+            <div id="requestRow" style="display: none;">
+              <div class="tech-title">SOLICITUD DEL CLIENTE:</div>
+              <div class="tech-desc" id="requestDescription"></div>
+            </div>
+            <div class="tech-title">DIAGNÓSTICO Y TRABAJO REALIZADO:</div>
+            <div class="tech-desc" id="workDescription"></div>
+          </div>
+
+          <!-- Services Table -->
+          <div id="servicesSection" style="display: none;">
+            <div class="section-title">🛠️ Mano de Obra y Servicios</div>
+            <table>
+              <thead>
+                <tr>
+                  <th>Descripción</th>
+                  <th class="text-center">Cant.</th>
+                  <th class="text-right">Precio Unit.</th>
+                  <th class="text-right">Total</th>
+                </tr>
+              </thead>
+              <tbody id="servicesTableBody"></tbody>
+            </table>
+          </div>
+
+          <!-- Products Table -->
+          <div id="productsSection" style="display: none;">
+            <div class="section-title">📦 Materiales y Repuestos Utilizados</div>
+            <table>
+              <thead>
+                <tr>
+                  <th>Material / Repuesto</th>
+                  <th class="text-center">Cant.</th>
+                  <th class="text-right">Precio Unit.</th>
+                  <th class="text-right">Total</th>
+                </tr>
+              </thead>
+              <tbody id="productsTableBody"></tbody>
+            </table>
+          </div>
+
+          <!-- Financial Totals -->
+          <div class="totals-wrapper">
+            <div class="totals-box">
+              <div class="totals-row">
+                <span>Subtotal:</span>
+                <span id="subtotalAmount"></span>
+              </div>
+              <div class="totals-row">
+                <span>IVA:</span>
+                <span id="taxAmount"></span>
+              </div>
+              <div class="totals-row final">
+                <span>TOTAL:</span>
+                <span id="totalAmount"></span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Recommendations -->
+          <div id="recommendationsSection" style="display: none; margin-bottom: 24px;">
+            <div class="section-title">💡 Recomendaciones Técnicas</div>
+            <div class="tech-box" style="border-left-color: #10B981;">
+              <div class="tech-desc" id="recommendationsText"></div>
+            </div>
+          </div>
+
+          <!-- Conditions -->
+          <div id="conditionsSection" style="display: none; margin-bottom: 24px;">
+            <div class="section-title">📋 Términos y Condiciones de Garantía</div>
+            <ul id="conditionsList" style="padding-left: 20px; font-size: 12px; color: var(--neutral-medium); line-height: 1.6;"></ul>
+          </div>
+        </div>
+
+        <!-- Action Bar -->
+        <div class="actions-bar">
+          <button class="btn btn-primary" id="btnDownloadPdf" style="display: none;">
+            Descargar PDF Oficial
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Footer -->
+    <div class="footer-brand">
+      Generado con tecnología D-UNA
+    </div>
+  </div>
+
+  <script>
+    const SUPABASE_FUNCTION_URL = 'https://fdkswvzrozijbizdthge.supabase.co/functions/v1/reports_action';
+
+    const urlParams = new URLSearchParams(window.location.search);
+    const token = urlParams.get('token');
+
+    async function loadReport() {
+      if (!token) {
+        showError('No se proporcionó un token de acceso válido.');
+        return;
+      }
+
+      try {
+        const response = await fetch(`${SUPABASE_FUNCTION_URL}?token=${token}&action=get_details`);
+        const data = await response.json();
+
+        if (data.status !== 'success' || !data.report) {
+          showError(data.message || 'No se pudo cargar el reporte de servicio.');
+          return;
+        }
+
+        renderReport(data.report, data.issuer);
+      } catch (err) {
+        showError('Error al conectar con el servidor.');
+      }
+    }
+
+    function renderReport(report, issuer) {
+      document.getElementById('loadingState').style.display = 'none';
+      document.getElementById('reportContent').style.display = 'block';
+
+      // Issuer info
+      if (issuer) {
+        document.getElementById('issuerName').textContent = issuer.company_name || issuer.full_name || 'Servicio Especializado';
+        document.getElementById('issuerTaxId').textContent = issuer.tax_id ? `RIF/NIT: ${issuer.tax_id}` : '';
+        document.getElementById('issuerAddress').textContent = issuer.address || '';
+        document.getElementById('issuerContact').textContent = [issuer.phone, issuer.email].filter(Boolean).join(' • ');
+        if (issuer.logo_url) {
+          const logoEl = document.getElementById('issuerLogo');
+          logoEl.src = issuer.logo_url;
+          logoEl.style.display = 'block';
+        }
+      }
+
+      // Report Header
+      document.getElementById('reportNumber').textContent = report.report_number;
+      document.getElementById('reportDate').textContent = `Fecha: ${formatDate(report.service_date)}`;
+
+      const badge = document.getElementById('statusBadge');
+      badge.textContent = report.status.toUpperCase();
+      badge.className = `status-badge ${report.status}`;
+
+      // Client info
+      if (report.client) {
+        document.getElementById('clientName').textContent = report.client.name;
+        document.getElementById('clientTaxId').textContent = report.client.tax_id ? `ID: ${report.client.tax_id}` : '';
+        document.getElementById('clientAddress').textContent = report.client.address || '';
+        document.getElementById('clientContact').textContent = [report.client.phone, report.client.email].filter(Boolean).join(' • ');
+      } else {
+        document.getElementById('clientName').textContent = 'Cliente General';
+      }
+
+      // Execution info
+      document.getElementById('advisorName').textContent = report.advisor_name || 'Especialista Asignado';
+      document.getElementById('categoryName').textContent = report.category_name || 'General';
+      document.getElementById('interventionType').textContent = formatInterventionType(report.intervention_type);
+      
+      if (report.start_time && report.end_time) {
+        document.getElementById('serviceTimesRow').innerHTML = `<strong>Horario:</strong> ${report.start_time} - ${report.end_time}`;
+      }
+
+      // Diagnostic & Work
+      if (report.request_description) {
+        document.getElementById('requestRow').style.display = 'block';
+        document.getElementById('requestDescription').textContent = report.request_description;
+      }
+      document.getElementById('workDescription').textContent = report.work_description || 'Servicio ejecutado satisfactoriamente.';
+
+      // Services Table
+      if (report.services && report.services.length > 0) {
+        document.getElementById('servicesSection').style.display = 'block';
+        const tbody = document.getElementById('servicesTableBody');
+        tbody.innerHTML = report.services.map(s => `
+          <tr>
+            <td>
+              <strong>${s.name}</strong>
+              ${s.description ? `<br><small style="color: var(--neutral-muted);">${s.description}</small>` : ''}
+            </td>
+            <td class="text-center">${s.quantity} ${s.rate_symbol || 'ud.'}</td>
+            <td class="text-right">$${Number(s.unit_price).toFixed(2)}</td>
+            <td class="text-right"><strong>$${Number(s.total_price).toFixed(2)}</strong></td>
+          </tr>
+        `).join('');
+      }
+
+      // Products Table
+      if (report.products && report.products.length > 0) {
+        document.getElementById('productsSection').style.display = 'block';
+        const tbody = document.getElementById('productsTableBody');
+        tbody.innerHTML = report.products.map(p => `
+          <tr>
+            <td>
+              <strong>${p.name}</strong>
+              ${p.brand ? ` • <small>${p.brand}</small>` : ''}
+            </td>
+            <td class="text-center">${p.quantity} ${p.uom || 'ud.'}</td>
+            <td class="text-right">$${Number(p.unit_price).toFixed(2)}</td>
+            <td class="text-right"><strong>$${Number(p.total_price).toFixed(2)}</strong></td>
+          </tr>
+        `).join('');
+      }
+
+      // Financials
+      document.getElementById('subtotalAmount').textContent = `$${Number(report.subtotal).toFixed(2)}`;
+      document.getElementById('taxAmount').textContent = `$${Number(report.tax_amount).toFixed(2)}`;
+      document.getElementById('totalAmount').textContent = `$${Number(report.total).toFixed(2)}`;
+
+      // Recommendations
+      if (report.recommendations) {
+        document.getElementById('recommendationsSection').style.display = 'block';
+        document.getElementById('recommendationsText').textContent = report.recommendations;
+      }
+
+      // Conditions
+      if (report.conditions && report.conditions.length > 0) {
+        document.getElementById('conditionsSection').style.display = 'block';
+        const list = document.getElementById('conditionsList');
+        list.innerHTML = report.conditions.map(c => `<li>${c.description}</li>`).join('');
+      }
+
+      // PDF Button
+      if (report.pdf_url) {
+        const btnPdf = document.getElementById('btnDownloadPdf');
+        btnPdf.style.display = 'inline-flex';
+        btnPdf.onclick = () => window.open(report.pdf_url, '_blank');
+      }
+    }
+
+    function formatDate(dateStr) {
+      if (!dateStr) return '';
+      const d = new Date(dateStr);
+      return d.toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit', year: 'numeric' });
+    }
+
+    function formatInterventionType(type) {
+      const types = {
+        'preventive': 'Mantenimiento Preventivo',
+        'corrective': 'Mantenimiento Correctivo',
+        'installation': 'Instalación',
+        'diagnosis': 'Diagnóstico Técnico',
+        'warranty': 'Garantía de Servicio',
+        'support': 'Soporte Técnico',
+      };
+      return types[type] || 'Mantenimiento';
+    }
+
+    function showError(msg) {
+      document.getElementById('loadingState').style.display = 'none';
+      document.getElementById('errorState').style.display = 'block';
+      document.getElementById('errorMessage').textContent = msg;
+    }
+
+    loadReport();
+  </script>
+</body>
+</html>

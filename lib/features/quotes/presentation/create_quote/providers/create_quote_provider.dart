@@ -629,6 +629,34 @@ class CreateQuoteNotifier extends StateNotifier<QuoteState> {
     state = state.copyWith(contactId: id, contactName: name);
   }
 
+  void clearContact() {
+    state = QuoteState(
+      quote: state.quote,
+      products: state.products,
+      services: state.services,
+      conditions: state.conditions,
+      globalMargin: state.globalMargin,
+      globalTaxRate: state.globalTaxRate,
+      pricingMethod: state.pricingMethod,
+      clientId: state.clientId,
+      clientName: state.clientName,
+      clientType: state.clientType,
+      contactId: null,
+      contactName: null,
+      validityDays: state.validityDays,
+      categoryId: state.categoryId,
+      categoryName: state.categoryName,
+      advisorId: state.advisorId,
+      advisorName: state.advisorName,
+      advisorPhone: state.advisorPhone,
+      advisorEmail: state.advisorEmail,
+      notes: state.notes,
+      label: state.label,
+      dateIssued: state.dateIssued,
+      currentQuoteNumber: state.currentQuoteNumber,
+    );
+  }
+
   // --- Details Management ---
   void setDetails({
     int? validity,

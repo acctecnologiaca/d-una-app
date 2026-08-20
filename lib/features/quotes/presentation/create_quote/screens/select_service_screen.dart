@@ -5,10 +5,14 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../../shared/widgets/standard_app_bar.dart';
 import '../../../../../shared/widgets/custom_search_bar.dart';
 import '../../../../../shared/widgets/sort_selector.dart';
+import '../../../../../shared/widgets/custom_extended_fab.dart';
+import '../../../../../shared/widgets/friendly_error_widget.dart';
+import '../../../../../shared/utils/currency_formatter.dart';
+import '../../../../portfolio/data/models/service_model.dart';
 import '../providers/quote_service_selection_provider.dart';
 import '../providers/create_quote_provider.dart';
+import '../widgets/quote_service_selection_card.dart';
 import '../widgets/quote_service_sale_details_sheet.dart';
-import '../../../../../shared/widgets/service_list_item.dart';
 
 class SelectServiceScreen extends ConsumerStatefulWidget {
   const SelectServiceScreen({super.key});
@@ -20,6 +24,9 @@ class SelectServiceScreen extends ConsumerStatefulWidget {
 
 class _SelectServiceScreenState extends ConsumerState<SelectServiceScreen> {
   SortOption _currentSort = SortOption.recent;
+  String? _selectedServiceId;
+  double _selectedQuantity = 0.0;
+  ServiceModel? _selectedService;
 
   @override
   Widget build(BuildContext context) {
@@ -31,10 +38,20 @@ class _SelectServiceScreenState extends ConsumerState<SelectServiceScreen> {
         quoteState.quote?.quoteNumber ?? quoteState.currentQuoteNumber ?? '';
     final quoteServices = quoteState.services;
 
+    final hasSelection = _selectedQuantity > 0 && _selectedService != null;
+
+    final formattedQty =
+        _selectedQuantity.truncateToDouble() == _selectedQuantity
+            ? _selectedQuantity.toInt().toString()
+            : _selectedQuantity.toStringAsFixed(2);
+    final totalPrice = (_selectedService?.price ?? 0.0) * _selectedQuantity;
+    final formattedTotal = CurrencyFormatter.format(totalPrice);
+    final rateSymbol = _selectedService?.serviceRate?.symbol ?? 'ud.';
+
     return Scaffold(
       appBar: StandardAppBar(
         title: 'Agregar servicio',
-        subtitle: 'Cotización #$quoteNumber',
+        subtitle: quoteNumber.isNotEmpty ? 'Cotización #$quoteNumber' : null,
       ),
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -49,7 +66,7 @@ class _SelectServiceScreenState extends ConsumerState<SelectServiceScreen> {
                 ) {
                   if (result == true) {
                     if (context.mounted) {
-                      context.pop();
+                      context.pop(true);
                     }
                   }
                 });
@@ -75,7 +92,7 @@ class _SelectServiceScreenState extends ConsumerState<SelectServiceScreen> {
                     .push('/quotes/create/select-service/temporal-service')
                     .then((result) {
                       if (result == true && context.mounted) {
-                        context.pop(); // Go back to create quote if added
+                        context.pop(true);
                       }
                     });
               },
@@ -126,7 +143,10 @@ class _SelectServiceScreenState extends ConsumerState<SelectServiceScreen> {
           Expanded(
             child: suggestionsAsync.when(
               loading: () => const Center(child: CircularProgressIndicator()),
-              error: (err, stack) => Center(child: Text('Error: $err')),
+              error: (err, stack) => FriendlyErrorWidget(
+                error: err,
+                onRetry: () => ref.invalidate(quoteServiceSuggestionsProvider),
+              ),
               data: (services) {
                 // Determine sort list
                 final sortedServices = List.of(services);
@@ -134,9 +154,7 @@ class _SelectServiceScreenState extends ConsumerState<SelectServiceScreen> {
                   switch (_currentSort) {
                     case SortOption.recent:
                     case SortOption.frequency:
-                      return b.createdAt.compareTo(
-                        a.createdAt,
-                      ); // Default to recent
+                      return b.createdAt.compareTo(a.createdAt);
                     case SortOption.nameAZ:
                       return a.name.toLowerCase().compareTo(
                         b.name.toLowerCase(),
@@ -160,45 +178,41 @@ class _SelectServiceScreenState extends ConsumerState<SelectServiceScreen> {
                 }
 
                 return ListView.separated(
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  //padding: const EdgeInsets.symmetric(horizontal: 16),
                   itemCount: sortedServices.length,
                   separatorBuilder: (_, _) =>
                       const Divider(height: 1, color: Colors.transparent),
                   itemBuilder: (context, index) {
                     final service = sortedServices[index];
+                    final currentQty = _selectedServiceId == service.id
+                        ? _selectedQuantity
+                        : 0.0;
+                    final isLocked =
+                        _selectedServiceId != null &&
+                        _selectedServiceId != service.id;
                     final isAlreadyInQuote = quoteServices.any(
                       (s) => s.serviceId == service.id,
                     );
 
-                    return ServiceListItem(
+                    return QuoteServiceSelectionCard(
                       service: service,
-                      isAlreadyAdded: isAlreadyInQuote,
-                      onTap: () async {
-                        if (isAlreadyInQuote) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                              content: Text(
-                                'Este servicio ya se encuentra en la cotización',
-                              ),
-                            ),
-                          );
-                          return;
-                        }
-
-                        final addedService =
-                            await QuoteServiceSaleDetailsSheet.show(
-                              context,
-                              service: service,
-                            );
-
-                        if (addedService != null) {
-                          ref
-                              .read(createQuoteProvider.notifier)
-                              .addService(addedService);
-                          if (context.mounted) {
-                            context.pop();
+                      selectedQty: currentQty,
+                      isLocked: isLocked,
+                      isAlreadyInQuote: isAlreadyInQuote,
+                      onQtyChanged: (qty) {
+                        setState(() {
+                          if (qty > 0) {
+                            _selectedServiceId = service.id;
+                            _selectedQuantity = qty;
+                            _selectedService = service;
+                          } else {
+                            if (_selectedServiceId == service.id) {
+                              _selectedServiceId = null;
+                              _selectedQuantity = 0.0;
+                              _selectedService = null;
+                            }
                           }
-                        }
+                        });
                       },
                     );
                   },
@@ -208,6 +222,35 @@ class _SelectServiceScreenState extends ConsumerState<SelectServiceScreen> {
           ),
         ],
       ),
+      floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
+      floatingActionButton: hasSelection
+          ? Padding(
+              padding: const EdgeInsets.only(bottom: 40.0),
+              child: CustomExtendedFab(
+                icon: Icons.check,
+                label:
+                    'Confirmar ($formattedQty $rateSymbol - $formattedTotal)',
+                isEnabled: true,
+                onPressed: () async {
+                  if (_selectedService == null || _selectedQuantity <= 0) {
+                    return;
+                  }
+
+                  final item = await QuoteServiceSaleDetailsSheet.show(
+                    context,
+                    service: _selectedService!,
+                    selectedQuantity: _selectedQuantity,
+                  );
+
+                  if (item != null && context.mounted) {
+                    ref.read(createQuoteProvider.notifier).addService(item);
+                    context.pop(true);
+                  }
+                },
+              ),
+            )
+          : null,
     );
   }
 }
+

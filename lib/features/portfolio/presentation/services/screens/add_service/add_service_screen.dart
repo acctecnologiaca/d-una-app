@@ -65,7 +65,7 @@ class _AddServiceScreenState extends ConsumerState<AddServiceScreen> {
     _selectedCategory = service?.category;
 
     // Step 4 Init
-    _hasWarranty = service?.hasWarranty ?? false;
+    _hasWarranty = service?.hasWarranty ?? true;
     _warrantyTimeController = TextEditingController(
       text: service?.warrantyTime?.toString() ?? '7',
     );

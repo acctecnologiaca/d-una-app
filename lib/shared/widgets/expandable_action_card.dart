@@ -10,6 +10,7 @@ class ExpandableActionCard extends StatefulWidget {
   final Widget? expandedTrailing;
   final EdgeInsetsGeometry padding;
   final bool isExpandable;
+  final bool? isExpanded;
   final Color? backgroundColor;
   final VoidCallback? onTap;
   final Widget? note;
@@ -24,6 +25,7 @@ class ExpandableActionCard extends StatefulWidget {
     this.expandedTrailing,
     this.padding = const EdgeInsets.symmetric(horizontal: 0.0, vertical: 12.0),
     this.isExpandable = true,
+    this.isExpanded,
     this.backgroundColor,
     this.onTap,
     this.note,
@@ -34,7 +36,9 @@ class ExpandableActionCard extends StatefulWidget {
 }
 
 class _ExpandableActionCardState extends State<ExpandableActionCard> {
-  bool _isExpanded = false;
+  bool _internalExpanded = false;
+
+  bool get _isExpanded => widget.isExpanded ?? _internalExpanded;
 
   bool get _canExpand =>
       widget.isExpandable &&
@@ -58,7 +62,7 @@ class _ExpandableActionCardState extends State<ExpandableActionCard> {
               onTap: _canExpand
                   ? () {
                       setState(() {
-                        _isExpanded = !_isExpanded;
+                        _internalExpanded = !_isExpanded;
                       });
                     }
                   : widget.onTap,

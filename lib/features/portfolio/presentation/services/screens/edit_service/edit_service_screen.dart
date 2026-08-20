@@ -374,39 +374,23 @@ class _EditServiceScreenState extends ConsumerState<EditServiceScreen> {
                     const SizedBox(height: 24),
 
                     // Warranty Toggle
-                    // Mock: "No ofrezco garantía para este servicio" [Switch]
-                    // If switch is ON -> HasWarranty = FALSE (?)
-                    // If switch is OFF -> HasWarranty = TRUE (?)
-                    // Wait, usually "Enable" switches are positive.
-                    // If text is "No ofrezco...", then ON means "I DO NOT offer".
-                    // Let's assume standard behavior: Switch OFF = I offer warranty? Or Switch ON = I agree with statement?
-                    // Let's look at the screenshot again if possible. It's greyed out (left).
-                    // And fields "Cantidad" and "Período" ARE VISIBLE.
-                    // This strongly implies:
-                    // Switch OFF (Left) -> Statement "No ofrezco..." is FALSE -> I DO offer warranty -> Fields Shown.
-                    // Switch ON (Right) -> Statement "No ofrezco..." is TRUE -> I DO NOT offer warranty -> Fields Hidden.
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
                         Expanded(
                           child: Text(
-                            'No ofrezco garantía para este servicio',
+                            'Ofrecer tiempo de garantía',
                             style: TextStyle(
                               fontSize: 14,
-                              fontWeight:
-                                  FontWeight.bold, // Mock looks bold-ish
+                              fontWeight: FontWeight.bold,
                               color: colors.onSurface,
                             ),
                           ),
                         ),
                         Switch(
-                          value:
-                              !_hasWarranty, // If hasWarranty is true, switch (No offer) is false.
+                          value: _hasWarranty,
                           onChanged: (val) {
-                            // val is "No offer".
-                            // If val is true (No offer), hasWarranty = false.
-                            // If val is false (Yes offer), hasWarranty = true.
-                            setState(() => _hasWarranty = !val);
+                            setState(() => _hasWarranty = val);
                           },
                         ),
                       ],

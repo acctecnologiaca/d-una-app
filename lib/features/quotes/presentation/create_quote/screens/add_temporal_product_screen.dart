@@ -414,6 +414,26 @@ class _AddTemporalProductScreenState
       }
     }
 
+    // --- Step 2.5: Check similar match (>= 80% fuzzy match on model) ---
+    if (currentModel != 'NO APLICA') {
+      final similarProduct = ProductValidators.findSimilarMatch(
+        products,
+        currentModel,
+      );
+
+      if (similarProduct != null &&
+          similarProduct.id != widget.existingItem?.productId) {
+        if (mounted) {
+          final shouldContinue = await _showSimilarModelDialog(
+            similarProduct: similarProduct,
+          );
+          if (!shouldContinue) {
+            return;
+          }
+        }
+      }
+    }
+
     // --- Step 3: If _addToInventory and NOT already there, create in DB ---
     if (_addToInventory && !_alreadyInInventory) {
       try {
@@ -684,6 +704,80 @@ class _AddTemporalProductScreenState
         ],
       ),
     );
+  }
+
+  Future<bool> _showSimilarModelDialog({
+    required Product similarProduct,
+  }) async {
+    final colors = Theme.of(context).colorScheme;
+    final res = await CustomDialog.show<bool>(
+      context: context,
+      dialog: CustomDialog.confirmation(
+        icon: Icons.info_outline,
+        title: 'Modelo similar detectado',
+        contentWidget: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'Se encontró un producto con un modelo muy similar en tu inventario:',
+            ),
+            const SizedBox(height: 12),
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: colors.surfaceContainerHighest,
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  if (similarProduct.brand?.name != null &&
+                      similarProduct.brand!.name.isNotEmpty)
+                    Text(
+                      similarProduct.brand!.name,
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: colors.onSurfaceVariant,
+                      ),
+                    ),
+                  Text(
+                    similarProduct.name,
+                    style: const TextStyle(fontWeight: FontWeight.bold),
+                  ),
+                  if (similarProduct.model != null &&
+                      similarProduct.model!.isNotEmpty)
+                    Text(
+                      similarProduct.model!.toUpperCase(),
+                      style: TextStyle(
+                        fontSize: 13,
+                        color: colors.onSurfaceVariant,
+                      ),
+                    ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 12),
+            Text(
+              '¿Deseas continuar guardando este nuevo producto o prefieres corregirlo?',
+              style: TextStyle(fontSize: 13, color: colors.onSurfaceVariant),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Corregir datos'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            child: const Text('Continuar'),
+          ),
+        ],
+      ),
+    );
+    return res ?? false;
   }
 
   Future<void> _showAddBrandDialog() async {
