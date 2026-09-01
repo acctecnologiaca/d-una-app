@@ -15,6 +15,7 @@ class Client extends Equatable {
   final String? country;
   final DateTime createdAt;
   final List<Contact> contacts;
+  final bool isArchived;
 
   const Client({
     required this.id,
@@ -31,6 +32,7 @@ class Client extends Equatable {
     this.country,
     required this.createdAt,
     this.contacts = const [],
+    this.isArchived = false,
   });
 
   factory Client.fromJson(Map<String, dynamic> json) {
@@ -48,6 +50,7 @@ class Client extends Equatable {
       state: json['state'],
       country: json['country'],
       createdAt: DateTime.parse(json['created_at']),
+      isArchived: json['is_archived'] == true,
       contacts:
           (json['contacts'] as List? ?? [])
               .map((c) => Contact.fromJson(c))
@@ -72,6 +75,7 @@ class Client extends Equatable {
       'state': state,
       'country': country,
       'created_at': createdAt.toIso8601String(),
+      'is_archived': isArchived,
     };
   }
 
@@ -90,6 +94,7 @@ class Client extends Equatable {
     String? country,
     DateTime? createdAt,
     List<Contact>? contacts,
+    bool? isArchived,
   }) {
     return Client(
       id: id ?? this.id,
@@ -106,6 +111,7 @@ class Client extends Equatable {
       country: country ?? this.country,
       createdAt: createdAt ?? this.createdAt,
       contacts: contacts ?? this.contacts,
+      isArchived: isArchived ?? this.isArchived,
     );
   }
 
@@ -125,6 +131,7 @@ class Client extends Equatable {
     country,
     createdAt,
     contacts,
+    isArchived,
   ];
 }
 

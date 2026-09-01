@@ -1,3 +1,7 @@
+import 'package:d_una_app/core/constants/draft_constants.dart';
+import 'package:d_una_app/core/models/draft_data.dart';
+import 'package:d_una_app/core/services/draft_storage_service.dart';
+import 'package:d_una_app/core/providers/draft_providers.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:equatable/equatable.dart';
 import 'package:uuid/uuid.dart';
@@ -114,6 +118,47 @@ class CreateSupplierOrderState extends Equatable {
     );
   }
 
+  Map<String, dynamic> toDraftJson() {
+    return {
+      'id': id,
+      'supplier_id': supplierId,
+      'supplier_branch_id': supplierBranchId,
+      'shipping_method_id': shippingMethodId,
+      'receiver_collaborator_id': receiverCollaboratorId,
+      'date': date.toIso8601String(),
+      'payment_method': paymentMethod,
+      'tax_rate': taxRate,
+      'items': items.map((i) => i.toJson()).toList(),
+      'supplier_name': supplierName,
+      'branch_name': branchName,
+      'shipping_method_label': shippingMethodLabel,
+      'receiver_name': receiverName,
+      'current_order_number': currentOrderNumber,
+    };
+  }
+
+  factory CreateSupplierOrderState.fromDraftJson(Map<String, dynamic> json) {
+    return CreateSupplierOrderState(
+      id: json['id'] as String?,
+      supplierId: json['supplier_id'] as String?,
+      supplierBranchId: json['supplier_branch_id'] as String?,
+      shippingMethodId: json['shipping_method_id'] as String?,
+      receiverCollaboratorId: json['receiver_collaborator_id'] as String?,
+      date: DateTime.tryParse(json['date'] as String? ?? '') ?? DateTime.now(),
+      paymentMethod: json['payment_method'] as String?,
+      taxRate: (json['tax_rate'] as num?)?.toDouble() ?? 0.0,
+      items: (json['items'] as List? ?? [])
+          .map((i) => SupplierOrderItem.fromJson(i as Map<String, dynamic>))
+          .toList(),
+      supplierName: json['supplier_name'] as String?,
+      branchName: json['branch_name'] as String?,
+      shippingMethodLabel: json['shipping_method_label'] as String?,
+      receiverName: json['receiver_name'] as String?,
+      currentOrderNumber: json['current_order_number'] as String?,
+      isDirty: true,
+    );
+  }
+
   @override
   List<Object?> get props => [
     id,
@@ -143,6 +188,107 @@ class CreateSupplierOrder extends _$CreateSupplierOrder {
   @override
   CreateSupplierOrderState build() {
     return CreateSupplierOrderState();
+  }
+
+  DraftStorageService get _draftStorage =>
+      ref.read(draftStorageServiceProvider);
+
+  String _getDraftKey({String? orderId}) {
+    if (orderId != null && orderId.isNotEmpty) {
+      return '${DraftConstants.supplierOrdersModule}_$orderId';
+    }
+    if (state.id != null && state.id!.isNotEmpty) {
+      return '${DraftConstants.supplierOrdersModule}_${state.id}';
+    }
+    return DraftConstants.supplierOrdersModule;
+  }
+
+  void autoSaveDraft({int tabIndex = 0, String? orderId}) {
+    final isEditing =
+        (state.id != null && state.id!.isNotEmpty) ||
+        (orderId != null && orderId.isNotEmpty);
+
+    if (isEditing) {
+      if (!state.isDirty) return;
+    } else {
+      final hasData =
+          state.items.isNotEmpty ||
+          state.supplierId != null ||
+          state.shippingMethodId != null ||
+          state.receiverCollaboratorId != null;
+
+      if (!hasData) return;
+    }
+
+    final key = _getDraftKey(orderId: orderId);
+    final draft = DraftData(
+      moduleKey: key,
+      savedAt: DateTime.now(),
+      tabIndex: tabIndex,
+      summaryTitle:
+          state.supplierName != null
+              ? '${isEditing ? "Modificación Orden" : "Orden de Compra"} - ${state.supplierName}'
+              : 'Orden de Compra',
+      data: state.toDraftJson(),
+    );
+    _draftStorage.saveDraftDebounced(draft);
+  }
+
+  Future<void> saveDraftNow({int tabIndex = 0, String? orderId}) async {
+    final isEditing =
+        (state.id != null && state.id!.isNotEmpty) ||
+        (orderId != null && orderId.isNotEmpty);
+
+    if (isEditing) {
+      if (!state.isDirty) return;
+    } else {
+      final hasData =
+          state.items.isNotEmpty ||
+          state.supplierId != null ||
+          state.shippingMethodId != null ||
+          state.receiverCollaboratorId != null;
+
+      if (!hasData) return;
+    }
+
+    final key = _getDraftKey(orderId: orderId);
+    final draft = DraftData(
+      moduleKey: key,
+      savedAt: DateTime.now(),
+      tabIndex: tabIndex,
+      summaryTitle:
+          state.supplierName != null
+              ? '${isEditing ? "Modificación Orden" : "Orden de Compra"} - ${state.supplierName}'
+              : 'Orden de Compra',
+      data: state.toDraftJson(),
+    );
+    await _draftStorage.saveDraftNow(draft);
+  }
+
+  Future<DraftData?> checkAndRestoreDraft({String? orderId}) async {
+    final key = _getDraftKey(orderId: orderId);
+    final draft = await _draftStorage.getDraft(key);
+    if (draft != null && draft.data.isNotEmpty) {
+      state = CreateSupplierOrderState.fromDraftJson(draft.data);
+      return draft;
+    }
+    return null;
+  }
+
+  Future<void> clearDraft({String? orderId}) async {
+    final key = _getDraftKey(orderId: orderId);
+    await _draftStorage.clearDraft(key);
+  }
+
+  void reset({bool clearPersistedDraft = false, String? orderId}) {
+    final isEditing =
+        (state.id != null && state.id!.isNotEmpty) ||
+        (orderId != null && orderId.isNotEmpty);
+    final currentId = orderId ?? state.id;
+    state = CreateSupplierOrderState();
+    if (clearPersistedDraft) {
+      clearDraft(orderId: isEditing ? currentId : null);
+    }
   }
 
   Future<void> fetchNextOrderNumber() async {
@@ -297,16 +443,19 @@ class CreateSupplierOrder extends _$CreateSupplierOrder {
       state = state.copyWith(
         supplierId: id,
         supplierName: name,
-        supplierBranchId: null, // Limpiar sucursal anterior ya que pertenece a otro proveedor
+        supplierBranchId: null,
         branchName: null,
-        items: const [],        // Vaciar la lista de ítems para evitar inconsistencias
+        items: const [],
         isDirty: true,
       );
+      autoSaveDraft();
     }
   }
 
   void setBranch(String? id, String? name) {
-    state = state.copyWith(supplierBranchId: id, branchName: name, isDirty: true);
+    state =
+        state.copyWith(supplierBranchId: id, branchName: name, isDirty: true);
+    autoSaveDraft();
   }
 
   void setShippingMethod(String? id, String? label) {
@@ -315,6 +464,7 @@ class CreateSupplierOrder extends _$CreateSupplierOrder {
       shippingMethodLabel: label,
       isDirty: true,
     );
+    autoSaveDraft();
   }
 
   void setReceiver(String? id, String? name) {
@@ -323,14 +473,17 @@ class CreateSupplierOrder extends _$CreateSupplierOrder {
       receiverName: name,
       isDirty: true,
     );
+    autoSaveDraft();
   }
 
   void setPaymentMethod(String? method) {
     state = state.copyWith(paymentMethod: method, isDirty: true);
+    autoSaveDraft();
   }
 
   void setDate(DateTime date) {
     state = state.copyWith(date: date, isDirty: true);
+    autoSaveDraft();
   }
 
   void addItem({
@@ -360,6 +513,7 @@ class CreateSupplierOrder extends _$CreateSupplierOrder {
       currentSupplierStock: currentSupplierStock,
     );
     state = state.copyWith(items: [...state.items, newItem], isDirty: true);
+    autoSaveDraft();
   }
 
   void updateItem(
@@ -393,6 +547,7 @@ class CreateSupplierOrder extends _$CreateSupplierOrder {
         return item;
       }).toList(),
     );
+    autoSaveDraft();
   }
 
   void removeItem(String itemId) {
@@ -400,6 +555,7 @@ class CreateSupplierOrder extends _$CreateSupplierOrder {
       isDirty: true,
       items: state.items.where((item) => item.id != itemId).toList(),
     );
+    autoSaveDraft();
   }
 
   void replaceProductItems(String productKey, List<SupplierOrderItem> newItems) {
@@ -417,6 +573,7 @@ class CreateSupplierOrder extends _$CreateSupplierOrder {
       }
     }
     state = state.copyWith(items: result, isDirty: true);
+    autoSaveDraft();
   }
 
   void updateGroupQuantity(String productKey, double newTotalQty) {
@@ -506,6 +663,7 @@ class CreateSupplierOrder extends _$CreateSupplierOrder {
       }
     }
     state = state.copyWith(items: result, isDirty: true);
+    autoSaveDraft();
   }
 
   Future<String?> saveOrder() async {
@@ -544,12 +702,17 @@ class CreateSupplierOrder extends _$CreateSupplierOrder {
         updatedAt: DateTime.now(),
       );
 
+      final wasEditing = state.id != null && state.id!.isNotEmpty;
+      final previousOrderId = state.id;
+
       String orderId;
-      if (state.id == null) {
-        orderId = await repo.createSupplierOrder(order, state.items);
-      } else {
+      if (wasEditing) {
         await repo.updateSupplierOrder(order, state.items);
         orderId = state.id!;
+        await clearDraft(orderId: previousOrderId);
+      } else {
+        orderId = await repo.createSupplierOrder(order, state.items);
+        await clearDraft(orderId: null);
       }
 
       ref.invalidate(paginatedSupplierOrdersProvider);

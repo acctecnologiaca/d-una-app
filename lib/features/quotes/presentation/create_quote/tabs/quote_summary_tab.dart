@@ -490,7 +490,7 @@ class QuoteSummaryTab extends ConsumerWidget {
                 ),
               );
             }),
-            if (totalGroupedProducts > 3)
+            if (totalGroupedProducts > 0)
               Align(
                 alignment: Alignment.centerRight,
                 child: TextButton.icon(
@@ -539,7 +539,7 @@ class QuoteSummaryTab extends ConsumerWidget {
                   ),
                 );
               }),
-              if (state.services.length > 3)
+              if (state.services.isNotEmpty)
                 Align(
                   alignment: Alignment.centerRight,
                   child: TextButton.icon(

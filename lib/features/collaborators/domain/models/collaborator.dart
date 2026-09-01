@@ -23,14 +23,14 @@ class Collaborator {
 
   factory Collaborator.fromJson(Map<String, dynamic> json) {
     return Collaborator(
-      id: json['id'] as String,
-      userId: json['user_id'] as String,
-      fullName: json['full_name'] as String,
+      id: json['id'] as String? ?? '',
+      userId: json['user_id'] as String? ?? '',
+      fullName: json['full_name'] as String? ?? '',
       identificationId: json['identification_id'] as String?,
       phone: json['phone'] as String?,
       email: json['email'] as String?,
       charge: json['charge'] as String?,
-      isActive: json['is_active'] as bool,
+      isActive: json['is_active'] as bool? ?? true,
       isUserRecord: json['is_user_record'] as bool? ?? false,
     );
   }
@@ -47,5 +47,29 @@ class Collaborator {
       'is_active': isActive,
       'is_user_record': isUserRecord,
     };
+  }
+
+  Collaborator copyWith({
+    String? id,
+    String? userId,
+    String? fullName,
+    String? identificationId,
+    String? phone,
+    String? email,
+    String? charge,
+    bool? isActive,
+    bool? isUserRecord,
+  }) {
+    return Collaborator(
+      id: id ?? this.id,
+      userId: userId ?? this.userId,
+      fullName: fullName ?? this.fullName,
+      identificationId: identificationId ?? this.identificationId,
+      phone: phone ?? this.phone,
+      email: email ?? this.email,
+      charge: charge ?? this.charge,
+      isActive: isActive ?? this.isActive,
+      isUserRecord: isUserRecord ?? this.isUserRecord,
+    );
   }
 }

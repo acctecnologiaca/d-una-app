@@ -1,3 +1,5 @@
+import 'package:d_una_app/shared/widgets/app_toast.dart';
+import 'package:d_una_app/shared/widgets/draft_toast.dart';
 import 'package:d_una_app/features/quotes/presentation/create_quote/providers/create_quote_provider.dart';
 import 'package:d_una_app/features/quotes/presentation/view_quote/providers/view_quote_provider.dart';
 import 'package:flutter/material.dart';
@@ -30,6 +32,7 @@ class CreateQuoteScreen extends ConsumerStatefulWidget {
 class _CreateQuoteScreenState extends ConsumerState<CreateQuoteScreen>
     with SingleTickerProviderStateMixin {
   late final TabController _tabController;
+  late final AppLifecycleListener _lifecycleListener;
   bool _hasInitializedTab = false;
 
   @override
@@ -38,30 +41,138 @@ class _CreateQuoteScreenState extends ConsumerState<CreateQuoteScreen>
     _tabController = TabController(length: 6, vsync: this);
 
     _tabController.addListener(() {
-      if (!_tabController.indexIsChanging) setState(() {});
+      if (!_tabController.indexIsChanging) {
+        setState(() {});
+        ref
+            .read(createQuoteProvider.notifier)
+            .autoSaveDraft(
+              tabIndex: _tabController.index,
+              quoteId: widget.quoteId,
+            );
+      }
     });
 
+    _lifecycleListener = AppLifecycleListener(
+      onPause: () {
+        ref
+            .read(createQuoteProvider.notifier)
+            .autoSaveDraft(
+              tabIndex: _tabController.index,
+              quoteId: widget.quoteId,
+            );
+      },
+      onInactive: () {
+        ref
+            .read(createQuoteProvider.notifier)
+            .autoSaveDraft(
+              tabIndex: _tabController.index,
+              quoteId: widget.quoteId,
+            );
+      },
+    );
+
     // Initialize state only if needed
-    WidgetsBinding.instance.addPostFrameCallback((_) {
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
       final currentState = ref.read(createQuoteProvider);
 
       if (widget.quoteId != null) {
-        // Modo EDICIÓN: Cargar siempre datos frescos desde la base de datos
-        ref.read(createQuoteProvider.notifier).loadQuote(widget.quoteId!);
-      } else {
-        // Modo CREACIÓN:
-        // 1. Si venimos de un estado con una cotización cargada (modo edición anterior), RESETEAR.
-        if (currentState.quote != null) {
-          ref.read(createQuoteProvider.notifier).reset();
-        } else {
-          // 2. Si no hay cotización cargada, solo resetear si NO hay datos (para no borrar lo que el usuario está escribiendo al volver de sub-pantallas)
-          final hasData =
-              currentState.products.isNotEmpty ||
-              currentState.services.isNotEmpty ||
-              currentState.clientId != null;
+        // Modo EDICIÓN:
+        // 1. Buscar si existen cambios locales no guardados para esta cotización
+        final draft = await ref
+            .read(createQuoteProvider.notifier)
+            .checkAndRestoreDraft(quoteId: widget.quoteId);
 
-          if (!hasData) {
-            ref.read(createQuoteProvider.notifier).reset();
+        if (draft != null && mounted) {
+          setState(() {
+            if (draft.tabIndex >= 0 && draft.tabIndex < 6) {
+              _tabController.index = draft.tabIndex;
+            }
+          });
+
+          DraftToast.show(
+            context,
+            message: 'Cambios restaurados automáticamente',
+            onDiscard: () async {
+              final colors = Theme.of(context).colorScheme;
+              final shouldDiscard = await CustomDialog.show<bool>(
+                context: context,
+                dialog: CustomDialog.destructive(
+                  title: '¿Descartar cambios locales?',
+                  contentText:
+                      'Se eliminarán las modificaciones sin guardar y se recargarán los datos del servidor.',
+                  actions: [
+                    TextButton(
+                      onPressed: () => Navigator.pop(context, false),
+                      child: const Text('Cancelar'),
+                    ),
+                    FilledButton(
+                      onPressed: () => Navigator.pop(context, true),
+                      style: FilledButton.styleFrom(
+                        backgroundColor: colors.error,
+                        foregroundColor: colors.onError,
+                      ),
+                      child: const Text('Descartar'),
+                    ),
+                  ],
+                ),
+              );
+
+              if (shouldDiscard == true && mounted) {
+                await ref
+                    .read(createQuoteProvider.notifier)
+                    .clearDraft(quoteId: widget.quoteId);
+                await ref
+                    .read(createQuoteProvider.notifier)
+                    .loadQuote(widget.quoteId!);
+                setState(() {
+                  _tabController.index = 0;
+                });
+              }
+            },
+          );
+        } else {
+          // No hay borrador local, cargar datos frescos desde la base de datos
+          ref.read(createQuoteProvider.notifier).loadQuote(widget.quoteId!);
+        }
+      } else {
+        // Modo CREACIÓN (nueva cotización):
+        if (currentState.quote != null && currentState.quote!.id.isNotEmpty) {
+          ref
+              .read(createQuoteProvider.notifier)
+              .reset(clearPersistedDraft: false);
+        }
+
+        final draft = await ref
+            .read(createQuoteProvider.notifier)
+            .checkAndRestoreDraft();
+        if (draft != null && mounted) {
+          setState(() {
+            if (draft.tabIndex >= 0 && draft.tabIndex < 6) {
+              _tabController.index = draft.tabIndex;
+            }
+          });
+
+          DraftToast.show(
+            context,
+            message: 'Cambios restaurados automáticamente',
+            onDiscard: () async {
+              final shouldDiscard = await _showDiscardDialog();
+              if (shouldDiscard && mounted) {
+                await ref.read(createQuoteProvider.notifier).clearDraft();
+                ref
+                    .read(createQuoteProvider.notifier)
+                    .reset(clearPersistedDraft: true);
+                ref.read(createQuoteProvider.notifier).initQuote();
+                setState(() {
+                  _tabController.index = 0;
+                });
+              }
+            },
+          );
+        } else {
+          final currentNum = ref.read(createQuoteProvider).currentQuoteNumber;
+          if (currentNum == null || currentNum.isEmpty) {
+            ref.read(createQuoteProvider.notifier).initQuote();
           }
         }
       }
@@ -99,25 +210,44 @@ class _CreateQuoteScreenState extends ConsumerState<CreateQuoteScreen>
 
   @override
   void dispose() {
+    _lifecycleListener.dispose();
     _tabController.dispose();
     super.dispose();
+  }
+
+  Future<void> _handlePop() async {
+    final state = ref.read(createQuoteProvider);
+    final hasDataOrChanges = state.hasChanges;
+
+    await ref
+        .read(createQuoteProvider.notifier)
+        .saveDraftNow(tabIndex: _tabController.index, quoteId: widget.quoteId);
+    ref
+        .read(createQuoteProvider.notifier)
+        .reset(clearPersistedDraft: false, quoteId: widget.quoteId);
+    if (!mounted) return;
+
+    if (hasDataOrChanges) {
+      AppToast.info(
+        context,
+        message: 'Cambios guardados temporalmente',
+        icon: Icons.bookmark_added_outlined,
+      );
+    }
+
+    context.pop();
   }
 
   @override
   Widget build(BuildContext context) {
     final colors = Theme.of(context).colorScheme;
     final state = ref.watch(createQuoteProvider);
-    final notifier = ref.read(createQuoteProvider.notifier);
 
     return PopScope(
-      canPop: !state.hasChanges,
-      onPopInvokedWithResult: (didPop, result) async {
+      canPop: false,
+      onPopInvokedWithResult: (didPop, result) {
         if (didPop) return;
-        final shouldPop = await _showDiscardDialog();
-        if (shouldPop && context.mounted) {
-          notifier.reset();
-          context.pop();
-        }
+        _handlePop();
       },
       child: Scaffold(
         appBar: StandardAppBar(
@@ -134,7 +264,9 @@ class _CreateQuoteScreenState extends ConsumerState<CreateQuoteScreen>
               IconButton(
                 icon: Icon(
                   Icons.save_outlined,
-                  color: state.hasChanges ? colors.onSurface : colors.outline,
+                  color: state.hasChanges
+                      ? colors.onSurfaceVariant
+                      : colors.onSurfaceVariant.withValues(alpha: 0.38),
                 ),
                 tooltip: state.hasChanges
                     ? 'Guardar cambios'
@@ -144,7 +276,7 @@ class _CreateQuoteScreenState extends ConsumerState<CreateQuoteScreen>
                     : null,
               ),
             IconButton(
-              icon: Icon(Icons.more_vert, color: colors.onSurface),
+              icon: Icon(Icons.more_vert, color: colors.onSurfaceVariant),
               onPressed: () => _showActionsMenu(ref),
             ),
           ],
@@ -330,15 +462,21 @@ class _CreateQuoteScreenState extends ConsumerState<CreateQuoteScreen>
         ),
         BottomSheetActionItem(
           icon: Icons.delete_outline,
-          label: 'Descartar cambios',
+          label: widget.quoteId != null
+              ? 'Descartar cambios locales'
+              : 'Descartar borrador',
           onTap: () async {
             context.pop(); // Close sheet
             final shouldDiscard = await _showDiscardDialog();
+            if (!shouldDiscard) return;
+            await ref
+                .read(createQuoteProvider.notifier)
+                .clearDraft(quoteId: widget.quoteId);
+            ref
+                .read(createQuoteProvider.notifier)
+                .reset(clearPersistedDraft: true, quoteId: widget.quoteId);
             if (!mounted) return;
-            if (shouldDiscard) {
-              notifier.reset();
-              context.pop(); // Go back to list
-            }
+            context.pop();
           },
         ),
       ],
@@ -347,16 +485,20 @@ class _CreateQuoteScreenState extends ConsumerState<CreateQuoteScreen>
 
   Future<bool> _showDiscardDialog() async {
     final colors = Theme.of(context).colorScheme;
+    final isEditing = widget.quoteId != null;
     return await CustomDialog.show<bool>(
           context: context,
           dialog: CustomDialog.destructive(
-            title: '¿Descartar cambios?',
-            contentText:
-                'Hay cambios sin guardar en esta cotización. ¿Estás seguro de que deseas salir y perder el progreso?',
+            title: isEditing
+                ? '¿Descartar cambios locales?'
+                : '¿Descartar borrador?',
+            contentText: isEditing
+                ? 'Se eliminarán las modificaciones sin guardar y se recargarán los datos del servidor.'
+                : 'Se eliminará el borrador guardado automáticamente y se limpiará el formulario.',
             actions: [
               TextButton(
                 onPressed: () => Navigator.pop(context, false),
-                child: const Text('Continuar editando'),
+                child: const Text('Cancelar'),
               ),
               FilledButton(
                 onPressed: () => Navigator.pop(context, true),

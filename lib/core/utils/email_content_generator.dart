@@ -29,19 +29,28 @@ class EmailContentGenerator {
     String? companyName,
     String? collaboratorName,
   }) {
+    final effectiveCompany =
+        (companyName != null && companyName.trim().isNotEmpty)
+        ? companyName.trim()
+        : userName;
+    final effectiveCollaborator =
+        (collaboratorName != null && collaboratorName.trim().isNotEmpty)
+        ? collaboratorName.trim()
+        : effectiveCompany;
+
     return template
         .replaceAll('{{nombre_cliente}}', clientName)
         .replaceAll('{{client_name}}', clientName)
         .replaceAll('{{nombre_usuario}}', userName)
         .replaceAll('{{user_name}}', userName)
-        .replaceAll('{{nombre_empresa}}', companyName ?? '')
-        .replaceAll('{{company_name}}', companyName ?? '')
-        .replaceAll('{{nombre_colaborador}}', collaboratorName ?? '')
-        .replaceAll('{{collaborator_name}}', collaboratorName ?? '')
-        .replaceAll('{{nombre_asesor}}', collaboratorName ?? '')
-        .replaceAll('{{nombre asesor}}', collaboratorName ?? '')
-        .replaceAll('{{nombre_tecnico}}', collaboratorName ?? '')
-        .replaceAll('{{nombre tecnico}}', collaboratorName ?? '');
+        .replaceAll('{{nombre_empresa}}', effectiveCompany)
+        .replaceAll('{{company_name}}', effectiveCompany)
+        .replaceAll('{{nombre_colaborador}}', effectiveCollaborator)
+        .replaceAll('{{collaborator_name}}', effectiveCollaborator)
+        .replaceAll('{{nombre_asesor}}', effectiveCollaborator)
+        .replaceAll('{{nombre asesor}}', effectiveCollaborator)
+        .replaceAll('{{nombre_tecnico}}', effectiveCollaborator)
+        .replaceAll('{{nombre tecnico}}', effectiveCollaborator);
   }
 
   /// Plantillas por defecto para nuevos usuarios o cuando no se ha configurado nada.
@@ -59,11 +68,17 @@ class EmailContentGenerator {
   }
 
   static String getDefaultBody(String type) {
-    final firma = type == 'report' ? '{{nombre_tecnico}}' : '{{nombre_asesor}}';
+    if (type == 'report') {
+      return 'Estimado(a) {{nombre_cliente}},\n\n'
+          'Es un gusto saludarle. Adjunto encontrará el reporte de servicio solicitado.\n\n'
+          'Quedamos atentos a cualquier duda o comentario.\n\n'
+          'Atentamente,\n'
+          '{{nombre_empresa}}';
+    }
     return 'Estimado(a) {{nombre_cliente}},\n\n'
         'Es un gusto saludarle. Adjunto encontrará el documento solicitado.\n\n'
         'Quedo atento(a) a cualquier duda o comentario.\n\n'
         'Atentamente,\n'
-        '$firma';
+        '{{nombre_asesor}}';
   }
 }

@@ -20,6 +20,7 @@ class ClientSearchScreen extends ConsumerStatefulWidget {
 class _ClientSearchScreenState extends ConsumerState<ClientSearchScreen> {
   String? _selectedFilterType; // null = All, 'company', 'person'
   final Set<String> _selectedFilterCities = {};
+  bool _showArchived = false;
   SortOption _currentSort = SortOption.recent;
 
   String _getHistoryKey() {
@@ -47,11 +48,16 @@ class _ClientSearchScreenState extends ConsumerState<ClientSearchScreen> {
         setState(() {
           _selectedFilterType = null;
           _selectedFilterCities.clear();
+          _showArchived = false;
           _currentSort = SortOption.recent;
         });
         ref.read(paginatedClientSearchProvider.notifier).updateSearch(null);
-        ref.read(paginatedClientSearchProvider.notifier).updateFilters(typeFilter: null);
-        ref.read(paginatedClientSearchProvider.notifier).updateSort('created_at', false);
+        ref
+            .read(paginatedClientSearchProvider.notifier)
+            .updateFilters(typeFilter: null, onlyArchived: false);
+        ref
+            .read(paginatedClientSearchProvider.notifier)
+            .updateSort('created_at', false);
       },
       onQueryChanged: (query) {
         // Handle query if needed locally, though server search debounce takes care of it
@@ -88,7 +94,9 @@ class _ClientSearchScreenState extends ConsumerState<ClientSearchScreen> {
                 setState(() {
                   _selectedFilterType = value == 'all' ? null : value;
                 });
-                ref.read(paginatedClientSearchProvider.notifier).updateFilters(typeFilter: _selectedFilterType);
+                ref
+                    .read(paginatedClientSearchProvider.notifier)
+                    .updateFilters(typeFilter: _selectedFilterType);
               },
             );
           },
@@ -107,7 +115,8 @@ class _ClientSearchScreenState extends ConsumerState<ClientSearchScreen> {
                 .where((c) => c.trim().isNotEmpty)
                 .toSet();
 
-            final options = {...validCities, ..._selectedFilterCities}.toList()..sort();
+            final options = {...validCities, ..._selectedFilterCities}.toList()
+              ..sort();
 
             FilterBottomSheet.showMulti(
               context: context,
@@ -123,10 +132,23 @@ class _ClientSearchScreenState extends ConsumerState<ClientSearchScreen> {
             );
           },
         ),
+        FilterChipData(
+          label: 'Archivados',
+          isActive: _showArchived,
+          onTap: () {
+            setState(() {
+              _showArchived = !_showArchived;
+            });
+            ref
+                .read(paginatedClientSearchProvider.notifier)
+                .updateFilters(onlyArchived: _showArchived);
+          },
+        ),
       ],
       filter: (client, query) {
         if (_selectedFilterCities.isNotEmpty) {
-          if (client.city == null || !_selectedFilterCities.contains(client.city)) {
+          if (client.city == null ||
+              !_selectedFilterCities.contains(client.city)) {
             return false;
           }
         }
@@ -148,7 +170,7 @@ class _ClientSearchScreenState extends ConsumerState<ClientSearchScreen> {
                 setState(() {
                   _currentSort = val;
                 });
-                
+
                 String orderBy = 'created_at';
                 bool ascending = false;
                 if (val == SortOption.nameAZ) {
@@ -158,7 +180,9 @@ class _ClientSearchScreenState extends ConsumerState<ClientSearchScreen> {
                   orderBy = 'name';
                   ascending = false;
                 }
-                ref.read(paginatedClientSearchProvider.notifier).updateSort(orderBy, ascending);
+                ref
+                    .read(paginatedClientSearchProvider.notifier)
+                    .updateSort(orderBy, ascending);
               },
             ),
           ],
@@ -177,6 +201,26 @@ class _ClientSearchScreenState extends ConsumerState<ClientSearchScreen> {
             ),
             title: client.name,
             subtitle: Text(client.taxId ?? 'Sin ID'),
+            trailing: client.isArchived
+                ? Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 2,
+                    ),
+                    decoration: BoxDecoration(
+                      color: colors.surfaceContainerHighest,
+                      borderRadius: BorderRadius.circular(6),
+                    ),
+                    child: Text(
+                      'Archivado',
+                      style: TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w500,
+                        color: colors.onSurfaceVariant,
+                      ),
+                    ),
+                  )
+                : null,
             onTap: () {
               context.push('/clients/${client.id}', extra: client);
             },

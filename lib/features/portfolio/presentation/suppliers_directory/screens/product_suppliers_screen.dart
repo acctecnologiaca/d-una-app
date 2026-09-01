@@ -1,4 +1,5 @@
 import 'package:d_una_app/features/portfolio/domain/models/product_search_filters.dart';
+import 'package:d_una_app/shared/widgets/app_toast.dart';
 import 'package:d_una_app/shared/widgets/friendly_error_widget.dart';
 import 'package:d_una_app/features/profile/presentation/screens/verification_screen.dart';
 import 'package:d_una_app/shared/widgets/info_disclaimer_card.dart';
@@ -365,55 +366,21 @@ class _ProductSuppliersScreenState
                       lastUpdated: lastUpdated,
                       onTap: () {
                         if (shouldShowSnackBar) {
-                          ScaffoldMessenger.of(context).hideCurrentSnackBar();
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(
-                              duration: const Duration(seconds: 5),
-                              content: Row(
-                                children: [
-                                  const Expanded(
-                                    child: Text(
-                                      'Requiere que estés verificado con una compañía o firma personal',
-                                      style: TextStyle(fontSize: 13),
-                                    ),
-                                  ),
-                                  TextButton(
-                                    onPressed: () {
-                                      ScaffoldMessenger.of(
-                                        context,
-                                      ).hideCurrentSnackBar();
-                                      Navigator.push(
-                                        context,
-                                        MaterialPageRoute(
-                                          builder: (context) =>
-                                              const VerificationScreen(),
-                                        ),
-                                      );
-                                    },
-                                    child: const Text(
-                                      'Verificar',
-                                      style: TextStyle(
-                                        color: Colors.blueAccent,
-                                        fontWeight: FontWeight.bold,
-                                      ),
-                                    ),
-                                  ),
-                                  IconButton(
-                                    icon: const Icon(
-                                      Icons.close,
-                                      color: Colors.white,
-                                    ),
-                                    padding: EdgeInsets.zero,
-                                    constraints: const BoxConstraints(),
-                                    onPressed: () {
-                                      ScaffoldMessenger.of(
-                                        context,
-                                      ).hideCurrentSnackBar();
-                                    },
-                                  ),
-                                ],
-                              ),
-                            ),
+                          AppToast.warning(
+                            context,
+                            message:
+                                'Requiere que estés verificado con una compañía o firma personal',
+                            actionLabel: 'Verificar',
+                            onAction: () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (context) =>
+                                      const VerificationScreen(),
+                                ),
+                              );
+                            },
+                            duration: const Duration(seconds: 5),
                           );
                           return;
                         }

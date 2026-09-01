@@ -16,6 +16,7 @@ import '../../../../../shared/widgets/empty_list_state.dart';
 import '../../../../../shared/widgets/paginated_list_view.dart';
 import '../quote_selection_actions.dart';
 import '../../../domain/models/quote_model.dart';
+import '../../../../ads/presentation/providers/ads_provider.dart';
 
 class QuotesListScreen extends ConsumerStatefulWidget {
   const QuotesListScreen({super.key});
@@ -54,8 +55,20 @@ class _QuotesListScreenState extends ConsumerState<QuotesListScreen>
     final selection = ref.watch(quoteSelectionProvider);
     final paginatedStateAsync = ref.watch(paginatedQuotesListProvider);
 
+    final userProfile = userProfileAsync.valueOrNull;
+    final occupationIds = <String>[
+      if (userProfile?.occupationId != null) userProfile!.occupationId!,
+      ...userProfile?.secondaryOccupationIds ?? [],
+    ];
+
+    final isAdsEnabled = ref.watch(isAdPlacementEnabledProvider('quotes_list'));
+    final adBannersAsync = isAdsEnabled
+        ? ref.watch(
+            adBannersProvider(AdBannerParams(occupationIds: occupationIds)),
+          )
+        : null;
+
     final allQuotes = paginatedStateAsync.valueOrNull?.items ?? [];
-    final isError = paginatedStateAsync.hasError || userProfileAsync.hasError;
 
     return Scaffold(
       backgroundColor: colors.surface,
@@ -65,102 +78,103 @@ class _QuotesListScreenState extends ConsumerState<QuotesListScreen>
             // Header
             selection.isSelectionMode
                 ? _buildSelectionHeader(context, ref, selection, allQuotes)
-                : _buildNormalHeader(context, ref, userProfileAsync, isError),
+                : _buildNormalHeader(context, ref, userProfileAsync),
             const SizedBox(height: 16),
 
-            if (!isError) ...[
-              // Search Bar
-              Padding(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 16.0,
-                  vertical: 8.0,
-                ),
-                child: CustomSearchBar(
-                  hintText: 'Buscar...',
-                  readOnly: true,
-                  showFilterIcon: true,
-                  onFilterTap: () {},
-                  onTap: () {
-                    context.push('/quotes/search');
-                  },
-                ),
+            // Search Bar
+            Padding(
+              padding: const EdgeInsets.symmetric(
+                horizontal: 16.0,
+                vertical: 8.0,
               ),
-              const SizedBox(height: 16),
-              // Sort Header
-              Padding(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 16.0,
-                  vertical: 8.0,
-                ),
-                child: Row(
-                  children: [
-                    SortSelector(
-                      currentSort: _currentSort,
-                      onSortChanged: (val) {
-                        setState(() => _currentSort = val);
-                        String orderBy = 'quote_number';
-                        bool ascending = false;
-                        if (val == SortOption.quoteNumberDesc) {
-                          orderBy = 'quote_number';
-                          ascending = false;
-                        } else if (val == SortOption.quoteNumberAsc) {
-                          orderBy = 'quote_number';
-                          ascending = true;
-                        } else if (val == SortOption.recent || val == SortOption.frequency) {
-                          orderBy = 'created_at';
-                          ascending = false;
-                        } else if (val == SortOption.dateIssued) {
-                          orderBy = 'date_issued';
-                          ascending = false;
-                        } else if (val == SortOption.nameAZ) {
-                          orderBy = 'clients(name)';
-                          ascending = true;
-                        } else if (val == SortOption.nameZA) {
-                          orderBy = 'clients(name)';
-                          ascending = false;
-                        }
-                        ref.read(paginatedQuotesListProvider.notifier).updateSort(orderBy, ascending);
-                      },
-                      options: const [
-                        SortOption.quoteNumberDesc,
-                        SortOption.quoteNumberAsc,
-                        SortOption.recent,
-                        SortOption.dateIssued,
-                        SortOption.nameAZ,
-                        SortOption.nameZA,
-                      ],
-                    ),
-                  ],
-                ),
+              child: CustomSearchBar(
+                hintText: 'Buscar...',
+                readOnly: true,
+                showFilterIcon: true,
+                onFilterTap: () {},
+                onTap: () {
+                  context.push('/quotes/search');
+                },
               ),
-              const SizedBox(height: 16),
-            ],
+            ),
+            const SizedBox(height: 16),
+            // Sort Header
+            Padding(
+              padding: const EdgeInsets.symmetric(
+                horizontal: 16.0,
+                vertical: 8.0,
+              ),
+              child: Row(
+                children: [
+                  SortSelector(
+                    currentSort: _currentSort,
+                    onSortChanged: (val) {
+                      setState(() => _currentSort = val);
+                      // Map SortOption to API fields
+                      String orderBy = 'created_at';
+                      bool ascending = false;
+                      if (val == SortOption.quoteNumberDesc) {
+                        orderBy = 'quote_number';
+                        ascending = false;
+                      } else if (val == SortOption.quoteNumberAsc) {
+                        orderBy = 'quote_number';
+                        ascending = true;
+                      } else if (val == SortOption.recent) {
+                        orderBy = 'created_at';
+                        ascending = false;
+                      } else if (val == SortOption.dateIssued) {
+                        orderBy = 'issue_date';
+                        ascending = false;
+                      } else if (val == SortOption.nameAZ) {
+                        orderBy = 'clients(name)';
+                        ascending = true;
+                      } else if (val == SortOption.nameZA) {
+                        orderBy = 'clients(name)';
+                        ascending = false;
+                      }
+                      ref
+                          .read(paginatedQuotesListProvider.notifier)
+                          .updateSort(orderBy, ascending);
+                    },
+                    options: const [
+                      SortOption.quoteNumberDesc,
+                      SortOption.quoteNumberAsc,
+                      SortOption.recent,
+                      SortOption.dateIssued,
+                      SortOption.nameAZ,
+                      SortOption.nameZA,
+                    ],
+                  ),
+                ],
+              ),
+            ),
+            //const SizedBox(height: 16),
             // List
             Expanded(
               child: RefreshIndicator(
                 onRefresh: () async {
                   ref.invalidate(userProfileProvider);
-                  await ref.read(paginatedQuotesListProvider.notifier).refresh();
+                  ref.read(dismissedBannerIdsProvider.notifier).state = {};
+                  ref.invalidate(adBannersProvider);
+                  await ref
+                      .read(paginatedQuotesListProvider.notifier)
+                      .refresh();
                 },
-                child: userProfileAsync.when(
-                  loading: () => const Center(child: CircularProgressIndicator()),
-                  error: (err, stack) => FriendlyErrorWidget(
-                    error: err,
-                    onRetry: () {
-                      ref.invalidate(userProfileProvider);
-                      ref.read(paginatedQuotesListProvider.notifier).refresh();
-                    },
-                  ),
-                  data: (_) {
+                child: Builder(
+                  builder: (context) {
                     final paginatedState = paginatedStateAsync.valueOrNull;
-                    if (paginatedState == null || paginatedState.isInitialLoading) {
+                    if (paginatedState == null ||
+                        paginatedState.isInitialLoading) {
                       return const Center(child: CircularProgressIndicator());
                     }
 
-                    if (paginatedStateAsync.hasError && paginatedState.items.isEmpty) {
+                    if (paginatedStateAsync.hasError &&
+                        paginatedState.items.isEmpty) {
                       return FriendlyErrorWidget(
                         error: paginatedStateAsync.error!,
-                        onRetry: () => ref.read(paginatedQuotesListProvider.notifier).refresh(),
+                        onRetry: () => ref
+                            .read(paginatedQuotesListProvider.notifier)
+                            .refresh(),
                       );
                     }
 
@@ -181,7 +195,13 @@ class _QuotesListScreenState extends ConsumerState<QuotesListScreen>
                       items: paginatedState.items,
                       isLoadingMore: paginatedState.isLoadingMore,
                       hasReachedEnd: paginatedState.hasReachedEnd,
-                      onLoadMore: () => ref.read(paginatedQuotesListProvider.notifier).loadMore(),
+                      onLoadMore: () => ref
+                          .read(paginatedQuotesListProvider.notifier)
+                          .loadMore(),
+                      banners: selection.isSelectionMode
+                          ? null
+                          : adBannersAsync?.valueOrNull,
+                      screenContext: 'quotes_list',
                       padding: const EdgeInsets.fromLTRB(0, 0, 0, 90),
                       separatorBuilder: (context, index) => const Divider(
                         height: 0,
@@ -201,9 +221,7 @@ class _QuotesListScreenState extends ConsumerState<QuotesListScreen>
                               ? () => ref
                                     .read(quoteSelectionProvider.notifier)
                                     .toggle(item.id)
-                              : () => context.push(
-                                  '/quotes/view/${item.id}',
-                                ),
+                              : () => context.push('/quotes/view/${item.id}'),
                         );
                       },
                     );
@@ -214,7 +232,7 @@ class _QuotesListScreenState extends ConsumerState<QuotesListScreen>
           ],
         ),
       ),
-      floatingActionButton: selection.isSelectionMode || isError
+      floatingActionButton: selection.isSelectionMode
           ? null
           : Padding(
               padding: const EdgeInsets.only(bottom: 0.0),
@@ -234,7 +252,6 @@ class _QuotesListScreenState extends ConsumerState<QuotesListScreen>
     BuildContext context,
     WidgetRef ref,
     AsyncValue<UserProfile?> userProfileAsync,
-    bool isError,
   ) {
     return Padding(
       padding: const EdgeInsets.fromLTRB(4, 4, 16, 0),
@@ -243,11 +260,9 @@ class _QuotesListScreenState extends ConsumerState<QuotesListScreen>
         children: [
           IconButton(
             icon: const Icon(Icons.menu),
-            onPressed: isError
-                ? null
-                : () {
-                    Scaffold.of(context).openDrawer();
-                  },
+            onPressed: () {
+              Scaffold.of(context).openDrawer();
+            },
           ),
           Text(
             'Cotizaciones',
@@ -256,7 +271,7 @@ class _QuotesListScreenState extends ConsumerState<QuotesListScreen>
               fontWeight: FontWeight.w500,
             ),
           ),
-          UserProfileAvatar(enabled: !isError),
+          const UserProfileAvatar(),
         ],
       ),
     );
@@ -271,8 +286,8 @@ class _QuotesListScreenState extends ConsumerState<QuotesListScreen>
     final selectedQuotes = allQuotes
         .where((q) => selection.selectedIds.contains(q.id))
         .toList();
-    final isAllArchived = selectedQuotes.isNotEmpty &&
-        selectedQuotes.every((q) => q.isArchived);
+    final isAllArchived =
+        selectedQuotes.isNotEmpty && selectedQuotes.every((q) => q.isArchived);
 
     return Padding(
       padding: const EdgeInsets.fromLTRB(4, 4, 16, 0),
@@ -292,7 +307,9 @@ class _QuotesListScreenState extends ConsumerState<QuotesListScreen>
           ),
           const Spacer(),
           IconButton(
-            icon: Icon(isAllArchived ? Icons.unarchive_outlined : Icons.archive_outlined),
+            icon: Icon(
+              isAllArchived ? Icons.unarchive_outlined : Icons.archive_outlined,
+            ),
             tooltip: isAllArchived ? 'Desarchivar' : 'Archivar',
             onPressed: () => _handleBatchArchive(
               context,
@@ -308,7 +325,8 @@ class _QuotesListScreenState extends ConsumerState<QuotesListScreen>
           ),
           IconButton(
             icon: const Icon(Icons.more_vert),
-            onPressed: () => _showActionsSheet(context, ref, selection, allQuotes),
+            onPressed: () =>
+                _showActionsSheet(context, ref, selection, allQuotes),
           ),
         ],
       ),

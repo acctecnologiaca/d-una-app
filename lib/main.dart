@@ -5,23 +5,21 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'core/router/app_router.dart';
 import 'core/theme/app_theme.dart';
 import 'core/utils/session_manager.dart';
-import 'package:d_una_app/features/profile/presentation/providers/profile_provider.dart';
-import 'package:d_una_app/features/supplier_orders/presentation/supplier_orders_list/providers/supplier_orders_providers.dart';
-import 'package:d_una_app/features/purchases/presentation/providers/purchases_providers.dart';
+import 'core/services/reconnection_sync_service.dart';
+import 'core/providers/network_status_provider.dart';
 import 'package:d_una_app/shared/providers/pdf_preview_provider.dart';
+import 'core/widgets/connectivity_gate.dart';
 
-//import 'package:shared_preferences/shared_preferences.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'core/providers/draft_providers.dart';
 
 final GlobalKey<RootAppState> rootAppKey = GlobalKey();
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // Reset disclaimer_mpd flag in SharedPreferences
-  /* SharedPreferences.getInstance().then((prefs) {
-    prefs.remove('disclaimer_mpd');
-  });
-*/
+  final prefs = await SharedPreferences.getInstance();
+
   await Supabase.initialize(
     url: 'https://fdkswvzrozijbizdthge.supabase.co',
     anonKey:
@@ -36,11 +34,12 @@ void main() async {
   final sessionManager = SessionManager();
   sessionManager.checkSessionValidity(); // Fire and forget, don't block startup
 
-  runApp(RootApp(key: rootAppKey));
+  runApp(RootApp(key: rootAppKey, prefs: prefs));
 }
 
 class RootApp extends StatefulWidget {
-  const RootApp({super.key});
+  final SharedPreferences prefs;
+  const RootApp({super.key, required this.prefs});
 
   static void restart(BuildContext? context) {
     debugPrint(
@@ -95,7 +94,13 @@ class RootAppState extends State<RootApp> {
 
   @override
   Widget build(BuildContext context) {
-    return ProviderScope(key: _providerScopeKey, child: DUnaApp());
+    return ProviderScope(
+      key: _providerScopeKey,
+      overrides: [
+        sharedPreferencesProvider.overrideWithValue(widget.prefs),
+      ],
+      child: const DUnaApp(),
+    );
   }
 }
 
@@ -126,24 +131,16 @@ class _DUnaAppState extends ConsumerState<DUnaApp> with WidgetsBindingObserver {
 
     if (state == AppLifecycleState.resumed) {
       debugPrint('App resumed: validando sesión y refrescando conectividad...');
+
+      // 1. Forzar re-comprobación inmediata del estado de red
+      ref.read(networkStatusProvider.notifier).checkImmediately();
+
+      // 2. Validar sesión y sincronizar datos
       final sessionManager = SessionManager();
       final isValid = await sessionManager.checkSessionValidity();
 
       if (isValid) {
-        try {
-          // Forzar refresco proactivo de la sesión
-          await Supabase.instance.client.auth.refreshSession();
-          debugPrint('Sesión refrescada proactivamente en OnResume.');
-        } catch (e) {
-          debugPrint('Fallo al refrescar sesión proactivamente: $e');
-        }
-
-        // Invalidar providers realtime para forzar re-suscripción de WebSockets y actualización
-        ref.invalidate(userProfileProvider);
-        ref.invalidate(shippingMethodsProvider);
-        ref.invalidate(verificationDocumentsProvider);
-        ref.invalidate(paginatedSupplierOrdersProvider);
-        ref.invalidate(paginatedPurchasesListProvider);
+        ReconnectionSyncService.syncAfterReconnection(ref);
       }
     }
   }
@@ -164,6 +161,9 @@ class _DUnaAppState extends ConsumerState<DUnaApp> with WidgetsBindingObserver {
         GlobalCupertinoLocalizations.delegate,
       ],
       supportedLocales: const [Locale('es', 'ES'), Locale('en', 'US')],
+      builder: (context, child) {
+        return ConnectivityGate(child: child ?? const SizedBox.shrink());
+      },
     );
   }
 }

@@ -75,8 +75,6 @@ class _SupplierOrdersListScreenState
               o.status != SupplierOrderStatus.merged,
         );
 
-    final isError = paginatedAsync.hasError && allOrders.isEmpty;
-
     final isSingleResend =
         selectedOrders.length == 1 &&
         (selectedOrders.first.status == SupplierOrderStatus.sent ||
@@ -100,7 +98,7 @@ class _SupplierOrdersListScreenState
                     isSingleResend,
                     isAllArchived,
                   )
-                : _buildNormalHeader(context, ref, userProfileAsync, isError),
+                : _buildNormalHeader(context, ref, userProfileAsync),
             const SizedBox(height: 16),
 
             // Search & Filter Bar
@@ -272,7 +270,6 @@ class _SupplierOrdersListScreenState
     BuildContext context,
     WidgetRef ref,
     AsyncValue<UserProfile?> userProfileAsync,
-    bool isError,
   ) {
     return Padding(
       padding: const EdgeInsets.fromLTRB(4, 4, 16, 0),
@@ -281,11 +278,9 @@ class _SupplierOrdersListScreenState
         children: [
           IconButton(
             icon: const Icon(Icons.arrow_back),
-            onPressed: isError
-                ? null
-                : () {
-                    context.pop();
-                  },
+            onPressed: () {
+              context.pop();
+            },
           ),
           const SizedBox(width: 8),
           Text(

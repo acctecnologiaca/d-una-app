@@ -137,19 +137,18 @@ class UserProfile {
   }
 
   UserProfile copyWith({
-    String? firstName,
-    String? lastName,
-    String? gender,
-    DateTime? birthDate,
-    String? nationalId,
-    String? avatarUrl,
-    String? phone,
-    String? secondaryPhone,
-    String? occupation,
-    String? occupationId,
-    List<String>? secondaryOccupations,
-    List<String>? secondaryOccupationIds,
-    // Use dynamic to allow explicit nulls for these fields
+    dynamic firstName = _sentinel,
+    dynamic lastName = _sentinel,
+    dynamic gender = _sentinel,
+    dynamic birthDate = _sentinel,
+    dynamic nationalId = _sentinel,
+    dynamic avatarUrl = _sentinel,
+    dynamic phone = _sentinel,
+    dynamic secondaryPhone = _sentinel,
+    dynamic occupation = _sentinel,
+    dynamic occupationId = _sentinel,
+    dynamic secondaryOccupations = _sentinel,
+    dynamic secondaryOccupationIds = _sentinel,
     dynamic mainAddress = _sentinel,
     dynamic mainCity = _sentinel,
     dynamic mainState = _sentinel,
@@ -160,24 +159,37 @@ class UserProfile {
     dynamic companyAddress = _sentinel,
     dynamic companyLogoUrl = _sentinel,
     String? verificationStatus,
-    String? verificationType,
-    int? userNumber,
+    dynamic verificationType = _sentinel,
+    dynamic userNumber = _sentinel,
   }) {
     return UserProfile(
       id: id,
-      firstName: firstName ?? this.firstName,
-      lastName: lastName ?? this.lastName,
-      gender: gender ?? this.gender,
-      birthDate: birthDate ?? this.birthDate,
-      nationalId: nationalId ?? this.nationalId,
-      avatarUrl: avatarUrl ?? this.avatarUrl,
-      phone: phone ?? this.phone,
-      secondaryPhone: secondaryPhone ?? this.secondaryPhone,
-      occupation: occupation ?? this.occupation,
-      occupationId: occupationId ?? this.occupationId,
-      secondaryOccupations: secondaryOccupations ?? this.secondaryOccupations,
-      secondaryOccupationIds:
-          secondaryOccupationIds ?? this.secondaryOccupationIds,
+      firstName: firstName == _sentinel ? this.firstName : firstName as String?,
+      lastName: lastName == _sentinel ? this.lastName : lastName as String?,
+      gender: gender == _sentinel ? this.gender : gender as String?,
+      birthDate: birthDate == _sentinel
+          ? this.birthDate
+          : birthDate as DateTime?,
+      nationalId: nationalId == _sentinel
+          ? this.nationalId
+          : nationalId as String?,
+      avatarUrl: avatarUrl == _sentinel ? this.avatarUrl : avatarUrl as String?,
+      phone: phone == _sentinel ? this.phone : phone as String?,
+      secondaryPhone: secondaryPhone == _sentinel
+          ? this.secondaryPhone
+          : secondaryPhone as String?,
+      occupation: occupation == _sentinel
+          ? this.occupation
+          : occupation as String?,
+      occupationId: occupationId == _sentinel
+          ? this.occupationId
+          : occupationId as String?,
+      secondaryOccupations: secondaryOccupations == _sentinel
+          ? this.secondaryOccupations
+          : secondaryOccupations as List<String>,
+      secondaryOccupationIds: secondaryOccupationIds == _sentinel
+          ? this.secondaryOccupationIds
+          : secondaryOccupationIds as List<String>,
       mainAddress: mainAddress == _sentinel
           ? this.mainAddress
           : mainAddress as String?,
@@ -200,8 +212,12 @@ class UserProfile {
           ? this.companyLogoUrl
           : companyLogoUrl as String?,
       verificationStatus: verificationStatus ?? this.verificationStatus,
-      verificationType: verificationType ?? this.verificationType,
-      userNumber: userNumber ?? this.userNumber,
+      verificationType: verificationType == _sentinel
+          ? this.verificationType
+          : verificationType as String?,
+      userNumber: userNumber == _sentinel
+          ? this.userNumber
+          : userNumber as int?,
       updatedAt: updatedAt,
       createdAt: createdAt,
     );

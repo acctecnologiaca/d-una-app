@@ -7,6 +7,7 @@ class CustomDropdown<T extends Object> extends StatefulWidget {
   final String label;
   final ValueChanged<T?>? onChanged;
   final String Function(T) itemLabelBuilder;
+  final String Function(T)? itemSubtitleBuilder;
   final bool showAddOption;
   final T? addOptionValue;
   final VoidCallback? onAddPressed;
@@ -17,6 +18,7 @@ class CustomDropdown<T extends Object> extends StatefulWidget {
 
   final bool searchable;
   final bool enabled;
+  final bool isRequired;
 
   const CustomDropdown({
     super.key,
@@ -25,6 +27,7 @@ class CustomDropdown<T extends Object> extends StatefulWidget {
     required this.label,
     this.onChanged,
     required this.itemLabelBuilder,
+    this.itemSubtitleBuilder,
     this.showAddOption = false,
     this.addOptionValue,
     this.onAddPressed,
@@ -34,6 +37,7 @@ class CustomDropdown<T extends Object> extends StatefulWidget {
     this.helperStyle,
     this.searchable = false,
     this.enabled = true,
+    this.isRequired = true,
   });
 
   @override
@@ -42,6 +46,15 @@ class CustomDropdown<T extends Object> extends StatefulWidget {
 
 class _CustomDropdownState<T extends Object> extends State<CustomDropdown<T>> {
   int _resetCounter = 0;
+
+  String get _effectiveLabel {
+    if (!widget.isRequired) {
+      return widget.label.endsWith('*')
+          ? widget.label.substring(0, widget.label.length - 1).trim()
+          : widget.label;
+    }
+    return widget.label.endsWith('*') ? widget.label : '${widget.label}*';
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -144,8 +157,9 @@ class _CustomDropdownState<T extends Object> extends State<CustomDropdown<T>> {
       validator: widget.validator,
       builder: (FormFieldState<T> state) {
         final hasValue = widget.value != null;
-        final displayText =
-            hasValue ? widget.itemLabelBuilder(widget.value as T) : '';
+        final displayText = hasValue
+            ? widget.itemLabelBuilder(widget.value as T)
+            : '';
 
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -155,13 +169,13 @@ class _CustomDropdownState<T extends Object> extends State<CustomDropdown<T>> {
               borderRadius: BorderRadius.circular(8.0),
               onTap: widget.enabled
                   ? () async {
-                      final selected =
-                          await SearchableSelectionSheet.show<T>(
+                      final selected = await SearchableSelectionSheet.show<T>(
                         context: context,
                         title: widget.label,
                         items: widget.items,
                         selectedValue: widget.value,
                         itemLabelBuilder: widget.itemLabelBuilder,
+                        itemSubtitleBuilder: widget.itemSubtitleBuilder,
                         showAddOption: widget.showAddOption,
                         addOptionLabel: widget.addOptionLabel,
                         onAddPressed: widget.onAddPressed,
@@ -175,7 +189,7 @@ class _CustomDropdownState<T extends Object> extends State<CustomDropdown<T>> {
                   : null,
               child: InputDecorator(
                 decoration: InputDecoration(
-                  labelText: '${widget.label}*',
+                  labelText: _effectiveLabel,
                   errorText: state.errorText,
                   floatingLabelBehavior: FloatingLabelBehavior.auto,
                   border: OutlineInputBorder(
@@ -234,9 +248,9 @@ class _CustomDropdownState<T extends Object> extends State<CustomDropdown<T>> {
                 padding: const EdgeInsets.only(top: 8.0, left: 12.0),
                 child: Text(
                   widget.helperText!,
-                  style: textTheme.bodySmall?.copyWith(
-                    color: colors.onSurfaceVariant,
-                  ).merge(widget.helperStyle),
+                  style: textTheme.bodySmall
+                      ?.copyWith(color: colors.onSurfaceVariant)
+                      .merge(widget.helperStyle),
                 ),
               ),
           ],
@@ -248,7 +262,7 @@ class _CustomDropdownState<T extends Object> extends State<CustomDropdown<T>> {
   InputDecoration _decoration() {
     final colors = Theme.of(context).colorScheme;
     return InputDecoration(
-      labelText: '${widget.label}*',
+      labelText: _effectiveLabel,
       helperText: widget.helperText,
       helperStyle: widget.helperStyle,
       floatingLabelBehavior: FloatingLabelBehavior.auto,

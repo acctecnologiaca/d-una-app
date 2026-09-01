@@ -15,10 +15,10 @@ class ServiceReportCondition {
 
   factory ServiceReportCondition.fromJson(Map<String, dynamic> json) {
     return ServiceReportCondition(
-      id: json['id'] as String,
-      reportId: json['report_id'] as String,
+      id: json['id'] as String? ?? '',
+      reportId: json['report_id'] as String? ?? '',
       conditionId: json['condition_id'] as String?,
-      description: json['description'] as String,
+      description: json['description'] as String? ?? '',
       orderIndex: json['order_index'] as int? ?? 0,
     );
   }

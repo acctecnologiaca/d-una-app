@@ -5,14 +5,17 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:d_una_app/shared/widgets/generic_search_screen.dart';
 import 'package:d_una_app/shared/widgets/horizontal_filter_bar.dart';
 import 'package:d_una_app/shared/widgets/filter_bottom_sheet.dart';
+import 'package:d_una_app/shared/widgets/custom_extended_fab.dart';
+import 'package:d_una_app/shared/utils/currency_formatter.dart';
 import 'package:d_una_app/features/portfolio/presentation/providers/products_provider.dart';
 import 'package:d_una_app/features/portfolio/data/models/product_model.dart';
 import 'package:d_una_app/features/portfolio/data/models/category_model.dart';
 import 'package:d_una_app/features/portfolio/data/models/brand_model.dart';
-import 'package:d_una_app/features/purchases/presentation/widgets/purchase_product_list_item.dart';
+import 'package:d_una_app/features/purchases/presentation/widgets/purchase_product_selection_card.dart';
 import 'package:d_una_app/features/purchases/data/models/purchase_item_product.dart';
 import 'package:d_una_app/features/purchases/presentation/providers/add_purchase_provider.dart';
 import 'package:d_una_app/features/purchases/presentation/widgets/add_purchase_product_details_sheet.dart';
+import 'package:d_una_app/features/purchases/presentation/widgets/register_serials_dialog.dart';
 import 'package:d_una_app/core/utils/string_extensions.dart';
 import 'package:d_una_app/core/utils/search_utils.dart';
 import 'package:uuid/uuid.dart';
@@ -30,6 +33,10 @@ class _AddPurchaseProductSearchScreenState
   Set<String> _selectedCategoryIds = {};
   Set<String> _selectedBrandIds = {};
   String _searchQuery = '';
+
+  String? _selectedProductId;
+  Product? _selectedProduct;
+  double _selectedQuantity = 0.0;
 
   @override
   Widget build(BuildContext context) {
@@ -69,6 +76,16 @@ class _AddPurchaseProductSearchScreenState
           map[brand.id] = brand.name.toTitleCase;
           return map;
         });
+
+    final hasSelection = _selectedQuantity > 0 && _selectedProduct != null;
+    final formattedQty =
+        _selectedQuantity.truncateToDouble() == _selectedQuantity
+        ? _selectedQuantity.toInt().toString()
+        : _selectedQuantity.toStringAsFixed(2);
+    final totalCost =
+        (_selectedProduct?.averageCost ?? 0.0) * _selectedQuantity;
+    final formattedTotal = CurrencyFormatter.format(totalCost);
+    final uom = _selectedProduct?.uom ?? 'ud.';
 
     return GenericSearchScreen<Product>(
       title: 'Buscar producto',
@@ -138,6 +155,9 @@ class _AddPurchaseProductSearchScreenState
           _selectedCategoryIds.clear();
           _selectedBrandIds.clear();
           _searchQuery = '';
+          _selectedProductId = null;
+          _selectedProduct = null;
+          _selectedQuantity = 0.0;
         });
         ref.read(paginatedProductSearchProvider.notifier).updateSearch(null);
       },
@@ -166,104 +186,154 @@ class _AddPurchaseProductSearchScreenState
         final isAlreadyAdded = addedProducts.any(
           (p) => p.productId == product.id,
         );
+        final isThisSelected = _selectedProductId == product.id;
+        final currentQty = isThisSelected ? _selectedQuantity : 0.0;
+        final isLocked =
+            _selectedProductId != null && _selectedProductId != product.id;
 
-        return PurchaseProductListItem(
-          brand: product.brand?.name ?? 'Sin marca',
-          name: product.name,
-          model: product.model ?? 'Sin modelo',
-          uom: product.uomModel,
-          imageUrl: product.imageUrl,
-          enabled: !isAlreadyAdded,
-          onDisabledTap: () {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text(
-                  'El producto "${product.name}" ya está agregado. Si deseas agregar más unidades, por favor modifica el ya existente.',
-                ),
-              ),
-            );
-          },
-          onTap: () async {
-            final result = await AddPurchaseProductDetailsSheet.show(
-              context,
-              product: product,
-            );
-            if (result != null) {
-              final qty = (result['quantity'] as num).toDouble();
-              final cost = (result['cost_price'] as num).toDouble();
-              final wTime = (result['warranty_duration'] as num).toInt();
-              final wPeriodStr = result['warranty_period'] as String;
-              final usesSerials = result['uses_serials'] == true;
-
-              // Map period to DB value
-              final wUnit = wPeriodStr == 'Días'
-                  ? 'days'
-                  : wPeriodStr == 'Meses'
-                  ? 'months'
-                  : 'years';
-
-              final item = PurchaseItemProduct(
-                id: const Uuid().v4(),
-                productId: product.id,
-                name: product.name,
-                brand: product.brand?.name,
-                model: product.model,
-                uom: product.uomModel?.symbol ?? 'ud.',
-                quantity: qty,
-                unitPrice: cost,
-                warrantyTime: wTime,
-                warrantyUnit: wUnit,
-                requiresSerials: usesSerials,
-              );
-
-              final added = ref
-                  .read(addPurchaseProvider.notifier)
-                  .addProduct(item);
-
-              if (!added) {
-                if (context.mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text(
-                        'El producto "${product.name}" ya está agregado.',
-                      ),
-                    ),
-                  );
-                }
-                return;
-              }
-
-              final bool registerNow = result['register_serials_now'] == true;
-              if (registerNow) {
-                if (context.mounted) {
-                  final confirmed = await context.push<bool>(
-                    '/my-purchases/add/select-product/manage-serials',
-                    extra: <String, dynamic>{
-                      'product': product,
-                      'quantity': qty.toInt(),
-                      'purchaseItemId': item.id,
-                    },
-                  );
-                  if (confirmed == true && context.mounted) {
-                    context.pop(); // Pop back from search
-                    context.pop(); // Pop back to Add Purchase screen
-                  }
-                }
+        return PurchaseProductSelectionCard(
+          key: ValueKey(product.id),
+          product: product,
+          selectedQty: currentQty,
+          isLocked: isLocked,
+          isAlreadyAdded: isAlreadyAdded,
+          onQtyChanged: (qty) {
+            setState(() {
+              if (qty > 0) {
+                _selectedProductId = product.id;
+                _selectedQuantity = qty;
+                _selectedProduct = product;
               } else {
-                if (context.mounted) {
-                  context.pop(); // Pop back from search
-                  context.pop(); // Pop back to Add Purchase screen
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text('Producto agregado: ${product.name}'),
-                    ),
-                  );
+                if (_selectedProductId == product.id) {
+                  _selectedProductId = null;
+                  _selectedQuantity = 0.0;
+                  _selectedProduct = null;
                 }
               }
-            }
+            });
           },
         );
       },
+      floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
+      floatingActionButton: hasSelection
+          ? Padding(
+              padding: const EdgeInsets.only(bottom: 40.0),
+              child: CustomExtendedFab(
+                icon: Icons.check,
+                label: 'Confirmar ($formattedQty $uom - $formattedTotal)',
+                isEnabled: true,
+                onPressed: () async {
+                  if (_selectedProduct == null || _selectedQuantity <= 0) {
+                    return;
+                  }
+
+                  final result = await AddPurchaseProductDetailsSheet.show(
+                    context,
+                    product: _selectedProduct!,
+                    initialQuantity: _selectedQuantity,
+                  );
+
+                  if (result != null && context.mounted) {
+                    final qty = (result['quantity'] as num).toDouble();
+                    final cost = (result['cost_price'] as num).toDouble();
+                    final hasWarranty = result['has_warranty'] as bool;
+                    final wTime = (result['warranty_duration'] as num).toInt();
+                    final wPeriodStr = result['warranty_period'] as String;
+                    bool usesSerials = result['uses_serials'] == true;
+                    final bool needsToAsk =
+                        result['needs_to_ask_serials'] == true;
+
+                    bool registerSerialsNow = false;
+
+                    if (needsToAsk && context.mounted) {
+                      final dialogResult =
+                          await RegisterSerialsDialog.show(context);
+                      if (dialogResult == null) return;
+                      switch (dialogResult) {
+                        case RegisterSerialsResult.now:
+                          registerSerialsNow = true;
+                          break;
+                        case RegisterSerialsResult.later:
+                          registerSerialsNow = false;
+                          break;
+                        case RegisterSerialsResult.never:
+                          usesSerials = false;
+                          registerSerialsNow = false;
+                          break;
+                      }
+                    }
+
+                    // Map period to DB value
+                    final wUnit = wPeriodStr == 'Días'
+                        ? 'days'
+                        : wPeriodStr == 'Meses'
+                        ? 'months'
+                        : 'years';
+
+                    final item = PurchaseItemProduct(
+                      id: const Uuid().v4(),
+                      productId: _selectedProduct!.id,
+                      name: _selectedProduct!.name,
+                      brand: _selectedProduct!.brand?.name,
+                      model: _selectedProduct!.model,
+                      uom: _selectedProduct!.uomModel?.symbol ?? 'ud.',
+                      quantity: qty,
+                      unitPrice: cost,
+                      warrantyTime: hasWarranty ? wTime : null,
+                      warrantyUnit: hasWarranty ? wUnit : null,
+                      requiresSerials: usesSerials,
+                    );
+
+                    final added = ref
+                        .read(addPurchaseProvider.notifier)
+                        .addProduct(item);
+
+                    if (!added) {
+                      if (context.mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text(
+                              'El producto "${_selectedProduct!.name}" ya está agregado.',
+                            ),
+                          ),
+                        );
+                      }
+                      return;
+                    }
+
+                    if (registerSerialsNow) {
+                      if (context.mounted) {
+                        final confirmed = await context.push<bool>(
+                          '/my-purchases/add/select-product/manage-serials',
+                          extra: <String, dynamic>{
+                            'product': _selectedProduct!,
+                            'quantity': qty.toInt(),
+                            'purchaseItemId': item.id,
+                          },
+                        );
+                        if (confirmed == true && context.mounted) {
+                          context.pop(); // Pop back from search
+                          context.pop(); // Pop back to Add Purchase screen
+                        }
+                      }
+                    } else {
+                      if (context.mounted) {
+                        context.pop(); // Pop back from search
+                        context.pop(); // Pop back to Add Purchase screen
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text(
+                              'Producto agregado: ${_selectedProduct!.name}',
+                            ),
+                          ),
+                        );
+                      }
+                    }
+                  }
+                },
+              ),
+            )
+          : null,
     );
   }
 }

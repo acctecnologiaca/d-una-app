@@ -109,16 +109,14 @@ class _GenericListScreenState<T> extends ConsumerState<GenericListScreen<T>> {
                 label: widget.fabLabel,
                 icon: widget.fabIcon,
                 isEnabled: widget.isFabEnabled,
-                backgroundColor: colors.tertiaryContainer,
-                foregroundColor: colors.onTertiaryContainer,
+                backgroundColor: colors.primaryContainer,
+                foregroundColor: colors.onPrimaryContainer,
               ),
             )
           : null,
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          if (widget.headerWidget != null) widget.headerWidget!,
-
           if (widget.descriptionText != null)
             Padding(
               padding: const EdgeInsets.all(16.0),
@@ -130,6 +128,8 @@ class _GenericListScreenState<T> extends ConsumerState<GenericListScreen<T>> {
                 ),
               ),
             ),
+
+          if (widget.headerWidget != null) widget.headerWidget!,
 
           if (widget.sortOptions != null && _currentSort != null)
             Padding(

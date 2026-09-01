@@ -45,6 +45,38 @@ class PurchaseItemProduct extends Equatable {
     requiresSerials,
   ];
 
+  Map<String, dynamic> toJson() {
+    return {
+      'id': id,
+      'product_id': productId,
+      'name': name,
+      'brand': brand,
+      'model': model,
+      'uom': uom,
+      'quantity': quantity,
+      'unit_price': unitPrice,
+      'warranty_time': warrantyTime,
+      'warranty_unit': warrantyUnit,
+      'requires_serials': requiresSerials,
+    };
+  }
+
+  factory PurchaseItemProduct.fromJson(Map<String, dynamic> json) {
+    return PurchaseItemProduct(
+      id: json['id'] as String? ?? '',
+      productId: json['product_id'] as String? ?? '',
+      name: json['name'] as String? ?? '',
+      brand: json['brand'] as String?,
+      model: json['model'] as String?,
+      uom: json['uom'] as String? ?? '',
+      quantity: (json['quantity'] as num?)?.toDouble() ?? 1.0,
+      unitPrice: (json['unit_price'] as num?)?.toDouble() ?? 0.0,
+      warrantyTime: (json['warranty_time'] as num?)?.toInt(),
+      warrantyUnit: json['warranty_unit'] as String?,
+      requiresSerials: json['requires_serials'] as bool? ?? false,
+    );
+  }
+
   PurchaseItemProduct copyWith({
     double? quantity,
     double? unitPrice,

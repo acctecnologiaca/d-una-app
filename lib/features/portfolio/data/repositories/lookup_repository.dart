@@ -22,6 +22,23 @@ class LookupRepository {
     return (response as List).map((e) => Category.fromJson(e)).toList();
   }
 
+  Future<List<Category>> getRelevantCategories({
+    List<String> occupationIds = const [],
+  }) async {
+    try {
+      final response = await _client.rpc(
+        'get_relevant_categories',
+        params: {
+          'p_occupation_ids': occupationIds.isNotEmpty ? occupationIds : null,
+        },
+      );
+      return (response as List).map((e) => Category.fromJson(e)).toList();
+    } catch (e) {
+      // Fallback to standard getCategories if RPC fails
+      return getCategories();
+    }
+  }
+
   Future<List<Brand>> getBrands() async {
     final response = await _client
         .from('brands')

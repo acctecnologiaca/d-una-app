@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:d_una_app/shared/widgets/app_toast.dart';
 import 'package:d_una_app/shared/widgets/friendly_error_widget.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:d_una_app/shared/widgets/custom_search_bar.dart';
@@ -18,11 +19,6 @@ class SuppliersDirectoryScreen extends ConsumerWidget {
     final suppliersAsync = ref.watch(suppliersProvider);
     final userProfileAsync = ref.watch(userProfileProvider);
 
-    final isError = suppliersAsync.maybeWhen(
-      error: (error, stack) => true,
-      orElse: () => false,
-    );
-
     // Determine verification status safely
     final isVerified =
         userProfileAsync.asData?.value?.verificationStatus == 'verified';
@@ -38,9 +34,8 @@ class SuppliersDirectoryScreen extends ConsumerWidget {
       ),
       body: Column(
         children: [
-          if (!isError)
-            Padding(
-              padding: const EdgeInsets.all(16.0),
+          Padding(
+            padding: const EdgeInsets.all(16.0),
               child: CustomSearchBar(
                 hintText: 'Buscar proveedores, productos, marcas,...',
                 readOnly: true,
@@ -144,55 +139,19 @@ class SuppliersDirectoryScreen extends ConsumerWidget {
                         isLocked: isLocked, // Pass lock status
                         onTap: () {
                           if (isLocked) {
-                            ScaffoldMessenger.of(context).hideCurrentSnackBar();
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(
-                                duration: const Duration(seconds: 5),
-                                content: Row(
-                                  children: [
-                                    Expanded(
-                                      child: Text(
-                                        lockMessage,
-                                        style: const TextStyle(fontSize: 13),
-                                      ),
-                                    ),
-                                    TextButton(
-                                      onPressed: () {
-                                        ScaffoldMessenger.of(
-                                          context,
-                                        ).hideCurrentSnackBar();
-                                        Navigator.of(context).push(
-                                          MaterialPageRoute(
-                                            builder: (context) =>
-                                                const VerificationScreen(),
-                                          ),
-                                        );
-                                      },
-                                      child: const Text(
-                                        'Verificar',
-                                        style: TextStyle(
-                                          color: Colors.blueAccent,
-                                          fontWeight: FontWeight.bold,
-                                        ),
-                                      ),
-                                    ),
-                                    IconButton(
-                                      icon: const Icon(
-                                        Icons.close,
-                                        color: Colors.white,
-                                        size: 20,
-                                      ),
-                                      padding: EdgeInsets.zero,
-                                      constraints: const BoxConstraints(),
-                                      onPressed: () {
-                                        ScaffoldMessenger.of(
-                                          context,
-                                        ).hideCurrentSnackBar();
-                                      },
-                                    ),
-                                  ],
-                                ),
-                              ),
+                            AppToast.warning(
+                              context,
+                              message: lockMessage,
+                              actionLabel: 'Verificar',
+                              onAction: () {
+                                Navigator.of(context).push(
+                                  MaterialPageRoute(
+                                    builder: (context) =>
+                                        const VerificationScreen(),
+                                  ),
+                                );
+                              },
+                              duration: const Duration(seconds: 5),
                             );
                             return;
                           }

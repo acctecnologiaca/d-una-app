@@ -1,6 +1,7 @@
 import 'dart:io';
 import 'dart:typed_data';
 import 'package:flutter/material.dart';
+import 'package:d_una_app/shared/widgets/app_toast.dart';
 import 'package:go_router/go_router.dart';
 import 'package:image_cropper/image_cropper.dart';
 import 'package:image_picker/image_picker.dart';
@@ -347,16 +348,18 @@ class _AddProductScreenState extends ConsumerState<AddProductScreen> {
           );
 
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Producto creado exitosamente')),
-        );
         context.pop();
+        AppToast.success(
+          context,
+          message: 'Producto creado exitosamente',
+        );
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(
+        AppToast.error(
           context,
-        ).showSnackBar(SnackBar(content: Text('Error al crear producto: $e')));
+          message: 'Error al crear producto: $e',
+        );
       }
     }
   }
@@ -367,10 +370,9 @@ class _AddProductScreenState extends ConsumerState<AddProductScreen> {
 
     if (brand == null || model.isEmpty) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Marca y modelo son requeridos para autocompletar'),
-          ),
+        AppToast.warning(
+          context,
+          message: 'Marca y modelo son requeridos para autocompletar',
         );
       }
       return;
@@ -392,8 +394,9 @@ class _AddProductScreenState extends ConsumerState<AddProductScreen> {
           // Optional: handle category matching if needed
           // if (data['category'] != null) ...
         });
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Datos autocompletados con IA ✨')),
+        AppToast.success(
+          context,
+          message: 'Datos autocompletados con IA ✨',
         );
       }
     } catch (e) {
@@ -407,9 +410,10 @@ class _AddProductScreenState extends ConsumerState<AddProductScreen> {
           errorMessage =
               'Has excedido el límite de consultas. Intenta más tarde.';
         }
-        ScaffoldMessenger.of(
+        AppToast.error(
           context,
-        ).showSnackBar(SnackBar(content: Text(errorMessage)));
+          message: errorMessage,
+        );
       }
     }
   }
@@ -541,8 +545,9 @@ class _AddProductScreenState extends ConsumerState<AddProductScreen> {
                   });
                 } catch (e) {
                   if (!context.mounted) return;
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text('Error al agregar marca: $e')),
+                  AppToast.error(
+                    context,
+                    message: 'Error al agregar marca: $e',
                   );
                 }
               },
@@ -645,8 +650,9 @@ class _AddProductScreenState extends ConsumerState<AddProductScreen> {
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error al seleccionar imagen: $e')),
+        AppToast.error(
+          context,
+          message: 'Error al seleccionar imagen: $e',
         );
       }
     }

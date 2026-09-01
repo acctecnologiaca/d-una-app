@@ -1,12 +1,14 @@
 import 'dart:io';
-import 'package:d_una_app/shared/widgets/friendly_error_widget.dart';
-import 'package:d_una_app/shared/widgets/custom_dialog.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:image_cropper/image_cropper.dart';
+import 'package:cached_network_image/cached_network_image.dart';
+import 'package:d_una_app/shared/widgets/app_toast.dart';
+import 'package:d_una_app/shared/widgets/friendly_error_widget.dart';
+import 'package:d_una_app/shared/widgets/custom_dialog.dart';
 import '../../domain/models/user_profile.dart';
 import '../providers/profile_provider.dart';
 import '../../../../shared/widgets/custom_text_field.dart';
@@ -44,9 +46,9 @@ class _BasicDataScreenState extends ConsumerState<BasicDataScreen> {
   String? _initialAvatarUrl;
 
   bool get _hasChanges {
-    return _nameController.text != _initialName ||
-        _lastNameController.text != _initialLastName ||
-        _idController.text != _initialId ||
+    return _nameController.text.trim() != _initialName.trim() ||
+        _lastNameController.text.trim() != _initialLastName.trim() ||
+        _idController.text.trim() != _initialId.trim() ||
         _selectedGender != _initialGender ||
         _selectedDate != _initialDate ||
         _avatarFile != null;
@@ -65,11 +67,8 @@ class _BasicDataScreenState extends ConsumerState<BasicDataScreen> {
     setState(() {});
   }
 
-  UserProfile? _lastLoadedProfile;
-
   void _populateData(UserProfile profile) {
-    if (_lastLoadedProfile == profile && _initialDataLoaded) return;
-    _lastLoadedProfile = profile;
+    if (_initialDataLoaded) return;
 
     _initialName = profile.firstName ?? '';
     _initialLastName = profile.lastName ?? '';
@@ -175,8 +174,9 @@ class _BasicDataScreenState extends ConsumerState<BasicDataScreen> {
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error al seleccionar imagen: $e')),
+        AppToast.error(
+          context,
+          message: 'Error al seleccionar imagen: $e',
         );
       }
     }
@@ -230,13 +230,14 @@ class _BasicDataScreenState extends ConsumerState<BasicDataScreen> {
 
       // Update Profile
       final updatedProfile = currentProfile.copyWith(
-        firstName: _nameController.text,
-        lastName: _lastNameController.text,
-        nationalId: _idController.text,
+        firstName: _nameController.text.trim(),
+        lastName: _lastNameController.text.trim(),
+        nationalId: _idController.text.trim(),
         gender: _selectedGender,
         birthDate: _selectedDate,
         avatarUrl: newAvatarUrl,
-        verificationStatus: isVerified ? 'unverified' : currentProfile.verificationStatus,
+        verificationStatus:
+            isVerified ? 'unverified' : currentProfile.verificationStatus,
       );
 
       await ref.read(profileRepositoryProvider).updateProfile(updatedProfile);
@@ -244,15 +245,17 @@ class _BasicDataScreenState extends ConsumerState<BasicDataScreen> {
 
       if (mounted) {
         context.pop();
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Datos actualizados correctamente')),
+        AppToast.success(
+          context,
+          message: 'Datos actualizados correctamente',
         );
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(
+        AppToast.error(
           context,
-        ).showSnackBar(SnackBar(content: Text('Error al guardar: $e')));
+          message: 'Error al guardar: $e',
+        );
       }
     } finally {
       if (mounted) {
@@ -264,7 +267,7 @@ class _BasicDataScreenState extends ConsumerState<BasicDataScreen> {
   Future<void> _selectDate(BuildContext context) async {
     final DateTime? picked = await showDatePicker(
       context: context,
-      initialDate: _selectedDate ?? DateTime.now(),
+      initialDate: _selectedDate ?? DateTime(2000, 1, 1),
       firstDate: DateTime(1900),
       lastDate: DateTime.now(),
       locale: const Locale('es', 'ES'),
@@ -274,16 +277,45 @@ class _BasicDataScreenState extends ConsumerState<BasicDataScreen> {
         _selectedDate = picked;
         _dobController.text = DateFormat('dd/MM/yyyy').format(picked);
       });
+      _formKey.currentState?.validate();
     }
   }
 
-  ImageProvider _getAvatarImage() {
+  Widget _buildAvatarWidget(ColorScheme colors) {
     if (_avatarFile != null) {
-      return FileImage(_avatarFile!);
+      return CircleAvatar(
+        radius: 60,
+        backgroundImage: FileImage(_avatarFile!),
+        backgroundColor: colors.surfaceContainerHighest,
+      );
     } else if (_avatarUrl != null && _avatarUrl!.isNotEmpty) {
-      return NetworkImage(_avatarUrl!);
+      return CachedNetworkImage(
+        imageUrl: _avatarUrl!,
+        imageBuilder: (context, imageProvider) => CircleAvatar(
+          radius: 60,
+          backgroundImage: imageProvider,
+          backgroundColor: colors.surfaceContainerHighest,
+        ),
+        placeholder: (context, url) => CircleAvatar(
+          radius: 60,
+          backgroundColor: colors.surfaceContainerHighest,
+          backgroundImage:
+              const AssetImage('assets/images/avatar_placeholder.png'),
+        ),
+        errorWidget: (context, url, error) => CircleAvatar(
+          radius: 60,
+          backgroundColor: colors.surfaceContainerHighest,
+          backgroundImage:
+              const AssetImage('assets/images/avatar_placeholder.png'),
+        ),
+      );
     } else {
-      return const NetworkImage('https://i.pravatar.cc/300?img=11');
+      return CircleAvatar(
+        radius: 60,
+        backgroundColor: colors.surfaceContainerHighest,
+        backgroundImage:
+            const AssetImage('assets/images/avatar_placeholder.png'),
+      );
     }
   }
 
@@ -318,8 +350,12 @@ class _BasicDataScreenState extends ConsumerState<BasicDataScreen> {
               loading: () => const Center(child: CircularProgressIndicator()),
               error: (error, stack) => FriendlyErrorWidget(error: error),
               data: (profile) {
-                if (profile != null) {
-                  _populateData(profile);
+                if (profile != null && !_initialDataLoaded) {
+                  WidgetsBinding.instance.addPostFrameCallback((_) {
+                    if (mounted) {
+                      _populateData(profile);
+                    }
+                  });
                 }
 
                 return SingleChildScrollView(
@@ -332,11 +368,7 @@ class _BasicDataScreenState extends ConsumerState<BasicDataScreen> {
                         Center(
                           child: Stack(
                             children: [
-                              CircleAvatar(
-                                radius: 60,
-                                backgroundImage: _getAvatarImage(),
-                                backgroundColor: colors.surfaceContainerHighest,
-                              ),
+                              _buildAvatarWidget(colors),
                               Positioned(
                                 bottom: 0,
                                 right: 0,
@@ -369,6 +401,12 @@ class _BasicDataScreenState extends ConsumerState<BasicDataScreen> {
                         CustomTextField(
                           controller: _nameController,
                           label: 'Nombre*',
+                          validator: (value) {
+                            if (value == null || value.trim().isEmpty) {
+                              return 'El nombre es obligatorio';
+                            }
+                            return null;
+                          },
                         ),
                         const SizedBox(height: 16),
 
@@ -376,6 +414,12 @@ class _BasicDataScreenState extends ConsumerState<BasicDataScreen> {
                         CustomTextField(
                           controller: _lastNameController,
                           label: 'Apellido*',
+                          validator: (value) {
+                            if (value == null || value.trim().isEmpty) {
+                              return 'El apellido es obligatorio';
+                            }
+                            return null;
+                          },
                         ),
                         const SizedBox(height: 16),
 
@@ -389,6 +433,13 @@ class _BasicDataScreenState extends ConsumerState<BasicDataScreen> {
                               suffixIcon: const Icon(
                                 Icons.calendar_today_outlined,
                               ),
+                              validator: (value) {
+                                if (_selectedDate == null ||
+                                    (value == null || value.trim().isEmpty)) {
+                                  return 'La fecha de nacimiento es obligatoria';
+                                }
+                                return null;
+                              },
                             ),
                           ),
                         ),
@@ -414,6 +465,12 @@ class _BasicDataScreenState extends ConsumerState<BasicDataScreen> {
                         CustomTextField(
                           controller: _idController,
                           label: 'Cédula/DNI/ID*',
+                          validator: (value) {
+                            if (value == null || value.trim().isEmpty) {
+                              return 'La cédula/DNI es obligatoria';
+                            }
+                            return null;
+                          },
                         ),
                         const SizedBox(height: 48),
 

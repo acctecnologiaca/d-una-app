@@ -46,10 +46,8 @@ class _ReportSearchScreenState extends ConsumerState<ReportSearchScreen> {
   String _searchQuery = '';
   SortOption _currentSort = SortOption.recent;
 
-  ReportSearchArgs get _searchArgs => ReportSearchArgs(
-        productId: widget.productId,
-        clientId: widget.clientId,
-      );
+  ReportSearchArgs get _searchArgs =>
+      ReportSearchArgs(productId: widget.productId, clientId: widget.clientId);
 
   String _getChipLabel(Set<String> selected, String defaultLabel) {
     if (selected.isEmpty) return defaultLabel;
@@ -67,18 +65,19 @@ class _ReportSearchScreenState extends ConsumerState<ReportSearchScreen> {
 
   void _showStatusFilter(List<ServiceReportSummary> reports) {
     final queryNormalized = _searchQuery.normalized;
-    final availableStatuses = reports
-        .where((r) {
-          return queryNormalized.isEmpty ||
-              r.clientName.normalized.contains(queryNormalized) ||
-              r.reportNumber.normalized.contains(queryNormalized) ||
-              (r.reportTag?.normalized.contains(queryNormalized) ?? false);
-        })
-        .where((r) => !r.isArchived)
-        .map((e) => e.status.label)
-        .toSet()
-        .toList()
-      ..sort();
+    final availableStatuses =
+        reports
+            .where((r) {
+              return queryNormalized.isEmpty ||
+                  r.clientName.normalized.contains(queryNormalized) ||
+                  r.reportNumber.normalized.contains(queryNormalized) ||
+                  (r.reportTag?.normalized.contains(queryNormalized) ?? false);
+            })
+            .where((r) => !r.isArchived)
+            .map((e) => e.status.label)
+            .toSet()
+            .toList()
+          ..sort();
 
     availableStatuses.remove(_archivedLabel);
     availableStatuses.add(_archivedLabel);
@@ -102,21 +101,22 @@ class _ReportSearchScreenState extends ConsumerState<ReportSearchScreen> {
 
   void _showInterventionFilter(List<ServiceReportSummary> reports) {
     final queryNormalized = _searchQuery.normalized;
-    final availableInterventions = reports
-        .where((r) {
-          return queryNormalized.isEmpty ||
-              r.clientName.normalized.contains(queryNormalized) ||
-              r.reportNumber.normalized.contains(queryNormalized) ||
-              (r.reportTag?.normalized.contains(queryNormalized) ?? false);
-        })
-        .map((e) => e.interventionType.label)
-        .toSet()
-        .toList()
-      ..sort();
+    final availableInterventions =
+        reports
+            .where((r) {
+              return queryNormalized.isEmpty ||
+                  r.clientName.normalized.contains(queryNormalized) ||
+                  r.reportNumber.normalized.contains(queryNormalized) ||
+                  (r.reportTag?.normalized.contains(queryNormalized) ?? false);
+            })
+            .map((e) => e.interventionType.label)
+            .toSet()
+            .toList()
+          ..sort();
 
     FilterBottomSheet.showMulti(
       context: context,
-      title: 'Tipo de Intervención',
+      title: 'Tipo de servicio',
       options: availableInterventions,
       selectedValues: _selectedInterventions,
       leadingBuilder: (value) => _buildInterventionLeading(value),
@@ -131,20 +131,22 @@ class _ReportSearchScreenState extends ConsumerState<ReportSearchScreen> {
 
   void _showCategoryFilter(List<ServiceReportSummary> reports) {
     final queryNormalized = _searchQuery.normalized;
-    final availableCategories = reports
-        .where((r) {
-          return queryNormalized.isEmpty ||
-              r.clientName.normalized.contains(queryNormalized) ||
-              r.reportNumber.normalized.contains(queryNormalized) ||
-              (r.reportTag?.normalized.contains(queryNormalized) ?? false);
-        })
-        .where(
-          (r) => r.categoryName != null && r.categoryName!.trim().isNotEmpty,
-        )
-        .map((e) => e.categoryName!.trim())
-        .toSet()
-        .toList()
-      ..sort();
+    final availableCategories =
+        reports
+            .where((r) {
+              return queryNormalized.isEmpty ||
+                  r.clientName.normalized.contains(queryNormalized) ||
+                  r.reportNumber.normalized.contains(queryNormalized) ||
+                  (r.reportTag?.normalized.contains(queryNormalized) ?? false);
+            })
+            .where(
+              (r) =>
+                  r.categoryName != null && r.categoryName!.trim().isNotEmpty,
+            )
+            .map((e) => e.categoryName!.trim())
+            .toSet()
+            .toList()
+          ..sort();
 
     FilterBottomSheet.showMulti(
       context: context,
@@ -160,51 +162,24 @@ class _ReportSearchScreenState extends ConsumerState<ReportSearchScreen> {
     );
   }
 
-  void _showClientFilter(List<ServiceReportSummary> reports) {
-    final queryNormalized = _searchQuery.normalized;
-    final availableClients = reports
-        .where((r) {
-          return queryNormalized.isEmpty ||
-              r.clientName.normalized.contains(queryNormalized) ||
-              r.reportNumber.normalized.contains(queryNormalized) ||
-              (r.reportTag?.normalized.contains(queryNormalized) ?? false);
-        })
-        .map((e) => e.clientName.trim())
-        .where((name) => name.isNotEmpty && name != 'Cliente Desconocido')
-        .toSet()
-        .toList()
-      ..sort();
-
-    FilterBottomSheet.showMulti(
-      context: context,
-      title: 'Cliente',
-      options: availableClients,
-      selectedValues: _selectedClients,
-      onApply: (selected) {
-        setState(() {
-          _selectedClients.clear();
-          _selectedClients.addAll(selected);
-        });
-      },
-    );
-  }
-
   void _showAdvisorFilter(List<ServiceReportSummary> reports) {
     final queryNormalized = _searchQuery.normalized;
-    final availableAdvisors = reports
-        .where((r) {
-          return queryNormalized.isEmpty ||
-              r.clientName.normalized.contains(queryNormalized) ||
-              r.reportNumber.normalized.contains(queryNormalized) ||
-              (r.reportTag?.normalized.contains(queryNormalized) ?? false);
-        })
-        .where(
-          (r) => r.advisorName != null && r.advisorName!.trim().isNotEmpty,
-        )
-        .map((e) => e.advisorName!.trim())
-        .toSet()
-        .toList()
-      ..sort();
+    final availableAdvisors =
+        reports
+            .where((r) {
+              return queryNormalized.isEmpty ||
+                  r.clientName.normalized.contains(queryNormalized) ||
+                  r.reportNumber.normalized.contains(queryNormalized) ||
+                  (r.reportTag?.normalized.contains(queryNormalized) ?? false);
+            })
+            .where(
+              (r) => r.advisorName != null && r.advisorName!.trim().isNotEmpty,
+            )
+            .expand((r) => r.advisorName!.split(',').map((e) => e.trim()))
+            .where((name) => name.isNotEmpty)
+            .toSet()
+            .toList()
+          ..sort();
 
     FilterBottomSheet.showMulti(
       context: context,
@@ -295,7 +270,8 @@ class _ReportSearchScreenState extends ConsumerState<ReportSearchScreen> {
       readOnly: widget.isSearchQueryReadOnly,
       isPaginatedMode: true,
       paginatedDataAsync: paginatedAsync,
-      showHistory: !widget.selectionMode &&
+      showHistory:
+          !widget.selectionMode &&
           widget.productId == null &&
           widget.clientId == null &&
           widget.initialQuery == null,
@@ -382,7 +358,8 @@ class _ReportSearchScreenState extends ConsumerState<ReportSearchScreen> {
           onLongPress: () =>
               ref.read(reportSelectionProvider.notifier).toggle(report.id),
           onTap: selection.isSelectionMode
-              ? () => ref.read(reportSelectionProvider.notifier).toggle(report.id)
+              ? () =>
+                    ref.read(reportSelectionProvider.notifier).toggle(report.id)
               : () {
                   if (widget.selectionMode) {
                     Navigator.of(context).pop(report);
@@ -402,7 +379,7 @@ class _ReportSearchScreenState extends ConsumerState<ReportSearchScreen> {
           },
         ),
         FilterChipData(
-          label: _getChipLabel(_selectedInterventions, 'Intervención'),
+          label: _getChipLabel(_selectedInterventions, 'Tipo'),
           isActive: _selectedInterventions.isNotEmpty,
           onTap: () {
             final items = paginatedAsync.valueOrNull?.items ?? [];
@@ -417,14 +394,7 @@ class _ReportSearchScreenState extends ConsumerState<ReportSearchScreen> {
             _showCategoryFilter(items);
           },
         ),
-        FilterChipData(
-          label: _getChipLabel(_selectedClients, 'Cliente'),
-          isActive: _selectedClients.isNotEmpty,
-          onTap: () {
-            final items = paginatedAsync.valueOrNull?.items ?? [];
-            _showClientFilter(items);
-          },
-        ),
+
         FilterChipData(
           label: _selectedDateRange != null
               ? _formatDateRange(_selectedDateRange!)
@@ -460,29 +430,36 @@ class _ReportSearchScreenState extends ConsumerState<ReportSearchScreen> {
           matchesArchive = report.isArchived;
         } else if (wantsArchived && regularStatuses.isNotEmpty) {
           matchesArchive =
-              report.isArchived && regularStatuses.contains(report.status.label);
+              report.isArchived &&
+              regularStatuses.contains(report.status.label);
         } else {
           matchesArchive =
-              !report.isArchived && regularStatuses.contains(report.status.label);
+              !report.isArchived &&
+              regularStatuses.contains(report.status.label);
         }
 
         // Filter match by intervention
-        final matchesIntervention = _selectedInterventions.isEmpty ||
+        final matchesIntervention =
+            _selectedInterventions.isEmpty ||
             _selectedInterventions.contains(report.interventionType.label);
 
         // Filter match by category
-        final matchesCategory = _selectedCategories.isEmpty ||
+        final matchesCategory =
+            _selectedCategories.isEmpty ||
             (report.categoryName != null &&
                 _selectedCategories.contains(report.categoryName));
 
         // Filter match by client
-        final matchesClient = _selectedClients.isEmpty ||
+        final matchesClient =
+            _selectedClients.isEmpty ||
             _selectedClients.contains(report.clientName);
 
         // Filter match by advisor
-        final matchesAdvisor = _selectedAdvisors.isEmpty ||
+        final matchesAdvisor =
+            _selectedAdvisors.isEmpty ||
             (report.advisorName != null &&
-                _selectedAdvisors.contains(report.advisorName));
+                _selectedAdvisors.any((selected) =>
+                    report.advisorName!.toLowerCase().contains(selected.toLowerCase())));
 
         // Filter match by date range
         bool matchesDate = true;
@@ -525,7 +502,8 @@ class _ReportSearchScreenState extends ConsumerState<ReportSearchScreen> {
     final selectedReports = allReports
         .where((r) => selection.selectedIds.contains(r.id))
         .toList();
-    final isAllArchived = selectedReports.isNotEmpty &&
+    final isAllArchived =
+        selectedReports.isNotEmpty &&
         selectedReports.every((r) => r.isArchived);
 
     return AppBar(
@@ -534,8 +512,7 @@ class _ReportSearchScreenState extends ConsumerState<ReportSearchScreen> {
       centerTitle: false,
       leading: IconButton(
         icon: Icon(Icons.close, color: colors.onSurface),
-        onPressed: () =>
-            ref.read(reportSelectionProvider.notifier).clear(),
+        onPressed: () => ref.read(reportSelectionProvider.notifier).clear(),
       ),
       title: Text(
         '${selection.count} Ítem${selection.count > 1 ? 's' : ''}',

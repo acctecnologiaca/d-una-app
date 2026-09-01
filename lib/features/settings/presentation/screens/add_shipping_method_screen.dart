@@ -1,4 +1,5 @@
-import 'package:csc_picker_plus/csc_picker_plus.dart';
+import 'package:d_una_app/shared/widgets/app_toast.dart';
+import 'package:d_una_app/shared/widgets/custom_location_picker.dart';
 import 'package:d_una_app/features/settings/presentation/widgets/add_edit_shipping_company_sheet.dart';
 import 'package:d_una_app/shared/widgets/friendly_error_widget.dart';
 import 'package:flutter/material.dart';
@@ -12,7 +13,6 @@ import '../../../../shared/widgets/custom_dropdown.dart';
 import '../../../../shared/widgets/form_bottom_bar.dart';
 import '../../../portfolio/presentation/providers/lookup_providers.dart';
 import '../../data/models/shipping_company.dart';
-import '../../../../core/utils/error_handler.dart';
 
 class AddShippingMethodScreen extends ConsumerStatefulWidget {
   final ShippingMethod? shippingMethod;
@@ -152,28 +152,23 @@ class _AddShippingMethodScreenState
 
     // Simple validation for dropdowns
     if (_selectedCompany == null || _selectedDeliveryOption == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Por favor llena todos los campos obligatorios'),
-        ),
+      AppToast.warning(
+        context,
+        message: 'Por favor llena todos los campos obligatorios',
       );
       return;
     }
 
     // Check Address if method is Branch or Home Delivery with custom address
     bool isBranchDelivery = _selectedDeliveryOption == 'Retiro en sucursal';
-    // If branch delivery: we might assume address is of the branch, but typically branch address is looked up.
-    // Assuming for now the user enters it.
 
     // Check address fields if relevant
     if (_addressController.text.isEmpty && !isBranchDelivery) {
-      // Assuming Home Delivery needs address
       if (_selectedDeliveryOption == 'Entrega a domicilio' &&
           _addressController.text.isEmpty) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Por favor ingresa la dirección de entrega'),
-          ),
+        AppToast.warning(
+          context,
+          message: 'Por favor ingresa la dirección de entrega',
         );
         return;
       }
@@ -185,7 +180,7 @@ class _AddShippingMethodScreenState
       final method = ShippingMethod(
         id:
             widget.shippingMethod?.id ??
-            '', // ID handled by DB if empty/null, but model requires non-null
+            '',
         userId: userId,
         label: _labelController.text,
         companyId: _selectedCompany!,
@@ -215,13 +210,11 @@ class _AddShippingMethodScreenState
 
       if (mounted) {
         context.pop();
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Método de envío guardado')),
-        );
+        AppToast.success(context, message: 'Método de envío guardado');
       }
     } catch (e) {
       if (mounted) {
-        ErrorHandler.showErrorSnackBar(context, e);
+        AppToast.error(context, message: 'Error al guardar método: $e');
       }
     } finally {
       if (mounted) setState(() => _isLoading = false);
@@ -412,105 +405,31 @@ class _AddShippingMethodScreenState
                         ),
                         const SizedBox(height: 16),
 
-                        // CSC Picker
-                        IgnorePointer(
-                          ignoring: !areAddressFieldsEnabled,
-                          child: Opacity(
-                            opacity: areAddressFieldsEnabled ? 1.0 : 0.6,
-                            child: CSCPickerPlus(
-                              layout: Layout.vertical,
-                              flagState: CountryFlag.DISABLE,
-                              onCountryChanged: (value) {
-                                setState(() {
-                                  _selectedCountry = value;
-                                  _selectedState = null;
-                                  _selectedCity = null;
-                                });
-                              },
-                              onStateChanged: (value) {
-                                setState(() {
-                                  _selectedState = value;
-                                  _selectedCity = null;
-                                });
-                              },
-                              onCityChanged: (value) {
-                                setState(() {
-                                  _selectedCity = value;
-                                });
-                              },
-                              countryFilter: const [
-                                CscCountry.Venezuela,
-                                CscCountry.Colombia,
-                                CscCountry.Argentina,
-                                CscCountry.Chile,
-                                CscCountry.Ecuador,
-                                CscCountry.Peru,
-                                CscCountry.Panama,
-                                CscCountry.Bolivia,
-                                CscCountry.Costa_Rica,
-                                CscCountry.Cuba,
-                                CscCountry.Dominican_Republic,
-                                CscCountry.El_Salvador,
-                                CscCountry.Guatemala,
-                                CscCountry.Honduras,
-                                CscCountry.Mexico,
-                                CscCountry.Nicaragua,
-                                CscCountry.Paraguay,
-                                CscCountry.Puerto_Rico,
-                                CscCountry.Spain,
-                                CscCountry.Uruguay,
-                              ],
-                              countryStateLanguage:
-                                  CountryStateLanguage.englishOrNative,
-                              cityLanguage: CityLanguage.native,
-                              defaultCountry: CscCountry.Venezuela,
-                              currentCountry: _selectedCountry,
-
-                              // Pass current state to ensure persistence
-                              currentState: _selectedState,
-                              currentCity: _selectedCity,
-
-                              // Styling
-                              dropdownDecoration: BoxDecoration(
-                                borderRadius: BorderRadius.circular(8),
-                                color: colors.surface,
-                                border: Border.all(
-                                  color: Colors.grey.shade400,
-                                  width: 1,
-                                ),
-                              ),
-                              disabledDropdownDecoration: BoxDecoration(
-                                borderRadius: BorderRadius.circular(8),
-                                color: colors.surface,
-                                border: Border.all(
-                                  color: Colors.grey.shade400,
-                                  width: 1,
-                                ),
-                              ),
-                              countrySearchPlaceholder: "País",
-                              stateSearchPlaceholder: "Estado",
-                              citySearchPlaceholder: "Ciudad",
-                              countryDropdownLabel: "País*",
-                              stateDropdownLabel: "Estado*",
-                              cityDropdownLabel: "Ciudad*",
-                              selectedItemStyle: TextStyle(
-                                color: colors.onSurface,
-                                fontSize: 16,
-                                height: 1.5,
-                              ),
-                              dropdownHeadingStyle: TextStyle(
-                                color: colors.onSurface,
-                                fontSize: 17,
-                                fontWeight: FontWeight.bold,
-                              ),
-                              dropdownItemStyle: TextStyle(
-                                color: colors.onSurface,
-                                fontSize: 16,
-                              ),
-                              searchBarRadius: 30.0,
-                              dropdownDialogRadius: 8.0,
-                            ),
-                          ),
+                        // Location Picker (Country, State, City)
+                        CustomLocationPicker(
+                          selectedCountry: _selectedCountry ?? 'Venezuela',
+                          selectedState: _selectedState,
+                          selectedCity: _selectedCity,
+                          enabled: areAddressFieldsEnabled,
+                          isRequired: areAddressFieldsEnabled,
+                          onCountryChanged: (value) {
+                            setState(() {
+                              _selectedCountry = value;
+                              _selectedState = null;
+                              _selectedCity = null;
+                            });
+                          },
+                          onStateChanged: (value) {
+                            setState(() {
+                              _selectedState = value;
+                              _selectedCity = null;
+                            });
+                          },
+                          onCityChanged: (value) {
+                            setState(() {
+                              _selectedCity = value;
+                            });
+                          },
                         ),
 
                         const SizedBox(height: 32),

@@ -30,14 +30,16 @@ class PdfSenderInfo {
 class PdfHelpers {
   /// Carga una imagen desde una URL y la convierte en MemoryImage para PDF
   static Future<pw.MemoryImage?> loadNetworkImage(String? url) async {
-    if (url == null || url.isEmpty) return null;
+    if (url == null || url.trim().isEmpty) return null;
     try {
-      final response = await http.get(Uri.parse(url));
-      if (response.statusCode == 200) {
+      final response = await http
+          .get(Uri.parse(url.trim()))
+          .timeout(const Duration(seconds: 3));
+      if (response.statusCode == 200 && response.bodyBytes.isNotEmpty) {
         return pw.MemoryImage(response.bodyBytes);
       }
     } catch (e) {
-      debugPrint('Error loading PDF network image: $e');
+      debugPrint('Error loading PDF network image ($url): $e');
     }
     return null;
   }

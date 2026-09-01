@@ -30,6 +30,8 @@ import '../widgets/send_email_bottom_sheet.dart';
 import '../widgets/select_oc_suppliers_sheet.dart';
 import '../widgets/send_whatsapp_bottom_sheet.dart';
 import 'package:intl/intl.dart';
+import 'package:d_una_app/core/utils/contact_utils.dart';
+import 'package:d_una_app/core/theme/app_theme.dart';
 
 class ViewQuoteScreen extends ConsumerStatefulWidget {
   final String quoteId;
@@ -620,26 +622,115 @@ class _ViewQuoteScreenState extends ConsumerState<ViewQuoteScreen>
                 ),
               ],
             ),
-      floatingActionButton: state.quote?.status == QuoteStatus.finalized.dbValue
-          ? null
-          : Padding(
-              padding: const EdgeInsets.only(bottom: 40.0),
-              child: FloatingActionButton(
-                onPressed: () async {
-                  await context.push(
-                    '/quotes/edit/${widget.quoteId}?tab=${_tabController.index}',
-                  );
-                  // Al volver, refrescamos el proveedor de visualización para obtener los datos actualizados
-                  ref.invalidate(viewQuoteProvider(widget.quoteId));
-                  // Y disparamos la validación de inventario inmediatamente
-                  ref
-                      .read(quoteValidationProvider(widget.quoteId).notifier)
-                      .validate();
-                },
-                child: const Icon(Icons.edit_outlined),
-              ),
+      floatingActionButton: Builder(
+        builder: (context) {
+          final quote = state.quote;
+          if (quote == null) return const SizedBox.shrink();
+
+          final currentStatus = quote.status;
+          final showWhatsAppFab = currentStatus == QuoteStatus.sent.dbValue ||
+              currentStatus == QuoteStatus.resent.dbValue ||
+              currentStatus == QuoteStatus.inReview.dbValue ||
+              currentStatus == QuoteStatus.opened.dbValue ||
+              currentStatus == QuoteStatus.approved.dbValue;
+
+          final canEdit = currentStatus != QuoteStatus.finalized.dbValue;
+
+          if (!showWhatsAppFab && !canEdit) {
+            return const SizedBox.shrink();
+          }
+
+          return Padding(
+            padding: const EdgeInsets.only(bottom: 40.0),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                if (showWhatsAppFab) ...[
+                  FloatingActionButton(
+                    heroTag: 'quote_whatsapp_contact_fab',
+                    onPressed: () => _contactClientWhatsApp(context, quote),
+                    backgroundColor: colors.greenBase,
+                    tooltip: 'Contactar por WhatsApp',
+                    child: Image.asset(
+                      'assets/icons/whatsapp_icon.png',
+                      width: 28,
+                      height: 28,
+                      color: colors.greenBaseOn,
+                    ),
+                  ),
+                  if (canEdit) const SizedBox(height: 16),
+                ],
+                if (canEdit)
+                  FloatingActionButton(
+                    heroTag: 'quote_edit_fab',
+                    onPressed: _handleEditQuote,
+                    child: const Icon(Icons.edit_outlined),
+                  ),
+              ],
             ),
+          );
+        },
+      ),
     );
+  }
+
+  Future<void> _handleEditQuote() async {
+    await context.push(
+      '/quotes/edit/${widget.quoteId}?tab=${_tabController.index}',
+    );
+    // Al volver, refrescamos el proveedor de visualización para obtener los datos actualizados
+    ref.invalidate(viewQuoteProvider(widget.quoteId));
+    // Y disparamos la validación de inventario inmediatamente
+    ref
+        .read(quoteValidationProvider(widget.quoteId).notifier)
+        .validate();
+  }
+
+  Future<void> _contactClientWhatsApp(
+    BuildContext context,
+    Quote quote,
+  ) async {
+    final phone = quote.contact?.phone ??
+        quote.contactPhone ??
+        quote.clientPhone ??
+        '';
+
+    if (phone.trim().isEmpty) {
+      if (context.mounted) {
+        CustomDialog.show(
+          context: context,
+          dialog: CustomDialog.confirmation(
+            title: 'Contacto no disponible',
+            contentText:
+                'El cliente o contacto seleccionado no cuenta con un número de teléfono registrado.',
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text('OK'),
+              ),
+            ],
+          ),
+        );
+      }
+      return;
+    }
+
+    final contactName = quote.contactName ?? quote.clientName ?? '';
+    final quoteNumber = quote.quoteNumber ?? '';
+    final msg = contactName.isNotEmpty
+        ? 'Hola $contactName, le escribo con respecto a la cotización #$quoteNumber.'
+        : 'Hola, le escribo con respecto a la cotización #$quoteNumber.';
+
+    try {
+      await ContactUtils.launchWhatsApp(phone.trim(), message: msg);
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('No se pudo abrir WhatsApp: $e')),
+        );
+      }
+    }
   }
 
   Future<QuoteStatus?> _showStatusDialog(QuoteStatus currentStatus) async {

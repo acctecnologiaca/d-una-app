@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Vista Previa - Diseño 100% Neutro Ejecutivo D-UNA</title>
+  <title>Cotización · CT-2026-0842</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
@@ -95,7 +95,7 @@
       border: 1px solid var(--neutral-border-dark);
       color: var(--neutral-dark);
       padding: 8px 16px;
-      border-radius: 20px;
+      border-radius: 8px;
       font-size: 13px;
       font-weight: 600;
       display: inline-flex;
@@ -269,7 +269,7 @@
 
     .btn {
       flex: 1;
-      padding: 14px 20px;
+      padding: 12px 16px;
       border-radius: 10px;
       font-weight: 600;
       font-size: 14px;
@@ -278,6 +278,8 @@
       display: inline-flex;
       align-items: center;
       justify-content: center;
+      text-align: center;
+      white-space: nowrap;
       gap: 8px;
       text-decoration: none;
       transition: transform 0.15s ease;
@@ -303,11 +305,77 @@
       border: 1.5px solid var(--neutral-dark);
     }
 
-    .footer {
-      text-align: center;
-      padding: 24px;
-      font-size: 12px;
-      color: var(--neutral-muted);
+    /* === PRINT STYLES === */
+    .print-fab {
+      position: fixed;
+      bottom: 24px;
+      right: 24px;
+      background: var(--neutral-dark);
+      color: #fff;
+      border: none;
+      padding: 12px 20px;
+      border-radius: 12px;
+      font-weight: 700;
+      font-size: 13px;
+      font-family: inherit;
+      cursor: pointer;
+      box-shadow: 0 4px 14px rgba(15, 23, 42, 0.25);
+      z-index: 9999;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      transition: transform 0.15s ease, box-shadow 0.15s ease;
+    }
+    .print-fab:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 20px rgba(15, 23, 42, 0.35);
+    }
+    .print-fab:active {
+      transform: scale(0.97);
+    }
+
+    @media print {
+      body {
+        padding: 0 !important;
+        background: white !important;
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+      }
+      .container {
+        max-width: 100% !important;
+        box-shadow: none !important;
+        margin: 0 !important;
+        padding: 0 !important;
+      }
+      .card {
+        border: none !important;
+        box-shadow: none !important;
+        border-radius: 0 !important;
+      }
+      .print-fab,
+      .action-panel,
+      .btn-group,
+      .btn,
+      .footer,
+      .no-print {
+        display: none !important;
+      }
+      .header-banner {
+        border-bottom: 2px solid #000;
+        padding: 16px 24px;
+      }
+      .body-content {
+        padding: 16px 24px;
+      }
+      .table-container {
+        overflow: visible;
+      }
+      table {
+        page-break-inside: auto;
+      }
+      tr {
+        page-break-inside: avoid;
+      }
     }
   </style>
 </head>
@@ -315,47 +383,63 @@
 
   <div class="container">
     <div class="card">
-      <!-- 1. ENCABEZADO MONOCROMÁTICO NEUTRO BLANCO -->
+      
+      <!-- 1. ENCABEZADO 100% NEUTRO BLANCO CON DIVISOR NEUTRO -->
       <div class="header-banner">
-        <div class="brand">
-          <img src="https://fdkswvzrozijbizdthge.supabase.co/storage/v1/object/sign/app_images/logo_d_una.png?token=eyJraWQiOiJzdG9yYWdlLXVybC1zaWduaW5nLWtleV8yNjZhOWZkMS0xYWQyLTQ3OWEtOGNlYS1kYjQzMjA0OGNlMjkiLCJhbGciOiJIUzI1NiJ9.eyJ1cmwiOiJhcHBfaW1hZ2VzL2xvZ29fZF91bmEucG5nIiwic2NvcGUiOiJkb3dubG9hZCIsImlhdCI6MTc4NTI2NTY0NSwiZXhwIjo0OTM4ODY1NjQ1fQ.2vHh0Q0-FA0ZQDV-HeBtlf6CKCS7jrPI5CIFjK7yPVw" alt="Logo Emisor">
-          <div class="title-block">
-            <h1>COTIZACIÓN</h1>
-            <div class="doc-num">CT-VE0001-26001 &bull; 30/07/2026</div>
+        <div class="brand-container">
+          <div class="brand-logo-row">
+            <img src="https://fdkswvzrozijbizdthge.supabase.co/storage/v1/object/public/app_images/logo_d_una.png" alt="D-UNA">
+            <div>
+              <div class="issuer-letterhead">
+                <strong>SERVICIOS Y SOLUCIONES EMPRESARIALES, C.A.</strong><br>
+                RIF / ID Fiscal: J-40192837-4<br>
+                Dirección: Av. Principal Los Ruices, Torre Empresarial, Piso 4, Ofic. 4-B, Caracas<br>
+                Teléfono: +58 (412) 345-6789
+              </div>
+            </div>
           </div>
         </div>
-        <div class="validity-badge">
-          ⌛ Válida hasta: 14/08/2026
+
+        <div style="text-align: right;">
+          <div class="doc-meta">
+            <h1>COTIZACIÓN</h1>
+            <div class="doc-num">CT-2026-0842 &bull; 21/08/2026</div>
+          </div>
+          <div style="margin-top: 8px;">
+            <span class="validity-badge">⌛ Vigente hasta: 05/09/2026</span>
+          </div>
         </div>
       </div>
 
+      <!-- 2. CUERPO PRINCIPAL -->
       <div class="body-content">
-        <!-- 2. DATOS EN 2 COLUMNAS EN NEUTRO -->
+        
+        <!-- GRILLA DE INFORMACIÓN: CLIENTE + ASESOR -->
         <div class="info-grid">
           <div class="info-box">
             <h3>Datos del Cliente</h3>
-            <p><strong>Razón Social:</strong> Corporación Tecnológica C.A.</p>
-            <p><strong>RIF / Cédula:</strong> J-40192837-5</p>
-            <p><strong>Atención:</strong> Ing. Alejandro Pérez</p>
-            <p><strong>Teléfono:</strong> +58 414 1234567</p>
-            <p><strong>Email:</strong> cliente@empresa.com</p>
+            <p><strong>Razón Social:</strong> Inversiones y Tecnología Global, S.A.</p>
+            <p><strong>RIF:</strong> J-30918273-0</p>
+            <p><strong>Atención:</strong> Ing. Carlos Mendoza</p>
+            <p><strong>Teléfono:</strong> +58 (414) 987-6543</p>
+            <p><strong>Email:</strong> cmendoza@itglobal.com</p>
           </div>
 
           <div class="info-box">
             <h3>Asesor Comercial</h3>
-            <p><strong>Empresa:</strong> Servicios Integrales D-UNA</p>
-            <p><strong>Vendedor:</strong> Asesor Técnico Principal</p>
-            <p><strong>Teléfono:</strong> +58 412 9876543</p>
-            <p><strong>Email:</strong> asesor@d-una.app</p>
+            <p><strong>Nombre:</strong> Lic. Alejandro Morales</p>
+            <p><strong>Teléfono:</strong> +58 (412) 345-6789</p>
+            <p><strong>Email:</strong> amorales@serviciosempresariales.com</p>
           </div>
         </div>
 
-        <!-- 3. TABLA DE ÍTEMS EN NEUTRO -->
+        <!-- 3. TABLA DE PRODUCTOS Y SERVICIOS -->
         <div class="table-container">
           <table>
             <thead>
               <tr>
-                <th>Ítem / Descripción</th>
+                <th>Producto / Servicio</th>
+                <th class="text-center">Garantía</th>
                 <th class="text-right">Cant.</th>
                 <th class="text-right">P. Unit</th>
                 <th class="text-right">Total</th>
@@ -364,30 +448,33 @@
             <tbody>
               <tr>
                 <td>
-                  <strong>Cámara IP Exterior Full HD 1080p</strong><br>
-                  <small style="color: var(--neutral-muted);">Marca: Hikvision - Modelo: DS-2CD2143G0-I</small>
+                  <strong>Servidor Rack 1U PowerEdge R350</strong><br>
+                  <small style="color: var(--neutral-muted);">Dell - Intel Xeon E-2314, 16GB RAM, 2x 2TB SATA Enterprise</small>
                 </td>
-                <td class="text-right">4 Und</td>
-                <td class="text-right">$65.00</td>
-                <td class="text-right">$260.00</td>
+                <td class="text-center">12 Meses</td>
+                <td class="text-right">1 Ud</td>
+                <td class="text-right">$1,450.00</td>
+                <td class="text-right">$1,450.00</td>
               </tr>
               <tr>
                 <td>
-                  <strong>DVR Grabador 8 Canales 4K</strong><br>
-                  <small style="color: var(--neutral-muted);">Marca: Dahua - Modelo: XVR5108HS-X</small>
+                  <strong>Switch Gigabit Administrable 24 Puertos</strong><br>
+                  <small style="color: var(--neutral-muted);">Cisco CBS250-24T-4G Smart Switch</small>
                 </td>
-                <td class="text-right">1 Und</td>
-                <td class="text-right">$120.00</td>
-                <td class="text-right">$120.00</td>
+                <td class="text-center">24 Meses</td>
+                <td class="text-right">2 Ud</td>
+                <td class="text-right">$320.00</td>
+                <td class="text-right">$640.00</td>
               </tr>
               <tr>
                 <td>
-                  <strong>Servicio de Instalación y Configuración</strong><br>
-                  <small style="color: var(--neutral-muted);">Incluye cableado estructurado UTP Cat6 y conectores</small>
+                  <strong>Servicio de Instalación, Cableado y Puesta en Marcha</strong><br>
+                  <small style="color: var(--neutral-muted);">Configuración de VLANs, pruebas de rendimiento y certificación de puntos</small>
                 </td>
+                <td class="text-center">30 Días</td>
                 <td class="text-right">1 Serv.</td>
-                <td class="text-right">$150.00</td>
-                <td class="text-right">$150.00</td>
+                <td class="text-right">$350.00</td>
+                <td class="text-right">$350.00</td>
               </tr>
             </tbody>
           </table>
@@ -397,16 +484,16 @@
         <div class="totals-block">
           <div class="totals-card">
             <div class="totals-row">
-              <span>Subtotal:</span>
-              <span>$530.00</span>
+              <span>SUB-TOTAL:</span>
+              <span>$2,440.00</span>
             </div>
             <div class="totals-row">
-              <span>Impuesto / IVA (16%):</span>
-              <span>$84.80</span>
+              <span>IVA (16%):</span>
+              <span>$390.40</span>
             </div>
             <div class="totals-row grand-total">
               <span>TOTAL USD:</span>
-              <span>$614.80</span>
+              <span>$2,830.40</span>
             </div>
           </div>
         </div>
@@ -415,30 +502,40 @@
         <div class="conditions-box">
           <h4>Condiciones Comerciales y Observaciones</h4>
           <ul>
-            <li>Tiempo de entrega estimado: 3 a 5 días hábiles tras recibir la aprobación.</li>
-            <li>Forma de Pago: 50% al aprobar la cotización y 50% contra entrega e instalación.</li>
-            <li>Garantía de equipos: 12 meses contra defectos de fábrica.</li>
+            <li>Validez de la oferta: 15 días continuos a partir de su emisión (Válida hasta el 05/09/2026).</li>
+            <li>Forma de pago: 60% anticipo al aprobar la cotización y 40% contra entrega e instalación conforme.</li>
+            <li>Garantía de equipos: Según especificación de fabricante contra defectos de fábrica.</li>
           </ul>
         </div>
       </div>
 
       <!-- 6. PANEL DE ACCIONES -->
       <div class="action-panel">
-        <div class="btn-group">
-          <button class="btn btn-success">🟩 Aprobar Cotización</button>
-          <button class="btn btn-danger">🟥 Rechazar</button>
+        <div class="action-title" style="font-size: 13px; font-weight: 700; color: var(--neutral-dark); margin-bottom: 6px; text-align: center;">
+          Por favor seleccione una opción para responder a esta cotización:
         </div>
-        <button class="btn btn-secondary" style="width: 100%; max-width: 480px; margin-top: 4px;">
-          📄 Descargar versión PDF
-        </button>
+        <div class="btn-group">
+          <button class="btn btn-success">Aprobar</button>
+          <button class="btn btn-evaluate" style="background: #FFB964; color: #FFFFFF;">En evaluación</button>
+          <button class="btn btn-danger">Rechazar</button>
+        </div>
+        <div class="action-notice" style="font-size: 12px; color: var(--neutral-muted); text-align: center; line-height: 1.4; margin-top: 4px;">
+          Al responder, su asesor comercial será notificado automáticamente para dar curso a su solicitud.
+        </div>
+        <div class="expiration-badge" style="font-size: 11px; font-weight: 800; color: #DC2626; letter-spacing: 0.5px; margin-top: 6px; text-align: center;">
+          COTIZACIÓN DISPONIBLE HASTA EL 05/09/2026
+        </div>
       </div>
     </div>
 
     <div class="footer">
-      <img src="https://fdkswvzrozijbizdthge.supabase.co/storage/v1/object/sign/app_images/logo_d_una.png?token=eyJraWQiOiJzdG9yYWdlLXVybC1zaWduaW5nLWtleV8yNjZhOWZkMS0xYWQyLTQ3OWEtOGNlYS1kYjQzMjA0OGNlMjkiLCJhbGciOiJIUzI1NiJ9.eyJ1cmwiOiJhcHBfaW1hZ2VzL2xvZ29fZF91bmEucG5nIiwic2NvcGUiOiJkb3dubG9hZCIsImlhdCI6MTc4NTI2NTY0NSwiZXhwIjo0OTM4ODY1NjQ1fQ.2vHh0Q0-FA0ZQDV-HeBtlf6CKCS7jrPI5CIFjK7yPVw" alt="D-UNA" style="height: 22px; margin-bottom: 6px; vertical-align: middle;"><br>
-      Sistema Transaccional D-UNA &bull; Gestión Operativa
+      <img src="https://fdkswvzrozijbizdthge.supabase.co/storage/v1/object/public/app_images/logo_d_una.png" alt="D-UNA" style="height: 22px; margin-bottom: 6px; vertical-align: middle;"><br>
+      Sistema Transaccional D-UNA &bull; Gestión Operativa &bull; &copy; 2026
     </div>
   </div>
 
+  <button class="print-fab" onclick="window.print()" title="Imprimir / Guardar como PDF">
+    🖨️ Imprimir / Guardar PDF
+  </button>
 </body>
 </html>

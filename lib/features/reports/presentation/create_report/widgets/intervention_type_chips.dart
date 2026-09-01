@@ -4,11 +4,13 @@ import '../../../domain/models/service_report_model.dart';
 class InterventionTypeChips extends StatelessWidget {
   final InterventionType selectedType;
   final ValueChanged<InterventionType> onSelected;
+  final EdgeInsetsGeometry? padding;
 
   const InterventionTypeChips({
     super.key,
     required this.selectedType,
     required this.onSelected,
+    this.padding,
   });
 
   @override
@@ -16,6 +18,7 @@ class InterventionTypeChips extends StatelessWidget {
     final colors = Theme.of(context).colorScheme;
 
     return SingleChildScrollView(
+      padding: padding ?? const EdgeInsets.symmetric(horizontal: 16),
       scrollDirection: Axis.horizontal,
       child: Row(
         children: InterventionType.values.map((type) {
@@ -29,7 +32,9 @@ class InterventionTypeChips extends StatelessWidget {
                   Icon(
                     type.icon,
                     size: 16,
-                    color: isSelected ? colors.onPrimary : colors.onSurfaceVariant,
+                    color: isSelected
+                        ? colors.onSecondaryContainer
+                        : colors.onSurfaceVariant,
                   ),
                   const SizedBox(width: 6),
                   Text(type.label),
@@ -37,20 +42,24 @@ class InterventionTypeChips extends StatelessWidget {
               ),
               selected: isSelected,
               onSelected: (_) => onSelected(type),
-              selectedColor: colors.primary,
+              selectedColor: colors.secondaryContainer,
               labelStyle: TextStyle(
-                color: isSelected ? colors.onPrimary : colors.onSurface,
-                fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                color: isSelected
+                    ? colors.onSecondaryContainer
+                    : colors.onSurface,
+                fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
                 fontSize: 13,
               ),
-              backgroundColor:
-                  colors.surfaceContainerHighest.withValues(alpha: 0.5),
+              backgroundColor: colors.surface,
               shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(20),
-                side: BorderSide(
-                  color: isSelected ? colors.primary : colors.outlineVariant,
-                ),
+                borderRadius: BorderRadius.circular(8),
+                side: isSelected
+                    ? const BorderSide(color: Colors.transparent)
+                    : BorderSide(
+                        color: colors.outline.withValues(alpha: 0.3),
+                      ),
               ),
+              padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
               showCheckmark: false,
             ),
           );

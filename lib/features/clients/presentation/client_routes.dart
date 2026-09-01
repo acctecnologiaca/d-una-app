@@ -58,21 +58,21 @@ final clientRoutes = <RouteBase>[
         path: ':id', // /clients/:id
         builder: (context, state) => ClientDetailsScreen(
           clientId: state.pathParameters['id']!,
-          initialClient: state.extra as Client?,
+          initialClient: state.extra is Client ? state.extra as Client : null,
         ),
         routes: [
           GoRoute(
             path: 'edit-company', // /clients/:id/edit-company
             builder: (context, state) => EditClientCompanyScreen(
               clientId: state.pathParameters['id']!,
-              client: state.extra as Client?,
+              client: state.extra is Client ? state.extra as Client : null,
             ),
           ),
           GoRoute(
             path: 'edit-person', // /clients/:id/edit-person
             builder: (context, state) => EditClientPersonScreen(
               clientId: state.pathParameters['id']!,
-              client: state.extra as Client?,
+              client: state.extra is Client ? state.extra as Client : null,
             ),
           ),
           GoRoute(
@@ -98,16 +98,30 @@ final clientRoutes = <RouteBase>[
                 path: 'details', // /clients/:id/contacts/details
                 parentNavigatorKey: rootNavigatorKey,
                 builder: (context, state) {
-                  final extra = state.extra as Map<String, dynamic>;
+                  final extra = state.extra is Map<String, dynamic>
+                      ? state.extra as Map<String, dynamic>
+                      : <String, dynamic>{};
                   final contactData = extra['contact'];
                   final contact = contactData is Contact
                       ? contactData
-                      : Contact.fromJson(contactData as Map<String, dynamic>);
+                      : (contactData is Map<String, dynamic>
+                          ? Contact.fromJson(contactData)
+                          : null);
 
                   return ContactDetailsScreen(
                     clientId: state.pathParameters['id']!,
                     companyName: extra['companyName'] as String?,
-                    contact: contact,
+                    contact: contact ??
+                        Contact(
+                          id: '',
+                          clientId: state.pathParameters['id']!,
+                          name: '',
+                          role: '',
+                          email: '',
+                          phone: '',
+                          isPrimary: false,
+                          createdAt: DateTime.now(),
+                        ),
                     contactCount: extra['contactCount'] as int?,
                     canEdit: extra['canEdit'] as bool? ?? true,
                   );
@@ -117,11 +131,15 @@ final clientRoutes = <RouteBase>[
                 path: 'edit', // /clients/:id/contacts/edit
                 parentNavigatorKey: rootNavigatorKey,
                 builder: (context, state) {
-                  final extra = state.extra as Map<String, dynamic>;
+                  final extra = state.extra is Map<String, dynamic>
+                      ? state.extra as Map<String, dynamic>
+                      : <String, dynamic>{};
                   final contactData = extra['contact'];
                   final contact = contactData is Contact
                       ? contactData
-                      : Contact.fromJson(contactData as Map<String, dynamic>);
+                      : (contactData is Map<String, dynamic>
+                          ? Contact.fromJson(contactData)
+                          : null);
 
                   return AddEditContactScreen(
                     clientId: state.pathParameters['id']!,
@@ -135,7 +153,11 @@ final clientRoutes = <RouteBase>[
                 path: 'search', // /clients/:id/contacts/search
                 builder: (context, state) => ContactSearchScreen(
                   clientId: state.pathParameters['id']!,
-                  companyName: state.extra as String,
+                  companyName: state.extra is String
+                      ? state.extra as String
+                      : (state.extra is Map<String, dynamic>
+                          ? (state.extra as Map<String, dynamic>)['companyName'] as String? ?? ''
+                          : ''),
                 ),
               ),
             ],

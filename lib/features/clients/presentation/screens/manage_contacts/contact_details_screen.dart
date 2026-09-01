@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:d_una_app/shared/widgets/app_toast.dart';
 import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 import 'package:d_una_app/features/clients/data/models/client_model.dart';
@@ -57,18 +58,18 @@ class ContactDetailsScreen extends ConsumerWidget {
         try {
           await ref.read(clientsProvider.notifier).deleteContact(contact.id);
           if (context.mounted) {
-            ScaffoldMessenger.of(
-              context,
-            ).showSnackBar(const SnackBar(content: Text('Contacto eliminado')));
             context.pop(); // Pop details
-            // context.pop(); // Pop manage list? No, usually list updates via provider check.
-            // Actually, we just pop the details screen, returning to ManageContactsScreen
+            AppToast.success(
+              context,
+              message: 'Contacto eliminado',
+            );
           }
         } catch (e) {
           if (context.mounted) {
-            ScaffoldMessenger.of(
+            AppToast.error(
               context,
-            ).showSnackBar(SnackBar(content: Text('Error al eliminar: $e')));
+              message: 'Error al eliminar: $e',
+            );
           }
         }
       }
@@ -207,8 +208,9 @@ class ContactDetailsScreen extends ConsumerWidget {
               action: IconButton(
                 onPressed: () {
                   Clipboard.setData(ClipboardData(text: phone));
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Teléfono copiado')),
+                  AppToast.info(
+                    context,
+                    message: 'Teléfono copiado',
                   );
                 },
                 icon: const Icon(Icons.copy_outlined),
@@ -225,8 +227,9 @@ class ContactDetailsScreen extends ConsumerWidget {
               action: IconButton(
                 onPressed: () {
                   Clipboard.setData(ClipboardData(text: email));
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Correo copiado')),
+                  AppToast.info(
+                    context,
+                    message: 'Correo copiado',
                   );
                 },
                 icon: const Icon(Icons.copy_outlined),

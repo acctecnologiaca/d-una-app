@@ -54,10 +54,10 @@ class ServiceReportItemProduct {
 
   factory ServiceReportItemProduct.fromJson(Map<String, dynamic> json) {
     return ServiceReportItemProduct(
-      id: json['id'] as String,
-      reportId: json['report_id'] as String,
+      id: json['id'] as String? ?? '',
+      reportId: json['report_id'] as String? ?? '',
       productId: json['product_id'] as String?,
-      name: json['name'] as String,
+      name: json['name'] as String? ?? '',
       brand: json['brand'] as String?,
       model: json['model'] as String?,
       uom: json['uom'] as String? ?? 'ud.',

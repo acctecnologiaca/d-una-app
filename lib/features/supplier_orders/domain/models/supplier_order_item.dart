@@ -47,6 +47,46 @@ class SupplierOrderItem extends Equatable {
       currentSupplierStock! > 0 &&
       currentSupplierStock! < quantity;
 
+  Map<String, dynamic> toJson() {
+    return {
+      'id': id,
+      'supplier_order_id': supplierOrderId,
+      'product_id': productId,
+      'name': name,
+      'brand': brand,
+      'model': model,
+      'uom': uom,
+      'uom_icon_name': uomIconName,
+      'quantity': quantity,
+      'unit_price': unitPrice,
+      'current_supplier_price': currentSupplierPrice,
+      'current_supplier_stock': currentSupplierStock,
+      'supplier_branch_stock_id': supplierBranchStockId,
+      'branch_name': branchName,
+    };
+  }
+
+  factory SupplierOrderItem.fromJson(Map<String, dynamic> json) {
+    return SupplierOrderItem(
+      id: json['id'] as String,
+      supplierOrderId: json['supplier_order_id'] as String? ?? '',
+      productId: json['product_id'] as String?,
+      name: json['name'] as String? ?? '',
+      brand: json['brand'] as String?,
+      model: json['model'] as String?,
+      uom: json['uom'] as String? ?? '',
+      uomIconName: json['uom_icon_name'] as String?,
+      quantity: (json['quantity'] as num?)?.toDouble() ?? 1.0,
+      unitPrice: (json['unit_price'] as num?)?.toDouble() ?? 0.0,
+      currentSupplierPrice:
+          (json['current_supplier_price'] as num?)?.toDouble(),
+      currentSupplierStock:
+          (json['current_supplier_stock'] as num?)?.toDouble(),
+      supplierBranchStockId: json['supplier_branch_stock_id'] as String?,
+      branchName: json['branch_name'] as String?,
+    );
+  }
+
   @override
   List<Object?> get props => [
     id,

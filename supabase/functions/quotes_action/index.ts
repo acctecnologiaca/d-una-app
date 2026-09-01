@@ -119,7 +119,7 @@ Deno.serve(async (req) => {
           user_name: `${profile?.first_name || ''} ${profile?.last_name || ''}`.trim() || 'Asesor Técnico',
           phone: profile?.phone || '-',
           email: profile?.email || '-',
-          tax_id: profile?.company_id || profile?.tax_id || profile?.identification_id || null,
+          tax_id: profile?.company_rif || profile?.company_id || profile?.tax_id || profile?.national_id || profile?.identification_id || null,
           address: profile?.company_address || profile?.address || null,
           city: profile?.company_city || profile?.city || null,
           state: profile?.company_state || profile?.state || null,

@@ -40,6 +40,7 @@ abstract class ServiceReportsRepository {
     List<ServiceReportItemProduct>? products,
     List<ServiceReportItemService>? services,
     List<ServiceReportCondition>? conditions,
+    List<String>? technicianIds,
   });
 
   Future<ServiceReport> updateReport(
@@ -47,6 +48,7 @@ abstract class ServiceReportsRepository {
     List<ServiceReportItemProduct>? products,
     List<ServiceReportItemService>? services,
     List<ServiceReportCondition>? conditions,
+    List<String>? technicianIds,
   });
 
   Future<void> updateReportStatus(String id, String status);

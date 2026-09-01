@@ -20,16 +20,24 @@ class ViewReportDetailsTab extends ConsumerWidget {
       error: (err, _) => Center(child: Text('Error: $err')),
       data: (report) {
         final dateFormat = DateFormat('dd/MM/yyyy');
-        final intervention =
-            InterventionType.fromDbValue(report.interventionType);
+        final intervention = InterventionType.fromDbValue(
+          report.interventionType,
+        );
+
+        final hasAdditionalInfo =
+            (report.recommendations != null &&
+                report.recommendations!.trim().isNotEmpty) ||
+            (report.notes != null && report.notes!.trim().isNotEmpty) ||
+            (report.reportTag != null && report.reportTag!.trim().isNotEmpty);
 
         return SingleChildScrollView(
           padding: const EdgeInsets.all(16.0),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
+              // 1. Tipo de servicio y categoría
               Text(
-                'Información técnica',
+                'Tipo de servicio y categoría',
                 style: textTheme.titleMedium?.copyWith(
                   fontWeight: FontWeight.bold,
                   color: colors.onSurface,
@@ -38,20 +46,14 @@ class ViewReportDetailsTab extends ConsumerWidget {
               const SizedBox(height: 24),
 
               InfoBlock.text(
-                icon: Icons.numbers,
-                label: 'Número de Reporte',
-                value: report.reportNumber ?? 'RS-PENDIENTE',
-              ),
-              const SizedBox(height: 24),
-
-              InfoBlock.text(
                 icon: intervention.icon,
-                label: 'Tipo de Intervención',
+                label: 'Tipo de servicio',
                 value: intervention.label,
               ),
               const SizedBox(height: 24),
 
-              if (report.categoryName != null) ...[
+              if (report.categoryName != null &&
+                  report.categoryName!.trim().isNotEmpty) ...[
                 InfoBlock.text(
                   icon: Icons.category_outlined,
                   label: 'Categoría',
@@ -60,19 +62,20 @@ class ViewReportDetailsTab extends ConsumerWidget {
                 const SizedBox(height: 24),
               ],
 
-              if (report.advisorName != null) ...[
-                InfoBlock.text(
-                  icon: Icons.person_outline,
-                  label: 'Técnico Asignado',
-                  value: report.advisorName!,
+              // 2. Horario y técnicos
+              Text(
+                'Horario y técnicos',
+                style: textTheme.titleMedium?.copyWith(
+                  fontWeight: FontWeight.bold,
+                  color: colors.onSurface,
                 ),
-                const SizedBox(height: 24),
-              ],
+              ),
+              const SizedBox(height: 24),
 
               InfoBlock.text(
                 icon: Icons.calendar_today_outlined,
-                label: 'Fecha de Servicio',
-                value: dateFormat.format(report.serviceDate),
+                label: 'Fecha de servicio',
+                value: dateFormat.format(report.serviceDate.toLocal()),
               ),
               const SizedBox(height: 24),
 
@@ -90,25 +93,26 @@ class ViewReportDetailsTab extends ConsumerWidget {
                   report.durationMinutes! > 0) ...[
                 InfoBlock.text(
                   icon: Icons.timer_outlined,
-                  label: 'Duración Estimada',
+                  label: 'Duración',
                   value:
                       '${report.durationMinutes! ~/ 60}h ${report.durationMinutes! % 60}m',
                 ),
                 const SizedBox(height: 24),
               ],
 
-              if (report.reportTag != null &&
-                  report.reportTag!.isNotEmpty) ...[
+              if (report.advisorName != null &&
+                  report.advisorName!.trim().isNotEmpty) ...[
                 InfoBlock.text(
-                  icon: Icons.label_outline,
-                  label: 'Etiqueta del Reporte',
-                  value: report.reportTag!,
+                  icon: Icons.badge_outlined,
+                  label: 'Técnicos responsables',
+                  value: report.advisorName!,
                 ),
                 const SizedBox(height: 24),
               ],
 
+              // 3. Trabajo técnico
               Text(
-                'Descripción del servicio',
+                'Informe técnico',
                 style: textTheme.titleMedium?.copyWith(
                   fontWeight: FontWeight.bold,
                   color: colors.onSurface,
@@ -118,41 +122,66 @@ class ViewReportDetailsTab extends ConsumerWidget {
 
               InfoBlock.text(
                 icon: Icons.assignment_outlined,
-                label: 'Solicitud del Cliente',
-                value: (report.requestDescription != null &&
-                        report.requestDescription!.isNotEmpty)
+                label: 'Requerimiento o falla reportada',
+                value:
+                    (report.requestDescription != null &&
+                        report.requestDescription!.trim().isNotEmpty)
                     ? report.requestDescription!
-                    : 'Sin descripción de solicitud',
+                    : 'Sin descripción',
               ),
               const SizedBox(height: 24),
 
               InfoBlock.text(
                 icon: Icons.build_circle_outlined,
-                label: 'Diagnóstico y Trabajo Realizado',
-                value: (report.workDescription != null &&
-                        report.workDescription!.isNotEmpty)
+                label: 'Diagnóstico y/o trabajo realizado',
+                value:
+                    (report.workDescription != null &&
+                        report.workDescription!.trim().isNotEmpty)
                     ? report.workDescription!
                     : 'Sin detalle de trabajo realizado',
               ),
               const SizedBox(height: 24),
 
               if (report.recommendations != null &&
-                  report.recommendations!.isNotEmpty) ...[
+                  report.recommendations!.trim().isNotEmpty) ...[
                 InfoBlock.text(
                   icon: Icons.lightbulb_outline,
-                  label: 'Recomendaciones y Observaciones',
+                  label: 'Recomendaciones',
                   value: report.recommendations!,
                 ),
                 const SizedBox(height: 24),
               ],
 
-              if (report.notes != null && report.notes!.isNotEmpty) ...[
-                InfoBlock.text(
-                  icon: Icons.notes,
-                  label: 'Notas Internas',
-                  value: report.notes!,
+              // 4. Información adicional
+              if (hasAdditionalInfo) ...[
+                Text(
+                  'Información adicional',
+                  style: textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.bold,
+                    color: colors.onSurface,
+                  ),
                 ),
                 const SizedBox(height: 24),
+
+                if (report.notes != null &&
+                    report.notes!.trim().isNotEmpty) ...[
+                  InfoBlock.text(
+                    icon: Icons.notes,
+                    label: 'Notas internas',
+                    value: report.notes!,
+                  ),
+                  const SizedBox(height: 24),
+                ],
+
+                if (report.reportTag != null &&
+                    report.reportTag!.trim().isNotEmpty) ...[
+                  InfoBlock.text(
+                    icon: Icons.label_outline,
+                    label: 'Etiqueta del reporte',
+                    value: report.reportTag!,
+                  ),
+                  const SizedBox(height: 24),
+                ],
               ],
 
               const SizedBox(height: 80),

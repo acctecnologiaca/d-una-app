@@ -1,4 +1,5 @@
-import 'package:csc_picker_plus/csc_picker_plus.dart';
+import 'package:d_una_app/shared/widgets/app_toast.dart';
+import 'package:d_una_app/shared/widgets/custom_location_picker.dart';
 import 'package:d_una_app/shared/widgets/friendly_error_widget.dart';
 import 'package:d_una_app/shared/widgets/custom_dialog.dart';
 import 'package:flutter/material.dart';
@@ -31,15 +32,17 @@ class _MainAddressScreenState extends ConsumerState<MainAddressScreen> {
 
   // Initial State for change detection
   String _initialAddress = '';
-  String? _initialCountry;
+  String? _initialCountry = 'Venezuela';
   String? _initialState;
   String? _initialCity;
 
   bool get _hasChanges {
-    final countryChanged = _selectedCountry != _initialCountry;
-    final stateChanged = _selectedState != _initialState;
-    final cityChanged = _selectedCity != _initialCity;
-    final addressChanged = _addressController.text != _initialAddress;
+    final countryChanged =
+        (_selectedCountry ?? 'Venezuela') != (_initialCountry ?? 'Venezuela');
+    final stateChanged = (_selectedState ?? '') != (_initialState ?? '');
+    final cityChanged = (_selectedCity ?? '') != (_initialCity ?? '');
+    final addressChanged =
+        _addressController.text.trim() != _initialAddress.trim();
 
     return countryChanged || stateChanged || cityChanged || addressChanged;
   }
@@ -51,23 +54,17 @@ class _MainAddressScreenState extends ConsumerState<MainAddressScreen> {
   }
 
   void _onFieldChanged() {
-    setState(() {
-      // triggers UI update
-    });
+    setState(() {});
   }
 
-  UserProfile? _lastLoadedProfile;
-
   void _populateData(UserProfile profile) {
-    if (_lastLoadedProfile == profile && _initialDataLoaded) return;
-    _lastLoadedProfile = profile;
+    if (_initialDataLoaded) return;
 
     final newAddress = profile.mainAddress ?? '';
     final newCountry = profile.mainCountry ?? 'Venezuela';
     final newState = profile.mainState;
     final newCity = profile.mainCity;
 
-    // Force update pristine form (simplest for this bug fix)
     _addressController.text = newAddress;
     _selectedCountry = newCountry;
     _selectedState = newState;
@@ -94,10 +91,9 @@ class _MainAddressScreenState extends ConsumerState<MainAddressScreen> {
     if (_selectedCountry == null ||
         _selectedState == null ||
         _selectedCity == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Por favor complete la selección de ubicación'),
-        ),
+      AppToast.warning(
+        context,
+        message: 'Por favor complete la selección de ubicación',
       );
       return;
     }
@@ -136,11 +132,12 @@ class _MainAddressScreenState extends ConsumerState<MainAddressScreen> {
 
     try {
       final updatedProfile = currentProfile.copyWith(
-        mainAddress: _addressController.text,
+        mainAddress: _addressController.text.trim(),
         mainCountry: _selectedCountry,
         mainState: _selectedState,
         mainCity: _selectedCity,
-        verificationStatus: isVerified ? 'unverified' : currentProfile.verificationStatus,
+        verificationStatus:
+            isVerified ? 'unverified' : currentProfile.verificationStatus,
       );
 
       await ref.read(profileRepositoryProvider).updateProfile(updatedProfile);
@@ -148,15 +145,17 @@ class _MainAddressScreenState extends ConsumerState<MainAddressScreen> {
 
       if (mounted) {
         context.pop();
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Dirección actualizada correctamente')),
+        AppToast.success(
+          context,
+          message: 'Dirección actualizada correctamente',
         );
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(
+        AppToast.error(
           context,
-        ).showSnackBar(SnackBar(content: Text('Error al guardar: $e')));
+          message: 'Error al guardar: $e',
+        );
       }
     } finally {
       if (mounted) {
@@ -196,8 +195,12 @@ class _MainAddressScreenState extends ConsumerState<MainAddressScreen> {
               loading: () => const Center(child: CircularProgressIndicator()),
               error: (error, stack) => FriendlyErrorWidget(error: error),
               data: (profile) {
-                if (profile != null) {
-                  _populateData(profile);
+                if (profile != null && !_initialDataLoaded) {
+                  WidgetsBinding.instance.addPostFrameCallback((_) {
+                    if (mounted) {
+                      _populateData(profile);
+                    }
+                  });
                 }
 
                 return SingleChildScrollView(
@@ -218,12 +221,11 @@ class _MainAddressScreenState extends ConsumerState<MainAddressScreen> {
 
                         // Address Line
                         CustomTextField(
-                          key: ValueKey('address-${profile?.mainAddress}'),
                           controller: _addressController,
                           label: 'Urbanización/Calle/Edificio*',
                           maxLines: 2,
                           validator: (value) {
-                            if (value == null || value.isEmpty) {
+                            if (value == null || value.trim().isEmpty) {
                               return 'Este campo es obligatorio';
                             }
                             return null;
@@ -231,108 +233,31 @@ class _MainAddressScreenState extends ConsumerState<MainAddressScreen> {
                         ),
                         const SizedBox(height: 24),
 
-                        // CSC Picker
-                        // Note: Keys are important here to prevent reset if parent rebuilds drastically,
-                        // but normally Riverpod state preservation handles this.
-                        // However, CSCPicker might be tricky with initial values if populated late.
-                        if (_initialDataLoaded)
-                          CSCPickerPlus(
-                            key: ValueKey(
-                              '$_selectedCountry-$_selectedState-$_selectedCity',
-                            ),
-                            layout: Layout.vertical,
-                            flagState: CountryFlag.DISABLE,
-                            onCountryChanged: (value) {
-                              setState(() {
-                                _selectedCountry = value;
-                                _selectedState = null; // reset lower levels
-                                _selectedCity = null;
-                              });
-                            },
-                            onStateChanged: (value) {
-                              setState(() {
-                                _selectedState = value;
-                                _selectedCity = null;
-                              });
-                            },
-                            onCityChanged: (value) {
-                              setState(() {
-                                _selectedCity = value;
-                              });
-                            },
-                            countryFilter: const [
-                              CscCountry.Venezuela,
-                              CscCountry.Colombia,
-                              CscCountry.Argentina,
-                              CscCountry.Chile,
-                              CscCountry.Ecuador,
-                              CscCountry.Peru,
-                              CscCountry.Panama,
-                              CscCountry.Bolivia,
-                              CscCountry.Costa_Rica,
-                              CscCountry.Cuba,
-                              CscCountry.Dominican_Republic,
-                              CscCountry.El_Salvador,
-                              CscCountry.Guatemala,
-                              CscCountry.Honduras,
-                              CscCountry.Mexico,
-                              CscCountry.Nicaragua,
-                              CscCountry.Paraguay,
-                              CscCountry.Puerto_Rico,
-                              CscCountry.Spain,
-                              CscCountry.Uruguay,
-                            ],
-                            countryStateLanguage:
-                                CountryStateLanguage.englishOrNative,
-                            cityLanguage: CityLanguage.native,
-                            defaultCountry: CscCountry.Venezuela,
-
-                            // We pass the current selected state as the "current" parameters
-                            // to ensure it reflects what we loaded from DB.
-                            currentCountry: _selectedCountry,
-                            currentState: _selectedState,
-                            currentCity: _selectedCity,
-
-                            // Styling
-                            dropdownDecoration: BoxDecoration(
-                              borderRadius: BorderRadius.circular(8),
-                              color: colors.surface,
-                              border: Border.all(
-                                color: Colors.grey.shade400,
-                                width: 1,
-                              ),
-                            ),
-                            disabledDropdownDecoration: BoxDecoration(
-                              borderRadius: BorderRadius.circular(8),
-                              color: Colors.grey.shade100,
-                              border: Border.all(
-                                color: Colors.grey.shade400,
-                                width: 1,
-                              ),
-                            ),
-                            countrySearchPlaceholder: "País",
-                            stateSearchPlaceholder: "Estado",
-                            citySearchPlaceholder: "Ciudad",
-                            countryDropdownLabel: "País*",
-                            stateDropdownLabel: "Estado*",
-                            cityDropdownLabel: "Ciudad*",
-                            selectedItemStyle: TextStyle(
-                              color: colors.onSurface,
-                              fontSize: 16,
-                              height: 1.5,
-                            ),
-                            dropdownHeadingStyle: TextStyle(
-                              color: colors.onSurface,
-                              fontSize: 17,
-                              fontWeight: FontWeight.bold,
-                            ),
-                            dropdownItemStyle: TextStyle(
-                              color: colors.onSurface,
-                              fontSize: 16,
-                            ),
-                            searchBarRadius: 30.0,
-                            dropdownDialogRadius: 8.0,
-                          ),
+                        // Location Picker (Country, State, City)
+                        CustomLocationPicker(
+                          selectedCountry: _selectedCountry ?? 'Venezuela',
+                          selectedState: _selectedState,
+                          selectedCity: _selectedCity,
+                          isRequired: true,
+                          onCountryChanged: (value) {
+                            setState(() {
+                              _selectedCountry = value;
+                              _selectedState = null;
+                              _selectedCity = null;
+                            });
+                          },
+                          onStateChanged: (value) {
+                            setState(() {
+                              _selectedState = value;
+                              _selectedCity = null;
+                            });
+                          },
+                          onCityChanged: (value) {
+                            setState(() {
+                              _selectedCity = value;
+                            });
+                          },
+                        ),
 
                         const SizedBox(height: 48),
 

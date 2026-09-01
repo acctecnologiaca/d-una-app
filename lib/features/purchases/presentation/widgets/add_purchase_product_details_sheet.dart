@@ -1,4 +1,3 @@
-import 'package:d_una_app/core/utils/string_extensions.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -9,9 +8,6 @@ import 'package:d_una_app/shared/widgets/custom_text_field.dart';
 import 'package:d_una_app/shared/widgets/custom_dropdown.dart';
 import 'package:d_una_app/shared/widgets/custom_button.dart';
 import 'package:d_una_app/shared/widgets/custom_stepper.dart';
-import 'package:d_una_app/shared/widgets/standard_list_item.dart';
-import 'package:d_una_app/shared/widgets/product_image_avatar.dart';
-import 'package:d_una_app/shared/widgets/uom_status_badge.dart';
 import 'package:d_una_app/shared/widgets/custom_action_sheet.dart';
 import 'package:d_una_app/shared/utils/currency_formatter.dart';
 
@@ -19,12 +15,14 @@ class AddPurchaseProductDetailsSheet extends ConsumerStatefulWidget {
   final Product product;
   final PurchaseItemProduct? existingItem;
   final bool isLinkedToOrder;
+  final double? initialQuantity;
 
   const AddPurchaseProductDetailsSheet({
     super.key,
     required this.product,
     this.existingItem,
     this.isLinkedToOrder = false,
+    this.initialQuantity,
   });
 
   static Future<Map<String, dynamic>?> show(
@@ -32,6 +30,7 @@ class AddPurchaseProductDetailsSheet extends ConsumerStatefulWidget {
     required Product product,
     PurchaseItemProduct? existingItem,
     bool isLinkedToOrder = false,
+    double? initialQuantity,
   }) {
     final sheetKey = GlobalKey<_AddPurchaseProductDetailsSheetState>();
 
@@ -44,6 +43,7 @@ class AddPurchaseProductDetailsSheet extends ConsumerStatefulWidget {
         product: product,
         existingItem: existingItem,
         isLinkedToOrder: isLinkedToOrder,
+        initialQuantity: initialQuantity,
       ),
       actions: [
         Padding(
@@ -71,7 +71,6 @@ class AddPurchaseProductDetailsSheet extends ConsumerStatefulWidget {
 class _AddPurchaseProductDetailsSheetState
     extends ConsumerState<AddPurchaseProductDetailsSheet> {
   final _formKey = GlobalKey<FormState>();
-  final _quantityController = TextEditingController(text: '1');
   final _costController = TextEditingController();
   final _warrantyQtyController = TextEditingController(text: '12');
 
@@ -85,7 +84,6 @@ class _AddPurchaseProductDetailsSheetState
     super.initState();
     if (widget.existingItem != null) {
       final item = widget.existingItem!;
-      _quantityController.text = item.quantity.toInt().toString();
       _costController.text = CurrencyFormatter.format(item.unitPrice);
       _warrantyQtyController.text = (item.warrantyTime ?? 1).toString();
       _noWarranty = item.warrantyTime == null || item.warrantyTime == 0;
@@ -101,6 +99,10 @@ class _AddPurchaseProductDetailsSheetState
 
       _noSerials = !item.requiresSerials;
     } else {
+      if (widget.product.averageCost > 0) {
+        _costController.text =
+            CurrencyFormatter.format(widget.product.averageCost);
+      }
       // Default to inverted values from product catalog settings
       _noWarranty = !widget.product.hasWarranty;
       _noSerials = !widget.product.requiresSerials;
@@ -110,26 +112,9 @@ class _AddPurchaseProductDetailsSheetState
 
   @override
   void dispose() {
-    _quantityController.dispose();
     _costController.dispose();
     _warrantyQtyController.dispose();
     super.dispose();
-  }
-
-  void _incrementQuantity() {
-    final current = double.tryParse(_quantityController.text) ?? 0;
-    setState(() {
-      _quantityController.text = (current + 1).toStringAsFixed(0);
-    });
-  }
-
-  void _decrementQuantity() {
-    final current = double.tryParse(_quantityController.text) ?? 1;
-    if (current > 1) {
-      setState(() {
-        _quantityController.text = (current - 1).toStringAsFixed(0);
-      });
-    }
   }
 
   void _incrementWarranty() {
@@ -151,7 +136,8 @@ class _AddPurchaseProductDetailsSheetState
   Future<void> onConfirm() async {
     if (!_formKey.currentState!.validate()) return;
 
-    final qty = double.tryParse(_quantityController.text) ?? 1;
+    final qty =
+        widget.initialQuantity ?? (widget.existingItem?.quantity ?? 1.0);
     final cost = CurrencyFormatter.parse(_costController.text) ?? 0;
     final wQty = _noWarranty
         ? 0
@@ -193,84 +179,6 @@ class _AddPurchaseProductDetailsSheetState
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          // Header Section (using StandardListItem)
-          StandardListItem(
-            padding: EdgeInsets.zero,
-            leading: ProductImageAvatar(imageUrl: widget.product.imageUrl),
-            overline: Text(
-              widget.product.brand?.name.toTitleCase ?? 'Sin marca',
-              style: const TextStyle(fontWeight: FontWeight.w600),
-            ),
-            title: widget.product.name,
-            subtitle: Text(widget.product.model ?? 'Sin modelo'),
-            trailing: UomStatusBadge(
-              quantity: 0,
-              uomAbbreviation: widget.product.uomModel?.symbol ?? 'ud.',
-              uomIconName: widget.product.uomModel?.iconName,
-              showQuantity: false,
-            ),
-          ),
-          const SizedBox(height: 16),
-          const Divider(),
-          const SizedBox(height: 16),
-
-          // Cantidad Comprada Title
-          Row(
-            children: [
-              Icon(
-                Icons.inventory_2_outlined,
-                size: 20,
-                color: colors.onSurfaceVariant,
-              ),
-              const SizedBox(width: 8),
-              Text(
-                'Cantidad comprada',
-                style: textTheme.titleSmall?.copyWith(
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 16),
-
-          // Quantity and UOM Row
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.center,
-            children: [
-              Expanded(
-                flex: 3,
-                child: IgnorePointer(
-                  ignoring: widget.isLinkedToOrder,
-                  child: Opacity(
-                    opacity: widget.isLinkedToOrder ? 0.6 : 1.0,
-                    child: CustomStepper(
-                      label: 'Cantidad*',
-                      controller: _quantityController,
-                      onIncrement: _incrementQuantity,
-                      onDecrement: _decrementQuantity,
-                    ),
-                  ),
-                ),
-              ),
-              const SizedBox(width: 8),
-              Expanded(
-                flex: 2,
-                child: Opacity(
-                  opacity: 0.5,
-                  child: CustomTextField(
-                    label: 'Medida',
-                    readOnly: true,
-                    controller: TextEditingController(
-                      text:
-                          '${widget.product.uomModel?.name.toTitleCase ?? ''} (${widget.product.uomModel?.symbol ?? ''})',
-                    ),
-                  ),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 24),
-
           // Precio de Compra Title
           Row(
             children: [

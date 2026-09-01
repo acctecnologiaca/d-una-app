@@ -19,11 +19,29 @@ class _ReportClientTabState extends ConsumerState<ReportClientTab> {
   Widget build(BuildContext context) {
     final state = ref.watch(createReportProvider);
     final clientsAsync = ref.watch(clientsProvider);
-    final clients = clientsAsync.value ?? [];
+    final activeClients = clientsAsync.value ?? [];
 
-    final selectedClient = clients
-        .where((c) => c.id == state.clientId)
-        .firstOrNull;
+    final selectedClient = activeClients
+            .where((c) => c.id == state.clientId)
+            .firstOrNull ??
+        (state.clientId != null
+            ? Client(
+                id: state.clientId!,
+                name: state.clientName ?? '',
+                userId: '',
+                type: 'company',
+                createdAt: DateTime.now(),
+                isArchived: true,
+              )
+            : null);
+
+    final clients = [
+      ...activeClients,
+      if (selectedClient != null &&
+          !activeClients.any((c) => c.id == selectedClient.id))
+        selectedClient,
+    ];
+
     final contacts = selectedClient?.contacts ?? [];
     final selectedContact = contacts
         .where((c) => c.id == state.contactId)

@@ -12,6 +12,7 @@ import '../../../../../shared/widgets/sort_selector.dart';
 import '../../../../../shared/widgets/custom_extended_fab.dart';
 import '../../../../../shared/widgets/empty_list_state.dart';
 import '../../../../../shared/widgets/paginated_list_view.dart';
+import '../../../../ads/presentation/providers/ads_provider.dart';
 
 class OwnInventoryScreen extends ConsumerStatefulWidget {
   const OwnInventoryScreen({super.key});
@@ -29,7 +30,21 @@ class _OwnInventoryScreenState extends ConsumerState<OwnInventoryScreen> {
     final paginatedStateAsync = ref.watch(paginatedProductsProvider);
     final userProfileAsync = ref.watch(userProfileProvider);
 
-    final isError = paginatedStateAsync.hasError || userProfileAsync.hasError;
+    final userProfile = userProfileAsync.valueOrNull;
+    final occupationIds = <String>[
+      if (userProfile?.occupationId != null) userProfile!.occupationId!,
+      ...userProfile?.secondaryOccupationIds ?? [],
+    ];
+
+    final isAdsEnabled =
+        ref.watch(isAdPlacementEnabledProvider('own_inventory_list'));
+    final adBannersAsync = isAdsEnabled
+        ? ref.watch(
+            adBannersProvider(
+              AdBannerParams(occupationIds: occupationIds),
+            ),
+          )
+        : null;
 
     return Scaffold(
       appBar: AppBar(
@@ -49,88 +64,99 @@ class _OwnInventoryScreenState extends ConsumerState<OwnInventoryScreen> {
       ),
       body: Column(
         children: [
-          if (!isError) ...[
-            // Search & Filter Bar
-            Padding(
-              padding: const EdgeInsets.symmetric(
-                horizontal: 16.0,
-                vertical: 8.0,
-              ),
-              child: CustomSearchBar(
-                hintText: 'Buscar...',
-                readOnly: true,
-                showFilterIcon: true,
-                onTap: () {
-                  context.push('/portfolio/own-inventory/search');
-                },
-              ),
+          // Search & Filter Bar
+          Padding(
+            padding: const EdgeInsets.symmetric(
+              horizontal: 16.0,
+              vertical: 8.0,
             ),
+            child: CustomSearchBar(
+              hintText: 'Buscar...',
+              readOnly: true,
+              showFilterIcon: true,
+              onTap: () {
+                context.push('/portfolio/own-inventory/search');
+              },
+            ),
+          ),
 
-            // Disclaimer (Updated text since price/stock are 0 for now)
-            Padding(
-              padding: const EdgeInsets.symmetric(
-                horizontal: 16.0,
-                vertical: 8.0,
-              ),
-              child: const InfoDisclaimerCard(
-                text: 'Precios no incluyen impuestos',
-                showCloseButton: true,
-              ),
+          // Disclaimer (Updated text since price/stock are 0 for now)
+          Padding(
+            padding: const EdgeInsets.symmetric(
+              horizontal: 16.0,
+              vertical: 8.0,
             ),
+            child: const InfoDisclaimerCard(
+              text: 'Precios no incluyen impuestos',
+              showCloseButton: true,
+            ),
+          ),
 
-            // Sort Selector
-            Padding(
-              padding: const EdgeInsets.symmetric(
-                horizontal: 16.0,
-                vertical: 8.0,
-              ),
-              child: Row(
-                children: [
-                  SortSelector(
-                    currentSort: _currentSort,
-                    onSortChanged: (val) {
-                      setState(() => _currentSort = val);
-                      String orderBy = 'created_at';
-                      bool ascending = false;
-                      if (val == SortOption.nameAZ) {
-                        orderBy = 'name';
-                        ascending = true;
-                      } else if (val == SortOption.nameZA) {
-                        orderBy = 'name';
-                        ascending = false;
-                      }
-                      ref
-                          .read(paginatedProductsProvider.notifier)
-                          .updateSort(orderBy, ascending);
-                    },
-                    options: const [
-                      SortOption.recent,
-                      SortOption.nameAZ,
-                      SortOption.nameZA,
-                    ],
-                  ),
-                ],
-              ),
+          // Sort Selector
+          Padding(
+            padding: const EdgeInsets.symmetric(
+              horizontal: 16.0,
+              vertical: 8.0,
             ),
-          ],
+            child: Row(
+              children: [
+                SortSelector(
+                  currentSort: _currentSort,
+                  onSortChanged: (val) {
+                    setState(() => _currentSort = val);
+                    String orderBy = 'created_at';
+                    bool ascending = false;
+                    if (val == SortOption.nameAZ) {
+                      orderBy = 'name';
+                      ascending = true;
+                    } else if (val == SortOption.nameZA) {
+                      orderBy = 'name';
+                      ascending = false;
+                    } else if (val == SortOption.recent) {
+                      orderBy = 'created_at';
+                      ascending = false;
+                    } else if (val == SortOption.quantityDesc) {
+                      orderBy = 'inventory_quantity';
+                      ascending = false;
+                    } else if (val == SortOption.quantityAsc) {
+                      orderBy = 'inventory_quantity';
+                      ascending = true;
+                    } else if (val == SortOption.highestPrice) {
+                      orderBy = 'average_cost';
+                      ascending = false;
+                    } else if (val == SortOption.lowestPrice) {
+                      orderBy = 'average_cost';
+                      ascending = true;
+                    }
+                    ref
+                        .read(paginatedProductsProvider.notifier)
+                        .updateSort(orderBy, ascending);
+                  },
+                  options: const [
+                    SortOption.recent,
+                    SortOption.nameAZ,
+                    SortOption.nameZA,
+                    SortOption.quantityDesc,
+                    SortOption.quantityAsc,
+                    SortOption.highestPrice,
+                    SortOption.lowestPrice,
+                  ],
+                ),
+              ],
+            ),
+          ),
 
           // Inventory List
           Expanded(
             child: RefreshIndicator(
               onRefresh: () async {
                 ref.invalidate(userProfileProvider);
+                ref.read(dismissedBannerIdsProvider.notifier).state = {};
+                ref.invalidate(adBannersProvider);
                 await ref.read(paginatedProductsProvider.notifier).refresh();
               },
-              child: userProfileAsync.when(
-                loading: () => const Center(child: CircularProgressIndicator()),
-                error: (err, stack) => FriendlyErrorWidget(
-                  error: err,
-                  onRetry: () {
-                    ref.invalidate(userProfileProvider);
-                    ref.invalidate(productsProvider);
-                  },
-                ),
-                data: (_) {
+              child: Builder(
+                builder: (context) {
                   final paginatedState = paginatedStateAsync.valueOrNull;
                   if (paginatedState == null ||
                       paginatedState.isInitialLoading) {
@@ -166,28 +192,33 @@ class _OwnInventoryScreenState extends ConsumerState<OwnInventoryScreen> {
                     hasReachedEnd: paginatedState.hasReachedEnd,
                     onLoadMore: () =>
                         ref.read(paginatedProductsProvider.notifier).loadMore(),
-                    padding: const EdgeInsets.fromLTRB(16, 16, 16, 120),
+                    banners: adBannersAsync?.valueOrNull,
+                    screenContext: 'own_inventory_list',
+                    padding: const EdgeInsets.fromLTRB(0, 8, 0, 120),
                     separatorBuilder: (context, index) =>
                         const Divider(height: 1, color: Colors.transparent),
                     itemBuilder: (context, index, product) {
-                      return InventoryItemCard(
-                        name: product.name,
-                        brand: product.brand?.name ?? 'Sin marca',
-                        model: product.model ?? 'Sin modelo',
-                        stock: product.inventoryQuantity,
-                        price: product.averageCost,
-                        unit: product.uom,
-                        uomIconName: product.uomModel?.iconName,
-                        imageUrl: product.imageUrl,
-                        onTap: () {
-                          InventoryActionSheet.show(
-                            context: context,
-                            ref: ref,
-                            product: product,
-                            currentPrice: product.averageCost,
-                            currentStock: product.inventoryQuantity,
-                          );
-                        },
+                      return Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                        child: InventoryItemCard(
+                          name: product.name,
+                          brand: product.brand?.name ?? 'Sin marca',
+                          model: product.model ?? 'Sin modelo',
+                          stock: product.inventoryQuantity,
+                          price: product.averageCost,
+                          unit: product.uom,
+                          uomIconName: product.uomModel?.iconName,
+                          imageUrl: product.imageUrl,
+                          onTap: () {
+                            InventoryActionSheet.show(
+                              context: context,
+                              ref: ref,
+                              product: product,
+                              currentPrice: product.averageCost,
+                              currentStock: product.inventoryQuantity,
+                            );
+                          },
+                        ),
                       );
                     },
                   );
@@ -197,18 +228,16 @@ class _OwnInventoryScreenState extends ConsumerState<OwnInventoryScreen> {
           ),
         ],
       ),
-      floatingActionButton: isError
-          ? null
-          : Padding(
-              padding: const EdgeInsets.only(bottom: 40.0),
-              child: CustomExtendedFab(
-                onPressed: () {
-                  context.push('/portfolio/own-inventory/add');
-                },
-                label: 'Agregar',
-                icon: Icons.add,
-              ),
-            ),
+      floatingActionButton: Padding(
+        padding: const EdgeInsets.only(bottom: 40.0),
+        child: CustomExtendedFab(
+          onPressed: () {
+            context.push('/portfolio/own-inventory/add');
+          },
+          label: 'Agregar',
+          icon: Icons.add,
+        ),
+      ),
     );
   }
 }

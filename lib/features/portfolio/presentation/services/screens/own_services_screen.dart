@@ -29,8 +29,6 @@ class _OwnServicesScreenState extends ConsumerState<OwnServicesScreen> {
     final colors = Theme.of(context).colorScheme;
     final paginatedAsync = ref.watch(paginatedServicesProvider);
 
-    final isError = paginatedAsync.hasError;
-
     return Scaffold(
       appBar: AppBar(
         title: const Text('Servicios propios'),
@@ -49,70 +47,68 @@ class _OwnServicesScreenState extends ConsumerState<OwnServicesScreen> {
       ),
       body: Column(
         children: [
-          if (!isError) ...[
-            // Search Bar
-            Padding(
-              padding: const EdgeInsets.symmetric(
-                horizontal: 16.0,
-                vertical: 8.0,
-              ),
-              child: CustomSearchBar(
-                hintText: 'Buscar servicio...',
-                readOnly: true,
-                showFilterIcon: true,
-                onTap: () {
-                  context.push('/portfolio/own-services/search');
-                },
-              ),
+          // Search Bar
+          Padding(
+            padding: const EdgeInsets.symmetric(
+              horizontal: 16.0,
+              vertical: 8.0,
             ),
+            child: CustomSearchBar(
+              hintText: 'Buscar servicio...',
+              readOnly: true,
+              showFilterIcon: true,
+              onTap: () {
+                context.push('/portfolio/own-services/search');
+              },
+            ),
+          ),
 
-            // Disclaimer
-            Padding(
-              padding: const EdgeInsets.symmetric(
-                horizontal: 16.0,
-                vertical: 8.0,
-              ),
-              child: const InfoDisclaimerCard(
-                text: 'Precios no incluyen impuestos',
-                showCloseButton: true,
-              ),
+          // Disclaimer
+          Padding(
+            padding: const EdgeInsets.symmetric(
+              horizontal: 16.0,
+              vertical: 8.0,
             ),
+            child: const InfoDisclaimerCard(
+              text: 'Precios no incluyen impuestos',
+              showCloseButton: true,
+            ),
+          ),
 
-            // Sort Header
-            Padding(
-              padding: const EdgeInsets.symmetric(
-                horizontal: 16.0,
-                vertical: 8.0,
-              ),
-              child: Row(
-                children: [
-                  SortSelector(
-                    currentSort: _currentSort,
-                    onSortChanged: (val) {
-                      setState(() => _currentSort = val);
-                      String orderBy = 'created_at';
-                      bool ascending = false;
-                      if (val == SortOption.nameAZ) {
-                        orderBy = 'name';
-                        ascending = true;
-                      } else if (val == SortOption.nameZA) {
-                        orderBy = 'name';
-                        ascending = false;
-                      }
-                      ref
-                          .read(paginatedServicesProvider.notifier)
-                          .updateSort(orderBy, ascending);
-                    },
-                    options: const [
-                      SortOption.recent,
-                      SortOption.nameAZ,
-                      SortOption.nameZA,
-                    ],
-                  ),
-                ],
-              ),
+          // Sort Header
+          Padding(
+            padding: const EdgeInsets.symmetric(
+              horizontal: 16.0,
+              vertical: 8.0,
             ),
-          ],
+            child: Row(
+              children: [
+                SortSelector(
+                  currentSort: _currentSort,
+                  onSortChanged: (val) {
+                    setState(() => _currentSort = val);
+                    String orderBy = 'created_at';
+                    bool ascending = false;
+                    if (val == SortOption.nameAZ) {
+                      orderBy = 'name';
+                      ascending = true;
+                    } else if (val == SortOption.nameZA) {
+                      orderBy = 'name';
+                      ascending = false;
+                    }
+                    ref
+                        .read(paginatedServicesProvider.notifier)
+                        .updateSort(orderBy, ascending);
+                  },
+                  options: const [
+                    SortOption.recent,
+                    SortOption.nameAZ,
+                    SortOption.nameZA,
+                  ],
+                ),
+              ],
+            ),
+          ),
 
           Expanded(
             child: RefreshIndicator(
@@ -173,19 +169,17 @@ class _OwnServicesScreenState extends ConsumerState<OwnServicesScreen> {
           ),
         ],
       ),
-      floatingActionButton: isError
-          ? null
-          : Padding(
-              padding: const EdgeInsets.only(bottom: 40.0),
-              child: CustomExtendedFab(
-                onPressed: () {
-                  // Navigate to Add Service Wizard
-                  context.push('/portfolio/own-services/add');
-                },
-                label: 'Agregar',
-                icon: Icons.add,
-              ),
-            ),
+      floatingActionButton: Padding(
+        padding: const EdgeInsets.only(bottom: 40.0),
+        child: CustomExtendedFab(
+          onPressed: () {
+            // Navigate to Add Service Wizard
+            context.push('/portfolio/own-services/add');
+          },
+          label: 'Agregar',
+          icon: Icons.add,
+        ),
+      ),
     );
   }
 

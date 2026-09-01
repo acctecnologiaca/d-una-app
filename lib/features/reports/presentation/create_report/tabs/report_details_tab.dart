@@ -1,18 +1,24 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import 'package:d_una_app/shared/widgets/friendly_error_widget.dart';
 import 'package:d_una_app/shared/widgets/custom_dropdown.dart';
+import 'package:d_una_app/shared/widgets/custom_multi_dropdown.dart';
 import 'package:d_una_app/shared/widgets/custom_text_field.dart';
+import 'package:d_una_app/shared/widgets/filter_bottom_sheet.dart';
 import 'package:d_una_app/features/portfolio/data/models/category_model.dart';
 import 'package:d_una_app/features/portfolio/presentation/providers/lookup_providers.dart';
 import 'package:d_una_app/features/collaborators/domain/models/collaborator.dart';
 import 'package:d_una_app/features/collaborators/presentation/providers/collaborators_providers.dart';
 import 'package:d_una_app/features/settings/presentation/widgets/add_edit_category_sheet.dart';
+import 'package:d_una_app/features/settings/presentation/widgets/add_edit_quick_phrase_sheet.dart';
+import 'package:d_una_app/features/settings/data/models/quick_phrase.dart';
+import 'package:d_una_app/features/settings/presentation/providers/quick_phrases_provider.dart';
 import '../providers/create_report_provider.dart';
 import '../widgets/intervention_type_chips.dart';
-import '../widgets/quick_phrases_bar.dart';
 import '../../../domain/models/service_report_model.dart';
+import 'package:d_una_app/shared/widgets/collapsible_card_block.dart';
 
 class ReportDetailsTab extends ConsumerStatefulWidget {
   const ReportDetailsTab({super.key});
@@ -31,34 +37,39 @@ class _ReportDetailsTabState extends ConsumerState<ReportDetailsTab> {
 
   final DateFormat _dateFormat = DateFormat('dd/MM/yyyy');
 
-  final List<String> _requestPhrases = const [
-    'Cámaras sin señal',
-    'Falla en visión nocturna',
-    'Sin grabación / Disco duro',
-    'Pérdida de enlace WiFi',
-    'Cerradura no traba',
-    'Mantenimiento programado',
-    'Reubicación de equipo',
-    'Configuración de acceso remoto',
-  ];
+  final ExpansibleController _controller1 = ExpansibleController();
+  final ExpansibleController _controller2 = ExpansibleController();
+  final ExpansibleController _controller3 = ExpansibleController();
+  final ExpansibleController _controller4 = ExpansibleController();
+  int? _expandedIndex = 0;
 
-  final List<String> _workPhrases = const [
-    'Fuente de poder quemada',
-    'Conector sulfatado / dañado',
-    'Sobretensión eléctrica',
-    'Desconfiguración de software',
-    'Sustitución de componente',
-    'Rehecho de conectores',
-    'Calibración y pruebas 100% OK',
-    'Limpieza y ajuste mecánico',
-  ];
+  void _onExpandBlock(int index) {
+    if (_expandedIndex != index) {
+      if (_expandedIndex == 0 && _controller1.isExpanded) {
+        _controller1.collapse();
+      }
+      if (_expandedIndex == 1 && _controller2.isExpanded) {
+        _controller2.collapse();
+      }
+      if (_expandedIndex == 2 && _controller3.isExpanded) {
+        _controller3.collapse();
+      }
+      if (_expandedIndex == 3 && _controller4.isExpanded) {
+        _controller4.collapse();
+      }
+      setState(() {
+        _expandedIndex = index;
+      });
+    }
+  }
 
-  final List<String> _recommendationPhrases = const [
-    'Instalar protector de voltaje / UPS',
-    'Reemplazar cableado expuesto a la intemperie',
-    'Próximo mantenimiento preventivo en 6 meses',
-    'Actualizar contraseñas de seguridad',
-  ];
+  void _onCollapseBlock(int index) {
+    if (_expandedIndex == index) {
+      setState(() {
+        _expandedIndex = null;
+      });
+    }
+  }
 
   @override
   void initState() {
@@ -84,21 +95,131 @@ class _ReportDetailsTabState extends ConsumerState<ReportDetailsTab> {
     _recommendationsController.dispose();
     _notesController.dispose();
     _reportTagController.dispose();
+    _controller1.dispose();
+    _controller2.dispose();
+    _controller3.dispose();
+    _controller4.dispose();
     super.dispose();
   }
 
-  void _appendOrSetText(
-    TextEditingController controller,
-    String phrase,
-    Function(String) onUpdate,
-  ) {
-    if (controller.text.trim().isEmpty) {
-      controller.text = phrase;
-    } else {
-      controller.text = '${controller.text.trim()}, $phrase';
-    }
-    onUpdate(controller.text);
+  void _openQuickPhrasesModal({
+    required String title,
+    required QuickPhraseFieldType fieldType,
+    required List<String> phrases,
+    required TextEditingController controller,
+    required ValueChanged<String> onChanged,
+  }) {
+    final state = ref.read(createReportProvider);
+    final colors = Theme.of(context).colorScheme;
+
+    FilterBottomSheet.showMulti(
+      context: context,
+      title: title,
+      options: phrases,
+      selectedValues: const {},
+      sortOptions: false,
+      showAllOption: false,
+      showLeading: true,
+      leadingBuilder: (_) => Icon(Icons.circle, size: 8, color: colors.primary),
+      applyButtonLabel: 'Insertar',
+      addOptionLabel: 'Agregar frase rápida',
+      onAddOption: () {
+        Navigator.pop(context);
+        AddEditQuickPhraseSheet.show(
+          context,
+          defaultFieldType: fieldType,
+          defaultCategoryId: state.categoryId,
+        );
+      },
+      onApply: (selected) {
+        if (selected.isEmpty) return;
+        final currentText = controller.text.trim();
+        final phrasesToAdd = selected.join(', ');
+
+        final String newText;
+        if (currentText.isEmpty) {
+          newText = phrasesToAdd;
+        } else if (currentText.endsWith(',') || currentText.endsWith('.')) {
+          newText = '$currentText $phrasesToAdd';
+        } else {
+          newText = '$currentText, $phrasesToAdd';
+        }
+
+        controller.text = newText;
+        onChanged(newText);
+      },
+    );
   }
+
+  // --- Subtítulos dinámicos de resumen para bloques colapsados ---
+  String _getBlock1Subtitle(ServiceReportCreateState state) {
+    final cat = state.categoryName;
+    if (cat != null && cat.isNotEmpty) {
+      return '${state.interventionType.label} • $cat';
+    }
+    return '${state.interventionType.label} • Sin categoría';
+  }
+
+  String _getBlock2Subtitle(
+    BuildContext context,
+    ServiceReportCreateState state,
+  ) {
+    final dateStr = _dateFormat.format(state.serviceDate);
+    final startStr = state.startTime != null
+        ? state.startTime!.format(context)
+        : '--';
+    final endStr = state.endTime != null
+        ? state.endTime!.format(context)
+        : '--';
+    final durationStr =
+        state.durationMinutes != null && state.durationMinutes! > 0
+        ? ' • ⏱️ ${state.durationMinutes! ~/ 60}h ${state.durationMinutes! % 60}m'
+        : '';
+    final advisorStr =
+        state.advisorName != null && state.advisorName!.isNotEmpty
+        ? ' • ${state.advisorName}'
+        : '';
+    return '$dateStr • $startStr a $endStr$durationStr$advisorStr';
+  }
+
+  String _getBlock3Subtitle(ServiceReportCreateState state) {
+    final work = state.workDescription.trim();
+    if (work.isNotEmpty) {
+      final firstLine = work.split('\n').first.trim();
+      final preview = firstLine.length > 35
+          ? '${firstLine.substring(0, 35)}...'
+          : firstLine;
+      return '✓ $preview';
+    }
+    return 'Pendiente de informe técnico';
+  }
+
+  String _getBlock4Subtitle(ServiceReportCreateState state) {
+    final tag = state.reportTag?.trim();
+    if (tag != null && tag.isNotEmpty) {
+      int extraCount = 0;
+      if (state.recommendations.trim().isNotEmpty) extraCount++;
+      if (state.notes != null && state.notes!.trim().isNotEmpty) extraCount++;
+      if (extraCount > 0) {
+        return '$tag • +$extraCount nota(s)';
+      }
+      return tag;
+    }
+    return 'Pendiente de etiqueta obligatoria';
+  }
+
+  bool _isBlock1Complete(ServiceReportCreateState state) =>
+      state.categoryId != null && state.categoryId!.isNotEmpty;
+
+  bool _isBlock2Complete(ServiceReportCreateState state) =>
+      state.selectedAdvisors.isNotEmpty ||
+      (state.advisorId != null && state.advisorId!.isNotEmpty);
+
+  bool _isBlock3Complete(ServiceReportCreateState state) =>
+      state.workDescription.trim().isNotEmpty;
+
+  bool _isBlock4Complete(ServiceReportCreateState state) =>
+      state.reportTag != null && state.reportTag!.trim().isNotEmpty;
 
   @override
   Widget build(BuildContext context) {
@@ -137,334 +258,555 @@ class _ReportDetailsTabState extends ConsumerState<ReportDetailsTab> {
     final categoriesAsync = ref.watch(categoriesProvider);
     final collaboratorsAsync = ref.watch(collaboratorsProvider);
     final colors = Theme.of(context).colorScheme;
+    final textTheme = Theme.of(context).textTheme;
+
+    final requestPhrases = ref.watch(
+      quickPhrasesForFieldProvider(
+        QuickPhraseFilterParams(
+          fieldType: QuickPhraseFieldType.request,
+          categoryId: state.categoryId,
+        ),
+      ),
+    );
+    final workPhrases = ref.watch(
+      quickPhrasesForFieldProvider(
+        QuickPhraseFilterParams(
+          fieldType: QuickPhraseFieldType.work,
+          categoryId: state.categoryId,
+        ),
+      ),
+    );
+    final recommendationPhrases = ref.watch(
+      quickPhrasesForFieldProvider(
+        QuickPhraseFilterParams(
+          fieldType: QuickPhraseFieldType.recommendation,
+          categoryId: state.categoryId,
+        ),
+      ),
+    );
 
     return SingleChildScrollView(
-      padding: const EdgeInsets.all(16),
+      keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
+      padding: const EdgeInsets.fromLTRB(16, 12, 16, 80),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          // 1. Tipo de Intervención
-          Text(
-            'Tipo de servicio*',
-            style: Theme.of(
-              context,
-            ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.bold),
-          ),
-          const SizedBox(height: 8),
-          InterventionTypeChips(
-            selectedType: state.interventionType,
-            onSelected: (InterventionType type) =>
-                notifier.setInterventionType(type),
-          ),
-          const SizedBox(height: 20),
-
-          // 2. Categoría Técnica
-          categoriesAsync.when(
-            data: (categories) {
-              Category? selectedCategory;
-              if (state.categoryId != null) {
-                for (final cat in categories) {
-                  if (cat.id == state.categoryId) {
-                    selectedCategory = cat;
-                    break;
-                  }
-                }
-              }
-
-              return CustomDropdown<Category>(
-                label: 'Categoría',
-                value: selectedCategory,
-                items: categories,
-                itemLabelBuilder: (cat) => cat.name,
-                onChanged: (cat) {
-                  notifier.setCategory(cat?.id, cat?.name);
-                },
-                showAddOption: true,
-                addOptionLabel: 'Nueva categoría',
-                addOptionValue: const Category(
-                  id: '___ADD___',
-                  name: 'Nueva categoría',
-                  type: 'service',
-                ),
-                onAddPressed: () async {
-                  final result = await showModalBottomSheet<Category>(
-                    context: context,
-                    isScrollControlled: true,
-                    builder: (context) => const AddEditCategorySheet(),
-                  );
-                  if (result != null) {
-                    notifier.setCategory(result.id, result.name);
-                  }
-                },
-              );
-            },
-            loading: () => const CustomDropdown<String>(
-              label: 'Categoría*',
-              value: null,
-              items: [],
-              itemLabelBuilder: _dummyLabelBuilder,
-              enabled: false,
-            ),
-            error: (err, _) => FriendlyErrorWidget(
-              error: err,
-              onRetry: () => ref.invalidate(categoriesProvider),
-            ),
-          ),
-          const SizedBox(height: 20),
-
-          // 3. Solicitud del Cliente
-          Text(
-            'Solicitud del Cliente',
-            style: Theme.of(
-              context,
-            ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.bold),
-          ),
-          const SizedBox(height: 6),
-          QuickPhrasesBar(
-            phrases: _requestPhrases,
-            onPhraseSelected: (phrase) => _appendOrSetText(
-              _requestController,
-              phrase,
-              (val) => notifier.setRequestDescription(val),
-            ),
-          ),
-          const SizedBox(height: 8),
-          CustomTextField(
-            label: 'Solicitud',
-            controller: _requestController,
-            hintText: '¿Qué problema o requerimiento reportó el cliente?',
-            maxLines: 3,
-            onChanged: (val) => notifier.setRequestDescription(val),
-          ),
-          const SizedBox(height: 20),
-
-          // 4. Diagnóstico y Trabajo Realizado
-          Text(
-            'Diagnóstico y Trabajo Realizado*',
-            style: Theme.of(
-              context,
-            ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.bold),
-          ),
-          const SizedBox(height: 6),
-          QuickPhrasesBar(
-            phrases: _workPhrases,
-            onPhraseSelected: (phrase) => _appendOrSetText(
-              _workController,
-              phrase,
-              (val) => notifier.setWorkDescription(val),
-            ),
-          ),
-          const SizedBox(height: 8),
-          CustomTextField(
-            label: 'Diagnóstico y Trabajo',
-            controller: _workController,
-            hintText:
-                'Detalle de la falla detectada y la solución técnica ejecutada...',
-            maxLines: 4,
-            onChanged: (val) => notifier.setWorkDescription(val),
-          ),
-          const SizedBox(height: 20),
-
-          // 5. Tiempos en Sitio
-          Text(
-            'Tiempos y Ejecución',
-            style: Theme.of(
-              context,
-            ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.bold),
-          ),
-          const SizedBox(height: 8),
-          CustomTextField(
-            label: 'Fecha del Servicio*',
-            controller: _dateController,
-            readOnly: true,
-            onTap: () async {
-              final date = await showDatePicker(
-                context: context,
-                initialDate: state.serviceDate,
-                firstDate: DateTime(2000),
-                lastDate: DateTime(2100),
-              );
-              if (date != null) {
-                _dateController.text = _dateFormat.format(date);
-                notifier.setServiceDate(date);
+          // ==========================================
+          // BLOQUE 1: Tipo de servicio (Clasificación)
+          // ==========================================
+          CollapsibleCardBlock(
+            controller: _controller1,
+            initiallyExpanded: true,
+            onExpansionChanged: (expanded) {
+              if (expanded) {
+                _onExpandBlock(0);
+              } else {
+                _onCollapseBlock(0);
               }
             },
-            suffixIcon: const Icon(Icons.calendar_today),
-          ),
-          const SizedBox(height: 12),
-          Row(
+            leading: Icon(
+              Icons.category_outlined,
+              size: 28,
+              color: colors.onSurfaceVariant,
+            ),
+            title: 'Tipo de servicio',
+            subtitle: _getBlock1Subtitle(state),
+            isComplete: _isBlock1Complete(state),
             children: [
-              Expanded(
-                child: OutlinedButton.icon(
-                  onPressed: () async {
-                    final time = await showTimePicker(
-                      context: context,
-                      initialTime:
-                          state.startTime ??
-                          const TimeOfDay(hour: 9, minute: 0),
-                    );
-                    if (time != null) {
-                      int? duration;
-                      if (state.endTime != null) {
-                        final startMins = time.hour * 60 + time.minute;
-                        final endMins =
-                            state.endTime!.hour * 60 + state.endTime!.minute;
-                        if (endMins >= startMins) {
-                          duration = endMins - startMins;
-                        }
+              InterventionTypeChips(
+                padding: EdgeInsets.zero,
+                selectedType: state.interventionType,
+                onSelected: (InterventionType type) =>
+                    notifier.setInterventionType(type),
+              ),
+              const SizedBox(height: 16),
+              categoriesAsync.when(
+                data: (categories) {
+                  Category? selectedCategory;
+                  if (state.categoryId != null) {
+                    for (final cat in categories) {
+                      if (cat.id == state.categoryId) {
+                        selectedCategory = cat;
+                        break;
                       }
-                      notifier.setTimes(start: time, durationMinutes: duration);
                     }
-                  },
-                  icon: const Icon(Icons.schedule, size: 18),
-                  label: Text(
-                    state.startTime != null
-                        ? 'Inicio: ${state.startTime!.format(context)}'
-                        : 'Hora Inicio',
-                    style: const TextStyle(fontSize: 13),
-                  ),
+                  }
+
+                  return CustomDropdown<Category>(
+                    label: 'Categoría',
+                    value: selectedCategory,
+                    items: categories,
+                    searchable: true,
+                    itemLabelBuilder: (cat) => cat.name,
+                    onChanged: (cat) {
+                      notifier.setCategory(cat?.id, cat?.name);
+                    },
+                    showAddOption: true,
+                    addOptionLabel: 'Agregar categoría',
+                    addOptionValue: const Category(
+                      id: '___ADD___',
+                      name: 'Agregar categoría',
+                      type: 'service',
+                    ),
+                    onAddPressed: () async {
+                      final result = await showModalBottomSheet<Category>(
+                        context: context,
+                        isScrollControlled: true,
+                        builder: (context) => const AddEditCategorySheet(),
+                      );
+                      if (result != null) {
+                        notifier.setCategory(result.id, result.name);
+                      }
+                    },
+                  );
+                },
+                loading: () => const CustomDropdown<String>(
+                  label: 'Categoría*',
+                  value: null,
+                  items: [],
+                  itemLabelBuilder: _dummyLabelBuilder,
+                  enabled: false,
+                ),
+                error: (err, _) => FriendlyErrorWidget(
+                  error: err,
+                  onRetry: () => ref.invalidate(categoriesProvider),
                 ),
               ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: OutlinedButton.icon(
-                  onPressed: () async {
-                    final time = await showTimePicker(
-                      context: context,
-                      initialTime:
-                          state.endTime ??
-                          const TimeOfDay(hour: 11, minute: 30),
-                    );
-                    if (time != null) {
-                      int? duration;
-                      if (state.startTime != null) {
-                        final startMins =
-                            state.startTime!.hour * 60 +
-                            state.startTime!.minute;
-                        final endMins = time.hour * 60 + time.minute;
-                        if (endMins >= startMins) {
-                          duration = endMins - startMins;
-                        }
-                      }
-                      notifier.setTimes(end: time, durationMinutes: duration);
-                    }
-                  },
-                  icon: const Icon(Icons.schedule_send, size: 18),
-                  label: Text(
-                    state.endTime != null
-                        ? 'Fin: ${state.endTime!.format(context)}'
-                        : 'Hora Fin',
-                    style: const TextStyle(fontSize: 13),
-                  ),
-                ),
-              ),
+              const SizedBox(height: 8),
             ],
           ),
-          if (state.durationMinutes != null && state.durationMinutes! > 0) ...[
-            const SizedBox(height: 6),
-            Align(
-              alignment: Alignment.centerLeft,
-              child: Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 10,
-                  vertical: 4,
-                ),
-                decoration: BoxDecoration(
-                  color: colors.primaryContainer.withValues(alpha: 0.5),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Text(
-                  '⏱️ Duración: ${state.durationMinutes! ~/ 60}h ${state.durationMinutes! % 60}m',
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: colors.onPrimaryContainer,
-                    fontWeight: FontWeight.w600,
+
+          // ==========================================
+          // BLOQUE 2: Tiempo y ejecución
+          // ==========================================
+          CollapsibleCardBlock(
+            controller: _controller2,
+            initiallyExpanded: false,
+            onExpansionChanged: (expanded) {
+              if (expanded) {
+                _onExpandBlock(1);
+              } else {
+                _onCollapseBlock(1);
+              }
+            },
+            leading: Icon(
+              Icons.schedule,
+              size: 28,
+              color: colors.onSurfaceVariant,
+            ),
+            title: 'Tiempo y ejecución',
+            subtitle: _getBlock2Subtitle(context, state),
+            isComplete: _isBlock2Complete(state),
+            children: [
+              CustomTextField(
+                label: 'Fecha del Servicio*',
+                controller: _dateController,
+                readOnly: true,
+                onTap: () async {
+                  final date = await showDatePicker(
+                    context: context,
+                    initialDate: state.serviceDate,
+                    firstDate: DateTime(2000),
+                    lastDate: DateTime(2100),
+                  );
+                  if (date != null) {
+                    _dateController.text = _dateFormat.format(date);
+                    notifier.setServiceDate(date);
+                  }
+                },
+                suffixIcon: const Icon(Icons.calendar_today),
+              ),
+              const SizedBox(height: 12),
+              Row(
+                children: [
+                  Expanded(
+                    child: OutlinedButton.icon(
+                      style: OutlinedButton.styleFrom(
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        side: BorderSide(
+                          color: colors.outline.withValues(alpha: 0.3),
+                        ),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 8,
+                          vertical: 10,
+                        ),
+                      ),
+                      onPressed: () async {
+                        final now = TimeOfDay.now();
+                        final time = await showTimePicker(
+                          context: context,
+                          initialTime: state.startTime ?? now,
+                        );
+                        if (time != null) {
+                          int? duration;
+                          if (state.endTime != null) {
+                            final startMins = time.hour * 60 + time.minute;
+                            final endMins =
+                                state.endTime!.hour * 60 +
+                                state.endTime!.minute;
+                            if (endMins >= startMins) {
+                              duration = endMins - startMins;
+                            }
+                          }
+                          notifier.setTimes(
+                            start: time,
+                            durationMinutes: duration,
+                          );
+                        }
+                      },
+                      icon: const Icon(Icons.schedule, size: 16),
+                      label: Text(
+                        state.startTime != null
+                            ? 'Inicio: ${state.startTime!.format(context)}'
+                            : 'Hora Inicio',
+                        style: const TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
                   ),
+                  if (state.durationMinutes != null &&
+                      state.durationMinutes! > 0) ...[
+                    const SizedBox(width: 8),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 6,
+                      ),
+                      decoration: BoxDecoration(
+                        color: colors.surfaceContainerHighest.withValues(
+                          alpha: 0.5,
+                        ),
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(
+                          color: colors.outline.withValues(alpha: 0.2),
+                        ),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            Icons.timer_outlined,
+                            size: 14,
+                            color: colors.primary,
+                          ),
+                          const SizedBox(width: 4),
+                          Text(
+                            '${state.durationMinutes! ~/ 60}h ${state.durationMinutes! % 60}m',
+                            style: TextStyle(
+                              fontSize: 11,
+                              color: colors.primary,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                  ] else ...[
+                    const SizedBox(width: 8),
+                    Text(
+                      'a',
+                      style: TextStyle(
+                        color: colors.onSurfaceVariant,
+                        fontSize: 12,
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                  ],
+                  Expanded(
+                    child: OutlinedButton.icon(
+                      style: OutlinedButton.styleFrom(
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        side: BorderSide(
+                          color: colors.outline.withValues(alpha: 0.3),
+                        ),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 8,
+                          vertical: 10,
+                        ),
+                      ),
+                      onPressed: () async {
+                        final now = TimeOfDay.now();
+                        final time = await showTimePicker(
+                          context: context,
+                          initialTime: state.endTime ?? now,
+                        );
+                        if (time != null) {
+                          int? duration;
+                          if (state.startTime != null) {
+                            final startMins =
+                                state.startTime!.hour * 60 +
+                                state.startTime!.minute;
+                            final endMins = time.hour * 60 + time.minute;
+                            if (endMins >= startMins) {
+                              duration = endMins - startMins;
+                            }
+                          }
+                          notifier.setTimes(
+                            end: time,
+                            durationMinutes: duration,
+                          );
+                        }
+                      },
+                      icon: const Icon(Icons.schedule_send, size: 16),
+                      label: Text(
+                        state.endTime != null
+                            ? 'Fin: ${state.endTime!.format(context)}'
+                            : 'Hora Fin',
+                        style: const TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 16),
+              collaboratorsAsync.when(
+                data: (collaborators) {
+                  List<Collaborator> selectedList = [];
+                  if (state.selectedAdvisors.isNotEmpty) {
+                    selectedList = collaborators
+                        .where(
+                          (c) => state.selectedAdvisors.any(
+                            (sel) => sel.id == c.id,
+                          ),
+                        )
+                        .toList();
+                  } else if (state.advisorId != null) {
+                    selectedList = collaborators
+                        .where((c) => c.id == state.advisorId)
+                        .toList();
+                  }
+
+                  return CustomMultiDropdown<Collaborator>(
+                    label: 'Técnicos responsables (colaboradores)',
+                    hintText: 'Seleccionar técnicos...',
+                    selectedValues: selectedList,
+                    items: collaborators,
+                    itemLabelBuilder: (c) => c.fullName,
+                    addOptionLabel: 'Agregar colaborador',
+                    onAddOption: () {
+                      Navigator.pop(context);
+                      context.push('/collaborators/add');
+                    },
+                    onChanged: (selected) {
+                      notifier.setAdvisors(selected);
+                    },
+                  );
+                },
+                loading: () => const CustomMultiDropdown<String>(
+                  label: 'Técnicos responsables',
+                  selectedValues: [],
+                  items: [],
+                  itemLabelBuilder: _dummyLabelBuilder,
+                  enabled: false,
+                ),
+                error: (err, _) => FriendlyErrorWidget(
+                  error: err,
+                  onRetry: () => ref.invalidate(collaboratorsProvider),
                 ),
               ),
-            ),
-          ],
-          const SizedBox(height: 20),
+              const SizedBox(height: 8),
+            ],
+          ),
 
-          // 6. Técnicos Responsables
-          collaboratorsAsync.when(
-            data: (collaborators) {
-              Collaborator? selectedCollab;
-              if (state.advisorId != null) {
-                for (final c in collaborators) {
-                  if (c.id == state.advisorId) {
-                    selectedCollab = c;
-                    break;
-                  }
-                }
+          // =========================================================================
+          // BLOQUE 3: Informe técnico
+          // =========================================================================
+          CollapsibleCardBlock(
+            controller: _controller3,
+            initiallyExpanded: false,
+            onExpansionChanged: (expanded) {
+              if (expanded) {
+                _onExpandBlock(2);
+              } else {
+                _onCollapseBlock(2);
               }
-
-              return CustomDropdown<Collaborator>(
-                label: 'Técnicos responsables',
-                value: selectedCollab,
-                items: collaborators,
-                itemLabelBuilder: (c) => c.fullName,
-                onChanged: (c) {
-                  notifier.setAdvisor(c?.id, c?.fullName);
-                },
-              );
             },
-            loading: () => const CustomDropdown<String>(
-              label: 'Técnico Responsable*',
-              value: null,
-              items: [],
-              itemLabelBuilder: _dummyLabelBuilder,
-              enabled: false,
+            leading: Icon(
+              Icons.assignment_outlined,
+              size: 28,
+              color: colors.onSurfaceVariant,
             ),
-            error: (err, _) => FriendlyErrorWidget(
-              error: err,
-              onRetry: () => ref.invalidate(collaboratorsProvider),
-            ),
-          ),
-          const SizedBox(height: 20),
+            title: 'Informe técnico',
+            subtitle: _getBlock3Subtitle(state),
+            isComplete: _isBlock3Complete(state),
+            children: [
+              // 1. Requerimiento o Falla reportada
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    'Requerimiento o falla reportada',
+                    style: textTheme.titleSmall?.copyWith(
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  IconButton(
+                    icon: Icon(
+                      Icons.quickreply_outlined,
+                      color: colors.primary,
+                      size: 22,
+                    ),
+                    visualDensity: VisualDensity.compact,
+                    tooltip: 'Frases de acceso rápido',
+                    onPressed: () => _openQuickPhrasesModal(
+                      title: 'Frases de acceso rápido',
+                      fieldType: QuickPhraseFieldType.request,
+                      phrases: requestPhrases,
+                      controller: _requestController,
+                      onChanged: (val) => notifier.setRequestDescription(val),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 4),
+              CustomTextField(
+                label: '',
+                controller: _requestController,
+                helperText:
+                    'Motivo o requerimiento reportado por el cliente (opcional).',
+                maxLines: 3,
+                maxLength: 500,
+                onChanged: (val) => notifier.setRequestDescription(val),
+              ),
+              const SizedBox(height: 12),
 
-          // 7. Recomendaciones Preventivas
-          Text(
-            'Recomendaciones Técnicas al Cliente',
-            style: Theme.of(
-              context,
-            ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.bold),
-          ),
-          const SizedBox(height: 6),
-          QuickPhrasesBar(
-            phrases: _recommendationPhrases,
-            onPhraseSelected: (phrase) => _appendOrSetText(
-              _recommendationsController,
-              phrase,
-              (val) => notifier.setRecommendations(val),
-            ),
-          ),
-          const SizedBox(height: 8),
-          CustomTextField(
-            label: 'Recomendaciones',
-            controller: _recommendationsController,
-            hintText: 'Observaciones preventivas o sugerencias de mejora...',
-            maxLines: 3,
-            onChanged: (val) => notifier.setRecommendations(val),
-          ),
-          const SizedBox(height: 20),
+              // 2. Diagnóstico y servicio realizado
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    'Diagnóstico y/o servicio realizado*',
+                    style: textTheme.titleSmall?.copyWith(
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  IconButton(
+                    icon: Icon(
+                      Icons.quickreply_outlined,
+                      color: colors.primary,
+                      size: 22,
+                    ),
+                    visualDensity: VisualDensity.compact,
+                    tooltip: 'Frases de acceso rápido',
+                    onPressed: () => _openQuickPhrasesModal(
+                      title: 'Frases de acceso rápido',
+                      fieldType: QuickPhraseFieldType.work,
+                      phrases: workPhrases,
+                      controller: _workController,
+                      onChanged: (val) => notifier.setWorkDescription(val),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 4),
+              CustomTextField(
+                label: '',
+                controller: _workController,
+                helperText:
+                    'Detalle de la falla detectada y solución ejecutada.',
+                maxLines: 5,
+                maxLength: 1000,
+                onChanged: (val) => notifier.setWorkDescription(val),
+              ),
+              const SizedBox(height: 12),
 
-          // Notas internas y etiqueta
-          CustomTextField(
-            label: 'Etiqueta del Reporte (Opcional)',
-            controller: _reportTagController,
-            hintText: 'Ej. Edificio B, Planta Alta',
-            onChanged: (val) => notifier.setDetails(reportTag: val),
+              // 3. Recomendaciones
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    'Recomendaciones técnicas',
+                    style: textTheme.titleSmall?.copyWith(
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  IconButton(
+                    icon: Icon(
+                      Icons.quickreply_outlined,
+                      color: colors.primary,
+                      size: 22,
+                    ),
+                    visualDensity: VisualDensity.compact,
+                    tooltip: 'Frases de acceso rápido',
+                    onPressed: () => _openQuickPhrasesModal(
+                      title: 'Frases de acceso rápido',
+                      fieldType: QuickPhraseFieldType.recommendation,
+                      phrases: recommendationPhrases,
+                      controller: _recommendationsController,
+                      onChanged: (val) => notifier.setRecommendations(val),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 4),
+              CustomTextField(
+                label: '',
+                controller: _recommendationsController,
+                helperText:
+                    'Observaciones o sugerencias de mejora para el cliente (opcional).',
+                maxLines: 3,
+                maxLength: 500,
+                onChanged: (val) => notifier.setRecommendations(val),
+              ),
+              const SizedBox(height: 8),
+            ],
           ),
-          const SizedBox(height: 16),
-          CustomTextField(
-            label: 'Notas Internas (Opcional)',
-            controller: _notesController,
-            hintText: 'Notas confidenciales para uso interno del equipo...',
-            maxLines: 2,
-            onChanged: (val) => notifier.setDetails(notes: val),
+
+          // =========================================================================
+          // BLOQUE 4: Detalles opcionales y notas (Acordeón Cerrado por defecto)
+          // =========================================================================
+          CollapsibleCardBlock(
+            controller: _controller4,
+            initiallyExpanded: false,
+            onExpansionChanged: (expanded) {
+              if (expanded) {
+                _onExpandBlock(3);
+              } else {
+                _onCollapseBlock(3);
+              }
+            },
+            leading: Icon(
+              Icons.tune_outlined,
+              size: 28,
+              color: colors.onSurfaceVariant,
+            ),
+            title: 'Información adicional',
+            subtitle: _getBlock4Subtitle(state),
+            isComplete: _isBlock4Complete(state),
+            children: [
+              CustomTextField(
+                label: 'Notas internas (opcional)',
+                controller: _notesController,
+                helperText: 'Notas confidenciales para uso interno.',
+                maxLines: 2,
+                maxLength: 250,
+                onChanged: (val) => notifier.setDetails(notes: val),
+              ),
+              const SizedBox(height: 16),
+              CustomTextField(
+                label: 'Etiqueta*',
+                controller: _reportTagController,
+                helperText: 'Descripción corta que identifique al reporte.',
+                maxLength: 35,
+                onChanged: (val) => notifier.setDetails(reportTag: val),
+              ),
+              const SizedBox(height: 8),
+            ],
           ),
-          const SizedBox(height: 80),
         ],
       ),
     );

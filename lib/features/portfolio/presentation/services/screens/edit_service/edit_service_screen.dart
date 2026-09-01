@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:d_una_app/shared/widgets/app_toast.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:d_una_app/shared/widgets/custom_dialog.dart';
@@ -152,16 +153,18 @@ class _EditServiceScreenState extends ConsumerState<EditServiceScreen> {
       await ref.read(servicesProvider.notifier).updateService(updatedService);
 
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Servicio actualizado exitosamente')),
-        );
         ref.invalidate(servicesProvider);
         context.pop();
+        AppToast.success(
+          context,
+          message: 'Servicio actualizado exitosamente',
+        );
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error al actualizar servicio: $e')),
+        AppToast.error(
+          context,
+          message: 'Error al actualizar servicio: $e',
         );
       }
     }

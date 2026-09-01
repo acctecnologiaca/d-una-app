@@ -1,6 +1,8 @@
+import 'package:d_una_app/shared/widgets/app_toast.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:d_una_app/shared/widgets/draft_toast.dart';
 import 'package:d_una_app/shared/widgets/standard_app_bar.dart';
 import 'package:d_una_app/shared/widgets/custom_extended_fab.dart';
 import '../providers/purchase_details_provider.dart';
@@ -33,14 +35,13 @@ class PurchaseDetailsScreen extends ConsumerStatefulWidget {
 class _PurchaseDetailsScreenState extends ConsumerState<PurchaseDetailsScreen>
     with SingleTickerProviderStateMixin {
   late TabController _tabController;
+  late final AppLifecycleListener _lifecycleListener;
   bool _isEditing = false;
   bool _dataLoadedToEditState = false;
 
   @override
   void initState() {
     super.initState();
-    // Inicia en la pestaña "Productos" (index 1) si startInEditMode es true o se especificó un producto a destacar,
-    // de lo contrario en "Resúmen" (index 2)
     _tabController = TabController(
       length: 3,
       initialIndex:
@@ -50,17 +51,49 @@ class _PurchaseDetailsScreenState extends ConsumerState<PurchaseDetailsScreen>
     _tabController.addListener(() {
       if (!_tabController.indexIsChanging) {
         setState(() {});
+        if (_isEditing) {
+          ref
+              .read(addPurchaseProvider.notifier)
+              .autoSaveDraft(
+                tabIndex: _tabController.index,
+                purchaseId: widget.purchaseId,
+              );
+        }
       }
     });
+
+    _lifecycleListener = AppLifecycleListener(
+      onPause: () {
+        if (_isEditing) {
+          ref
+              .read(addPurchaseProvider.notifier)
+              .autoSaveDraft(
+                tabIndex: _tabController.index,
+                purchaseId: widget.purchaseId,
+              );
+        }
+      },
+      onInactive: () {
+        if (_isEditing) {
+          ref
+              .read(addPurchaseProvider.notifier)
+              .autoSaveDraft(
+                tabIndex: _tabController.index,
+                purchaseId: widget.purchaseId,
+              );
+        }
+      },
+    );
   }
 
   @override
   void dispose() {
+    _lifecycleListener.dispose();
     _tabController.dispose();
     super.dispose();
   }
 
-  void _enterEditMode(PurchaseDetailsData data) {
+  Future<void> _enterEditMode(PurchaseDetailsData data) async {
     if (!_dataLoadedToEditState) {
       final editState = ref.read(addPurchaseProvider);
       if (editState.purchaseId != widget.purchaseId) {
@@ -75,9 +108,95 @@ class _PurchaseDetailsScreenState extends ConsumerState<PurchaseDetailsScreen>
       }
       _dataLoadedToEditState = true;
     }
+
     setState(() {
       _isEditing = true;
     });
+
+    final draft = await ref
+        .read(addPurchaseProvider.notifier)
+        .checkAndRestoreDraft(purchaseId: widget.purchaseId);
+
+    if (draft != null && mounted) {
+      setState(() {
+        if (draft.tabIndex >= 0 && draft.tabIndex < 3) {
+          _tabController.index = draft.tabIndex;
+        }
+      });
+
+      DraftToast.show(
+        context,
+        message: 'Cambios restaurados automáticamente',
+        onDiscard: () async {
+          final colors = Theme.of(context).colorScheme;
+          final shouldDiscard = await CustomDialog.show<bool>(
+            context: context,
+            dialog: CustomDialog.destructive(
+              title: '¿Descartar cambios locales?',
+              contentText:
+                  'Se eliminarán las modificaciones sin guardar y se recargarán los datos del servidor.',
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(context, false),
+                  child: const Text('Cancelar'),
+                ),
+                FilledButton(
+                  onPressed: () => Navigator.pop(context, true),
+                  style: FilledButton.styleFrom(
+                    backgroundColor: colors.error,
+                    foregroundColor: colors.onError,
+                  ),
+                  child: const Text('Descartar'),
+                ),
+              ],
+            ),
+          );
+
+          if (shouldDiscard == true && mounted) {
+            await ref
+                .read(addPurchaseProvider.notifier)
+                .clearDraft(purchaseId: widget.purchaseId);
+            ref
+                .read(addPurchaseProvider.notifier)
+                .loadFromDetails(
+                  data.purchase,
+                  data.items,
+                  data.serials,
+                  data.supplierTaxId,
+                );
+            setState(() {
+              _tabController.index = 0;
+            });
+          }
+        },
+      );
+    }
+  }
+
+  Future<void> _handlePop() async {
+    final notifier = ref.read(addPurchaseProvider.notifier);
+
+    if (_isEditing) {
+      final hasChanges = notifier.hasChanges;
+      await notifier.saveDraftNow(
+        tabIndex: _tabController.index,
+        purchaseId: widget.purchaseId,
+      );
+      notifier.reset(clearPersistedDraft: false, purchaseId: widget.purchaseId);
+      setState(() {
+        _isEditing = false;
+      });
+      if (hasChanges && mounted) {
+        AppToast.info(
+          context,
+          message: 'Cambios guardados temporalmente',
+          icon: Icons.bookmark_added_outlined,
+        );
+      }
+    } else {
+      if (!mounted) return;
+      context.pop();
+    }
   }
 
   @override
@@ -99,70 +218,20 @@ class _PurchaseDetailsScreenState extends ConsumerState<PurchaseDetailsScreen>
       ),
       data: (data) {
         final purchase = data.purchase;
-        final notifier = ref.read(addPurchaseProvider.notifier);
 
         if (widget.startInEditMode && !_dataLoadedToEditState) {
           _dataLoadedToEditState = true;
           _isEditing = true;
-          final editState = ref.read(addPurchaseProvider);
-          if (editState.purchaseId != widget.purchaseId) {
-            WidgetsBinding.instance.addPostFrameCallback((_) {
-              ref
-                  .read(addPurchaseProvider.notifier)
-                  .loadFromDetails(
-                    data.purchase,
-                    data.items,
-                    data.serials,
-                    data.supplierTaxId,
-                  );
-            });
-          }
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            _enterEditMode(data);
+          });
         }
 
         return PopScope(
           canPop: !_isEditing,
-          onPopInvokedWithResult: (didPop, result) async {
+          onPopInvokedWithResult: (didPop, result) {
             if (didPop) return;
-
-            if (_isEditing) {
-              if (notifier.hasChanges) {
-                final shouldDiscard = await CustomDialog.show<bool>(
-                  context: context,
-                  dialog: CustomDialog.destructive(
-                    title: '¿Descartar cambios?',
-                    contentText:
-                        'Se perderán todos los cambios realizados en esta compra.',
-                    actions: [
-                      TextButton(
-                        onPressed: () => Navigator.of(context).pop(false),
-                        child: const Text('Continuar editando'),
-                      ),
-                      FilledButton(
-                        onPressed: () {
-                          notifier.reset(); // clear state if discarded
-                          Navigator.of(context).pop(true);
-                        },
-                        style: FilledButton.styleFrom(
-                          backgroundColor: colors.error,
-                          foregroundColor: colors.onError,
-                        ),
-                        child: const Text('Descartar'),
-                      ),
-                    ],
-                  ),
-                );
-
-                if (shouldDiscard == true && mounted) {
-                  setState(() {
-                    _isEditing = false;
-                  });
-                }
-              } else {
-                setState(() {
-                  _isEditing = false;
-                });
-              }
-            }
+            _handlePop();
           },
           child: Scaffold(
             backgroundColor: colors.surface,
@@ -183,8 +252,8 @@ class _PurchaseDetailsScreenState extends ConsumerState<PurchaseDetailsScreen>
                     color:
                         (ref.read(addPurchaseProvider.notifier).hasChanges &&
                             !ref.watch(addPurchaseProvider).isLoading)
-                        ? colors.primary
-                        : colors.onSurface.withValues(alpha: 0.38),
+                        ? colors.onSurfaceVariant
+                        : colors.onSurfaceVariant.withValues(alpha: 0.38),
                   ),
                   const SizedBox(width: 48),
                 ],
@@ -202,9 +271,10 @@ class _PurchaseDetailsScreenState extends ConsumerState<PurchaseDetailsScreen>
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         const Text('Productos'),
-                        if (_isEditing
-                            ? ref.watch(addPurchaseProvider).hasMissingSerials
-                            : data.hasMissingSerials) ...[
+                        if (_isEditing &&
+                            ref
+                                .watch(addPurchaseProvider)
+                                .hasMissingSerials) ...[
                           const SizedBox(width: 6),
                           Badge(backgroundColor: colors.error, smallSize: 8),
                         ],
@@ -217,18 +287,8 @@ class _PurchaseDetailsScreenState extends ConsumerState<PurchaseDetailsScreen>
             ),
             body: TabBarView(
               controller: _tabController,
-              children: _isEditing
+              children: !_isEditing
                   ? [
-                      const AddPurchaseDetailsTab(),
-                      AddPurchaseProductsTab(
-                        highlightProductId: widget.highlightProductId,
-                      ),
-                      AddPurchaseSummaryTab(
-                        onNavigateToTab: (index) =>
-                            _tabController.animateTo(index),
-                      ),
-                    ]
-                  : [
                       ViewPurchaseDetailsTab(data: data),
                       ViewPurchaseProductsTab(
                         data: data,
@@ -236,6 +296,14 @@ class _PurchaseDetailsScreenState extends ConsumerState<PurchaseDetailsScreen>
                       ),
                       ViewPurchaseSummaryTab(
                         data: data,
+                        onNavigateToTab: (index) =>
+                            _tabController.animateTo(index),
+                      ),
+                    ]
+                  : [
+                      const AddPurchaseDetailsTab(),
+                      const AddPurchaseProductsTab(),
+                      AddPurchaseSummaryTab(
                         onNavigateToTab: (index) =>
                             _tabController.animateTo(index),
                       ),
@@ -251,14 +319,17 @@ class _PurchaseDetailsScreenState extends ConsumerState<PurchaseDetailsScreen>
   Future<void> _savePurchaseChanges() async {
     final notifier = ref.read(addPurchaseProvider.notifier);
     final success = await notifier.createPurchase();
-    if (success && mounted) {
+    if (success) {
+      await notifier.clearDraft(purchaseId: widget.purchaseId);
+      if (!mounted) return;
       setState(() {
         _isEditing = false;
       });
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Compra actualizada correctamente')),
       );
-    } else if (mounted) {
+    } else {
+      if (!mounted) return;
       final error = ref.read(addPurchaseProvider).error;
       if (error != null) {
         ScaffoldMessenger.of(

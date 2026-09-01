@@ -18,6 +18,8 @@ final userProfileProvider = StreamProvider.autoDispose<UserProfile?>((
 ) async* {
   final supabase = Supabase.instance.client;
 
+  UserProfile? lastKnownProfile;
+
   // Retry loop to handle token expiry race conditions
   while (true) {
     final user = supabase.auth.currentUser;
@@ -50,7 +52,8 @@ final userProfileProvider = StreamProvider.autoDispose<UserProfile?>((
 
       await for (final data in stream) {
         if (data.isNotEmpty) {
-          yield UserProfile.fromJson(data.first);
+          lastKnownProfile = UserProfile.fromJson(data.first);
+          yield lastKnownProfile;
         } else {
           yield null;
         }
@@ -69,13 +72,15 @@ final userProfileProvider = StreamProvider.autoDispose<UserProfile?>((
           await supabase.auth.refreshSession();
           continue; // Retry loop
         } catch (_) {
-          // Refresh failed, typically means user needs to re-login
+          if (lastKnownProfile != null) rethrow;
           yield null;
           return;
         }
       }
-      // Other error, log and return null
-      // debugPrint('Realtime Error: $e');
+      // Si ocurre desconexión de red / caída de WebSocket, no sobreescribir con null
+      if (lastKnownProfile != null) {
+        rethrow;
+      }
       yield null;
       return;
     } catch (e) {

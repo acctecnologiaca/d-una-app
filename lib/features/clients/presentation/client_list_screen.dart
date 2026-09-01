@@ -39,10 +39,7 @@ class _ClientListScreenState extends ConsumerState<ClientListScreen> {
   @override
   Widget build(BuildContext context) {
     final paginatedStateAsync = ref.watch(paginatedClientsProvider);
-    final userProfileAsync = ref.watch(userProfileProvider);
     final colors = Theme.of(context).colorScheme;
-
-    final isError = paginatedStateAsync.hasError || userProfileAsync.hasError;
 
     return Scaffold(
       backgroundColor: colors.surface,
@@ -58,11 +55,9 @@ class _ClientListScreenState extends ConsumerState<ClientListScreen> {
                 children: [
                   IconButton(
                     icon: const Icon(Icons.menu),
-                    onPressed: isError
-                        ? null
-                        : () {
-                            Scaffold.of(context).openDrawer();
-                          },
+                    onPressed: () {
+                      Scaffold.of(context).openDrawer();
+                    },
                   ),
                   Text(
                     'Clientes',
@@ -71,72 +66,70 @@ class _ClientListScreenState extends ConsumerState<ClientListScreen> {
                       fontWeight: FontWeight.w500,
                     ),
                   ),
-                  UserProfileAvatar(enabled: !isError),
+                  const UserProfileAvatar(),
                 ],
               ),
             ),
             const SizedBox(height: 16),
 
-            if (!isError) ...[
-              // Search Bar
-              Padding(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 16.0,
-                  vertical: 8.0,
-                ),
-                child: CustomSearchBar(
-                  controller: _searchController,
-                  hintText: 'Buscar...',
-                  readOnly: true,
-                  showFilterIcon: true,
-                  onTap: () {
-                    context.push('/clients/search');
-                  },
-                ),
+            // Search Bar
+            Padding(
+              padding: const EdgeInsets.symmetric(
+                horizontal: 16.0,
+                vertical: 8.0,
               ),
-
-              const SizedBox(height: 16),
-
-              // Sort Options Row
-              Padding(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 16.0,
-                  vertical: 8.0,
-                ),
-                child: Row(
-                  children: [
-                    SortSelector(
-                      currentSort: _currentSort,
-                      options: const [
-                        SortOption.recent,
-                        SortOption.nameAZ,
-                        SortOption.nameZA,
-                        SortOption.type,
-                      ],
-                      onSortChanged: (val) {
-                        setState(() => _currentSort = val);
-                        // Map SortOption to API fields
-                        String orderBy = 'created_at';
-                        bool ascending = false;
-                        if (val == SortOption.nameAZ) {
-                          orderBy = 'name';
-                          ascending = true;
-                        } else if (val == SortOption.nameZA) {
-                          orderBy = 'name';
-                          ascending = false;
-                        } else if (val == SortOption.type) {
-                          orderBy = 'type';
-                          ascending = true;
-                        }
-                        ref
-                            .read(paginatedClientsProvider.notifier)
-                            .updateSort(orderBy, ascending);
-                      },
-                    ),
-                  ],
-                ),
+              child: CustomSearchBar(
+                controller: _searchController,
+                hintText: 'Buscar...',
+                readOnly: true,
+                showFilterIcon: true,
+                onTap: () {
+                  context.push('/clients/search');
+                },
               ),
-            ],
+            ),
+
+            const SizedBox(height: 16),
+
+            // Sort Options Row
+            Padding(
+              padding: const EdgeInsets.symmetric(
+                horizontal: 16.0,
+                vertical: 8.0,
+              ),
+              child: Row(
+                children: [
+                  SortSelector(
+                    currentSort: _currentSort,
+                    options: const [
+                      SortOption.recent,
+                      SortOption.nameAZ,
+                      SortOption.nameZA,
+                      SortOption.type,
+                    ],
+                    onSortChanged: (val) {
+                      setState(() => _currentSort = val);
+                      // Map SortOption to API fields
+                      String orderBy = 'created_at';
+                      bool ascending = false;
+                      if (val == SortOption.nameAZ) {
+                        orderBy = 'name';
+                        ascending = true;
+                      } else if (val == SortOption.nameZA) {
+                        orderBy = 'name';
+                        ascending = false;
+                      } else if (val == SortOption.type) {
+                        orderBy = 'type';
+                        ascending = true;
+                      }
+                      ref
+                          .read(paginatedClientsProvider.notifier)
+                          .updateSort(orderBy, ascending);
+                    },
+                  ),
+                ],
+              ),
+            ),
 
             // Content
             Expanded(
@@ -145,17 +138,8 @@ class _ClientListScreenState extends ConsumerState<ClientListScreen> {
                   ref.invalidate(userProfileProvider);
                   await ref.read(paginatedClientsProvider.notifier).refresh();
                 },
-                child: userProfileAsync.when(
-                  loading: () =>
-                      const Center(child: CircularProgressIndicator()),
-                  error: (err, stack) => FriendlyErrorWidget(
-                    error: err,
-                    onRetry: () {
-                      ref.invalidate(userProfileProvider);
-                      ref.invalidate(clientsProvider);
-                    },
-                  ),
-                  data: (_) {
+                child: Builder(
+                  builder: (context) {
                     final paginatedState = paginatedStateAsync.valueOrNull;
                     if (paginatedState == null ||
                         paginatedState.isInitialLoading) {
@@ -229,20 +213,18 @@ class _ClientListScreenState extends ConsumerState<ClientListScreen> {
           ],
         ),
       ),
-      floatingActionButton: isError
-          ? null
-          : Padding(
-              padding: const EdgeInsets.only(bottom: 0.0),
-              child: CustomExtendedFab(
-                onPressed: () {
-                  // Reset provider state before starting new wizard
-                  ref.read(addClientProvider.notifier).reset();
-                  context.push('/clients/add?returnTo=/clients');
-                },
-                label: 'Agregar',
-                icon: Icons.add,
-              ),
-            ),
+      floatingActionButton: Padding(
+        padding: const EdgeInsets.only(bottom: 0.0),
+        child: CustomExtendedFab(
+          onPressed: () {
+            // Reset provider state before starting new wizard
+            ref.read(addClientProvider.notifier).reset();
+            context.push('/clients/add?returnTo=/clients');
+          },
+          label: 'Agregar',
+          icon: Icons.add,
+        ),
+      ),
     );
   }
 }

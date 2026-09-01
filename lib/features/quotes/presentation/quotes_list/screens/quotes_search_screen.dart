@@ -12,6 +12,8 @@ import '../widgets/quote_card.dart';
 import '../providers/quotes_provider.dart';
 import '../quote_selection_actions.dart';
 import 'package:material_symbols_icons/symbols.dart';
+import '../../../../profile/presentation/providers/profile_provider.dart';
+import '../../../../ads/presentation/providers/ads_provider.dart';
 
 class QuotesSearchScreen extends ConsumerStatefulWidget {
   final bool selectionMode;
@@ -188,6 +190,25 @@ class _QuotesSearchScreenState extends ConsumerState<QuotesSearchScreen> {
     final selection = ref.watch(quoteSelectionProvider);
     final allQuotes = paginatedAsync.valueOrNull?.items ?? [];
 
+    final userProfile = ref.watch(userProfileProvider).valueOrNull;
+    final occupationIds = <String>[
+      if (userProfile?.occupationId != null) userProfile!.occupationId!,
+      ...userProfile?.secondaryOccupationIds ?? [],
+    ];
+
+    final isAdsEnabled =
+        ref.watch(isAdPlacementEnabledProvider('quotes_search'));
+    final adBannersAsync = isAdsEnabled
+        ? ref.watch(
+            adBannersProvider(
+              AdBannerParams(
+                occupationIds: occupationIds,
+                searchQuery: _searchQuery,
+              ),
+            ),
+          )
+        : null;
+
     return GenericSearchScreen<Quote>(
       title:
           widget.selectionMode ? 'Seleccionar cotización' : 'Buscar cotización',
@@ -197,6 +218,10 @@ class _QuotesSearchScreenState extends ConsumerState<QuotesSearchScreen> {
       readOnly: widget.isSearchQueryReadOnly,
       isPaginatedMode: true,
       paginatedDataAsync: paginatedAsync,
+      banners: (selection.isSelectionMode || !isAdsEnabled)
+          ? null
+          : adBannersAsync?.valueOrNull,
+      screenContext: 'quotes_search',
       showHistory: !widget.selectionMode &&
           widget.productId == null &&
           widget.clientId == null &&

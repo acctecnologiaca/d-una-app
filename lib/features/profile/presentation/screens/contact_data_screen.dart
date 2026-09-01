@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:d_una_app/shared/widgets/app_toast.dart';
 import 'package:d_una_app/shared/widgets/friendly_error_widget.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -23,17 +25,24 @@ class _ContactDataScreenState extends ConsumerState<ContactDataScreen> {
   late TextEditingController _emailController;
   late TextEditingController _primaryPhoneController;
   late TextEditingController _altPhoneController;
-  final TextEditingController _verificationCodeController =
-      TextEditingController();
 
   // State
   String _selectedPrimaryCode = '0412';
-  String _selectedAltCode = '0424';
-  // bool _isVerificationSent = false;
+  String? _selectedAltCode;
   bool _isLoading = false;
   bool _initialDataLoaded = false;
 
-  final List<String> _phoneCodes = [
+  final List<String> _phoneCodes = const [
+    '0412',
+    '0422',
+    '0414',
+    '0424',
+    '0416',
+    '0426',
+  ];
+
+  final List<String> _altPhoneCodes = const [
+    '',
     '0412',
     '0422',
     '0414',
@@ -43,21 +52,39 @@ class _ContactDataScreenState extends ConsumerState<ContactDataScreen> {
   ];
 
   // Initial State for change detection
-  String _initialPrimaryPhone = '';
-  String _initialAltPhone = '';
+  String _initialPrimaryCode = '0412';
+  String _initialPrimaryNumber = '';
+  String? _initialAltCode;
+  String _initialAltNumber = '';
 
   bool get _hasChanges {
-    final currentPrimary =
-        '$_selectedPrimaryCode${_primaryPhoneController.text}';
-    final currentAlt = _altPhoneController.text.isNotEmpty
-        ? '$_selectedAltCode${_altPhoneController.text}'
+    final currentPrimaryDigits = _primaryPhoneController.text.trim();
+    final currentPrimary = currentPrimaryDigits.isNotEmpty
+        ? '$_selectedPrimaryCode$currentPrimaryDigits'
         : '';
 
-    // Normalize initial (handle empty/null)
-    final safeInitialPrimary = _initialPrimaryPhone;
-    final safeInitialAlt = _initialAltPhone;
+    final currentAltDigits = _altPhoneController.text.trim();
+    final currentAlt =
+        (_selectedAltCode != null &&
+            _selectedAltCode!.isNotEmpty &&
+            currentAltDigits.isNotEmpty)
+        ? '$_selectedAltCode$currentAltDigits'
+        : '';
 
-    return currentPrimary != safeInitialPrimary || currentAlt != safeInitialAlt;
+    final initialPrimaryDigits = _initialPrimaryNumber.trim();
+    final initialPrimary = initialPrimaryDigits.isNotEmpty
+        ? '$_initialPrimaryCode$initialPrimaryDigits'
+        : '';
+
+    final initialAltDigits = _initialAltNumber.trim();
+    final initialAlt =
+        (_initialAltCode != null &&
+            _initialAltCode!.isNotEmpty &&
+            initialAltDigits.isNotEmpty)
+        ? '$_initialAltCode$initialAltDigits'
+        : '';
+
+    return currentPrimary != initialPrimary || currentAlt != initialAlt;
   }
 
   @override
@@ -68,85 +95,73 @@ class _ContactDataScreenState extends ConsumerState<ContactDataScreen> {
       ..addListener(_onFieldChanged);
     _altPhoneController = TextEditingController()..addListener(_onFieldChanged);
 
-    // Load email directly from Auth as it's not in profile table usually or read-only
     final user = Supabase.instance.client.auth.currentUser;
     _emailController.text = user?.email ?? '';
   }
 
   void _onFieldChanged() {
-    setState(() {
-      // triggers UI update for button state
-    });
+    setState(() {});
   }
 
-  UserProfile? _lastLoadedProfile;
+  (String? code, String number) _parsePhone(
+    String? fullPhone, {
+    bool isOptional = false,
+  }) {
+    if (fullPhone == null || fullPhone.trim().isEmpty) {
+      return (isOptional ? null : '0412', '');
+    }
 
-  void _populateData(UserProfile profile) {
-    if (_lastLoadedProfile == profile && _initialDataLoaded) return;
-    _lastLoadedProfile = profile;
+    var digits = fullPhone.replaceAll(RegExp(r'\D'), '');
 
-    // Helper to parse phone
-    void parsePhone(
-      String? fullPhone,
-      Function(String code, String number) onParsed,
-    ) {
-      if (fullPhone == null || fullPhone.isEmpty) return;
-      for (final code in _phoneCodes) {
-        if (fullPhone.startsWith(code)) {
-          onParsed(code, fullPhone.substring(code.length));
-          return;
-        }
+    // Normalize +58 / 58
+    if (digits.startsWith('58') && digits.length >= 12) {
+      digits = '0${digits.substring(2)}';
+    } else if (digits.length == 10 && !digits.startsWith('0')) {
+      digits = '0$digits';
+    }
+
+    for (final code in _phoneCodes) {
+      if (digits.startsWith(code)) {
+        final num = digits.substring(code.length);
+        return (code, num.length > 7 ? num.substring(0, 7) : num);
       }
     }
 
-    // Determine new values
-    String newPrimaryCode = '0412';
-    String newPrimaryNumber = '';
-    if (profile.phone != null) {
-      parsePhone(profile.phone, (code, number) {
-        newPrimaryCode = code;
-        newPrimaryNumber = number;
-      });
+    if (digits.length >= 4) {
+      final codeCandidate = digits.substring(0, 4);
+      if (_phoneCodes.contains(codeCandidate)) {
+        final num = digits.substring(4);
+        return (codeCandidate, num.length > 7 ? num.substring(0, 7) : num);
+      }
     }
 
-    String newAltCode = '0424';
-    String newAltNumber = '';
-    if (profile.secondaryPhone != null) {
-      parsePhone(profile.secondaryPhone, (code, number) {
-        newAltCode = code;
-        newAltNumber = number;
-      });
+    if (isOptional && digits.isEmpty) {
+      return (null, '');
     }
 
-    // Update Primary if pristine
-    // Valid if current text matches initial (old) text OR if first load
-    if (!_initialDataLoaded ||
-        _primaryPhoneController.text ==
-            (_initialPrimaryPhone.length > 4
-                ? _initialPrimaryPhone.substring(4)
-                : '')) {
-      // Note: checking against substring is tricky because initial is full phone.
-      // Simplified check: if user hasn't typed anything yet, or if we trust the update.
-      // Given the user feedback, they want the DB value to overwrite if they come back.
-      _selectedPrimaryCode = newPrimaryCode;
-      _primaryPhoneController.text = newPrimaryNumber;
-    }
+    return (
+      isOptional ? null : '0412',
+      digits.length > 7 ? digits.substring(0, 7) : digits,
+    );
+  }
 
-    // Better Logic: Just update initial values to current profile.
-    // If the screen was just built/rebuilt and we have fresh data, we should probably show it
-    // unless the user is actively typing.
-    // Since this is a "view/edit" screen, and typically you land here to see data:
-    // We should strictly sync to profile if the Form is "clean" or if we are reloading.
-    // Given the specific bug "go back and enter again", we should force update.
+  void _populateData(UserProfile profile) {
+    if (_initialDataLoaded) return;
 
-    _primaryPhoneController.text = newPrimaryNumber;
-    _selectedPrimaryCode = newPrimaryCode;
+    final primaryParsed = _parsePhone(profile.phone, isOptional: false);
+    final altParsed = _parsePhone(profile.secondaryPhone, isOptional: true);
 
-    _altPhoneController.text = newAltNumber;
-    _selectedAltCode = newAltCode;
+    _selectedPrimaryCode = primaryParsed.$1 ?? '0412';
+    _primaryPhoneController.text = primaryParsed.$2;
 
-    _initialPrimaryPhone = profile.phone ?? '';
-    _initialAltPhone = profile.secondaryPhone ?? '';
+    _selectedAltCode = altParsed.$1;
+    _altPhoneController.text = altParsed.$2;
+
+    _initialPrimaryCode = primaryParsed.$1 ?? '0412';
+    _initialPrimaryNumber = primaryParsed.$2;
+
+    _initialAltCode = altParsed.$1;
+    _initialAltNumber = altParsed.$2;
 
     _initialDataLoaded = true;
     setState(() {});
@@ -157,7 +172,6 @@ class _ContactDataScreenState extends ConsumerState<ContactDataScreen> {
     _emailController.dispose();
     _primaryPhoneController.dispose();
     _altPhoneController.dispose();
-    _verificationCodeController.dispose();
     super.dispose();
   }
 
@@ -166,15 +180,22 @@ class _ContactDataScreenState extends ConsumerState<ContactDataScreen> {
     setState(() => _isLoading = true);
 
     try {
-      final primaryPhone =
-          '$_selectedPrimaryCode${_primaryPhoneController.text}';
-      final altPhone = _altPhoneController.text.isNotEmpty
-          ? '$_selectedAltCode${_altPhoneController.text}'
+      final primaryDigits = _primaryPhoneController.text.trim();
+      final altDigits = _altPhoneController.text.trim();
+
+      final primaryPhone = primaryDigits.isNotEmpty
+          ? '$_selectedPrimaryCode$primaryDigits'
+          : null;
+      final altPhone =
+          (altDigits.isNotEmpty &&
+              _selectedAltCode != null &&
+              _selectedAltCode!.isNotEmpty)
+          ? '$_selectedAltCode$altDigits'
           : null;
 
       final updatedProfile = currentProfile.copyWith(
         phone: primaryPhone,
-        secondaryPhone: altPhone, // Assuming secondaryPhone maps to this
+        secondaryPhone: altPhone,
       );
 
       await ref.read(profileRepositoryProvider).updateProfile(updatedProfile);
@@ -182,15 +203,11 @@ class _ContactDataScreenState extends ConsumerState<ContactDataScreen> {
 
       if (mounted) {
         context.pop();
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Datos de contacto actualizados')),
-        );
+        AppToast.success(context, message: 'Datos de contacto actualizados');
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('Error al guardar: $e')));
+        AppToast.error(context, message: 'Error al guardar: $e');
       }
     } finally {
       if (mounted) {
@@ -230,8 +247,12 @@ class _ContactDataScreenState extends ConsumerState<ContactDataScreen> {
               loading: () => const Center(child: CircularProgressIndicator()),
               error: (error, stack) => FriendlyErrorWidget(error: error),
               data: (profile) {
-                if (profile != null) {
-                  _populateData(profile);
+                if (profile != null && !_initialDataLoaded) {
+                  WidgetsBinding.instance.addPostFrameCallback((_) {
+                    if (mounted) {
+                      _populateData(profile);
+                    }
+                  });
                 }
 
                 return SingleChildScrollView(
@@ -253,7 +274,7 @@ class _ContactDataScreenState extends ConsumerState<ContactDataScreen> {
                         CustomTextField(
                           controller: _emailController,
                           label: 'Correo electrónico*',
-                          enabled: false, // Visually disabled
+                          enabled: false,
                         ),
                         const SizedBox(height: 32),
 
@@ -278,9 +299,11 @@ class _ContactDataScreenState extends ConsumerState<ContactDataScreen> {
                                 items: _phoneCodes,
                                 itemLabelBuilder: (item) => item,
                                 onChanged: (val) {
-                                  setState(() {
-                                    _selectedPrimaryCode = val!;
-                                  });
+                                  if (val != null) {
+                                    setState(() {
+                                      _selectedPrimaryCode = val;
+                                    });
+                                  }
                                 },
                               ),
                             ),
@@ -291,76 +314,24 @@ class _ContactDataScreenState extends ConsumerState<ContactDataScreen> {
                                 controller: _primaryPhoneController,
                                 label: 'Teléfono*',
                                 keyboardType: TextInputType.phone,
+                                inputFormatters: [
+                                  FilteringTextInputFormatter.digitsOnly,
+                                  LengthLimitingTextInputFormatter(7),
+                                ],
+                                validator: (val) {
+                                  if (val == null || val.trim().isEmpty) {
+                                    return 'El teléfono es obligatorio';
+                                  }
+                                  if (val.trim().length != 7) {
+                                    return 'Debe tener 7 dígitos';
+                                  }
+                                  return null;
+                                },
                               ),
                             ),
                           ],
                         ),
 
-                        /*const SizedBox(height: 16),
-
-                        // Verification temporarily disabled
-                        SizedBox(
-                          width: double.infinity,
-                          height: 50,
-                          child: ElevatedButton(
-                            onPressed: () {
-                              setState(() {
-                                _isVerificationSent = true;
-                              });
-                            },
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: const Color(0xFF325983),
-                              foregroundColor: Colors.white,
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(25),
-                              ),
-                              elevation: 0,
-                            ),
-                            child: const Text(
-                              'Enviar código de verificación',
-                              style: TextStyle(fontWeight: FontWeight.bold),
-                            ),
-                          ),
-                        ),
-
-                        if (_isVerificationSent) ...[
-                          const SizedBox(height: 16),
-                          CustomTextField(
-                            controller: _verificationCodeController,
-                            label: 'Introduce el código',
-                            suffixIcon: const Icon(
-                              Icons.cancel_outlined,
-                            ), // Close/Clear icon
-                          ),
-                          const SizedBox(height: 16),
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              TextButton(
-                                onPressed: () {
-                                  // Resend logic
-                                },
-                                child: Text(
-                                  'Reenviar código',
-                                  style: TextStyle(color: Colors.grey.shade600),
-                                ),
-                              ),
-                              ElevatedButton(
-                                onPressed: null, // Disabled initially
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: Colors.grey.shade300,
-                                  foregroundColor: Colors.grey.shade600,
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(25),
-                                  ),
-                                  elevation: 0,
-                                ),
-                                child: const Text('Verificar'),
-                              ),
-                            ],
-                          ),
-                        ],
-                        */
                         const SizedBox(height: 32),
 
                         // Alternative Phone Section
@@ -375,18 +346,33 @@ class _ContactDataScreenState extends ConsumerState<ContactDataScreen> {
                         Row(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            // Code Dropdown
+                            // Code Dropdown (Optional with blank option)
                             SizedBox(
                               width: 110,
                               child: CustomDropdown<String>(
                                 label: 'Código',
+                                isRequired: false,
                                 value: _selectedAltCode,
-                                items: _phoneCodes,
-                                itemLabelBuilder: (item) => item,
+                                items: _altPhoneCodes,
+                                itemLabelBuilder: (item) =>
+                                    item.isEmpty ? ' ' : item,
                                 onChanged: (val) {
                                   setState(() {
-                                    _selectedAltCode = val!;
+                                    _selectedAltCode =
+                                        (val == null || val.isEmpty)
+                                        ? null
+                                        : val;
                                   });
+                                  _formKey.currentState?.validate();
+                                },
+                                validator: (val) {
+                                  final altDigits = _altPhoneController.text
+                                      .trim();
+                                  if (altDigits.isNotEmpty &&
+                                      (val == null || val.isEmpty)) {
+                                    return 'Requerido';
+                                  }
+                                  return null;
                                 },
                               ),
                             ),
@@ -398,6 +384,18 @@ class _ContactDataScreenState extends ConsumerState<ContactDataScreen> {
                                 controller: _altPhoneController,
                                 label: 'Teléfono (Opcional)',
                                 keyboardType: TextInputType.phone,
+                                inputFormatters: [
+                                  FilteringTextInputFormatter.digitsOnly,
+                                  LengthLimitingTextInputFormatter(7),
+                                ],
+                                validator: (val) {
+                                  if (val != null &&
+                                      val.trim().isNotEmpty &&
+                                      val.trim().length != 7) {
+                                    return 'Debe tener 7 dígitos';
+                                  }
+                                  return null;
+                                },
                               ),
                             ),
                           ],

@@ -65,7 +65,19 @@ To avoid "Multiple Choices / PGRST203" errors:
   SELECT pg_get_function_arguments(oid) FROM pg_proc WHERE proname = 'func_name';
   ```
 
-## 5. User Review
+## 5. UI/UX Design Integrity and Zero Assumptions
+
+- **NEVER assume or alter UI/UX layouts**: When refactoring, paginating, or adding background features (like ads, analytics, or filters), preserve 100% of the existing UI layout, styling tokens (`surfaceContainerHigh`, `surface`, etc.), auto-focus behaviors, and navigation structures.
+- **Header & Search Bars**: Do not move search bars out of AppBars into page bodies or alter established visual hierarchies.
+- **Pre/Post Verification**: Always check `git diff` against previous commits to verify no unintended visual regressions were introduced.
+
+## 6. State Persistence & Draft Recovery Guardrails
+
+- **Document Forms & Wizards**: Any screen with document creation, editing, or multi-step input MUST implement local draft auto-save and transparent recovery using `DraftStorageService` and `DraftToast`.
+- **Reference Protocol**: Consult and adhere to [Draftable Module Guide](file:///c:/Users/aleja/flutter_apps/MVP/d_una_app/.agents/skills/development_safety_guardrails/draftable_module_guide.md) and the `implement_draftable_module` skill.
+- **Key Isolation**: Never mix creation and edition keys. Use `${DraftConstants.module}` for new docs and `${DraftConstants.module}_$documentId` for editing existing docs.
+
+## 7. User Review
 
 - Present the `implementation_plan.md` and wait for explicit approval before
   executing any destructive `DROP` or schema-altering commands.

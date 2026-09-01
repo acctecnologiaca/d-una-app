@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:d_una_app/shared/widgets/app_toast.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:d_una_app/features/clients/data/models/client_model.dart';
@@ -181,10 +182,9 @@ class _AddEditContactScreenState extends ConsumerState<AddEditContactScreen> {
               .read(clientsProvider.notifier)
               .updateContact(widget.contact!.id, contactData);
           if (mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                content: Text('Contacto actualizado exitosamente'),
-              ),
+            AppToast.success(
+              context,
+              message: 'Contacto actualizado exitosamente',
             );
           }
         } else {
@@ -192,12 +192,10 @@ class _AddEditContactScreenState extends ConsumerState<AddEditContactScreen> {
               .read(clientsProvider.notifier)
               .addContact(widget.clientId, contactData);
           if (mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text('Contacto agregado exitosamente')),
+            AppToast.success(
+              context,
+              message: 'Contacto agregado exitosamente',
             );
-
-            // Auto-select contact (using ID returned? No, AddEditContact currently returns void! Wait.)
-            // But CreateQuoteScreen already has ref.refresh and auto-select logic running for Contacts because it uses await `context.push()`! Wait, if we use `context.go()`, the `await` is lost.
           }
         }
         if (mounted) {
@@ -209,9 +207,10 @@ class _AddEditContactScreenState extends ConsumerState<AddEditContactScreen> {
         }
       } catch (e) {
         if (mounted) {
-          ScaffoldMessenger.of(
+          AppToast.error(
             context,
-          ).showSnackBar(SnackBar(content: Text('Error: $e')));
+            message: 'Error: $e',
+          );
         }
       } finally {
         if (mounted) setState(() => _isSubmitting = false);

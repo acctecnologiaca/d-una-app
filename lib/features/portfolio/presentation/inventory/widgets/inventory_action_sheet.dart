@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:d_una_app/shared/widgets/app_toast.dart';
 import 'package:go_router/go_router.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:uuid/uuid.dart';
@@ -157,15 +158,11 @@ class InventoryActionSheet {
   ) async {
     if (product.inventoryQuantity <= 0.0) {
       if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            duration: const Duration(seconds: 5),
-            content: Text(
+        AppToast.error(
+          context,
+          message:
               'No se puede agregar este producto. El inventario disponible es 0 ${product.uom ?? "ud."}',
-            ),
-            behavior: SnackBarBehavior.floating,
-            backgroundColor: Colors.redAccent,
-          ),
+          duration: const Duration(seconds: 5),
         );
       }
       return;
@@ -250,7 +247,6 @@ class InventoryActionSheet {
     Product product,
     double costPrice,
   ) async {
-    final colors = Theme.of(context).colorScheme;
     final quoteState = ref.read(createQuoteProvider);
     final existingProducts = quoteState.products;
 
@@ -272,16 +268,11 @@ class InventoryActionSheet {
 
       if (newQty > availableStock) {
         if (context.mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              duration: const Duration(seconds: 8),
-              content: const Text(
+          AppToast.error(
+            context,
+            message:
                 'No se puede agregar más de este producto. La cotización ya tiene agregada el stock máximo disponible.',
-              ),
-              behavior: SnackBarBehavior.floating,
-              backgroundColor: colors.error,
-              showCloseIcon: true,
-            ),
+            duration: const Duration(seconds: 8),
           );
 
           final quoteId = quoteState.quote?.id;
@@ -308,15 +299,11 @@ class InventoryActionSheet {
 
       // Show feedback SnackBar
       if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            duration: const Duration(seconds: 8),
-            content: Text(
+        AppToast.info(
+          context,
+          message:
               'Este producto ya se encuentra en la cotización. Se ha actualizado la cantidad a ${newQty.toStringAsFixed(newQty.truncateToDouble() == newQty ? 0 : 2)} ${product.uom ?? "ud."}',
-            ),
-            behavior: SnackBarBehavior.floating,
-            showCloseIcon: true,
-          ),
+          duration: const Duration(seconds: 8),
         );
 
         final quoteId = quoteState.quote?.id;
@@ -331,16 +318,11 @@ class InventoryActionSheet {
 
     if (product.inventoryQuantity <= 0.0) {
       if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            duration: const Duration(seconds: 8),
-            content: const Text(
+        AppToast.error(
+          context,
+          message:
               'Sin stock. Añade este producto usando la opción "Proveedor Externo" desde la cotización.',
-            ),
-            behavior: SnackBarBehavior.floating,
-            backgroundColor: colors.error,
-            showCloseIcon: true,
-          ),
+          duration: const Duration(seconds: 8),
         );
       }
       return;
@@ -522,8 +504,6 @@ class InventoryActionSheet {
     double costPrice,
     Purchase selectedPurchase,
   ) async {
-    final colors = Theme.of(context).colorScheme;
-
     // Show loading indicator while fetching purchase details
     showDialog(
       context: context,
@@ -548,11 +528,9 @@ class InventoryActionSheet {
           context,
           rootNavigator: true,
         ).pop(); // Close loading dialog
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Error al cargar la compra: $e'),
-            backgroundColor: colors.error,
-          ),
+        AppToast.error(
+          context,
+          message: 'Error al cargar la compra: $e',
         );
       }
       return;
@@ -563,12 +541,9 @@ class InventoryActionSheet {
     // Check if product already exists in this purchase
     final exists = details.items.any((item) => item.productId == product.id);
     if (exists) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: const Text('Este producto ya se encuentra en la compra.'),
-          backgroundColor: colors.error,
-          behavior: SnackBarBehavior.floating,
-        ),
+      AppToast.warning(
+        context,
+        message: 'Este producto ya se encuentra en la compra.',
       );
       context.push(
         '/my-purchases/view/${selectedPurchase.id}',

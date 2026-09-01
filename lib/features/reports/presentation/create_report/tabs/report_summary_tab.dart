@@ -1,10 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
+import 'package:material_symbols_icons/symbols.dart';
 import '../providers/create_report_provider.dart';
 import '../../../../../shared/utils/currency_formatter.dart';
 import '../../../domain/models/service_report_model.dart';
 import '../../../data/models/service_report.dart';
+import '../../../data/models/service_report_item_product.dart';
+import '../../../data/models/service_report_item_service.dart';
 
 class ReportSummaryTab extends ConsumerWidget {
   final Function(int) onNavigateToTab;
@@ -14,9 +17,15 @@ class ReportSummaryTab extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final state = ref.watch(createReportProvider);
-    final colors = Theme.of(context).colorScheme;
+    final theme = Theme.of(context);
+    final colors = theme.colorScheme;
 
-    if (state.products.isEmpty && state.services.isEmpty && state.clientId == null) {
+    // Check if empty
+    if (state.products.isEmpty &&
+        state.services.isEmpty &&
+        state.clientId == null &&
+        state.requestDescription.isEmpty &&
+        state.workDescription.isEmpty) {
       return Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
@@ -40,61 +49,75 @@ class ReportSummaryTab extends ConsumerWidget {
         ? state.globalTaxRate
         : state.globalTaxRate * 100;
 
+    // Group Products for display by index
+    final groupedProducts = <int, List<ServiceReportItemProduct>>{};
+    for (var product in state.products) {
+      if (!groupedProducts.containsKey(product.groupIndex)) {
+        groupedProducts[product.groupIndex] = [];
+      }
+      groupedProducts[product.groupIndex]!.add(product);
+    }
+
+    final sortedIndices = groupedProducts.keys.toList()..sort();
+    final displayProducts = sortedIndices
+        .take(3)
+        .map(
+          (idx) =>
+              MapEntry(groupedProducts[idx]!.first.name, groupedProducts[idx]!),
+        )
+        .toList();
+    final totalGroupedProducts = sortedIndices.length;
+
+    // Group Services for display by index
+    final displayServices = [...state.services]
+      ..sort((a, b) => a.orderIndex.compareTo(b.orderIndex));
+    final finalDisplayServices = displayServices.take(3).toList();
+
     return SingleChildScrollView(
       padding: const EdgeInsets.only(left: 16, right: 16, top: 16, bottom: 120),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          // 0. Info Section (si se está editando)
+          // 0. Info Section (Status & Last Mod) - Only if editing existing report
           if (state.report != null) ...[
             _buildInfoCard(context, state.report!),
             const SizedBox(height: 16),
           ],
 
-          // 1. Ficha Técnica Section
-          _buildSectionHeader(context, Icons.assignment_outlined, 'Ficha Técnica'),
-          _buildReportSummaryCard(context, state),
-          const SizedBox(height: 16),
-
-          // 2. Cliente Section
-          _buildSectionHeader(context, Icons.people_outline, 'Cliente'),
+          // 1. Cliente Section
+          _buildSectionHeader(context, Icons.people, 'Cliente'),
           _buildClientCard(context, state),
           const SizedBox(height: 16),
 
-          // 3. Resumen Económico
-          _buildSectionHeader(context, Icons.calculate_outlined, 'Liquidación y Cobro'),
-          _buildFinancialCard(
+          // 2. Informe
+          _buildSectionHeader(context, Icons.assignment_outlined, 'Informe'),
+          _buildTechnicalCard(context, state),
+          const SizedBox(height: 16),
+
+          // 3. Reporte Económico Section
+          _buildSectionHeader(context, Icons.calculate, 'Costos'),
+          _buildReportCard(
             context,
             state,
+            state.productsSubtotal,
+            state.servicesSubtotal,
+            state.totalSales,
+            state.taxAmount,
             taxRateDisplay,
+            state.finalTotal,
+            displayProducts,
+            finalDisplayServices,
+            totalGroupedProducts,
           ),
           const SizedBox(height: 16),
 
-          // 4. Tarjeta Confidencial del Técnico
-          _buildConfidentialProfitCard(context, state),
-          const SizedBox(height: 16),
-
-          // 5. Checklist de Completitud
-          _buildChecklistCard(context, state),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildSectionHeader(BuildContext context, IconData icon, String title) {
-    final colors = Theme.of(context).colorScheme;
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 8),
-      child: Row(
-        children: [
-          Icon(icon, size: 18, color: colors.primary),
-          const SizedBox(width: 8),
-          Text(
-            title,
-            style: Theme.of(context)
-                .textTheme
-                .titleSmall
-                ?.copyWith(fontWeight: FontWeight.bold),
+          // 4. Rentabilidad Section
+          _buildSectionHeader(context, Icons.bar_chart, 'Rentabilidad'),
+          _buildUtilityCard(
+            context,
+            state.totalSales,
+            state.totalCosts,
+            state.estimatedProfit,
           ),
         ],
       ),
@@ -103,42 +126,57 @@ class ReportSummaryTab extends ConsumerWidget {
 
   Widget _buildInfoCard(BuildContext context, ServiceReport report) {
     final colors = Theme.of(context).colorScheme;
+    final dateFormat = DateFormat('dd/MM/yyyy - hh:mm a');
     final status = ServiceReportStatus.fromDbValue(report.status);
 
     return Card(
       elevation: 0,
-      color: colors.surfaceContainerLow,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(8),
+        side: BorderSide(color: colors.outlineVariant),
+      ),
+      color: colors.surface,
       child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Row(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
           children: [
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-              decoration: BoxDecoration(
-                color: status.statusColor(colors).withValues(alpha: 0.15),
-                borderRadius: BorderRadius.circular(20),
-              ),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Image.asset(status.iconPath, width: 16, height: 16),
-                  const SizedBox(width: 6),
-                  Text(
-                    status.label,
-                    style: TextStyle(
-                      color: status.statusColor(colors),
-                      fontWeight: FontWeight.bold,
-                      fontSize: 12,
-                    ),
+            Row(
+              children: [
+                Icon(
+                  Symbols.conversion_path,
+                  size: 20,
+                  color: colors.onSurfaceVariant,
+                ),
+                const SizedBox(width: 8),
+                Text(
+                  'Estatus:',
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    color: colors.onSurface,
                   ),
-                ],
-              ),
+                ),
+                const SizedBox(width: 12),
+                _buildStatusBadge(context, status),
+              ],
             ),
-            const Spacer(),
-            Text(
-              'Emisión: ${DateFormat('dd/MM/yyyy').format(report.serviceDate)}',
-              style: TextStyle(fontSize: 12, color: colors.onSurfaceVariant),
+            const SizedBox(height: 12),
+            Row(
+              children: [
+                Icon(Symbols.update, size: 20, color: colors.onSurfaceVariant),
+                const SizedBox(width: 8),
+                Text(
+                  'Últ. mod:',
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    color: colors.onSurface,
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Text(
+                  dateFormat.format(report.updatedAt.toLocal()),
+                  style: TextStyle(color: colors.onSurfaceVariant),
+                ),
+              ],
             ),
           ],
         ),
@@ -146,187 +184,361 @@ class ReportSummaryTab extends ConsumerWidget {
     );
   }
 
-  Widget _buildReportSummaryCard(
-      BuildContext context, ServiceReportCreateState state) {
+  Widget _buildStatusBadge(BuildContext context, ServiceReportStatus status) {
     final colors = Theme.of(context).colorScheme;
-
-    return Card(
-      elevation: 0,
-      color: colors.surfaceContainerLow,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      child: InkWell(
-        borderRadius: BorderRadius.circular(12),
-        onTap: () => onNavigateToTab(0),
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  Icon(state.interventionType.icon,
-                      size: 16, color: colors.primary),
-                  const SizedBox(width: 6),
-                  Text(
-                    state.interventionType.label,
-                    style: TextStyle(
-                      fontWeight: FontWeight.bold,
-                      color: colors.primary,
-                      fontSize: 13,
-                    ),
-                  ),
-                  if (state.categoryName != null) ...[
-                    Text(' • ', style: TextStyle(color: colors.outline)),
-                    Text(
-                      state.categoryName!,
-                      style: TextStyle(
-                        fontSize: 13,
-                        color: colors.onSurfaceVariant,
-                      ),
-                    ),
-                  ],
-                  const Spacer(),
-                  Icon(Icons.edit_outlined, size: 16, color: colors.outline),
-                ],
-              ),
-              const Divider(height: 20),
-              if (state.requestDescription.isNotEmpty) ...[
-                Text(
-                  'Solicitud:',
-                  style: TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.bold,
-                    color: colors.onSurfaceVariant,
-                  ),
-                ),
-                Text(
-                  state.requestDescription,
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(fontSize: 13),
-                ),
-                const SizedBox(height: 8),
-              ],
-              if (state.workDescription.isNotEmpty) ...[
-                Text(
-                  'Diagnóstico y Trabajo:',
-                  style: TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.bold,
-                    color: colors.onSurfaceVariant,
-                  ),
-                ),
-                Text(
-                  state.workDescription,
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(fontSize: 13),
-                ),
-              ] else ...[
-                Text(
-                  '⚠️ Sin diagnóstico / trabajo especificado',
-                  style: TextStyle(fontSize: 12, color: colors.error),
-                ),
-              ],
-            ],
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+      decoration: BoxDecoration(
+        color: colors.surface,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: colors.primary.withValues(alpha: 0.2)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Image.asset(status.iconPath, width: 16, height: 16),
+          const SizedBox(width: 8),
+          Text(
+            status.label,
+            style: TextStyle(
+              color: status.statusColor(colors),
+              fontWeight: FontWeight.bold,
+              fontSize: 14,
+            ),
           ),
-        ),
+        ],
       ),
     );
   }
 
-  Widget _buildClientCard(BuildContext context, ServiceReportCreateState state) {
-    final colors = Theme.of(context).colorScheme;
-
-    return Card(
-      elevation: 0,
-      color: colors.surfaceContainerLow,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      child: InkWell(
-        borderRadius: BorderRadius.circular(12),
-        onTap: () => onNavigateToTab(1),
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Row(
-            children: [
-              CircleAvatar(
-                backgroundColor: colors.primaryContainer,
-                child: Icon(Icons.person, color: colors.onPrimaryContainer),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      state.clientName ?? 'Seleccionar Cliente',
-                      style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
-                    ),
-                    if (state.contactName != null)
-                      Text(
-                        'Contacto: ${state.contactName}',
-                        style: TextStyle(fontSize: 12, color: colors.onSurfaceVariant),
-                      ),
-                  ],
-                ),
-              ),
-              Icon(Icons.chevron_right, color: colors.outline),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildFinancialCard(
+  Widget _buildSectionHeader(
     BuildContext context,
-    ServiceReportCreateState state,
-    double taxRateDisplay,
+    IconData icon,
+    String title,
   ) {
     final colors = Theme.of(context).colorScheme;
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8.0),
+      child: Row(
+        children: [
+          Icon(icon, size: 20, color: colors.onSurfaceVariant),
+          const SizedBox(width: 8),
+          Text(
+            title,
+            style: TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.bold,
+              color: colors.onSurfaceVariant,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildTechnicalCard(
+    BuildContext context,
+    ServiceReportCreateState state,
+  ) {
+    final colors = Theme.of(context).colorScheme;
+    return Card(
+      elevation: 0,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(8),
+        side: BorderSide(color: colors.outlineVariant),
+      ),
+      color: colors.surface,
+      child: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          children: [
+            _buildSummaryRow(
+              context,
+              state.interventionType.icon,
+              'Tipo de servicio',
+              state.interventionType.label,
+              isTextValue: true,
+            ),
+            if (state.categoryName != null &&
+                state.categoryName!.isNotEmpty) ...[
+              const SizedBox(height: 12),
+              _buildSummaryRow(
+                context,
+                Icons.category_outlined,
+                'Categoría',
+                state.categoryName!,
+                isTextValue: true,
+              ),
+            ],
+            ...[
+              const SizedBox(height: 12),
+              _buildSummaryRow(
+                context,
+                Icons.calendar_today_outlined,
+                'Fecha de ejecución',
+                DateFormat('dd/MM/yyyy').format(state.serviceDate.toLocal()),
+                isTextValue: true,
+              ),
+            ],
+
+            if (state.advisorName != null && state.advisorName!.isNotEmpty) ...[
+              const SizedBox(height: 12),
+              _buildSummaryRow(
+                context,
+                Icons.badge_outlined,
+                'Técnico(s)',
+                state.advisorName!,
+                isTextValue: true,
+              ),
+            ],
+            const SizedBox(height: 8),
+            Align(
+              alignment: Alignment.centerRight,
+              child: TextButton.icon(
+                onPressed: () => onNavigateToTab(0), // Informe Tab
+                icon: const Icon(Icons.arrow_forward_ios, size: 14),
+                label: const Text(
+                  'Ir a informe',
+                  style: TextStyle(fontWeight: FontWeight.bold),
+                ),
+                style: TextButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 4,
+                  ),
+                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildClientCard(
+    BuildContext context,
+    ServiceReportCreateState state,
+  ) {
+    final colors = Theme.of(context).colorScheme;
+    return Card(
+      elevation: 0,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(8),
+        side: BorderSide(color: colors.outlineVariant),
+      ),
+      color: colors.surface,
+      child: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          children: [
+            _buildSummaryRow(
+              context,
+              Icons.domain,
+              'Razón social',
+              state.clientName ?? 'No seleccionado',
+              isTextValue: true,
+            ),
+            if (state.contactName != null &&
+                state.contactName!.isNotEmpty &&
+                state.contactName != state.clientName) ...[
+              const SizedBox(height: 12),
+              _buildSummaryRow(
+                context,
+                Icons.person_outline,
+                'Contacto',
+                state.contactName!,
+                isTextValue: true,
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildReportCard(
+    BuildContext context,
+    ServiceReportCreateState state,
+    double productsSubtotal,
+    double servicesSubtotal,
+    double totalSales,
+    double taxAmount,
+    double taxRateDisplay,
+    double finalTotal,
+    List<MapEntry<String, List<ServiceReportItemProduct>>> displayProducts,
+    List<ServiceReportItemService> displayServices,
+    int totalGroupedProducts,
+  ) {
+    final colors = Theme.of(context).colorScheme;
+    final textTheme = Theme.of(context).textTheme;
 
     return Card(
       elevation: 0,
-      color: colors.surfaceContainerLow,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(8),
+        side: BorderSide(color: colors.outlineVariant),
+      ),
+      color: colors.surface,
       child: Padding(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(16.0),
         child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            _buildAmountRow(
-              'Mano de Obra (${state.services.length} servicios)',
-              CurrencyFormatter.format(state.servicesSubtotal),
-              onTap: () => onNavigateToTab(2),
+            // Products
+            if (state.products.isNotEmpty) ...[
+              _buildHeaderRow(
+                context,
+                Icons.inventory_2_outlined,
+                'Productos',
+                groupedCount: totalGroupedProducts,
+                amount: CurrencyFormatter.format(productsSubtotal),
+              ),
+              const SizedBox(height: 8),
+              ...displayProducts.map((entry) {
+                final name = entry.key;
+                final items = entry.value;
+                double totalQty = 0;
+                for (var item in items) {
+                  totalQty += item.quantity;
+                }
+                final uomStr = items.first.uom;
+                return Padding(
+                  padding: const EdgeInsets.only(bottom: 4.0, left: 24.0),
+                  child: Text.rich(
+                    TextSpan(
+                      children: [
+                        TextSpan(
+                          text: '${totalQty.toInt()} $uomStr: ',
+                          style: const TextStyle(fontWeight: FontWeight.bold),
+                        ),
+                        TextSpan(
+                          text: name,
+                          style: TextStyle(color: colors.onSurfaceVariant),
+                        ),
+                      ],
+                    ),
+                  ),
+                );
+              }),
+              if (totalGroupedProducts > 0)
+                Align(
+                  alignment: Alignment.centerRight,
+                  child: TextButton.icon(
+                    onPressed: () => onNavigateToTab(1), // Products Tab
+                    icon: const Icon(Icons.arrow_forward_ios, size: 14),
+                    label: const Text(
+                      'Ir a productos',
+                      style: TextStyle(fontWeight: FontWeight.bold),
+                    ),
+                    style: TextButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 4,
+                      ),
+                      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                    ),
+                  ),
+                ),
+            ],
+
+            // Services
+            if (state.services.isNotEmpty) ...[
+              const SizedBox(height: 16),
+              _buildHeaderRow(
+                context,
+                Icons.handyman_outlined,
+                'Servicios',
+                groupedCount: state.services.length,
+                amount: CurrencyFormatter.format(servicesSubtotal),
+              ),
+              const SizedBox(height: 8),
+              ...displayServices.map((service) {
+                final String rateStr = service.rateSymbol;
+                return Padding(
+                  padding: const EdgeInsets.only(bottom: 4.0, left: 24.0),
+                  child: Text.rich(
+                    TextSpan(
+                      children: [
+                        TextSpan(
+                          text: '${service.quantity.toInt()} $rateStr: ',
+                          style: const TextStyle(fontWeight: FontWeight.bold),
+                        ),
+                        TextSpan(
+                          text: service.name,
+                          style: TextStyle(color: colors.onSurfaceVariant),
+                        ),
+                      ],
+                    ),
+                  ),
+                );
+              }),
+              if (state.services.isNotEmpty)
+                Align(
+                  alignment: Alignment.centerRight,
+                  child: TextButton.icon(
+                    onPressed: () => onNavigateToTab(2), // Services Tab
+                    icon: const Icon(Icons.arrow_forward_ios, size: 14),
+                    label: const Text(
+                      'Ir a servicios',
+                      style: TextStyle(fontWeight: FontWeight.bold),
+                    ),
+                    style: TextButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 4,
+                      ),
+                      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                    ),
+                  ),
+                ),
+            ],
+
+            const Padding(
+              padding: EdgeInsets.symmetric(vertical: 8.0),
+              child: Divider(),
+            ),
+
+            // Totals
+            _buildRowText(
+              'Sub-Total',
+              CurrencyFormatter.format(totalSales),
+              isBold: true,
+              icon: Icons.attach_money,
             ),
             const SizedBox(height: 8),
-            _buildAmountRow(
-              'Materiales/Repuestos (${state.products.length} ítems)',
-              CurrencyFormatter.format(state.productsSubtotal),
-              onTap: () => onNavigateToTab(3),
-            ),
-            const Divider(height: 20),
-            _buildAmountRow(
-              'Subtotal',
-              CurrencyFormatter.format(state.totalSales),
-            ),
-            const SizedBox(height: 8),
-            _buildAmountRow(
+            _buildRowText(
               'IVA (${taxRateDisplay.toStringAsFixed(0)}%)',
-              CurrencyFormatter.format(state.taxAmount),
+              CurrencyFormatter.format(taxAmount),
+              icon: Icons.percent,
             ),
-            const Divider(height: 20),
+            const Padding(
+              padding: EdgeInsets.symmetric(vertical: 8.0),
+              child: Divider(),
+            ),
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                const Text(
-                  'TOTAL A COBRAR',
-                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
+                Row(
+                  children: [
+                    Icon(
+                      Icons.monetization_on_outlined,
+                      size: 18,
+                      color: colors.onSurface,
+                    ),
+                    const SizedBox(width: 8),
+                    Text(
+                      'Total',
+                      style: textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ],
                 ),
                 Text(
-                  CurrencyFormatter.format(state.finalTotal),
-                  style: TextStyle(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 18,
+                  CurrencyFormatter.format(finalTotal),
+                  style: textTheme.headlineSmall?.copyWith(
+                    fontWeight: FontWeight.w900,
                     color: colors.primary,
                   ),
                 ),
@@ -338,84 +550,49 @@ class ReportSummaryTab extends ConsumerWidget {
     );
   }
 
-  Widget _buildAmountRow(String label, String amount, {VoidCallback? onTap}) {
-    return InkWell(
-      onTap: onTap,
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Text(label, style: const TextStyle(fontSize: 13)),
-          Text(amount, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildConfidentialProfitCard(
-      BuildContext context, ServiceReportCreateState state) {
+  Widget _buildUtilityCard(
+    BuildContext context,
+    double sales,
+    double costs,
+    double profit,
+  ) {
     final colors = Theme.of(context).colorScheme;
-    final profitMarginPercent = state.totalSales > 0
-        ? (state.estimatedProfit / state.totalSales) * 100
-        : 0.0;
-
     return Card(
       elevation: 0,
-      color: colors.secondaryContainer.withValues(alpha: 0.4),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(8),
+        side: BorderSide(color: colors.outlineVariant),
+      ),
+      color: colors.surface,
       child: Padding(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(16.0),
         child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Row(
-              children: [
-                Icon(Icons.lock_outline, size: 16, color: colors.onSecondaryContainer),
-                const SizedBox(width: 6),
-                Text(
-                  'Vista Confidencial del Técnico',
-                  style: TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.bold,
-                    color: colors.onSecondaryContainer,
-                  ),
-                ),
-              ],
+            _buildSummaryRow(
+              context,
+              Icons.sell_outlined,
+              'Venta',
+              CurrencyFormatter.format(sales),
             ),
             const SizedBox(height: 12),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Costos Propios:',
-                      style: TextStyle(fontSize: 12, color: colors.onSurfaceVariant),
-                    ),
-                    Text(
-                      CurrencyFormatter.format(state.totalCosts),
-                      style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
-                    ),
-                  ],
-                ),
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.end,
-                  children: [
-                    Text(
-                      'Utilidad Neta Estimada:',
-                      style: TextStyle(fontSize: 12, color: colors.onSurfaceVariant),
-                    ),
-                    Text(
-                      '${CurrencyFormatter.format(state.estimatedProfit)} (${profitMarginPercent.toStringAsFixed(1)}%)',
-                      style: TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 14,
-                        color: state.estimatedProfit >= 0 ? Colors.green.shade700 : colors.error,
-                      ),
-                    ),
-                  ],
-                ),
-              ],
+            _buildSummaryRow(
+              context,
+              Icons.payments_outlined,
+              'Costos',
+              CurrencyFormatter.format(costs),
+            ),
+            const SizedBox(height: 12),
+            _buildSummaryRow(
+              context,
+              Icons.trending_up,
+              'Ganancia estimada',
+              CurrencyFormatter.format(profit),
+              valueStyle: const TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.w900,
+                color: Colors.green,
+              ),
+              iconColor: Colors.green,
             ),
           ],
         ),
@@ -423,69 +600,106 @@ class ReportSummaryTab extends ConsumerWidget {
     );
   }
 
-  Widget _buildChecklistCard(
-      BuildContext context, ServiceReportCreateState state) {
+  Widget _buildSummaryRow(
+    BuildContext context,
+    IconData icon,
+    String label,
+    String value, {
+    TextStyle? valueStyle,
+    Color? iconColor,
+    bool isTextValue = false,
+  }) {
     final colors = Theme.of(context).colorScheme;
-
-    final hasClient = state.clientId != null;
-    final hasCategory = state.categoryId != null;
-    final hasAdvisor = state.advisorId != null;
-    final hasWork = state.workDescription.trim().isNotEmpty;
-    final hasItems = state.products.isNotEmpty || state.services.isNotEmpty;
-    final hasConditions = state.conditions.isNotEmpty;
-
-    return Card(
-      elevation: 0,
-      color: colors.surfaceContainerLow,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text(
-              'Verificación para Finalizar',
-              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
-            ),
-            const SizedBox(height: 10),
-            _buildChecklistItem('Cliente asignado', hasClient, () => onNavigateToTab(1)),
-            _buildChecklistItem('Categoría técnica seleccionada', hasCategory, () => onNavigateToTab(0)),
-            _buildChecklistItem('Técnico responsable asignado', hasAdvisor, () => onNavigateToTab(0)),
-            _buildChecklistItem('Diagnóstico y trabajo detallado', hasWork, () => onNavigateToTab(0)),
-            _buildChecklistItem('Mano de obra o repuestos agregados', hasItems, () => onNavigateToTab(2)),
-            _buildChecklistItem('Condiciones y garantías incluidas', hasConditions, () => onNavigateToTab(4)),
-          ],
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Icon(icon, size: 18, color: iconColor ?? colors.onSurfaceVariant),
+        const SizedBox(width: 8),
+        Text(
+          label,
+          style: TextStyle(
+            color: colors.onSurfaceVariant,
+            fontWeight: FontWeight.w500,
+          ),
         ),
-      ),
+        const SizedBox(width: 16),
+        Expanded(
+          child: Text(
+            value,
+            textAlign: TextAlign.right,
+            style:
+                valueStyle ??
+                TextStyle(
+                  fontWeight: isTextValue ? FontWeight.normal : FontWeight.w600,
+                  color: isTextValue
+                      ? colors.onSurfaceVariant
+                      : colors.onSurface,
+                  fontSize: isTextValue ? 14 : 16,
+                ),
+          ),
+        ),
+      ],
     );
   }
 
-  Widget _buildChecklistItem(String title, bool isCompleted, VoidCallback onTap) {
-    return InkWell(
-      onTap: onTap,
-      child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 4),
-        child: Row(
+  Widget _buildHeaderRow(
+    BuildContext context,
+    IconData icon,
+    String title, {
+    required int groupedCount,
+    required String amount,
+  }) {
+    final colors = Theme.of(context).colorScheme;
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        Row(
           children: [
-            Icon(
-              isCompleted ? Icons.check_circle : Icons.radio_button_unchecked,
-              size: 16,
-              color: isCompleted ? Colors.green : Colors.grey,
-            ),
+            Icon(icon, size: 18, color: colors.onSurface),
             const SizedBox(width: 8),
-            Expanded(
-              child: Text(
-                title,
-                style: TextStyle(
-                  fontSize: 12,
-                  color: isCompleted ? null : Colors.grey.shade600,
-                  decoration: isCompleted ? null : null,
-                ),
+            Text(
+              '$title ($groupedCount)',
+              style: const TextStyle(fontWeight: FontWeight.bold),
+            ),
+          ],
+        ),
+        Text(amount, style: const TextStyle(fontWeight: FontWeight.bold)),
+      ],
+    );
+  }
+
+  Widget _buildRowText(
+    String label,
+    String value, {
+    bool isBold = false,
+    IconData? icon,
+  }) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        Row(
+          children: [
+            if (icon != null) ...[
+              Icon(icon, size: 16, color: Colors.grey.shade600),
+              const SizedBox(width: 8),
+            ] else
+              const SizedBox(width: 24),
+            Text(
+              label,
+              style: TextStyle(
+                fontWeight: isBold ? FontWeight.bold : FontWeight.w500,
+                color: Colors.grey.shade700,
               ),
             ),
           ],
         ),
-      ),
+        Text(
+          value,
+          style: TextStyle(
+            fontWeight: isBold ? FontWeight.bold : FontWeight.w600,
+          ),
+        ),
+      ],
     );
   }
 }

@@ -11,15 +11,30 @@ import '../../../settings/data/models/observation.dart';
 import '../../../settings/data/models/shipping_company.dart';
 import '../../data/models/delivery_time_model.dart';
 
+import '../../../profile/presentation/providers/profile_provider.dart';
+
 final lookupRepositoryProvider = Provider<LookupRepository>((ref) {
   return LookupRepository(Supabase.instance.client);
 });
 
 final categoriesProvider = FutureProvider<List<Category>>((ref) async {
-  final categories = await ref.watch(lookupRepositoryProvider).getCategories();
   final currentUserId = Supabase.instance.client.auth.currentUser?.id;
+  final userProfile = ref.watch(userProfileProvider).valueOrNull;
 
-  // Filter: verified categories OR categories owned by the current user
+  final occupationIds = <String>[];
+  if (userProfile?.occupationId != null && userProfile!.occupationId!.isNotEmpty) {
+    occupationIds.add(userProfile.occupationId!);
+  }
+  if (userProfile?.secondaryOccupationIds != null) {
+    occupationIds.addAll(userProfile!.secondaryOccupationIds);
+  }
+
+  // Fetch relevant categories via RPC
+  final categories = await ref
+      .watch(lookupRepositoryProvider)
+      .getRelevantCategories(occupationIds: occupationIds);
+
+  // Return verified categories matching the user's sectors/global OR custom categories owned by current user
   return categories.where((category) {
     return category.isVerified || (currentUserId != null && category.userId == currentUserId);
   }).toList();

@@ -4,6 +4,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:d_una_app/shared/widgets/app_toast.dart';
 import 'widgets/register_layout.dart';
 import 'providers/register_provider.dart';
 
@@ -66,7 +67,6 @@ class _RegisterVerificationScreenState
     String message = fallbackMessage;
 
     if (e is AuthException) {
-      // Mapping verified Supabase Auth codes from official table
       switch (e.code) {
         case 'otp_expired':
           message =
@@ -88,7 +88,6 @@ class _RegisterVerificationScreenState
               'El servicio de correo falló temporalmente. Por favor, intenta de nuevo en unos minutos.';
           break;
         default:
-          // Fallback for other auth errors
           if (e.message.toLowerCase().contains('invalid')) {
             message =
                 'El código ingresado es incorrecto. Verifica e intenta de nuevo.';
@@ -99,14 +98,7 @@ class _RegisterVerificationScreenState
       }
     }
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(message),
-        backgroundColor: Theme.of(context).colorScheme.error,
-        behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-      ),
-    );
+    AppToast.error(context, message: message);
   }
 
   Future<void> _onVerify() async {
@@ -121,18 +113,15 @@ class _RegisterVerificationScreenState
         _handleError(e, 'No se pudo verificar el código. Inténtalo de nuevo.');
       }
     } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Por favor ingresa el código de 6 dígitos'),
-        ),
+      AppToast.warning(
+        context,
+        message: 'Por favor ingresa el código de 6 dígitos',
       );
     }
   }
 
   void _onChanged(String value, int index) {
-    // 1. Detectar si el usuario pegó un código múltiple
     if (value.length > 1) {
-      // Extraer solo los números
       String digits = value.replaceAll(RegExp(r'\D'), '');
       if (digits.length > 6) digits = digits.substring(0, 6);
 
@@ -254,27 +243,27 @@ class _RegisterVerificationScreenState
                       ? null
                       : () async {
                           try {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(
-                                content: Text('Reenviando código...'),
-                              ),
+                            AppToast.info(
+                              context,
+                              message: 'Reenviando código...',
                             );
                             await ref
                                 .read(registerProvider.notifier)
                                 .resendCode();
                             _startResendTimer();
                             if (context.mounted) {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(
-                                  content: Text('Código reenviado con éxito'),
-                                ),
+                              AppToast.success(
+                                context,
+                                message: 'Código reenviado con éxito',
                               );
                             }
                           } catch (e) {
-                            _handleError(
-                              e,
-                              'No se pudo reenviar el código. Inténtalo de nuevo.',
-                            );
+                            if (context.mounted) {
+                              _handleError(
+                                e,
+                                'No se pudo reenviar el código. Inténtalo de nuevo.',
+                              );
+                            }
                           }
                         },
                   child: Text(

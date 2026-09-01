@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:d_una_app/shared/widgets/app_toast.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:d_una_app/shared/widgets/custom_dialog.dart';
@@ -89,8 +90,9 @@ class ServiceDetailsScreen extends ConsumerWidget {
                     .deleteService(latestService.id);
                 if (context.mounted) {
                   context.pop(); // Close details
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Servicio eliminado')),
+                  AppToast.success(
+                    context,
+                    message: 'Servicio eliminado',
                   );
                 }
               }

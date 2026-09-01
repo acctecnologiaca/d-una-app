@@ -7,6 +7,10 @@ import 'custom_search_bar.dart';
 import 'horizontal_filter_bar.dart';
 import '../models/paginated_state.dart';
 import 'paginated_list_view.dart';
+import '../../features/ads/domain/models/ad_banner_model.dart';
+import '../../features/ads/presentation/providers/ads_provider.dart';
+import '../../features/ads/presentation/widgets/ad_banner_card.dart';
+import '../utils/ad_list_position_helper.dart';
 
 class GenericSearchScreen<T> extends StatefulWidget {
   final String title;
@@ -27,12 +31,16 @@ class GenericSearchScreen<T> extends StatefulWidget {
   final PreferredSizeWidget? appBarOverride;
   final Widget? floatingActionButton;
   final FloatingActionButtonLocation? floatingActionButtonLocation;
-  
+
   // Paginated Mode
   final bool isPaginatedMode;
   final AsyncValue<PaginatedState<T>>? paginatedDataAsync;
   final ValueChanged<String>? onServerSearch;
   final VoidCallback? onLoadMore;
+
+  // Banners Publicitarios
+  final List<AdBanner>? banners;
+  final String? screenContext;
 
   const GenericSearchScreen({
     super.key,
@@ -58,6 +66,8 @@ class GenericSearchScreen<T> extends StatefulWidget {
     this.paginatedDataAsync,
     this.onServerSearch,
     this.onLoadMore,
+    this.banners,
+    this.screenContext,
   });
 
   @override
@@ -118,46 +128,41 @@ class _GenericSearchScreenState<T> extends State<GenericSearchScreen<T>> {
     });
   }
 
-  Future<void> _addToHistory(String query) async {
-    if (query.trim().isEmpty) return;
+  Future<void> _addToHistory(String term) async {
+    if (term.trim().isEmpty) return;
     final prefs = await SharedPreferences.getInstance();
-    List<String> newHistory = List.from(_history);
+    final cleanTerm = term.trim();
 
-    // Remove if exists to move to top
-    newHistory.remove(query);
-    // Add to top
-    newHistory.insert(0, query);
-    // Limit to 10
-    if (newHistory.length > 10) {
-      newHistory = newHistory.sublist(0, 10);
+    _history.remove(cleanTerm);
+    _history.insert(0, cleanTerm);
+
+    if (_history.length > 5) {
+      _history = _history.sublist(0, 5);
     }
 
-    await prefs.setStringList(widget.historyKey, newHistory);
-    setState(() {
-      _history = newHistory;
-    });
+    await prefs.setStringList(widget.historyKey, _history);
+    setState(() {});
   }
 
-  Future<void> _removeFromHistory(String query) async {
+  Future<void> _removeFromHistory(String term) async {
     final prefs = await SharedPreferences.getInstance();
-    List<String> newHistory = List.from(_history);
-    newHistory.remove(query);
-    await prefs.setStringList(widget.historyKey, newHistory);
-    setState(() {
-      _history = newHistory;
-    });
+    _history.remove(term);
+    await prefs.setStringList(widget.historyKey, _history);
+    setState(() {});
   }
 
   Future<void> _clearHistory() async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove(widget.historyKey);
     setState(() {
-      _history = [];
+      _history.clear();
     });
   }
 
-  void _onSearchSubmitted(String query) {
-    _addToHistory(query);
+  void _onSearchSubmitted(String value) {
+    if (value.isNotEmpty) {
+      _addToHistory(value);
+    }
   }
 
   @override
@@ -168,56 +173,61 @@ class _GenericSearchScreenState<T> extends State<GenericSearchScreen<T>> {
       backgroundColor: colors.surface,
       floatingActionButtonLocation: widget.floatingActionButtonLocation,
       floatingActionButton: widget.floatingActionButton,
-      appBar: widget.appBarOverride ?? AppBar(
-        backgroundColor: colors.surfaceContainerHigh,
-        elevation: 0,
-        leading: IconButton(
-          icon: Icon(Icons.arrow_back, color: colors.onSurface),
-          onPressed: () => Navigator.of(
-            context,
-          ).pop(), // Changed context.pop() to Navigator.of(context).pop() for standard Flutter
-        ),
-        titleSpacing: 0,
-        title: Padding(
-          padding: const EdgeInsets.only(right: 16.0),
-          child: CustomSearchBar(
-            controller: _searchController,
-            focusNode: _focusNode,
-            hintText: widget.hintText,
-            readOnly: widget.readOnly,
-            onSubmitted: _onSearchSubmitted,
+      appBar:
+          widget.appBarOverride ??
+          AppBar(
+            backgroundColor: colors.surfaceContainerHigh,
+            elevation: 0,
+            leading: IconButton(
+              icon: Icon(Icons.arrow_back, color: colors.onSurface),
+              onPressed: () => Navigator.of(context).pop(),
+            ),
+            titleSpacing: 0,
+            title: Padding(
+              padding: const EdgeInsets.only(right: 16.0),
+              child: CustomSearchBar(
+                controller: _searchController,
+                focusNode: _focusNode,
+                hintText: widget.hintText,
+                readOnly: widget.readOnly,
+                onSubmitted: _onSearchSubmitted,
+              ),
+            ),
           ),
-        ),
-      ),
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          // Filters
+          // 1. Filter Bar (Chips)
           if (widget.filters.isNotEmpty)
-            if (widget.filters.isNotEmpty)
-              HorizontalFilterBar(
-                filters: widget.filters,
-                onResetFilters: widget.onResetFilters,
-              ),
+            HorizontalFilterBar(
+              filters: widget.filters,
+              onResetFilters: widget.onResetFilters,
+            ),
 
+          // 2. Optional Bottom Filter (e.g. Sort selector)
           if (widget.bottomFilterWidget != null) widget.bottomFilterWidget!,
 
+          // 3. Content Area
           Expanded(
             child: widget.isPaginatedMode
-                ? (widget.paginatedDataAsync != null
-                    ? widget.paginatedDataAsync!.when(
-                        data: (paginatedState) => _buildPaginatedBody(paginatedState, colors),
-                        loading: () => const Center(child: CircularProgressIndicator()),
-                        error: (err, stack) => FriendlyErrorWidget(error: err),
-                      )
-                    : const SizedBox.shrink())
-                : (widget.data != null
-                    ? widget.data!.when(
+                ? (widget.paginatedDataAsync?.when(
+                        data: (state) => _buildPaginatedBody(state, colors),
+                        loading: () =>
+                            const Center(child: CircularProgressIndicator()),
+                        error: (err, stack) => FriendlyErrorWidget(
+                          error: err,
+                          onRetry: () =>
+                              widget.onServerSearch?.call(_searchQuery),
+                        ),
+                      ) ??
+                      const SizedBox.shrink())
+                : (widget.data?.when(
                         data: (items) => _buildBody(items, colors),
-                        loading: () => const Center(child: CircularProgressIndicator()),
+                        loading: () =>
+                            const Center(child: CircularProgressIndicator()),
                         error: (err, stack) => FriendlyErrorWidget(error: err),
-                      )
-                    : const SizedBox.shrink()),
+                      ) ??
+                      const SizedBox.shrink()),
           ),
         ],
       ),
@@ -225,15 +235,9 @@ class _GenericSearchScreenState<T> extends State<GenericSearchScreen<T>> {
   }
 
   Widget _buildBody(List<T> items, ColorScheme colors) {
-    // Determine if we should show history or results
-    // Show history only if query is empty AND no active filters allow results to be seen?
-    // Actually, usually history is shown only when query is empty.
-    // However, if we have active filters (e.g. "Category: Electronics"), we probably want to see results even if query is empty.
-    // Logic: Show history if query is empty AND no filters are "active" (meaning narrowing down).
-    // The `FilterChipData.isActive` usually means "User has selected a value".
-
     final bool hasActiveFilters = widget.filters.any((f) => f.isActive);
-    final bool showHistory = widget.showHistory && _searchQuery.isEmpty && !hasActiveFilters;
+    final bool showHistory =
+        widget.showHistory && _searchQuery.isEmpty && !hasActiveFilters;
 
     if (showHistory) {
       if (_history.isEmpty) {
@@ -305,7 +309,6 @@ class _GenericSearchScreenState<T> extends State<GenericSearchScreen<T>> {
                     ),
                     onTap: () {
                       _searchController.text = term;
-                      // Move cursor to end
                       _searchController.selection = TextSelection.fromPosition(
                         TextPosition(offset: term.length),
                       );
@@ -320,7 +323,7 @@ class _GenericSearchScreenState<T> extends State<GenericSearchScreen<T>> {
     }
 
     // Filter Items
-    final filteredItems = widget.filter != null 
+    final filteredItems = widget.filter != null
         ? items.where((item) => widget.filter!(item, _searchQuery)).toList()
         : items;
 
@@ -335,11 +338,7 @@ class _GenericSearchScreenState<T> extends State<GenericSearchScreen<T>> {
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Icon(
-                  Icons.search_off,
-                  size: 48,
-                  color: colors.outline,
-                ), // Fixed: size was missing in original logic often
+                Icon(Icons.search_off, size: 48, color: colors.outline),
                 const SizedBox(height: 16),
                 Text(
                   'No se encontraron resultados',
@@ -350,17 +349,56 @@ class _GenericSearchScreenState<T> extends State<GenericSearchScreen<T>> {
           );
     }
 
-    return ListView.builder(
-      padding: const EdgeInsets.only(bottom: 80), // Fab space mostly
-      itemCount: filteredItems.length,
-      itemBuilder: (context, index) =>
-          widget.itemBuilder(context, filteredItems[index]),
+    final activeBanners = widget.banners ?? [];
+
+    return Consumer(
+      builder: (context, ref, child) {
+        final dismissedIds = ref.watch(dismissedBannerIdsProvider);
+        final totalCount = AdListPositionHelper.calculateTotalCount(
+          realCount: filteredItems.length,
+          banners: activeBanners,
+          dismissedIds: dismissedIds,
+        );
+
+        return ListView.builder(
+          padding: const EdgeInsets.only(bottom: 80),
+          itemCount: totalCount,
+          itemBuilder: (context, index) {
+            final banner = AdListPositionHelper.getBannerAtVisualIndex(
+              index,
+              realCount: filteredItems.length,
+              banners: activeBanners,
+              dismissedIds: dismissedIds,
+            );
+
+            if (banner != null) {
+              return AdBannerCard(
+                banner: banner,
+                screenContext: widget.screenContext ?? 'search',
+                searchQuery: _searchQuery,
+              );
+            }
+
+            final realIndex = AdListPositionHelper.getRealIndex(
+              index,
+              realCount: filteredItems.length,
+              banners: activeBanners,
+              dismissedIds: dismissedIds,
+            );
+            if (realIndex >= 0 && realIndex < filteredItems.length) {
+              return widget.itemBuilder(context, filteredItems[realIndex]);
+            }
+            return const SizedBox.shrink();
+          },
+        );
+      },
     );
   }
 
   Widget _buildPaginatedBody(PaginatedState<T> state, ColorScheme colors) {
     final bool hasActiveFilters = widget.filters.any((f) => f.isActive);
-    final bool showHistory = widget.showHistory && _searchQuery.isEmpty && !hasActiveFilters;
+    final bool showHistory =
+        widget.showHistory && _searchQuery.isEmpty && !hasActiveFilters;
 
     if (showHistory) {
       if (_history.isEmpty) {
@@ -451,7 +489,9 @@ class _GenericSearchScreenState<T> extends State<GenericSearchScreen<T>> {
 
     // Apply client-side filter to paginated items if provided
     final filteredItems = widget.filter != null
-        ? state.items.where((item) => widget.filter!(item, _searchQuery)).toList()
+        ? state.items
+              .where((item) => widget.filter!(item, _searchQuery))
+              .toList()
         : state.items;
 
     if (filteredItems.isEmpty && !state.isLoadingMore) {
@@ -460,11 +500,7 @@ class _GenericSearchScreenState<T> extends State<GenericSearchScreen<T>> {
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Icon(
-                  Icons.search_off,
-                  size: 48,
-                  color: colors.outline,
-                ),
+                Icon(Icons.search_off, size: 48, color: colors.outline),
                 const SizedBox(height: 16),
                 Text(
                   'No se encontraron resultados',
@@ -482,6 +518,9 @@ class _GenericSearchScreenState<T> extends State<GenericSearchScreen<T>> {
       onLoadMore: () {
         widget.onLoadMore?.call();
       },
+      banners: widget.banners,
+      screenContext: widget.screenContext,
+      searchQuery: _searchQuery,
       padding: const EdgeInsets.only(bottom: 80),
       itemBuilder: (context, index, item) => widget.itemBuilder(context, item),
     );

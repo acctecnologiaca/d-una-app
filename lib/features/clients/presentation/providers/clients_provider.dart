@@ -90,6 +90,38 @@ class Clients extends _$Clients {
     ref.invalidate(paginatedClientSearchProvider);
   }
 
+  Future<void> archiveClient(String id) async {
+    state = AsyncValue<List<Client>>.loading().copyWithPrevious(state);
+    state = await AsyncValue.guard(() async {
+      await ref.read(clientsRepositoryProvider).archiveClient(id);
+      return ref.read(clientsRepositoryProvider).getClients();
+    });
+    ref.invalidate(paginatedClientsProvider);
+    ref.invalidate(paginatedClientSearchProvider);
+  }
+
+  Future<void> unarchiveClient(String id) async {
+    state = AsyncValue<List<Client>>.loading().copyWithPrevious(state);
+    state = await AsyncValue.guard(() async {
+      await ref.read(clientsRepositoryProvider).unarchiveClient(id);
+      return ref.read(clientsRepositoryProvider).getClients();
+    });
+    ref.invalidate(paginatedClientsProvider);
+    ref.invalidate(paginatedClientSearchProvider);
+  }
+
+  Future<void> batchArchiveClients(List<String> ids, bool isArchived) async {
+    state = AsyncValue<List<Client>>.loading().copyWithPrevious(state);
+    state = await AsyncValue.guard(() async {
+      await ref
+          .read(clientsRepositoryProvider)
+          .batchArchiveClients(ids, isArchived);
+      return ref.read(clientsRepositoryProvider).getClients();
+    });
+    ref.invalidate(paginatedClientsProvider);
+    ref.invalidate(paginatedClientSearchProvider);
+  }
+
   Future<bool> checkClientExists(String taxId, {String? excludeId}) async {
     return ref
         .read(clientsRepositoryProvider)
@@ -201,6 +233,7 @@ class PaginatedClientSearch extends _$PaginatedClientSearch {
   bool _ascending = false;
   String? _searchQuery;
   String? _typeFilter;
+  bool _onlyArchived = false;
 
   @override
   FutureOr<PaginatedState<Client>> build() async {
@@ -214,6 +247,7 @@ class PaginatedClientSearch extends _$PaginatedClientSearch {
           ascending: _ascending,
           searchQuery: _searchQuery,
           typeFilter: _typeFilter,
+          onlyArchived: _onlyArchived,
         );
     return PaginatedState(
       items: items,
@@ -268,9 +302,12 @@ class PaginatedClientSearch extends _$PaginatedClientSearch {
     state = await AsyncValue.guard(() => _fetchPage(0));
   }
   
-  Future<void> updateFilters({String? typeFilter}) async {
-    if (_typeFilter == typeFilter) return;
-    _typeFilter = typeFilter;
+  Future<void> updateFilters({String? typeFilter, bool? onlyArchived}) async {
+    final newType = typeFilter ?? _typeFilter;
+    final newArchived = onlyArchived ?? _onlyArchived;
+    if (_typeFilter == newType && _onlyArchived == newArchived) return;
+    _typeFilter = newType;
+    _onlyArchived = newArchived;
     
     final current = state.valueOrNull;
     if (current != null) {

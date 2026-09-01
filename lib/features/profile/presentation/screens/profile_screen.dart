@@ -1,9 +1,12 @@
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
+import 'package:d_una_app/shared/widgets/app_toast.dart';
 import 'package:d_una_app/shared/widgets/friendly_error_widget.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../../../shared/widgets/custom_menu_tile.dart';
+import '../../../../shared/widgets/status_badge.dart';
 import '../providers/profile_provider.dart';
 import '../providers/occupations_provider.dart';
 import '../../../../core/utils/session_manager.dart';
@@ -41,8 +44,9 @@ class ProfileScreen extends ConsumerWidget {
                 RootApp.restart(null);
               } catch (e) {
                 if (context.mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text('Error al cerrar sesión: $e')),
+                  AppToast.error(
+                    context,
+                    message: 'Error al cerrar sesión: $e',
                   );
                 }
               }
@@ -105,14 +109,33 @@ class ProfileScreen extends ConsumerWidget {
                   child: Column(
                     children: [
                       // Avatar
-                      CircleAvatar(
-                        radius: 60,
-                        backgroundImage: NetworkImage(
-                          (currentAvatarUrl ?? '').isNotEmpty
-                              ? currentAvatarUrl!
-                              : 'https://i.pravatar.cc/300?img=11',
+                      if ((currentAvatarUrl ?? '').isNotEmpty)
+                        CachedNetworkImage(
+                          imageUrl: currentAvatarUrl!,
+                          imageBuilder: (context, imageProvider) => CircleAvatar(
+                            radius: 60,
+                            backgroundImage: imageProvider,
+                          ),
+                          placeholder: (context, url) => const CircleAvatar(
+                            radius: 60,
+                            backgroundImage: AssetImage(
+                              'assets/images/avatar_placeholder.png',
+                            ),
+                          ),
+                          errorWidget: (context, url, error) => const CircleAvatar(
+                            radius: 60,
+                            backgroundImage: AssetImage(
+                              'assets/images/avatar_placeholder.png',
+                            ),
+                          ),
+                        )
+                      else
+                        const CircleAvatar(
+                          radius: 60,
+                          backgroundImage: AssetImage(
+                            'assets/images/avatar_placeholder.png',
+                          ),
                         ),
-                      ),
                       const SizedBox(height: 16),
                       // Name
                       Text(
@@ -141,59 +164,69 @@ class ProfileScreen extends ConsumerWidget {
                       ),
                       const SizedBox(height: 8),
                       // Verification Badge
-                      // Verification Badge
                       () {
                         final status =
                             profile?.verificationStatus ?? 'unverified';
+                        Widget icon;
                         String text;
-                        Color color;
-                        IconData icon;
+                        Color backgroundColor;
+                        Color textColor;
 
                         switch (status) {
                           case 'verified':
                             text = 'Verificado';
-                            color = Colors.green;
-                            icon = Icons.verified;
+                            icon = Image.asset(
+                              'assets/icons/status_approved.png',
+                              width: 14,
+                              height: 14,
+                            );
+                            backgroundColor = Colors.green.withValues(alpha: 0.1);
+                            textColor = Colors.green.shade700;
                             break;
                           case 'pending':
                             text = 'Pendiente de verificación';
-                            color = Colors.orange;
-                            icon = Icons.access_time_filled;
+                            icon = Image.asset(
+                              'assets/icons/status_review.png',
+                              width: 14,
+                              height: 14,
+                            );
+                            backgroundColor = Colors.orange.withValues(alpha: 0.1);
+                            textColor = Colors.orange.shade800;
+                            break;
+                          case 'rejected':
+                            text = 'Rechazado';
+                            icon = Image.asset(
+                              'assets/icons/status_rejected.png',
+                              width: 14,
+                              height: 14,
+                            );
+                            backgroundColor = colors.error.withValues(alpha: 0.1);
+                            textColor = colors.error;
                             break;
                           case 'unverified':
                           default:
                             text = 'No verificado';
-                            color = colors.error;
-                            icon = Icons.info_outline;
+                            icon = Icon(
+                              Icons.info_outline,
+                              size: 14,
+                              color: colors.onSurfaceVariant,
+                            );
+                            backgroundColor = colors.surfaceContainerHighest.withValues(alpha: 0.5);
+                            textColor = colors.onSurfaceVariant;
                             break;
                         }
 
-                        return Container(
+                        return StatusBadge(
+                          icon: icon,
+                          text: text,
+                          backgroundColor: backgroundColor,
+                          textColor: textColor,
                           padding: const EdgeInsets.symmetric(
-                            horizontal: 12,
+                            horizontal: 10,
                             vertical: 4,
                           ),
-                          decoration: BoxDecoration(
-                            color: color.withValues(alpha: 0.1),
-                            borderRadius: BorderRadius.circular(20),
-                            border: Border.all(
-                              color: color.withValues(alpha: 0.5),
-                            ),
-                          ),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Text(
-                                text,
-                                style: textTheme.bodyMedium?.copyWith(
-                                  color: color,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                              const SizedBox(width: 4),
-                              Icon(icon, color: color, size: 18),
-                            ],
-                          ),
+                          borderRadius: 16,
+                          fontSize: 13,
                         );
                       }(),
                     ],

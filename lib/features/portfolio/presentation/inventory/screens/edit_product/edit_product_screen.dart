@@ -2,6 +2,7 @@ import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:d_una_app/shared/widgets/app_toast.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -274,16 +275,18 @@ class _EditProductScreenState extends ConsumerState<EditProductScreen> {
           );
 
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Producto actualizado exitosamente')),
-        );
         context.pop(); // Go back to details
+        AppToast.success(
+          context,
+          message: 'Producto actualizado exitosamente',
+        );
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(
+        AppToast.error(
           context,
-        ).showSnackBar(SnackBar(content: Text('Error al actualizar: $e')));
+          message: 'Error al actualizar: $e',
+        );
       }
     }
   }

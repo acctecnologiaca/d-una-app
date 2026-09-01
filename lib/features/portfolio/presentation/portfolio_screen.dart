@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:d_una_app/features/profile/presentation/providers/profile_provider.dart';
 import 'widgets/dashboard_card.dart';
 import 'package:material_symbols_icons/symbols.dart';
 import 'package:d_una_app/shared/widgets/user_profile_avatar.dart';
@@ -12,8 +11,6 @@ class PortfolioScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final colors = Theme.of(context).colorScheme;
-    final userProfileAsync = ref.watch(userProfileProvider);
-    final isError = userProfileAsync.hasError;
 
     return Scaffold(
       backgroundColor: colors.surface,
@@ -28,11 +25,9 @@ class PortfolioScreen extends ConsumerWidget {
                 children: [
                   IconButton(
                     icon: const Icon(Icons.menu),
-                    onPressed: isError
-                        ? null
-                        : () {
-                            Scaffold.of(context).openDrawer();
-                          },
+                    onPressed: () {
+                      Scaffold.of(context).openDrawer();
+                    },
                   ),
                   Text(
                     'Portafolio',
@@ -41,7 +36,7 @@ class PortfolioScreen extends ConsumerWidget {
                       fontWeight: FontWeight.w500,
                     ),
                   ),
-                  UserProfileAvatar(enabled: !isError),
+                  const UserProfileAvatar(),
                 ],
               ),
             ),

@@ -17,42 +17,46 @@ class UserProfileAvatar extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final userProfileAsync = ref.watch(userProfileProvider);
+    final profile = userProfileAsync.valueOrNull;
+    final avatarUrl = profile?.avatarUrl;
+
+    Widget avatarContent;
+
+    if (avatarUrl != null && avatarUrl.isNotEmpty) {
+      avatarContent = CachedNetworkImage(
+        imageUrl: avatarUrl,
+        imageBuilder: (context, imageProvider) => CircleAvatar(
+          radius: radius,
+          backgroundImage: imageProvider,
+        ),
+        placeholder: (context, url) => CircleAvatar(
+          radius: radius,
+          backgroundImage:
+              const AssetImage('assets/images/avatar_placeholder.png'),
+        ),
+        errorWidget: (context, url, error) => CircleAvatar(
+          radius: radius,
+          backgroundImage:
+              const AssetImage('assets/images/avatar_placeholder.png'),
+        ),
+      );
+    } else if (userProfileAsync.isLoading && profile == null) {
+      avatarContent = CircleAvatar(
+        radius: radius,
+        child: const CircularProgressIndicator(strokeWidth: 2),
+      );
+    } else {
+      avatarContent = CircleAvatar(
+        radius: radius,
+        backgroundImage:
+            const AssetImage('assets/images/avatar_placeholder.png'),
+      );
+    }
 
     return InkWell(
       onTap: enabled ? () => context.push('/profile') : null,
-      child: userProfileAsync.when(
-        data: (profile) {
-          final avatarUrl = profile?.avatarUrl;
-          return avatarUrl != null && avatarUrl.isNotEmpty
-              ? CachedNetworkImage(
-                  imageUrl: avatarUrl,
-                  imageBuilder: (context, imageProvider) => CircleAvatar(
-                    radius: radius,
-                    backgroundImage: imageProvider,
-                  ),
-                  placeholder: (context, url) => CircleAvatar(
-                    radius: radius,
-                    child: const CircularProgressIndicator(strokeWidth: 2),
-                  ),
-                  errorWidget: (context, url, error) => CircleAvatar(
-                    radius: radius,
-                    backgroundImage: const AssetImage('assets/images/avatar_placeholder.png'),
-                  ),
-                )
-              : CircleAvatar(
-                  radius: radius,
-                  backgroundImage: const AssetImage('assets/images/avatar_placeholder.png'),
-                );
-        },
-        loading: () => CircleAvatar(
-          radius: radius,
-          child: const CircularProgressIndicator(strokeWidth: 2),
-        ),
-        error: (err, stack) => CircleAvatar(
-          radius: radius,
-          backgroundImage: const AssetImage('assets/images/avatar_placeholder.png'),
-        ),
-      ),
+      borderRadius: BorderRadius.circular(radius),
+      child: avatarContent,
     );
   }
 }

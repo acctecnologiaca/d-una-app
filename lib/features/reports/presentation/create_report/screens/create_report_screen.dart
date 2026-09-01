@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import '../../../../../shared/widgets/draft_toast.dart';
+import '../../../../../shared/widgets/app_toast.dart';
 import '../../../../../shared/widgets/standard_app_bar.dart';
 import '../../../../../shared/widgets/custom_extended_fab.dart';
 import '../../../../../shared/widgets/custom_action_sheet.dart';
@@ -28,6 +30,7 @@ class CreateReportScreen extends ConsumerStatefulWidget {
 class _CreateReportScreenState extends ConsumerState<CreateReportScreen>
     with SingleTickerProviderStateMixin {
   late final TabController _tabController;
+  late final AppLifecycleListener _lifecycleListener;
   bool _hasInitializedTab = false;
 
   @override
@@ -36,26 +39,103 @@ class _CreateReportScreenState extends ConsumerState<CreateReportScreen>
     _tabController = TabController(length: 6, vsync: this);
 
     _tabController.addListener(() {
-      if (!_tabController.indexIsChanging) setState(() {});
+      if (!_tabController.indexIsChanging) {
+        setState(() {});
+        ref
+            .read(createReportProvider.notifier)
+            .autoSaveDraft(tabIndex: _tabController.index, reportId: widget.reportId);
+      }
     });
 
-    WidgetsBinding.instance.addPostFrameCallback((_) {
+    _lifecycleListener = AppLifecycleListener(
+      onPause: () {
+        ref
+            .read(createReportProvider.notifier)
+            .autoSaveDraft(tabIndex: _tabController.index, reportId: widget.reportId);
+      },
+      onInactive: () {
+        ref
+            .read(createReportProvider.notifier)
+            .autoSaveDraft(tabIndex: _tabController.index, reportId: widget.reportId);
+      },
+    );
+
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
       final currentState = ref.read(createReportProvider);
 
       if (widget.reportId != null) {
-        ref.read(createReportProvider.notifier).loadReport(widget.reportId!);
-      } else {
-        if (currentState.report != null) {
-          ref.read(createReportProvider.notifier).reset();
+        // Modo EDICIÓN:
+        // 1. Buscar si existen cambios locales no guardados para este reporte
+        final draft = await ref
+            .read(createReportProvider.notifier)
+            .checkAndRestoreDraft(reportId: widget.reportId);
+
+        if (draft != null && mounted) {
+          setState(() {
+            if (draft.tabIndex >= 0 && draft.tabIndex < 6) {
+              _tabController.index = draft.tabIndex;
+            }
+          });
+
+          DraftToast.show(
+            context,
+            message: 'Cambios restaurados automáticamente',
+            onDiscard: () async {
+              final shouldDiscard = await _showDiscardDialog();
+              if (shouldDiscard && mounted) {
+                await ref
+                    .read(createReportProvider.notifier)
+                    .clearDraft(reportId: widget.reportId);
+                await ref
+                    .read(createReportProvider.notifier)
+                    .loadReport(widget.reportId!);
+                setState(() {
+                  _tabController.index = 0;
+                });
+              }
+            },
+          );
         } else {
-          final hasData =
-              currentState.products.isNotEmpty ||
-              currentState.services.isNotEmpty ||
-              currentState.clientId != null;
-          if (!hasData) {
-            ref.read(createReportProvider.notifier).reset();
-          } else if (currentState.currentReportNumber == null) {
-            ref.read(createReportProvider.notifier).fetchNextReportNumber();
+          // No hay borrador local, cargar datos frescos desde DB
+          ref.read(createReportProvider.notifier).loadReport(widget.reportId!);
+        }
+      } else {
+        // Modo CREACIÓN (nuevo reporte):
+        if (currentState.report != null && currentState.report!.id.isNotEmpty) {
+          ref.read(createReportProvider.notifier).reset(clearPersistedDraft: false);
+        }
+
+        final draft = await ref
+            .read(createReportProvider.notifier)
+            .checkAndRestoreDraft();
+        if (draft != null && mounted) {
+          setState(() {
+            if (draft.tabIndex >= 0 && draft.tabIndex < 6) {
+              _tabController.index = draft.tabIndex;
+            }
+          });
+
+          DraftToast.show(
+            context,
+            message: 'Cambios restaurados automáticamente',
+            onDiscard: () async {
+              final shouldDiscard = await _showDiscardDialog();
+              if (shouldDiscard && mounted) {
+                await ref
+                    .read(createReportProvider.notifier)
+                    .clearDraft();
+                ref.read(createReportProvider.notifier).reset(clearPersistedDraft: true);
+                ref.read(createReportProvider.notifier).initReport();
+                setState(() {
+                  _tabController.index = 0;
+                });
+              }
+            },
+          );
+        } else {
+          // Si no hay borrador previo, inicializar parámetros y valores por defecto
+          if (ref.read(createReportProvider).currentReportNumber == null) {
+            ref.read(createReportProvider.notifier).initReport();
           }
         }
       }
@@ -64,10 +144,9 @@ class _CreateReportScreenState extends ConsumerState<CreateReportScreen>
           currentState.report?.status ==
               ServiceReportStatus.finalized.dbValue) {
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('El reporte está finalizado y no se puede editar.'),
-            ),
+          AppToast.error(
+            context,
+            message: 'El reporte está finalizado y no se puede editar.',
           );
           context.pop();
         }
@@ -92,25 +171,46 @@ class _CreateReportScreenState extends ConsumerState<CreateReportScreen>
 
   @override
   void dispose() {
+    _lifecycleListener.dispose();
     _tabController.dispose();
     super.dispose();
+  }
+
+  Future<void> _handlePop() async {
+    final state = ref.read(createReportProvider);
+    final hasDataOrChanges = state.hasChanges;
+
+    // Guardar inmediatamente el borrador sincrónico antes de salir
+    await ref
+        .read(createReportProvider.notifier)
+        .saveDraftNow(tabIndex: _tabController.index, reportId: widget.reportId);
+    
+    // Limpiar estado en memoria sin borrar el borrador persistido en disco
+    ref.read(createReportProvider.notifier).reset(clearPersistedDraft: false, reportId: widget.reportId);
+    
+    if (!mounted) return;
+
+    if (hasDataOrChanges) {
+      AppToast.info(
+        context,
+        message: 'Cambios guardados temporalmente',
+        icon: Icons.bookmark_added_outlined,
+      );
+    }
+
+    context.pop();
   }
 
   @override
   Widget build(BuildContext context) {
     final colors = Theme.of(context).colorScheme;
     final state = ref.watch(createReportProvider);
-    final notifier = ref.read(createReportProvider.notifier);
 
     return PopScope(
-      canPop: !state.hasChanges,
-      onPopInvokedWithResult: (didPop, result) async {
+      canPop: false,
+      onPopInvokedWithResult: (didPop, result) {
         if (didPop) return;
-        final shouldPop = await _showDiscardDialog();
-        if (shouldPop && context.mounted) {
-          notifier.reset();
-          context.pop();
-        }
+        _handlePop();
       },
       child: Scaffold(
         appBar: StandardAppBar(
@@ -127,7 +227,9 @@ class _CreateReportScreenState extends ConsumerState<CreateReportScreen>
               IconButton(
                 icon: Icon(
                   Icons.save_outlined,
-                  color: state.hasChanges ? colors.onSurface : colors.outline,
+                  color: state.hasChanges
+                      ? colors.onSurfaceVariant
+                      : colors.onSurfaceVariant.withValues(alpha: 0.38),
                 ),
                 tooltip: state.hasChanges
                     ? 'Guardar cambios'
@@ -137,7 +239,7 @@ class _CreateReportScreenState extends ConsumerState<CreateReportScreen>
                     : null,
               ),
             IconButton(
-              icon: Icon(Icons.more_vert, color: colors.onSurface),
+              icon: Icon(Icons.more_vert, color: colors.onSurfaceVariant),
               onPressed: () => _showActionsMenu(ref),
             ),
           ],
@@ -149,7 +251,7 @@ class _CreateReportScreenState extends ConsumerState<CreateReportScreen>
             indicatorColor: colors.primary,
             labelStyle: const TextStyle(fontWeight: FontWeight.bold),
             tabs: const [
-              Tab(text: 'Reporte'),
+              Tab(text: 'Informe'),
               Tab(text: 'Productos'),
               Tab(text: 'Servicios'),
               Tab(text: 'Cliente'),
@@ -316,14 +418,22 @@ class _CreateReportScreenState extends ConsumerState<CreateReportScreen>
         if (state.hasChanges)
           BottomSheetActionItem(
             icon: Icons.delete_outline,
-            label: 'Descartar cambios',
+            label: widget.reportId != null
+                ? 'Descartar cambios locales'
+                : 'Descartar borrador',
             onTap: () async {
               context.pop();
               final shouldDiscard = await _showDiscardDialog();
-              if (shouldDiscard && mounted) {
-                notifier.reset();
-                context.pop();
-              }
+              if (!shouldDiscard) return;
+              await ref
+                  .read(createReportProvider.notifier)
+                  .clearDraft(reportId: widget.reportId);
+              ref.read(createReportProvider.notifier).reset(
+                    clearPersistedDraft: true,
+                    reportId: widget.reportId,
+                  );
+              if (!mounted) return;
+              context.pop();
             },
           ),
       ],
@@ -331,16 +441,20 @@ class _CreateReportScreenState extends ConsumerState<CreateReportScreen>
   }
 
   Future<bool> _showDiscardDialog() async {
+    final isEditing = widget.reportId != null;
     final result = await CustomDialog.show<bool>(
       context: context,
-      dialog: CustomDialog.confirmation(
-        title: '¿Descartar cambios?',
-        contentText:
-            'Tienes modificaciones sin guardar en el reporte. Si sales ahora, se perderán.',
+      dialog: CustomDialog.destructive(
+        title: isEditing
+            ? '¿Descartar cambios locales?'
+            : '¿Descartar borrador?',
+        contentText: isEditing
+            ? 'Se eliminarán las modificaciones sin guardar y se recargarán los datos del servidor.'
+            : 'Se eliminará el borrador guardado automáticamente y se limpiará el formulario.',
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
-            child: const Text('Continuar editando'),
+            child: const Text('Cancelar'),
           ),
           FilledButton(
             onPressed: () => Navigator.pop(context, true),

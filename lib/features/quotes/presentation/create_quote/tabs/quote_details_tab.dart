@@ -257,12 +257,9 @@ class _QuoteDetailsTabState extends ConsumerState<QuoteDetailsTab> {
           CustomTextField(
             label: 'Etiqueta*',
             controller: _labelController,
-            helperText:
-                'Descripción corta que identifique a la cotización (Máx. 35 caracteres).',
+            helperText: 'Descripción corta que identifique a la cotización.',
+            maxLength: 35,
             onChanged: (val) {
-              if (val.length > 35) {
-                _labelController.text = val.substring(0, 35);
-              }
               ref.read(createQuoteProvider.notifier).setDetails(label: val);
             },
           ),
@@ -271,14 +268,10 @@ class _QuoteDetailsTabState extends ConsumerState<QuoteDetailsTab> {
           CustomTextField(
             label: 'Notas adicionales',
             controller: _notesController,
-            helperText:
-                'Estas notas quedarán reflejadas en el PDF de la cotización (Máx. 250 caracteres).',
-            maxLines: 5,
-            minLines: 3,
+            helperText: 'Estas notas quedarán reflejadas en la cotización.',
+            maxLines: 3,
+            maxLength: 250,
             onChanged: (val) {
-              if (val.length > 250) {
-                _notesController.text = val.substring(0, 250);
-              }
               ref.read(createQuoteProvider.notifier).setDetails(notes: val);
             },
           ),

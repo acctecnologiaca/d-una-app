@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:d_una_app/shared/widgets/app_toast.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -99,6 +100,69 @@ class ClientDetailsScreen extends ConsumerWidget {
             ),
             centerTitle: false,
             actions: [
+              IconButton(
+                tooltip:
+                    client.isArchived ? 'Desarchivar cliente' : 'Archivar cliente',
+                icon: Icon(
+                  client.isArchived
+                      ? Icons.unarchive_outlined
+                      : Icons.archive_outlined,
+                  color: colors.onSurface,
+                ),
+                onPressed: () async {
+                  final actionName =
+                      client.isArchived ? 'Desarchivar' : 'Archivar';
+                  final actionMessage = client.isArchived
+                      ? '¿Deseas desarchivar este cliente para que vuelva a mostrarse en los listados activos?'
+                      : '¿Deseas archivar este cliente? Se ocultará de los listados y selectores de nuevos documentos.';
+
+                  final confirm = await CustomDialog.show<bool>(
+                    context: context,
+                    dialog: CustomDialog.confirmation(
+                      title: '$actionName Cliente',
+                      contentText: actionMessage,
+                      actions: [
+                        TextButton(
+                          onPressed: () => Navigator.of(
+                            context,
+                            rootNavigator: true,
+                          ).pop(false),
+                          child: const Text('Cancelar'),
+                        ),
+                        FilledButton(
+                          onPressed: () => Navigator.of(
+                            context,
+                            rootNavigator: true,
+                          ).pop(true),
+                          child: Text(actionName),
+                        ),
+                      ],
+                    ),
+                  );
+
+                  if (confirm == true) {
+                    if (client.isArchived) {
+                      await ref
+                          .read(clientsProvider.notifier)
+                          .unarchiveClient(client.id);
+                      if (context.mounted) {
+                        AppToast.success(
+                          context,
+                          message: 'Cliente desarchivado correctamente',
+                        );
+                      }
+                    } else {
+                      await ref
+                          .read(clientsProvider.notifier)
+                          .archiveClient(client.id);
+                      if (context.mounted) {
+                        AppToast.info(context, message: 'Cliente archivado');
+                        context.pop();
+                      }
+                    }
+                  }
+                },
+              ),
               Tooltip(
                 message: canDelete
                     ? 'Eliminar cliente'
@@ -172,6 +236,37 @@ class ClientDetailsScreen extends ConsumerWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
+                if (client.isArchived)
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 8,
+                      ),
+                      decoration: BoxDecoration(
+                        color: colors.surfaceContainerHighest,
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Row(
+                        children: [
+                          Icon(
+                            Icons.inventory_2_outlined,
+                            size: 18,
+                            color: colors.onSurfaceVariant,
+                          ),
+                          const SizedBox(width: 8),
+                          Text(
+                            'Este cliente se encuentra archivado',
+                            style: textTheme.bodySmall?.copyWith(
+                              color: colors.onSurfaceVariant,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
                 const SizedBox(height: 24),
                 // Top Action Bar
                 SingleChildScrollView(
@@ -180,6 +275,18 @@ class ClientDetailsScreen extends ConsumerWidget {
                   child: Row(
                     children: [
                       OutlinedButton.icon(
+                        style: OutlinedButton.styleFrom(
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          side: BorderSide(
+                            color: colors.outline.withValues(alpha: 0.3),
+                          ),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 12,
+                            vertical: 8,
+                          ),
+                        ),
                         onPressed: () {
                           final encodedName = Uri.encodeComponent(client.name);
                           context.push(
@@ -191,14 +298,24 @@ class ClientDetailsScreen extends ConsumerWidget {
                       ),
                       const SizedBox(width: 12),
                       OutlinedButton.icon(
+                        style: OutlinedButton.styleFrom(
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          side: BorderSide(
+                            color: colors.outline.withValues(alpha: 0.3),
+                          ),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 12,
+                            vertical: 8,
+                          ),
+                        ),
                         onPressed: () {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                              content: Text(
+                          AppToast.info(
+                            context,
+                            message:
                                 'El módulo de reportes estará disponible próximamente.',
-                              ),
-                              duration: Duration(seconds: 2),
-                            ),
+                            duration: const Duration(seconds: 2),
                           );
                         },
                         icon: const Icon(Icons.analytics_outlined, size: 18),
@@ -337,10 +454,9 @@ class ClientDetailsScreen extends ConsumerWidget {
                                 Clipboard.setData(
                                   ClipboardData(text: client.phone!),
                                 );
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  const SnackBar(
-                                    content: Text('Teléfono copiado'),
-                                  ),
+                                AppToast.info(
+                                  context,
+                                  message: 'Teléfono copiado',
                                 );
                               }
                             },
@@ -360,10 +476,9 @@ class ClientDetailsScreen extends ConsumerWidget {
                                 Clipboard.setData(
                                   ClipboardData(text: client.email!),
                                 );
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  const SnackBar(
-                                    content: Text('Correo copiado'),
-                                  ),
+                                AppToast.info(
+                                  context,
+                                  message: 'Correo copiado',
                                 );
                               }
                             },

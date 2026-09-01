@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Orden de Compra - D-UNA</title>
+  <title>Orden · D-UNA</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
@@ -37,7 +37,7 @@
     }
 
     .container {
-      max-width: 680px;
+      max-width: 780px;
       width: 100%;
       margin: 0 auto;
     }
@@ -65,54 +65,82 @@
       100% { transform: rotate(360deg); }
     }
 
-    /* 1. BANNER SUPERIOR (Logo D-Una a la izquierda / Metadatos a la derecha) */
+    /* 1. BANNER SUPERIOR */
     .header-banner {
       background-color: #FFFFFF;
-      padding: 20px 24px;
+      padding: 24px 32px;
       display: flex;
       justify-content: space-between;
-      align-items: center;
+      align-items: flex-start;
       flex-wrap: wrap;
-      gap: 16px;
       border-bottom: 2px solid var(--neutral-dark);
+      gap: 16px;
     }
 
-    .header-banner .brand img {
+    .header-banner .brand-container {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .header-banner .brand-logo-row {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+    }
+
+    .header-banner .brand-logo-row img {
       max-height: 48px;
+      width: auto;
       object-fit: contain;
     }
 
-    .header-banner .doc-meta {
-      text-align: right;
-    }
-
-    .header-banner .doc-meta h2 {
-      margin: 0;
-      font-size: 18px;
+    .header-banner .doc-meta h1 {
+      font-size: 22px;
       font-weight: 800;
       color: var(--neutral-dark);
-      text-transform: uppercase;
       letter-spacing: 0.5px;
+      line-height: 1.2;
     }
 
-    .header-banner .doc-meta .order-num {
+    .header-banner .doc-meta .doc-num {
       font-size: 13px;
-      font-weight: 700;
       color: var(--neutral-muted);
+      font-weight: 600;
       margin-top: 2px;
     }
 
-    .header-banner .doc-meta .date-loc {
+    .issuer-letterhead {
       font-size: 11px;
       color: var(--neutral-muted);
+      line-height: 1.4;
       margin-top: 4px;
+    }
+
+    .issuer-letterhead strong {
+      color: var(--neutral-dark);
+      font-size: 12px;
+      font-weight: 700;
+    }
+
+    .validity-badge {
+      background: var(--neutral-bg-subtle);
+      border: 1px solid var(--neutral-border-dark);
+      color: var(--neutral-dark);
+      padding: 8px 16px;
+      border-radius: 8px;
+      font-size: 13px;
+      font-weight: 600;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
     }
 
     .body-content {
       padding: 24px;
     }
 
-    /* 2. GRILLA DE INFORMACIÓN (2 Tarjetas: Datos del Cliente y Condiciones de Envío) */
+    /* 2. GRILLA DE INFORMACIÓN */
     .info-grid {
       display: grid;
       grid-template-columns: 1fr 1fr;
@@ -122,97 +150,102 @@
 
     @media (max-width: 600px) {
       .info-grid { grid-template-columns: 1fr; }
-      .header-banner { flex-direction: column; align-items: flex-start; text-align: left; }
-      .header-banner .doc-meta { text-align: left; }
       .body-content { padding: 16px; }
+      .header-banner { padding: 16px; }
     }
 
     .info-card {
       background-color: var(--neutral-bg-subtle);
       border: 1px solid var(--neutral-border);
       border-radius: 12px;
-      padding: 16px;
+      padding: 14px 16px;
     }
 
     .info-card h4 {
-      margin: 0 0 10px 0;
       font-size: 11px;
       font-weight: 700;
       color: var(--neutral-dark);
       text-transform: uppercase;
-      letter-spacing: 0.8px;
-      border-bottom: 2px solid var(--neutral-border-dark);
+      letter-spacing: 0.5px;
+      margin-bottom: 8px;
+      border-bottom: 1px solid var(--neutral-border-dark);
       padding-bottom: 4px;
     }
 
     .info-card p {
-      margin: 3px 0;
       font-size: 12px;
-      line-height: 1.4;
+      line-height: 1.5;
       color: var(--neutral-dark);
+      margin-bottom: 3px;
     }
 
     .info-card p strong {
-      color: var(--neutral-dark);
-      font-weight: 700;
+      color: var(--neutral-muted);
+      font-weight: 600;
     }
 
-    /* 3. TABLA DE PRODUCTOS (Producto | Cant. | P. Unit. | Total) */
+    /* 3. TABLA DE PRODUCTOS */
     .table-container {
+      overflow-x: auto;
+      margin-bottom: 24px;
       border: 1px solid var(--neutral-border);
       border-radius: 12px;
-      overflow: hidden;
-      margin-bottom: 24px;
+      -webkit-overflow-scrolling: touch;
     }
 
     table {
       width: 100%;
       border-collapse: collapse;
-      font-size: 12px;
-    }
-
-    thead tr {
-      background-color: var(--neutral-bg-header);
-      color: var(--neutral-dark);
-      font-size: 11px;
-      text-transform: uppercase;
-      letter-spacing: 0.6px;
+      font-size: 13px;
+      min-width: 480px;
     }
 
     th {
-      padding: 10px 12px;
-      border-bottom: 2px solid var(--neutral-border-dark);
+      background-color: var(--neutral-bg-header);
+      color: var(--neutral-dark);
       font-weight: 700;
+      padding: 12px 16px;
+      border-bottom: 2px solid var(--neutral-border-dark);
+      text-transform: uppercase;
+      font-size: 11px;
+      letter-spacing: 0.6px;
     }
 
     th.text-left { text-align: left; }
-    th.text-center { text-align: center; width: 55px; }
-    th.text-right { text-align: right; width: 90px; }
+    th.text-center { text-align: center; width: 70px; }
+    th.text-right { text-align: right; width: 105px; }
 
     td {
-      padding: 10px 12px;
+      padding: 12px 16px;
       border-bottom: 1px solid var(--neutral-border);
       color: var(--neutral-dark);
-      vertical-align: top;
     }
 
-    tr:last-child td { border-bottom: none; }
+    tr:nth-child(even) {
+      background-color: var(--neutral-bg-subtle);
+    }
+
+    tr:last-child td {
+      border-bottom: none;
+    }
 
     .product-title {
       font-weight: 700;
+      font-size: 13px;
       color: var(--neutral-dark);
     }
 
     .product-brand {
       font-size: 11px;
       color: var(--neutral-muted);
-      font-style: italic;
+      margin-top: 2px;
     }
 
     .product-branches {
       font-size: 11px;
       color: var(--neutral-muted);
-      line-height: 1.3;
+      margin-top: 4px;
+      line-height: 1.4;
     }
 
     /* 4. TOTALES Y CONDICIONES DE PAGO */
@@ -220,59 +253,47 @@
       display: grid;
       grid-template-columns: 1fr 1fr;
       gap: 16px;
-      margin-bottom: 24px;
+      margin-bottom: 8px;
     }
 
     @media (max-width: 600px) {
       .totals-grid { grid-template-columns: 1fr; }
     }
 
-    .totals-table-card {
+    .totals-card {
       background-color: var(--neutral-bg-subtle);
       border: 1px solid var(--neutral-border);
       border-radius: 12px;
       overflow: hidden;
     }
 
-    .totals-table-card table {
-      width: 100%;
-      border-collapse: collapse;
-    }
-
-    .totals-table-card td {
-      padding: 8px 14px;
-      font-size: 12px;
+    .totals-row {
+      display: flex;
+      justify-content: space-between;
+      font-size: 13px;
+      padding: 10px 16px;
       color: var(--neutral-muted);
-      border-bottom: none;
     }
 
-    .totals-table-card td.val {
+    .totals-row.grand-total {
+      font-size: 15px;
+      font-weight: 800;
       color: var(--neutral-dark);
-      font-weight: 700;
-      text-align: right;
-    }
-
-    .grand-total-row {
+      background: #FFFFFF;
       border-top: 2px solid var(--neutral-dark);
-      background-color: var(--neutral-dark);
-      color: #FFFFFF !important;
-    }
-
-    .grand-total-row td {
-      color: #FFFFFF !important;
-      font-size: 13px !important;
-      font-weight: 800 !important;
-      padding: 10px 14px !important;
+      padding: 14px 16px;
     }
 
     /* 5. PANEL DE ACCIONES */
     .action-panel {
-      text-align: center;
-      margin: 20px 0 8px 0;
-      padding: 20px 16px;
+      border-top: 1px solid var(--neutral-border);
+      padding: 24px 32px;
       background-color: var(--neutral-bg-subtle);
-      border: 1px dashed var(--neutral-border-dark);
-      border-radius: 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      align-items: center;
+      text-align: center;
     }
 
     .action-title {
@@ -397,10 +418,41 @@
       object-fit: contain;
     }
 
+    /* === PRINT STYLES === */
+    .print-fab {
+      position: fixed;
+      bottom: 24px;
+      right: 24px;
+      background: var(--neutral-dark);
+      color: #fff;
+      border: none;
+      padding: 12px 20px;
+      border-radius: 12px;
+      font-weight: 700;
+      font-size: 13px;
+      font-family: inherit;
+      cursor: pointer;
+      box-shadow: 0 4px 14px rgba(15, 23, 42, 0.25);
+      z-index: 9999;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      transition: transform 0.15s ease, box-shadow 0.15s ease;
+    }
+    .print-fab:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 20px rgba(15, 23, 42, 0.35);
+    }
+    .print-fab:active {
+      transform: scale(0.97);
+    }
+
     @media print {
       body {
         background: #FFFFFF !important;
         padding: 0 !important;
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
       }
       .container {
         max-width: 100% !important;
@@ -412,13 +464,24 @@
         box-shadow: none !important;
         border-radius: 0 !important;
       }
+      .print-fab,
       .action-panel,
       .alert-banner,
       .expiration-badge,
       .btn-pdf-download,
+      .disclaimer-card,
       .modal-overlay,
       .footer {
         display: none !important;
+      }
+      .table-container {
+        overflow: visible;
+      }
+      table {
+        page-break-inside: auto;
+      }
+      tr {
+        page-break-inside: avoid;
       }
     }
   </style>
@@ -460,7 +523,13 @@
 
       try {
         const apiUrl = `https://fdkswvzrozijbizdthge.supabase.co/functions/v1/orders_action?token=${encodeURIComponent(token)}&action=get_details`;
-        const res = await fetch(apiUrl);
+        const anonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZka3N3dnpyb3ppamJpemR0aGdlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njc0NzQ2MzMsImV4cCI6MjA4MzA1MDYzM30.ZENEwSy2E8iSHuy4Y4uTd7CBd32iaE-tJmSww6cw0TY';
+        const res = await fetch(apiUrl, {
+          headers: {
+            'apikey': anonKey,
+            'Authorization': `Bearer ${anonKey}`,
+          },
+        });
         const data = await res.json();
 
         if (data.status !== 'success' || !data.order) {
@@ -473,6 +542,7 @@
 
         renderOrder(data);
       } catch (err) {
+        console.error('Error cargando la orden de compra:', err);
         showError('Error de Conexión', 'No se pudo cargar la orden de compra. Por favor verifique su conexión a internet e intente nuevamente.');
       }
 
@@ -486,7 +556,7 @@
         const items = data.items || [];
         const isExpired = Boolean(data.is_expired);
 
-        document.title = `Orden de Compra ${esc(o.order_number)} - D-UNA`;
+        document.title = `Orden · ${esc(o.order_number)}`;
 
         // Format Date
         let formattedDate = o.date || '';
@@ -585,57 +655,88 @@
             <div class="expiration-badge">
               ESTA ORDEN CADUCA EN 72 H
             </div>
-            <div style="margin-top: 10px; text-align: center;">
-              <button onclick="window.print()" class="btn-pdf-download" style="background: none; border: none; color: var(--neutral-muted); font-size: 12px; font-weight: 500; cursor: pointer; text-decoration: underline; display: inline-flex; align-items: center; gap: 4px;">
-                Descargar versión PDF
-              </button>
-            </div>
           `;
         }
 
         const taxRatePct = o.subtotal > 0 ? ((o.tax / o.subtotal) * 100).toFixed(0) : '16';
 
+        // Fecha de disponibilidad (72h o expiración del token)
+        let orderExpiresDateStr = '';
+        if (o.expires_at) {
+          try {
+            const parts = o.expires_at.split('T')[0].split('-');
+            if (parts.length === 3) orderExpiresDateStr = `${parts[2]}/${parts[1]}/${parts[0]}`;
+          } catch(e) {}
+        } else if (o.date) {
+          try {
+            const parts = o.date.split('T')[0].split('-');
+            const exp = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]) + 3);
+            const d = String(exp.getDate()).padStart(2, '0');
+            const m = String(exp.getMonth() + 1).padStart(2, '0');
+            const y = exp.getFullYear();
+            orderExpiresDateStr = `${d}/${m}/${y}`;
+          } catch(e) {}
+        }
+
+        const buyerLetterheadHtml = `
+          <div class="issuer-letterhead">
+            <strong>${esc(b.display_name || 'Comprador')}</strong><br>
+            ${b.tax_id && b.tax_id !== '-' ? `${b.has_company ? 'RIF / ID Fiscal' : 'C.I. / ID'}: ${esc(b.tax_id)}<br>` : ''}
+            ${b.address && b.address !== '-' ? `Dirección: ${esc(b.address)}<br>` : ''}
+            ${b.phone && b.phone !== '-' ? `Teléfono: ${esc(b.phone)}` : ''}
+          </div>
+        `;
+
         content.innerHTML = `
-          <!-- 1. BANNER SUPERIOR -->
+          <!-- 1. ENCABEZADO MONOCROMÁTICO NEUTRO CON MEMBRETE (IDÉNTICO A QUOTE/REPORT) -->
           <div class="header-banner">
-            <div class="brand">
-              <img src="https://fdkswvzrozijbizdthge.supabase.co/storage/v1/object/public/app_images/logo_d_una.png" alt="D-Una">
+            <div class="brand-container">
+              <div class="brand-logo-row">
+                <img src="${b.logo_url ? esc(b.logo_url) : 'https://fdkswvzrozijbizdthge.supabase.co/storage/v1/object/public/app_images/logo_d_una.png'}" alt="Logo Comprador">
+                <div class="doc-meta">
+                  <h1>ORDEN DE COMPRA</h1>
+                  <div class="doc-num">${esc(o.order_number)} &bull; ${formattedDate}</div>
+                </div>
+              </div>
+              ${buyerLetterheadHtml}
             </div>
-            <div class="doc-meta">
-              <h2>Orden de Compra</h2>
-              <div class="order-num">${esc(o.order_number)}</div>
-              <div class="date-loc"><strong>Fecha y Lugar:</strong> ${locationDateStr}</div>
-            </div>
+            ${orderExpiresDateStr ? `
+              <div style="text-align: right;">
+                <span class="validity-badge">⌛ Disponible hasta: ${orderExpiresDateStr}</span>
+              </div>
+            ` : ''}
           </div>
 
           <div class="body-content">
 
             <!-- 2. GRILLA DE INFORMACIÓN -->
             <div class="info-grid">
-              <!-- Tarjeta 1: Datos del Cliente / Comprador -->
+              <!-- Tarjeta 1: Datos del Proveedor -->
               <div class="info-card">
-                <h4>Datos del Cliente</h4>
-                <p><strong>${b.has_company ? 'Razón Social:' : 'Nombre:'}</strong> ${esc(b.display_name)}</p>
-                <p><strong>${b.has_company ? 'RIF/ID Fiscal:' : 'C.I. / ID:'}</strong> ${esc(b.tax_id)}</p>
-                <p><strong>Dirección:</strong> ${esc(b.address)}</p>
-                <p><strong>Contacto:</strong> ${esc(b.contact_name)}</p>
-                <p><strong>Teléfono:</strong> ${esc(b.phone)}</p>
+                <h4>Datos del Proveedor</h4>
+                <p><strong>Razón Social / Nombre:</strong> ${esc(s.legal_name || s.name || 'Proveedor')}</p>
+                ${s.tax_id && s.tax_id !== '-' ? `<p><strong>RIF / ID Fiscal:</strong> ${esc(s.tax_id)}</p>` : ''}
+                ${s.phone && s.phone !== '-' ? `<p><strong>Teléfono:</strong> ${esc(s.phone)}</p>` : ''}
+                ${s.email && s.email !== '-' ? `<p><strong>Email:</strong> ${esc(s.email)}</p>` : ''}
+                ${sh.branch_name && sh.branch_name !== '-' ? `<p><strong>Sucursal:</strong> ${esc(sh.branch_name)}</p>` : ''}
               </div>
 
               <!-- Tarjeta 2: Condiciones de Envío y Retiro -->
               <div class="info-card">
-                <h4>Condiciones de Envío / Entrega</h4>
+                <h4>Condiciones de Entrega / Envío</h4>
+                <p><strong>Modalidad:</strong> ${esc(sh.delivery_option || 'Por definir')}</p>
                 ${!sh.is_personal_pickup ? `
                   <p><strong>Empresa de Envío:</strong> ${esc(sh.company_name)}</p>
                   ${sh.branch_code ? `<p><strong>Código Sucursal:</strong> ${esc(sh.branch_code)}</p>` : ''}
-                  <p><strong>Dirección Envío:</strong> ${esc(sh.address)}</p>
+                  <p><strong>Dirección de Entrega:</strong> ${esc(sh.address)}</p>
                 ` : ''}
-                <p><strong>Opción de Entrega:</strong> ${esc(sh.delivery_option)}</p>
-
-                <h4 style="margin-top: 14px;">Persona que Retira</h4>
-                <p><strong>Nombre:</strong> ${esc(sh.receiver_name)}</p>
-                ${sh.receiver_id ? `<p><strong>ID:</strong> ${esc(sh.receiver_id)}</p>` : ''}
-                ${sh.receiver_phone ? `<p><strong>Teléfono:</strong> ${esc(sh.receiver_phone)}</p>` : ''}
+                ${sh.receiver_name && sh.receiver_name !== '-' ? `
+                  <div style="margin-top: 10px; padding-top: 8px; border-top: 1px dashed var(--neutral-border);">
+                    <p style="margin-bottom: 2px;"><strong>Persona Autorizada:</strong> ${esc(sh.receiver_name)}</p>
+                    ${sh.receiver_id ? `<p style="margin-bottom: 2px;"><strong>C.I. / ID:</strong> ${esc(sh.receiver_id)}</p>` : ''}
+                    ${sh.receiver_phone ? `<p style="margin-bottom: 2px;"><strong>Teléfono:</strong> ${esc(sh.receiver_phone)}</p>` : ''}
+                  </div>
+                ` : ''}
               </div>
             </div>
 
@@ -663,40 +764,37 @@
                 <p style="margin-top: 4px;"><strong>Método:</strong> ${esc(o.payment_method)}</p>
               </div>
 
-              <div class="totals-table-card">
-                <table>
-                  <tr>
-                    <td>Sub-Total (USD):</td>
-                    <td class="val">$${fmt(o.subtotal)}</td>
-                  </tr>
-                  <tr>
-                    <td>IVA (${taxRatePct}%):</td>
-                    <td class="val">$${fmt(o.tax)}</td>
-                  </tr>
-                  <tr class="grand-total-row">
-                    <td>Total (USD):</td>
-                    <td class="val" style="color: #FFFFFF;">$${fmt(o.total)}</td>
-                  </tr>
-                </table>
+              <div class="totals-card">
+                <div class="totals-row">
+                  <span>SUB-TOTAL:</span>
+                  <span>$${fmt(o.subtotal)}</span>
+                </div>
+                <div class="totals-row">
+                  <span>IVA (${taxRatePct}%):</span>
+                  <span>$${fmt(o.tax)}</span>
+                </div>
+                <div class="totals-row grand-total">
+                  <span>TOTAL USD:</span>
+                  <span>$${fmt(o.total)}</span>
+                </div>
               </div>
-            </div>
-
-            <!-- 5. PANEL DE ACCIONES -->
-            <div class="action-panel">
-              ${actionHtml}
             </div>
 
           </div>
 
-          <!-- FOOTER INSTITUCIONAL -->
-          <div style="background-color: var(--neutral-bg-header); padding: 14px 20px; border-top: 1px solid var(--neutral-border); text-align: center; font-size: 11px; color: var(--neutral-muted);">
-            Enviado con D-UNA &bull; Gestión Operativa de Órdenes de Compra
+          <!-- 5. PANEL DE ACCIONES -->
+          <div class="action-panel">
+            ${actionHtml}
           </div>
         `;
 
         content.style.display = 'block';
         disclaimerBlock.style.display = 'block';
         footerBlock.style.display = 'block';
+
+        // Mostrar botón de impresión
+        const btnPrint = document.getElementById('btn-print');
+        if (btnPrint) btnPrint.style.display = 'flex';
 
         // Bind Action Buttons
         const btnApprove = document.getElementById('btn-approve');
@@ -739,5 +837,8 @@
       }
     })();
   </script>
+    <button class="print-fab" id="btn-print" onclick="window.print()" title="Imprimir / Guardar como PDF" style="display:none;">
+    🖨️ Imprimir / Guardar PDF
+  </button>
 </body>
 </html>

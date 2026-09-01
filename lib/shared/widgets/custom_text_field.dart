@@ -58,7 +58,11 @@ class CustomTextField extends StatefulWidget {
 
 class _CustomTextFieldState extends State<CustomTextField> {
   late TextEditingController _controller;
+  FocusNode? _internalFocusNode;
   bool _showClearButton = false;
+
+  FocusNode get _effectiveFocusNode =>
+      widget.focusNode ?? (_internalFocusNode ??= FocusNode());
 
   @override
   void initState() {
@@ -66,8 +70,22 @@ class _CustomTextFieldState extends State<CustomTextField> {
     // Use provided controller or create a local one if none provided
     _controller = widget.controller ?? TextEditingController();
     _controller.addListener(_updateClearButtonVisibility);
+    _effectiveFocusNode.addListener(_handleFocusChange);
     // Initial check
     _updateClearButtonVisibility();
+  }
+
+  void _handleFocusChange() {
+    if (_effectiveFocusNode.hasFocus) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted && !_controller.selection.isCollapsed) {
+          final offset = _controller.selection.extentOffset >= 0
+              ? _controller.selection.extentOffset
+              : _controller.text.length;
+          _controller.selection = TextSelection.collapsed(offset: offset);
+        }
+      });
+    }
   }
 
   @override
@@ -79,10 +97,18 @@ class _CustomTextFieldState extends State<CustomTextField> {
       _controller.addListener(_updateClearButtonVisibility);
       _updateClearButtonVisibility();
     }
+    if (widget.focusNode != oldWidget.focusNode) {
+      (oldWidget.focusNode ?? _internalFocusNode)
+          ?.removeListener(_handleFocusChange);
+      _effectiveFocusNode.addListener(_handleFocusChange);
+    }
   }
 
   @override
   void dispose() {
+    (widget.focusNode ?? _internalFocusNode)
+        ?.removeListener(_handleFocusChange);
+    _internalFocusNode?.dispose();
     _controller.removeListener(_updateClearButtonVisibility);
     // If we created a local controller, we should dispose it.
     // But typically parents provide it. If we created it here (widget.controller == null), we dispose it.
@@ -128,7 +154,7 @@ class _CustomTextFieldState extends State<CustomTextField> {
       children: [
         TextFormField(
           controller: _controller,
-          focusNode: widget.focusNode,
+          focusNode: _effectiveFocusNode,
           autofocus: widget.autofocus,
           obscureText: widget.obscureText,
           keyboardType: widget.keyboardType,
@@ -139,7 +165,18 @@ class _CustomTextFieldState extends State<CustomTextField> {
           onChanged: widget.onChanged,
           readOnly: widget.readOnly,
           enabled: widget.enabled,
-          onTap: widget.onTap,
+          onTap: () {
+            widget.onTap?.call();
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              if (mounted && !_controller.selection.isCollapsed) {
+                final offset = _controller.selection.extentOffset >= 0
+                    ? _controller.selection.extentOffset
+                    : _controller.text.length;
+                _controller.selection =
+                    TextSelection.collapsed(offset: offset);
+              }
+            });
+          },
           textCapitalization: widget.textCapitalization,
           maxLength: widget.maxLength,
           decoration: InputDecoration(

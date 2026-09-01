@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:d_una_app/shared/widgets/app_toast.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -8,7 +9,7 @@ import 'package:d_una_app/shared/widgets/form_bottom_bar.dart';
 import 'package:d_una_app/shared/widgets/custom_dropdown.dart';
 import 'package:d_una_app/shared/widgets/custom_text_field.dart';
 import 'package:d_una_app/shared/widgets/custom_dialog.dart';
-import 'package:csc_picker_plus/csc_picker_plus.dart';
+import 'package:d_una_app/shared/widgets/custom_location_picker.dart';
 
 class EditClientPersonScreen extends ConsumerStatefulWidget {
   final String clientId;
@@ -189,18 +190,18 @@ class _EditClientPersonScreenState
         });
 
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Información actualizada exitosamente'),
-            ),
-          );
           context.pop();
+          AppToast.success(
+            context,
+            message: 'Información actualizada exitosamente',
+          );
         }
       } catch (e) {
         if (mounted) {
-          ScaffoldMessenger.of(
+          AppToast.error(
             context,
-          ).showSnackBar(SnackBar(content: Text('Error al actualizar: $e')));
+            message: 'Error al actualizar: $e',
+          );
         }
       } finally {
         if (mounted) setState(() => _isSubmitting = false);
@@ -317,12 +318,11 @@ class _EditClientPersonScreenState
                 ),
                 const SizedBox(height: 16),
 
-                // CSC Picker
-                CSCPickerPlus(
-                  layout: Layout.vertical,
-                  flagState: CountryFlag.DISABLE,
-                  countryStateLanguage: CountryStateLanguage.englishOrNative,
-                  cityLanguage: CityLanguage.native,
+                // Location Picker (Country, State, City)
+                CustomLocationPicker(
+                  selectedCountry: _selectedCountry ?? 'Venezuela',
+                  selectedState: _selectedState,
+                  selectedCity: _selectedCity,
                   onCountryChanged: (value) {
                     setState(() {
                       _selectedCountry = value;
@@ -341,63 +341,6 @@ class _EditClientPersonScreenState
                       _checkChanges();
                     });
                   },
-                  countryFilter: const [
-                    CscCountry.Argentina,
-                    CscCountry.Bolivia,
-                    CscCountry.Chile,
-                    CscCountry.Colombia,
-                    CscCountry.Costa_Rica,
-                    CscCountry.Cuba,
-                    CscCountry.Dominican_Republic,
-                    CscCountry.Ecuador,
-                    CscCountry.El_Salvador,
-                    CscCountry.Guatemala,
-                    CscCountry.Honduras,
-                    CscCountry.Mexico,
-                    CscCountry.Nicaragua,
-                    CscCountry.Panama,
-                    CscCountry.Paraguay,
-                    CscCountry.Peru,
-                    CscCountry.Puerto_Rico,
-                    CscCountry.Spain,
-                    CscCountry.Uruguay,
-                    CscCountry.Venezuela,
-                  ],
-                  currentCountry: _selectedCountry,
-                  currentState: _selectedState,
-                  currentCity: _selectedCity,
-                  dropdownDecoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(8),
-                    color: colors.surface,
-                    border: Border.all(color: Colors.grey.shade400, width: 1),
-                  ),
-                  disabledDropdownDecoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(8),
-                    color: Colors.grey.shade100,
-                    border: Border.all(color: Colors.grey.shade400, width: 1),
-                  ),
-                  countrySearchPlaceholder: "País",
-                  stateSearchPlaceholder: "Estado",
-                  citySearchPlaceholder: "Ciudad",
-                  countryDropdownLabel: "País",
-                  stateDropdownLabel: "Estado",
-                  cityDropdownLabel: "Ciudad",
-                  selectedItemStyle: TextStyle(
-                    color: colors.onSurface,
-                    fontSize: 16,
-                    height: 1.9, // Match TextFormFields height
-                  ),
-                  dropdownHeadingStyle: TextStyle(
-                    color: colors.onSurfaceVariant,
-                    fontSize: 17,
-                    fontWeight: FontWeight.bold,
-                  ),
-                  dropdownItemStyle: TextStyle(
-                    color: colors.onSurface,
-                    fontSize: 16,
-                  ),
-                  searchBarRadius: 30.0,
-                  dropdownDialogRadius: 8.0,
                 ),
 
                 const SizedBox(height: 32),

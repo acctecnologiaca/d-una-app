@@ -19,12 +19,29 @@ class _QuoteClientTabState extends ConsumerState<QuoteClientTab> {
   Widget build(BuildContext context) {
     final state = ref.watch(createQuoteProvider);
     final clientsAsync = ref.watch(clientsProvider);
-    final clients = clientsAsync.value ?? [];
+    final activeClients = clientsAsync.value ?? [];
 
     // Find the currently selected client object
-    final selectedClient = clients
-        .where((c) => c.id == state.clientId)
-        .firstOrNull;
+    final selectedClient = activeClients
+            .where((c) => c.id == state.clientId)
+            .firstOrNull ??
+        (state.quote?.clientId == state.clientId && state.clientId != null
+            ? Client(
+                id: state.clientId!,
+                name: state.quote?.clientName ?? '',
+                userId: '',
+                type: 'company',
+                createdAt: DateTime.now(),
+                isArchived: true,
+              )
+            : null);
+
+    final clients = [
+      ...activeClients,
+      if (selectedClient != null &&
+          !activeClients.any((c) => c.id == selectedClient.id))
+        selectedClient,
+    ];
 
     final contacts = selectedClient?.contacts ?? [];
     final selectedContact = contacts

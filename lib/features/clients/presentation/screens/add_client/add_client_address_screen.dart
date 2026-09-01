@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:csc_picker_plus/csc_picker_plus.dart';
 import 'package:d_una_app/shared/widgets/custom_dialog.dart';
+import 'package:d_una_app/shared/widgets/custom_location_picker.dart';
 import 'package:d_una_app/shared/widgets/custom_text_field.dart';
 import 'package:d_una_app/shared/widgets/wizard_bottom_bar.dart';
 import 'package:d_una_app/shared/widgets/wizard_progress_bar.dart';
@@ -142,10 +142,11 @@ class _AddClientAddressScreenState
                       ),
                       const SizedBox(height: 16),
 
-                      // CSC Picker
-                      CSCPickerPlus(
-                        layout: Layout.vertical,
-                        flagState: CountryFlag.DISABLE,
+                      // Location Picker (Country, State, City)
+                      CustomLocationPicker(
+                        selectedCountry: _selectedCountry ?? 'Venezuela',
+                        selectedState: _selectedState,
+                        selectedCity: _selectedCity,
                         onCountryChanged: (value) {
                           setState(() {
                             _selectedCountry = value;
@@ -161,73 +162,6 @@ class _AddClientAddressScreenState
                             _selectedCity = value;
                           });
                         },
-                        countryFilter: const [
-                          CscCountry.Venezuela,
-                          CscCountry.Colombia,
-                          CscCountry.Argentina,
-                          CscCountry.Chile,
-                          CscCountry.Ecuador,
-                          CscCountry.Peru,
-                          CscCountry.Panama,
-                          CscCountry.Bolivia,
-                          CscCountry.Costa_Rica,
-                          CscCountry.Cuba,
-                          CscCountry.Dominican_Republic,
-                          CscCountry.El_Salvador,
-                          CscCountry.Guatemala,
-                          CscCountry.Honduras,
-                          CscCountry.Mexico,
-                          CscCountry.Nicaragua,
-                          CscCountry.Paraguay,
-                          CscCountry.Puerto_Rico,
-                          CscCountry.Spain,
-                          CscCountry.Uruguay,
-                        ],
-                        countryStateLanguage:
-                            CountryStateLanguage.englishOrNative,
-                        cityLanguage: CityLanguage.native,
-                        defaultCountry: CscCountry.Venezuela,
-                        currentCountry: _selectedCountry,
-                        currentState: _selectedState,
-                        currentCity: _selectedCity,
-                        dropdownDecoration: BoxDecoration(
-                          borderRadius: BorderRadius.circular(8),
-                          color: Colors.white,
-                          border: Border.all(
-                            color: Colors.grey.shade400,
-                            width: 1,
-                          ),
-                        ),
-                        disabledDropdownDecoration: BoxDecoration(
-                          borderRadius: BorderRadius.circular(8),
-                          color: Colors.grey.shade100,
-                          border: Border.all(
-                            color: Colors.grey.shade400,
-                            width: 1,
-                          ),
-                        ),
-                        countrySearchPlaceholder: "País",
-                        stateSearchPlaceholder: "Estado",
-                        citySearchPlaceholder: "Ciudad",
-                        countryDropdownLabel: "País",
-                        stateDropdownLabel: "Estado",
-                        cityDropdownLabel: "Ciudad",
-                        selectedItemStyle: TextStyle(
-                          color: colors.onSurface,
-                          fontSize: 16,
-                          height: 1.9,
-                        ),
-                        dropdownHeadingStyle: TextStyle(
-                          color: colors.onSurface,
-                          fontSize: 17,
-                          fontWeight: FontWeight.bold,
-                        ),
-                        dropdownItemStyle: TextStyle(
-                          color: colors.onSurface,
-                          fontSize: 16,
-                        ),
-                        searchBarRadius: 30.0,
-                        dropdownDialogRadius: 8.0,
                       ),
                     ],
                   ),

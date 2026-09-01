@@ -1,3 +1,7 @@
+import 'package:d_una_app/core/constants/draft_constants.dart';
+import 'package:d_una_app/core/models/draft_data.dart';
+import 'package:d_una_app/core/services/draft_storage_service.dart';
+import 'package:d_una_app/core/providers/draft_providers.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../data/models/models.dart';
@@ -23,6 +27,7 @@ class ServiceReportCreateState {
   final String? categoryName;
   final String? advisorId;
   final String? advisorName;
+  final List<Collaborator> selectedAdvisors;
   final InterventionType interventionType;
   final String requestDescription;
   final String workDescription;
@@ -57,6 +62,7 @@ class ServiceReportCreateState {
     this.categoryName,
     this.advisorId,
     this.advisorName,
+    this.selectedAdvisors = const [],
     this.interventionType = InterventionType.corrective,
     this.requestDescription = '',
     this.workDescription = '',
@@ -90,6 +96,7 @@ class ServiceReportCreateState {
     String? categoryName,
     String? advisorId,
     String? advisorName,
+    List<Collaborator>? selectedAdvisors,
     InterventionType? interventionType,
     String? requestDescription,
     String? workDescription,
@@ -122,6 +129,7 @@ class ServiceReportCreateState {
       categoryName: categoryName ?? this.categoryName,
       advisorId: advisorId ?? this.advisorId,
       advisorName: advisorName ?? this.advisorName,
+      selectedAdvisors: selectedAdvisors ?? this.selectedAdvisors,
       interventionType: interventionType ?? this.interventionType,
       requestDescription: requestDescription ?? this.requestDescription,
       workDescription: workDescription ?? this.workDescription,
@@ -140,6 +148,109 @@ class ServiceReportCreateState {
       globalTaxRate: globalTaxRate ?? this.globalTaxRate,
       pricingMethod: pricingMethod ?? this.pricingMethod,
       isReadOnly: isReadOnly ?? this.isReadOnly,
+    );
+  }
+
+  Map<String, dynamic> toDraftJson() {
+    return {
+      'report': report?.toJson(),
+      'products': products.map((p) => p.toJson()).toList(),
+      'services': services.map((s) => s.toJson()).toList(),
+      'conditions': conditions.map((c) => c.toJson()).toList(),
+      'client_id': clientId,
+      'client_name': clientName,
+      'contact_id': contactId,
+      'contact_name': contactName,
+      'category_id': categoryId,
+      'category_name': categoryName,
+      'advisor_id': advisorId,
+      'advisor_name': advisorName,
+      'selected_advisors': selectedAdvisors.map((a) => a.toJson()).toList(),
+      'intervention_type': interventionType.name,
+      'request_description': requestDescription,
+      'work_description': workDescription,
+      'recommendations': recommendations,
+      'service_date': serviceDate.toIso8601String(),
+      'start_time': startTime != null
+          ? {'hour': startTime!.hour, 'minute': startTime!.minute}
+          : null,
+      'end_time': endTime != null
+          ? {'hour': endTime!.hour, 'minute': endTime!.minute}
+          : null,
+      'duration_minutes': durationMinutes,
+      'notes': notes,
+      'report_tag': reportTag,
+      'current_report_number': currentReportNumber,
+      'client_type': clientType,
+      'global_margin': globalMargin,
+      'global_tax_rate': globalTaxRate,
+      'pricing_method': pricingMethod,
+      'is_read_only': isReadOnly,
+    };
+  }
+
+  factory ServiceReportCreateState.fromDraftJson(Map<String, dynamic> json) {
+    TimeOfDay? parseTime(dynamic t) {
+      if (t == null) return null;
+      if (t is Map) {
+        return TimeOfDay(
+          hour: (t['hour'] as num?)?.toInt() ?? 0,
+          minute: (t['minute'] as num?)?.toInt() ?? 0,
+        );
+      }
+      return null;
+    }
+
+    return ServiceReportCreateState(
+      report: json['report'] != null
+          ? ServiceReport.fromJson(json['report'] as Map<String, dynamic>)
+          : null,
+      products: (json['products'] as List? ?? [])
+          .map((p) =>
+              ServiceReportItemProduct.fromJson(p as Map<String, dynamic>))
+          .toList(),
+      services: (json['services'] as List? ?? [])
+          .map((s) =>
+              ServiceReportItemService.fromJson(s as Map<String, dynamic>))
+          .toList(),
+      conditions: (json['conditions'] as List? ?? [])
+          .map((c) =>
+              ServiceReportCondition.fromJson(c as Map<String, dynamic>))
+          .toList(),
+      clientId: json['client_id'] as String?,
+      clientName: json['client_name'] as String?,
+      contactId: json['contact_id'] as String?,
+      contactName: json['contact_name'] as String?,
+      categoryId: json['category_id'] as String?,
+      categoryName: json['category_name'] as String?,
+      advisorId: json['advisor_id'] as String?,
+      advisorName: json['advisor_name'] as String?,
+      selectedAdvisors: (json['selected_advisors'] as List? ?? [])
+          .map((a) => Collaborator.fromJson(a as Map<String, dynamic>))
+          .toList(),
+      interventionType: InterventionType.values.firstWhere(
+        (e) =>
+            e.name == json['intervention_type'] ||
+            e.dbValue == json['intervention_type'],
+        orElse: () => InterventionType.corrective,
+      ),
+      requestDescription: json['request_description'] as String? ?? '',
+      workDescription: json['work_description'] as String? ?? '',
+      recommendations: json['recommendations'] as String? ?? '',
+      serviceDate:
+          DateTime.tryParse(json['service_date'] as String? ?? '') ??
+          DateTime.now(),
+      startTime: parseTime(json['start_time']),
+      endTime: parseTime(json['end_time']),
+      durationMinutes: (json['duration_minutes'] as num?)?.toInt(),
+      notes: json['notes'] as String?,
+      reportTag: json['report_tag'] as String?,
+      currentReportNumber: json['current_report_number'] as String?,
+      clientType: json['client_type'] as String?,
+      globalMargin: (json['global_margin'] as num?)?.toDouble() ?? 0.0,
+      globalTaxRate: (json['global_tax_rate'] as num?)?.toDouble() ?? 0.0,
+      pricingMethod: json['pricing_method'] as String? ?? 'margin',
+      isReadOnly: json['is_read_only'] as bool? ?? false,
     );
   }
 
@@ -219,8 +330,13 @@ class ServiceReportCreateState {
       return products.isNotEmpty ||
           services.isNotEmpty ||
           clientId != null ||
-          workDescription.isNotEmpty ||
-          requestDescription.isNotEmpty;
+          categoryId != null ||
+          contactId != null ||
+          workDescription.trim().isNotEmpty ||
+          requestDescription.trim().isNotEmpty ||
+          recommendations.trim().isNotEmpty ||
+          (notes != null && notes!.trim().isNotEmpty) ||
+          (reportTag != null && reportTag!.trim().isNotEmpty);
     }
 
     if (clientId != report!.clientId) return true;
@@ -248,7 +364,7 @@ class CreateServiceReportNotifier
   final Ref ref;
 
   CreateServiceReportNotifier(this.ref) : super(ServiceReportCreateState()) {
-    initReport();
+    loadFinancialParameters();
   }
 
   Future<void> initReport() async {
@@ -283,10 +399,13 @@ class CreateServiceReportNotifier
         }
       }
       defaultCollab ??= collaborators.isNotEmpty ? collaborators.first : null;
-      if (defaultCollab != null && state.advisorId == null) {
+      if (defaultCollab != null &&
+          state.selectedAdvisors.isEmpty &&
+          state.advisorId == null) {
         state = state.copyWith(
           advisorId: defaultCollab.id,
           advisorName: defaultCollab.fullName,
+          selectedAdvisors: [defaultCollab],
         );
       }
     } catch (e) {
@@ -359,15 +478,125 @@ class CreateServiceReportNotifier
     }
   }
 
-  void reset() {
+  DraftStorageService get _draftStorage =>
+      ref.read(draftStorageServiceProvider);
+
+  String _getDraftKey({String? reportId}) {
+    if (reportId != null && reportId.isNotEmpty) {
+      return '${DraftConstants.reportsModule}_$reportId';
+    }
+    if (state.report != null && state.report!.id.isNotEmpty) {
+      return '${DraftConstants.reportsModule}_${state.report!.id}';
+    }
+    return DraftConstants.reportsModule;
+  }
+
+  void autoSaveDraft({int tabIndex = 0, String? reportId}) {
+    final isEditing =
+        (state.report != null && state.report!.id.isNotEmpty) ||
+        (reportId != null && reportId.isNotEmpty);
+
+    if (isEditing) {
+      if (!state.hasChanges) return;
+    } else {
+      final hasData =
+          state.products.isNotEmpty ||
+          state.services.isNotEmpty ||
+          state.clientId != null ||
+          state.categoryId != null ||
+          state.contactId != null ||
+          state.workDescription.trim().isNotEmpty ||
+          state.requestDescription.trim().isNotEmpty ||
+          (state.notes != null && state.notes!.trim().isNotEmpty);
+
+      if (!hasData) return;
+    }
+
+    final key = _getDraftKey(reportId: reportId);
+    final draft = DraftData(
+      moduleKey: key,
+      savedAt: DateTime.now(),
+      tabIndex: tabIndex,
+      summaryTitle:
+          state.clientName != null
+              ? '${isEditing ? "Modificación Reporte" : "Reporte"} - ${state.clientName}'
+              : 'Reporte de Servicio',
+      data: state.toDraftJson(),
+    );
+    _draftStorage.saveDraftDebounced(draft);
+  }
+
+  Future<void> saveDraftNow({int tabIndex = 0, String? reportId}) async {
+    final isEditing =
+        (state.report != null && state.report!.id.isNotEmpty) ||
+        (reportId != null && reportId.isNotEmpty);
+
+    if (isEditing) {
+      if (!state.hasChanges) return;
+    } else {
+      final hasData =
+          state.products.isNotEmpty ||
+          state.services.isNotEmpty ||
+          state.clientId != null ||
+          state.categoryId != null ||
+          state.contactId != null ||
+          state.workDescription.trim().isNotEmpty ||
+          state.requestDescription.trim().isNotEmpty ||
+          (state.notes != null && state.notes!.trim().isNotEmpty);
+
+      if (!hasData) return;
+    }
+
+    final key = _getDraftKey(reportId: reportId);
+    final draft = DraftData(
+      moduleKey: key,
+      savedAt: DateTime.now(),
+      tabIndex: tabIndex,
+      summaryTitle:
+          state.clientName != null
+              ? '${isEditing ? "Modificación Reporte" : "Reporte"} - ${state.clientName}'
+              : 'Reporte de Servicio',
+      data: state.toDraftJson(),
+    );
+    await _draftStorage.saveDraftNow(draft);
+  }
+
+  Future<DraftData?> checkAndRestoreDraft({String? reportId}) async {
+    try {
+      final key = _getDraftKey(reportId: reportId);
+      final draft = await _draftStorage.getDraft(key);
+      if (draft != null && draft.data.isNotEmpty) {
+        state = ServiceReportCreateState.fromDraftJson(draft.data);
+        debugPrint('[Draft] Borrador de reporte restaurado exitosamente para clave: $key');
+        return draft;
+      }
+    } catch (e, stack) {
+      debugPrint('[Draft] Error al restaurar borrador de reporte: $e\n$stack');
+    }
+    return null;
+  }
+
+  Future<void> clearDraft({String? reportId}) async {
+    final key = _getDraftKey(reportId: reportId);
+    await _draftStorage.clearDraft(key);
+  }
+
+  void reset({bool clearPersistedDraft = false, String? reportId}) {
+    final isEditing =
+        (state.report != null && state.report!.id.isNotEmpty) ||
+        (reportId != null && reportId.isNotEmpty);
+    final currentId = reportId ?? state.report?.id;
     state = ServiceReportCreateState();
-    initReport();
+    if (clearPersistedDraft) {
+      clearDraft(reportId: isEditing ? currentId : null);
+    }
   }
 
   Future<void> loadReport(String reportId) async {
     state = state.copyWith(isLoading: true, error: null);
     try {
       final repo = ref.read(serviceReportsRepositoryProvider);
+      final financialParams = await repo.getFinancialParameters();
       final report = await repo.getReportWithDetails(reportId);
 
       TimeOfDay? start;
@@ -388,6 +617,11 @@ class CreateServiceReportNotifier
         );
       }
 
+      final techs = report.technicians ?? [];
+      final advisorNames = techs.isNotEmpty
+          ? techs.map((t) => t.fullName).join(', ')
+          : report.advisorName;
+
       state = state.copyWith(
         report: report,
         currentReportNumber: report.reportNumber,
@@ -399,7 +633,8 @@ class CreateServiceReportNotifier
         categoryId: report.categoryId,
         categoryName: report.categoryName,
         advisorId: report.advisorId,
-        advisorName: report.advisorName,
+        advisorName: advisorNames,
+        selectedAdvisors: techs,
         interventionType: InterventionType.fromDbValue(report.interventionType),
         requestDescription: report.requestDescription ?? '',
         workDescription: report.workDescription ?? '',
@@ -413,6 +648,9 @@ class CreateServiceReportNotifier
         products: report.products ?? [],
         services: report.services ?? [],
         conditions: report.conditions ?? [],
+        globalMargin: financialParams.profitMargin,
+        globalTaxRate: financialParams.taxRate,
+        pricingMethod: financialParams.pricingMethod,
         isLoading: false,
         isReadOnly: report.status == ServiceReportStatus.finalized.dbValue,
       );
@@ -423,27 +661,57 @@ class CreateServiceReportNotifier
 
   // --- Field updates ---
   void setInterventionType(InterventionType type) {
-    state = state.copyWith(interventionType: type);
+    String? newTag = state.reportTag;
+    final currentCat = state.categoryName;
+    final oldAutoTag = currentCat != null && currentCat.isNotEmpty
+        ? '${state.interventionType.label} - $currentCat'
+        : state.interventionType.label;
+    if (newTag == null || newTag.isEmpty || newTag == oldAutoTag) {
+      newTag = currentCat != null && currentCat.isNotEmpty
+          ? '${type.label} - $currentCat'
+          : type.label;
+    }
+    state = state.copyWith(interventionType: type, reportTag: newTag);
+    autoSaveDraft();
   }
 
   void setCategory(String? id, String? name) {
-    state = state.copyWith(categoryId: id, categoryName: name);
+    String? newTag = state.reportTag;
+    final oldCat = state.categoryName;
+    final oldAutoTag = oldCat != null && oldCat.isNotEmpty
+        ? '${state.interventionType.label} - $oldCat'
+        : state.interventionType.label;
+    if (newTag == null || newTag.isEmpty || newTag == oldAutoTag) {
+      newTag = name != null && name.isNotEmpty
+          ? '${state.interventionType.label} - $name'
+          : state.interventionType.label;
+    }
+    state = state.copyWith(
+      categoryId: id,
+      categoryName: name,
+      reportTag: newTag,
+    );
+    autoSaveDraft();
   }
 
   void setRequestDescription(String text) {
     state = state.copyWith(requestDescription: text);
+    autoSaveDraft();
   }
 
   void setWorkDescription(String text) {
     state = state.copyWith(workDescription: text);
+    autoSaveDraft();
   }
 
   void setRecommendations(String text) {
     state = state.copyWith(recommendations: text);
+    autoSaveDraft();
   }
 
   void setServiceDate(DateTime date) {
     state = state.copyWith(serviceDate: date);
+    autoSaveDraft();
   }
 
   void setTimes({TimeOfDay? start, TimeOfDay? end, int? durationMinutes}) {
@@ -452,10 +720,23 @@ class CreateServiceReportNotifier
       endTime: end ?? state.endTime,
       durationMinutes: durationMinutes ?? state.durationMinutes,
     );
+    autoSaveDraft();
   }
 
   void setAdvisor(String? id, String? name) {
     state = state.copyWith(advisorId: id, advisorName: name);
+    autoSaveDraft();
+  }
+
+  void setAdvisors(List<Collaborator> advisors) {
+    final lead = advisors.firstOrNull;
+    final names = advisors.map((a) => a.fullName).join(', ');
+    state = state.copyWith(
+      selectedAdvisors: advisors,
+      advisorId: lead?.id,
+      advisorName: names.isNotEmpty ? names : null,
+    );
+    autoSaveDraft();
   }
 
   void setClient(Client client) {
@@ -478,6 +759,7 @@ class CreateServiceReportNotifier
       contactId: contactId,
       contactName: contactName,
     );
+    autoSaveDraft();
   }
 
   void clearClient() {
@@ -495,6 +777,7 @@ class CreateServiceReportNotifier
       categoryName: state.categoryName,
       advisorId: state.advisorId,
       advisorName: state.advisorName,
+      selectedAdvisors: state.selectedAdvisors,
       interventionType: state.interventionType,
       requestDescription: state.requestDescription,
       workDescription: state.workDescription,
@@ -513,10 +796,12 @@ class CreateServiceReportNotifier
       pricingMethod: state.pricingMethod,
       isReadOnly: state.isReadOnly,
     );
+    autoSaveDraft();
   }
 
   void setContact(String? id, String? name) {
     state = state.copyWith(contactId: id, contactName: name);
+    autoSaveDraft();
   }
 
   void clearContact() {
@@ -534,6 +819,7 @@ class CreateServiceReportNotifier
       categoryName: state.categoryName,
       advisorId: state.advisorId,
       advisorName: state.advisorName,
+      selectedAdvisors: state.selectedAdvisors,
       interventionType: state.interventionType,
       requestDescription: state.requestDescription,
       workDescription: state.workDescription,
@@ -552,6 +838,7 @@ class CreateServiceReportNotifier
       pricingMethod: state.pricingMethod,
       isReadOnly: state.isReadOnly,
     );
+    autoSaveDraft();
   }
 
   void setDetails({String? notes, String? reportTag}) {
@@ -559,6 +846,7 @@ class CreateServiceReportNotifier
       notes: notes ?? state.notes,
       reportTag: reportTag ?? state.reportTag,
     );
+    autoSaveDraft();
   }
 
   // --- Products & Services Actions ---
@@ -566,6 +854,7 @@ class CreateServiceReportNotifier
     final updated = List<ServiceReportItemProduct>.from(state.products)
       ..add(product);
     state = state.copyWith(products: updated);
+    autoSaveDraft();
   }
 
   void updateProduct(int index, ServiceReportItemProduct product) {
@@ -573,6 +862,7 @@ class CreateServiceReportNotifier
       final updated = List<ServiceReportItemProduct>.from(state.products);
       updated[index] = product;
       state = state.copyWith(products: updated);
+      autoSaveDraft();
     }
   }
 
@@ -581,6 +871,7 @@ class CreateServiceReportNotifier
       final updated = List<ServiceReportItemProduct>.from(state.products)
         ..removeAt(index);
       state = state.copyWith(products: updated);
+      autoSaveDraft();
     }
   }
 
@@ -588,6 +879,7 @@ class CreateServiceReportNotifier
     final updated = List<ServiceReportItemService>.from(state.services)
       ..add(service);
     state = state.copyWith(services: updated);
+    autoSaveDraft();
   }
 
   void updateService(int index, ServiceReportItemService service) {
@@ -595,6 +887,7 @@ class CreateServiceReportNotifier
       final updated = List<ServiceReportItemService>.from(state.services);
       updated[index] = service;
       state = state.copyWith(services: updated);
+      autoSaveDraft();
     }
   }
 
@@ -603,6 +896,7 @@ class CreateServiceReportNotifier
       final updated = List<ServiceReportItemService>.from(state.services)
         ..removeAt(index);
       state = state.copyWith(services: updated);
+      autoSaveDraft();
     }
   }
 
@@ -611,6 +905,7 @@ class CreateServiceReportNotifier
     final updated = List<ServiceReportCondition>.from(state.conditions)
       ..add(condition);
     state = state.copyWith(conditions: updated);
+    autoSaveDraft();
   }
 
   void addConditions(List<CommercialCondition> newConditions) {
@@ -627,6 +922,7 @@ class CreateServiceReportNotifier
       );
     }
     state = state.copyWith(conditions: updated);
+    autoSaveDraft();
   }
 
   void updateCondition(int index, String description) {
@@ -634,6 +930,7 @@ class CreateServiceReportNotifier
       final updated = List<ServiceReportCondition>.from(state.conditions);
       updated[index] = updated[index].copyWith(description: description);
       state = state.copyWith(conditions: updated);
+      autoSaveDraft();
     }
   }
 
@@ -642,6 +939,7 @@ class CreateServiceReportNotifier
       final updated = List<ServiceReportCondition>.from(state.conditions)
         ..removeAt(index);
       state = state.copyWith(conditions: updated);
+      autoSaveDraft();
     }
   }
 
@@ -657,6 +955,7 @@ class CreateServiceReportNotifier
     }).toList();
 
     state = state.copyWith(conditions: reindexed);
+    autoSaveDraft();
   }
 
   // --- Save / Finalize ---
@@ -708,13 +1007,21 @@ class CreateServiceReportNotifier
         updatedAt: DateTime.now(),
       );
 
+      final techIds = state.selectedAdvisors.isNotEmpty
+          ? state.selectedAdvisors.map((a) => a.id).toList()
+          : (state.advisorId != null ? [state.advisorId!] : null);
+
+      final wasEditing = state.report != null && state.report!.id.isNotEmpty;
+      final previousReportId = state.report?.id;
+
       ServiceReport saved;
-      if (state.report != null && state.report!.id.isNotEmpty) {
+      if (wasEditing) {
         saved = await repo.updateReport(
           reportObj,
           products: state.products,
           services: state.services,
           conditions: state.conditions,
+          technicianIds: techIds,
         );
       } else {
         saved = await repo.createReport(
@@ -722,6 +1029,7 @@ class CreateServiceReportNotifier
           products: state.products,
           services: state.services,
           conditions: state.conditions,
+          technicianIds: techIds,
         );
       }
 
@@ -730,6 +1038,12 @@ class CreateServiceReportNotifier
         currentReportNumber: saved.reportNumber,
         isLoading: false,
       );
+
+      if (wasEditing) {
+        await clearDraft(reportId: previousReportId);
+      } else {
+        await clearDraft(reportId: null);
+      }
 
       ref.invalidate(paginatedReportsListProvider);
       return true;

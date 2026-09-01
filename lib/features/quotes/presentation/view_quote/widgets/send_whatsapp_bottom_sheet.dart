@@ -1,7 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:pdf/pdf.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../../../../shared/widgets/custom_text_field.dart';
 import '../../../../../shared/widgets/custom_button.dart';
 import '../../../../../shared/widgets/custom_action_sheet.dart';
@@ -17,7 +15,6 @@ import '../../../data/models/quote.dart';
 import 'package:d_una_app/features/quotes/domain/models/quote_model.dart'
     show QuoteStatus;
 import '../providers/view_quote_provider.dart';
-import 'package:d_una_app/core/pdf/templates/quote_pdf_template.dart';
 
 class SendWhatsAppBottomSheet extends ConsumerStatefulWidget {
   final Quote quote;
@@ -94,32 +91,13 @@ class _SendWhatsAppBottomSheetState
 
     try {
       final userProfile = ref.read(userProfileProvider).value;
-      final userEmail = Supabase.instance.client.auth.currentUser?.email;
 
       if (userProfile == null) {
         throw Exception('No se pudo cargar el perfil del usuario');
       }
 
-      // 1. Generate PDF Bytes
-      final pdfBytes = await QuotePdfTemplate(
-        quote: widget.quote,
-        products: widget.quote.products ?? [],
-        services: widget.quote.services ?? [],
-        conditions: widget.quote.conditions ?? [],
-        userProfile: userProfile,
-        userEmail: userEmail,
-      ).generate(PdfPageFormat.a4);
-
-      final fileName = '${widget.quote.quoteNumber ?? widget.quote.id}.pdf';
-
-      // 2. Upload PDF & Generate Action Token for WebViewer
+      // 1. Generate Action Token for WebViewer (lightweight flow, no PDF)
       final quotesRepo = ref.read(quotesRepositoryProvider);
-      await quotesRepo.uploadQuotePdf(
-        quoteId: widget.quote.id,
-        pdfBytes: pdfBytes,
-        fileName: fileName,
-      );
-
       final actionToken = await quotesRepo.generateActionToken(widget.quote.id);
 
       final userName =
@@ -217,11 +195,12 @@ class _SendWhatsAppBottomSheetState
           : QuoteStatus.sent.dbValue;
 
       await ref
-          .read(quotesListProvider.notifier)
+          .read(quotesRepositoryProvider)
           .updateQuoteStatus(widget.quote.id, newStatus);
 
-      // Invalidate quote view provider so UI updates quote status badge
+      // Invalidate quote view provider and list providers
       ref.invalidate(viewQuoteProvider(widget.quote.id));
+      refreshAllQuoteProviders(ref);
 
       // 6. Obtener saldo fresco de créditos y refrescar la caché en Riverpod
       final freshCreditStatus = await ref

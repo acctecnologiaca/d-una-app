@@ -19,6 +19,11 @@ class FilterBottomSheet extends StatefulWidget {
   final ValueChanged<String>? onSelect;
   final Widget Function(String value)? leadingBuilder;
   final bool sortOptions;
+  final bool showAllOption;
+  final bool showLeading;
+  final String applyButtonLabel;
+  final VoidCallback? onAddOption;
+  final String? addOptionLabel;
 
   const FilterBottomSheet._({
     required this.title,
@@ -29,6 +34,11 @@ class FilterBottomSheet extends StatefulWidget {
     this.onSelect,
     this.leadingBuilder,
     this.sortOptions = true,
+    this.showAllOption = true,
+    this.showLeading = true,
+    this.applyButtonLabel = 'Aplicar',
+    this.onAddOption,
+    this.addOptionLabel,
   });
 
   static Future<void> showMulti<T>({
@@ -40,6 +50,11 @@ class FilterBottomSheet extends StatefulWidget {
     String Function(String)? labelBuilder,
     Widget Function(String value)? leadingBuilder,
     bool sortOptions = true,
+    bool showAllOption = true,
+    bool showLeading = true,
+    String applyButtonLabel = 'Aplicar',
+    VoidCallback? onAddOption,
+    String? addOptionLabel,
   }) {
     return showModalBottomSheet(
       context: context,
@@ -59,6 +74,11 @@ class FilterBottomSheet extends StatefulWidget {
         onApply: onApply,
         leadingBuilder: leadingBuilder,
         sortOptions: sortOptions,
+        showAllOption: showAllOption,
+        showLeading: showLeading,
+        applyButtonLabel: applyButtonLabel,
+        onAddOption: onAddOption,
+        addOptionLabel: addOptionLabel,
       ),
     );
   }
@@ -215,26 +235,55 @@ class _FilterBottomSheetState extends State<FilterBottomSheet> {
                   child: ListView(
                     controller: scrollController,
                     children: [
-                      CheckboxListTile(
-                        title: const Text('Todas'),
-                        value: _tempSelected.isEmpty,
-                        contentPadding: const EdgeInsets.symmetric(
-                          horizontal: 24,
+                      if (widget.onAddOption != null)
+                        InkWell(
+                          onTap: widget.onAddOption,
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 24,
+                              vertical: 12,
+                            ),
+                            child: Row(
+                              children: [
+                                Icon(
+                                  Icons.add,
+                                  color: colors.primary,
+                                  size: 20,
+                                ),
+                                const SizedBox(width: 12),
+                                Text(
+                                  widget.addOptionLabel ?? 'Agregar opción',
+                                  style: TextStyle(
+                                    color: colors.primary,
+                                    fontWeight: FontWeight.w600,
+                                    fontSize: 15,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
                         ),
-                        secondary: Icon(
-                          Icons.select_all,
-                          color: colors.onSurfaceVariant,
-                          size: 24,
+                      if (widget.showAllOption)
+                        CheckboxListTile(
+                          title: const Text('Todas'),
+                          value: _tempSelected.isEmpty,
+                          contentPadding: const EdgeInsets.symmetric(
+                            horizontal: 24,
+                          ),
+                          secondary: Icon(
+                            Icons.select_all,
+                            color: colors.onSurfaceVariant,
+                            size: 24,
+                          ),
+                          controlAffinity: ListTileControlAffinity.trailing,
+                          onChanged: (bool? value) {
+                            setState(() {
+                              if (value == true) {
+                                _tempSelected.clear();
+                              }
+                            });
+                          },
                         ),
-                        controlAffinity: ListTileControlAffinity.trailing,
-                        onChanged: (bool? value) {
-                          setState(() {
-                            if (value == true) {
-                              _tempSelected.clear();
-                            }
-                          });
-                        },
-                      ),
                       ...filteredOptions.map((opt) {
                         final isSelected = _tempSelected.contains(opt.value);
                         return CheckboxListTile(
@@ -243,19 +292,22 @@ class _FilterBottomSheetState extends State<FilterBottomSheet> {
                           contentPadding: const EdgeInsets.symmetric(
                             horizontal: 24,
                           ),
-                          secondary: widget.leadingBuilder != null
-                              ? widget.leadingBuilder!(opt.value)
-                              : CircleAvatar(
-                                  backgroundColor: colors.secondaryContainer,
-                                  child: Text(
-                                    opt.label.isNotEmpty
-                                        ? opt.label[0].toUpperCase()
-                                        : '?',
-                                    style: TextStyle(
-                                      color: colors.onSecondaryContainer,
-                                    ),
-                                  ),
-                                ),
+                          secondary: widget.showLeading
+                              ? (widget.leadingBuilder != null
+                                    ? widget.leadingBuilder!(opt.value)
+                                    : CircleAvatar(
+                                        backgroundColor:
+                                            colors.secondaryContainer,
+                                        child: Text(
+                                          opt.label.isNotEmpty
+                                              ? opt.label[0].toUpperCase()
+                                              : '?',
+                                          style: TextStyle(
+                                            color: colors.onSecondaryContainer,
+                                          ),
+                                        ),
+                                      ))
+                              : null,
                           controlAffinity: ListTileControlAffinity.trailing,
                           onChanged: (bool? value) {
                             setState(() {
@@ -282,8 +334,9 @@ class _FilterBottomSheetState extends State<FilterBottomSheet> {
                   widget.onApply?.call(_tempSelected);
                   context.pop();
                 },
-                label:
-                    'Aplicar (${_tempSelected.isEmpty ? "Todas" : _tempSelected.length})',
+                label: widget.showAllOption
+                    ? '${widget.applyButtonLabel} (${_tempSelected.isEmpty ? "Todas" : _tempSelected.length})'
+                    : '${widget.applyButtonLabel}${_tempSelected.isNotEmpty ? " (${_tempSelected.length})" : ""}',
                 icon: Icons.check,
               ),
             ),

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:d_una_app/shared/widgets/app_toast.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -84,8 +85,9 @@ class _AddClientContactScreenState
         final newClientId = await notifier.submit();
 
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Cliente agregado exitosamente')),
+          AppToast.success(
+            context,
+            message: 'Cliente agregado exitosamente',
           );
 
           if (_returnTo != null && _returnTo!.contains('/quotes/create')) {
@@ -108,8 +110,9 @@ class _AddClientContactScreenState
       } catch (e) {
         if (mounted) {
           setState(() => _isLoading = false);
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Error al guardar cliente: $e')),
+          AppToast.error(
+            context,
+            message: 'Error al guardar cliente: $e',
           );
         }
       }

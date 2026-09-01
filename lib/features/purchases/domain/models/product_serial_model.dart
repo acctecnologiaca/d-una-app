@@ -31,6 +31,32 @@ class ProductSerial extends Equatable {
     );
   }
 
+  Map<String, dynamic> toDraftJson() {
+    return {
+      'id': id,
+      'purchase_item_id': purchaseItemId,
+      'product_id': productId,
+      'serial_number': serialNumber,
+      'status': status,
+      'created_at': createdAt.toIso8601String(),
+      'updated_at': updatedAt.toIso8601String(),
+    };
+  }
+
+  factory ProductSerial.fromDraftJson(Map<String, dynamic> json) {
+    return ProductSerial(
+      id: json['id'] as String? ?? '',
+      purchaseItemId: json['purchase_item_id'] as String? ?? '',
+      productId: json['product_id'] as String? ?? '',
+      serialNumber: json['serial_number'] as String? ?? '',
+      status: json['status'] as String? ?? 'in_stock',
+      createdAt: DateTime.tryParse(json['created_at'] as String? ?? '') ??
+          DateTime.now(),
+      updatedAt: DateTime.tryParse(json['updated_at'] as String? ?? '') ??
+          DateTime.now(),
+    );
+  }
+
   Map<String, dynamic> toJson() {
     return {
       'purchase_item_id': purchaseItemId,

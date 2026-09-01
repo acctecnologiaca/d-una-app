@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:d_una_app/shared/widgets/app_toast.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:d_una_app/shared/widgets/custom_text_field.dart';
@@ -24,22 +25,7 @@ class _SecurityScreenState extends ConsumerState<SecurityScreen> {
   bool _isLoading = false;
 
   @override
-  void initState() {
-    super.initState();
-    _currentPasswordController.addListener(_updateState);
-    _newPasswordController.addListener(_updateState);
-    _confirmPasswordController.addListener(_updateState);
-  }
-
-  void _updateState() {
-    setState(() {});
-  }
-
-  @override
   void dispose() {
-    _currentPasswordController.removeListener(_updateState);
-    _newPasswordController.removeListener(_updateState);
-    _confirmPasswordController.removeListener(_updateState);
     _currentPasswordController.dispose();
     _newPasswordController.dispose();
     _confirmPasswordController.dispose();
@@ -64,8 +50,9 @@ class _SecurityScreenState extends ConsumerState<SecurityScreen> {
     if (!_formKey.currentState!.validate()) return;
 
     if (_newPasswordController.text != _confirmPasswordController.text) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Las contraseñas no coinciden')),
+      AppToast.error(
+        context,
+        message: 'Las contraseñas no coinciden',
       );
       return;
     }
@@ -86,16 +73,18 @@ class _SecurityScreenState extends ConsumerState<SecurityScreen> {
       await repo.updatePassword(_newPasswordController.text);
 
       if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(const SnackBar(content: Text('Contraseña actualizada')));
         context.pop();
+        AppToast.success(
+          context,
+          message: 'Contraseña actualizada',
+        );
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(
+        AppToast.error(
           context,
-        ).showSnackBar(SnackBar(content: Text('Error: ${e.toString()}')));
+          message: 'Error: ${e.toString()}',
+        );
       }
     } finally {
       if (mounted) {

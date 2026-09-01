@@ -2,6 +2,7 @@ import 'service_report_item_product.dart';
 import 'service_report_item_service.dart';
 import 'service_report_condition.dart';
 import '../../../clients/data/models/client_model.dart';
+import '../../../collaborators/domain/models/collaborator.dart';
 
 class ServiceReport {
   final String id;
@@ -40,6 +41,7 @@ class ServiceReport {
   final String? contactPhone;
   final String? contactEmail;
   final String? advisorName;
+  final List<Collaborator>? technicians;
   final List<ServiceReportItemProduct>? products;
   final List<ServiceReportItemService>? services;
   final List<ServiceReportCondition>? conditions;
@@ -90,6 +92,7 @@ class ServiceReport {
     this.contactPhone,
     this.contactEmail,
     this.advisorName,
+    this.technicians,
     this.products,
     this.services,
     this.conditions,
@@ -139,6 +142,7 @@ class ServiceReport {
     String? contactPhone,
     String? contactEmail,
     String? advisorName,
+    List<Collaborator>? technicians,
     List<ServiceReportItemProduct>? products,
     List<ServiceReportItemService>? services,
     List<ServiceReportCondition>? conditions,
@@ -187,6 +191,7 @@ class ServiceReport {
       contactPhone: contactPhone ?? this.contactPhone,
       contactEmail: contactEmail ?? this.contactEmail,
       advisorName: advisorName ?? this.advisorName,
+      technicians: technicians ?? this.technicians,
       products: products ?? this.products,
       services: services ?? this.services,
       conditions: conditions ?? this.conditions,
@@ -246,9 +251,28 @@ class ServiceReport {
       resolvedCategoryName = json['category_name'] as String?;
     }
 
-    // 3. Resolve nested advisor
+    // 3. Resolve technicians and nested advisor
+    List<Collaborator>? resolvedTechnicians;
+    if (json['service_report_collaborators'] != null &&
+        json['service_report_collaborators'] is List) {
+      resolvedTechnicians = (json['service_report_collaborators'] as List)
+          .map((c) {
+            if (c is Map<String, dynamic> && c['collaborators'] != null) {
+              return Collaborator.fromJson(
+                c['collaborators'] as Map<String, dynamic>,
+              );
+            }
+            return null;
+          })
+          .whereType<Collaborator>()
+          .toList();
+    }
+
     String? resolvedAdvisorName;
-    if (json['collaborators'] != null &&
+    if (resolvedTechnicians != null && resolvedTechnicians.isNotEmpty) {
+      resolvedAdvisorName =
+          resolvedTechnicians.map((t) => t.fullName).join(', ');
+    } else if (json['collaborators'] != null &&
         json['collaborators'] is Map<String, dynamic>) {
       resolvedAdvisorName = json['collaborators']['full_name'] as String?;
     } else {
@@ -328,6 +352,7 @@ class ServiceReport {
       clientState: resolvedClientState,
       clientCountry: resolvedClientCountry,
       contact: resolvedContact,
+      technicians: resolvedTechnicians,
       products: json['service_report_items_products'] != null
           ? (json['service_report_items_products'] as List)
               .map((p) =>

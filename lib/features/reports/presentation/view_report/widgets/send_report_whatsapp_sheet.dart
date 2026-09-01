@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:pdf/pdf.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:intl/intl.dart';
 import '../../../../../shared/widgets/custom_text_field.dart';
 import '../../../../../shared/widgets/custom_button.dart';
 import '../../../../../shared/widgets/custom_dialog.dart';
@@ -17,7 +16,6 @@ import '../../../data/models/service_report.dart';
 import '../../../domain/models/service_report_model.dart'
     show ServiceReportStatus;
 import '../providers/view_report_provider.dart';
-import '../../../../../core/pdf/templates/service_report_pdf_template.dart';
 
 class SendReportWhatsAppSheet extends ConsumerStatefulWidget {
   final ServiceReport report;
@@ -51,8 +49,8 @@ class _SendReportWhatsAppSheetState
     super.initState();
     final initialPhone =
         PhoneUtils.normalizeForWhatsApp(widget.report.contactPhone) ??
-            PhoneUtils.normalizeForWhatsApp(widget.report.clientPhone) ??
-            '';
+        PhoneUtils.normalizeForWhatsApp(widget.report.clientPhone) ??
+        '';
     _phoneController = TextEditingController(text: initialPhone);
     _messageController = TextEditingController(text: '');
   }
@@ -89,106 +87,82 @@ class _SendReportWhatsAppSheetState
 
     try {
       final userProfile = ref.read(userProfileProvider).value;
-      final userEmail = Supabase.instance.client.auth.currentUser?.email;
 
       if (userProfile == null) {
         throw Exception('No se pudo cargar el perfil del usuario');
       }
 
-      // 1. Generar PDF
-      final pdfBytes = await ServiceReportPdfTemplate(
-        report: widget.report,
-        products: widget.report.products ?? [],
-        services: widget.report.services ?? [],
-        conditions: widget.report.conditions ?? [],
-        userProfile: userProfile,
-        userEmail: userEmail,
-      ).generate(PdfPageFormat.a4);
-
-      final fileName = '${widget.report.reportNumber ?? widget.report.id}.pdf';
-
-      // 2. Subir PDF & Generar Action Token
+      // 1. Generar Action Token para WebViewer (flujo ligero, sin PDF)
       final reportsRepo = ref.read(serviceReportsRepositoryProvider);
-      await reportsRepo.uploadReportPdf(
-        reportId: widget.report.id,
-        pdfBytes: pdfBytes,
-        fileName: fileName,
+      final actionToken = await reportsRepo.generateActionToken(
+        widget.report.id,
       );
-
-      final actionToken =
-          await reportsRepo.generateActionToken(widget.report.id);
 
       final userName =
           '${userProfile.firstName ?? ''} ${userProfile.lastName ?? ''}'.trim();
-      final isCompany = userProfile.companyName != null &&
+      final isCompany =
+          userProfile.companyName != null &&
           userProfile.companyName!.trim().isNotEmpty;
 
-      final headerUser = isCompany
+      final senderDisplayName = isCompany
           ? userProfile.companyName!.trim()
           : (userName.isEmpty ? 'D-UNA' : userName);
 
-      final contactName = widget.report.contactName ??
-          widget.report.clientName ??
-          'Cliente';
+      final contactName =
+          widget.report.contactName ?? widget.report.clientName ?? 'Cliente';
 
       final categoryName = widget.report.categoryName ?? 'Servicio Técnico';
-
-      final bodyUser = (isCompany &&
-              widget.report.advisorName != null &&
-              widget.report.advisorName!.trim().isNotEmpty)
-          ? widget.report.advisorName!.trim()
-          : (userName.isEmpty ? headerUser : userName);
 
       final userPhone = userProfile.phone ?? '';
 
       final userNote = _messageController.text.trim();
-      final defaultNote =
-          'Adjunto el reporte de servicio ${widget.report.reportNumber ?? ""}.';
-      final finalNote = userNote.isEmpty ? defaultNote : userNote;
+      final defaultAvailability =
+          'Este reporte estará disponible sólo por 30 días.';
+      final finalNote = userNote.isEmpty
+          ? defaultAvailability
+          : '$userNote (Enlace disponible por 30 días)';
+
+      final formattedDate = DateFormat(
+        'dd/MM/yyyy',
+      ).format(widget.report.serviceDate);
 
       final cleanPhone = phone.replaceAll(RegExp(r'[^\d]'), '');
 
       // 3. Enviar mensaje via WhatsApp Cloud API
-      await ref.read(whatsappRepositoryProvider).sendMessage(
+      await ref
+          .read(whatsappRepositoryProvider)
+          .sendMessage(
             phone: cleanPhone,
-            templateName: 'd_una_envio_cotizacion_formal',
+            templateName: 'd_una_envio_reporte_servicio',
             headerVariables: [
               {
                 'name': 'usuario',
-                'text': _sanitizeHeaderParam(headerUser),
+                'text': _sanitizeHeaderParam(senderDisplayName, maxLength: 22),
               },
             ],
             bodyVariables: [
+              {'name': 'contacto', 'text': _sanitizeParam(contactName)},
+              {'name': 'categoria', 'text': _sanitizeParam(categoryName)},
+              {'name': 'usuario', 'text': _sanitizeParam(senderDisplayName)},
               {
-                'name': 'contacto',
-                'text': _sanitizeParam(contactName),
+                'name': 'fecha_ejecucion',
+                'text': _sanitizeParam(formattedDate),
               },
               {
-                'name': 'categoria',
-                'text': _sanitizeParam(categoryName),
+                'name': 'telefono',
+                'text': _sanitizeParam(
+                  userPhone.isNotEmpty ? userPhone : 'nuestro equipo',
+                ),
               },
-              {
-                'name': 'numero_documento',
-                'text': _sanitizeParam(widget.report.reportNumber ?? 'RS-PENDIENTE'),
-              },
-              {
-                'name': 'asesor',
-                'text': _sanitizeParam(bodyUser),
-              },
-              {
-                'name': 'telefono_contacto',
-                'text': _sanitizeParam(userPhone.isNotEmpty ? userPhone : 'nuestro equipo'),
-              },
-              {
-                'name': 'nota_validez',
-                'text': _sanitizeParam(finalNote),
-              },
+              {'name': 'nota_personalizada', 'text': _sanitizeParam(finalNote)},
             ],
             buttonUrlParam: 'report.html?token=$actionToken',
           );
 
       // 4. Consumir crédito
-      await ref.read(creditsRepositoryProvider).consumeCredit(
+      await ref
+          .read(creditsRepositoryProvider)
+          .consumeCredit(
             documentType: 'report',
             channel: 'whatsapp',
             referenceId: widget.report.id,
@@ -197,20 +171,22 @@ class _SendReportWhatsAppSheetState
 
       // 5. Actualizar estado del reporte
       final currentStatus = widget.report.status;
-      final newStatus = (currentStatus == ServiceReportStatus.sent.dbValue ||
+      final newStatus =
+          (currentStatus == ServiceReportStatus.sent.dbValue ||
               currentStatus == ServiceReportStatus.resent.dbValue)
           ? ServiceReportStatus.resent.dbValue
           : ServiceReportStatus.sent.dbValue;
 
       await ref
-          .read(reportsListProvider.notifier)
+          .read(serviceReportsRepositoryProvider)
           .updateReportStatus(widget.report.id, newStatus);
 
       ref.invalidate(viewReportProvider(widget.report.id));
       refreshAllReportProviders(ref);
 
-      final freshCreditStatus =
-          await ref.read(creditsRepositoryProvider).getCreditStatus();
+      final freshCreditStatus = await ref
+          .read(creditsRepositoryProvider)
+          .getCreditStatus();
       ref.invalidate(userCreditsStatusProvider);
       ref.invalidate(creditTransactionsHistoryProvider);
 

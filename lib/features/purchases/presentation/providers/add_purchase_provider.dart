@@ -1,3 +1,7 @@
+import 'package:d_una_app/core/constants/draft_constants.dart';
+import 'package:d_una_app/core/models/draft_data.dart';
+import 'package:d_una_app/core/services/draft_storage_service.dart';
+import 'package:d_una_app/core/providers/draft_providers.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:d_una_app/features/purchases/domain/models/models.dart';
@@ -115,6 +119,44 @@ class AddPurchaseState extends Equatable {
       error: error,
     );
   }
+
+  Map<String, dynamic> toDraftJson() {
+    return {
+      'purchase_id': purchaseId,
+      'supplier_id': supplierId,
+      'supplier_name': supplierName,
+      'supplier_tax_id': supplierTaxId,
+      'supplier_order_id': supplierOrderId,
+      'document_type': documentType,
+      'document_number': documentNumber,
+      'invoice_photo_url': invoicePhotoUrl,
+      'date': date.toIso8601String(),
+      'tax_rate': taxRate,
+      'products': products.map((p) => p.toJson()).toList(),
+      'serials': serials.map((s) => s.toDraftJson()).toList(),
+    };
+  }
+
+  factory AddPurchaseState.fromDraftJson(Map<String, dynamic> json) {
+    return AddPurchaseState(
+      purchaseId: json['purchase_id'] as String?,
+      supplierId: json['supplier_id'] as String?,
+      supplierName: json['supplier_name'] as String?,
+      supplierTaxId: json['supplier_tax_id'] as String?,
+      supplierOrderId: json['supplier_order_id'] as String?,
+      documentType: json['document_type'] as String? ?? 'invoice',
+      documentNumber: json['document_number'] as String?,
+      invoicePhotoUrl: json['invoice_photo_url'] as String?,
+      date: DateTime.tryParse(json['date'] as String? ?? '') ?? DateTime.now(),
+      taxRate: (json['tax_rate'] as num?)?.toDouble() ?? 16.0,
+      products: (json['products'] as List? ?? [])
+          .map((p) => PurchaseItemProduct.fromJson(p as Map<String, dynamic>))
+          .toList(),
+      serials: (json['serials'] as List? ?? [])
+          .map((s) => ProductSerial.fromDraftJson(s as Map<String, dynamic>))
+          .toList(),
+    );
+  }
 }
 
 class AddPurchaseNotifier extends StateNotifier<AddPurchaseState> {
@@ -125,6 +167,96 @@ class AddPurchaseNotifier extends StateNotifier<AddPurchaseState> {
   AddPurchaseNotifier(this._ref, this._repository) : super(AddPurchaseState()) {
     _baselineState = state;
     _loadFinancialParameters();
+  }
+
+  DraftStorageService get _draftStorage =>
+      _ref.read(draftStorageServiceProvider);
+
+  String _getDraftKey({String? purchaseId}) {
+    if (purchaseId != null && purchaseId.isNotEmpty) {
+      return '${DraftConstants.purchasesModule}_$purchaseId';
+    }
+    if (state.purchaseId != null && state.purchaseId!.isNotEmpty) {
+      return '${DraftConstants.purchasesModule}_${state.purchaseId}';
+    }
+    return DraftConstants.purchasesModule;
+  }
+
+  void autoSaveDraft({int tabIndex = 0, String? purchaseId}) {
+    final isEditing =
+        (state.purchaseId != null && state.purchaseId!.isNotEmpty) ||
+        (purchaseId != null && purchaseId.isNotEmpty);
+
+    if (isEditing) {
+      if (!hasChanges) return;
+    } else {
+      final hasData =
+          state.products.isNotEmpty ||
+          state.supplierId != null ||
+          (state.documentNumber != null &&
+              state.documentNumber!.trim().isNotEmpty);
+
+      if (!hasData) return;
+    }
+
+    final key = _getDraftKey(purchaseId: purchaseId);
+    final draft = DraftData(
+      moduleKey: key,
+      savedAt: DateTime.now(),
+      tabIndex: tabIndex,
+      summaryTitle:
+          state.supplierName != null
+              ? '${isEditing ? "Modificación Compra" : "Registro de Compra"} - ${state.supplierName}'
+              : 'Registro de Compra',
+      data: state.toDraftJson(),
+    );
+    _draftStorage.saveDraftDebounced(draft);
+  }
+
+  Future<void> saveDraftNow({int tabIndex = 0, String? purchaseId}) async {
+    final isEditing =
+        (state.purchaseId != null && state.purchaseId!.isNotEmpty) ||
+        (purchaseId != null && purchaseId.isNotEmpty);
+
+    if (isEditing) {
+      if (!hasChanges) return;
+    } else {
+      final hasData =
+          state.products.isNotEmpty ||
+          state.supplierId != null ||
+          (state.documentNumber != null &&
+              state.documentNumber!.trim().isNotEmpty);
+
+      if (!hasData) return;
+    }
+
+    final key = _getDraftKey(purchaseId: purchaseId);
+    final draft = DraftData(
+      moduleKey: key,
+      savedAt: DateTime.now(),
+      tabIndex: tabIndex,
+      summaryTitle:
+          state.supplierName != null
+              ? '${isEditing ? "Modificación Compra" : "Registro de Compra"} - ${state.supplierName}'
+              : 'Registro de Compra',
+      data: state.toDraftJson(),
+    );
+    await _draftStorage.saveDraftNow(draft);
+  }
+
+  Future<DraftData?> checkAndRestoreDraft({String? purchaseId}) async {
+    final key = _getDraftKey(purchaseId: purchaseId);
+    final draft = await _draftStorage.getDraft(key);
+    if (draft != null && draft.data.isNotEmpty) {
+      state = AddPurchaseState.fromDraftJson(draft.data);
+      return draft;
+    }
+    return null;
+  }
+
+  Future<void> clearDraft({String? purchaseId}) async {
+    final key = _getDraftKey(purchaseId: purchaseId);
+    await _draftStorage.clearDraft(key);
   }
 
   bool get hasChanges {
@@ -176,6 +308,7 @@ class AddPurchaseNotifier extends StateNotifier<AddPurchaseState> {
       supplierName: name,
       supplierTaxId: taxId,
     );
+    autoSaveDraft();
   }
 
   void loadFromDetails(
@@ -202,14 +335,17 @@ class AddPurchaseNotifier extends StateNotifier<AddPurchaseState> {
 
   void setDocumentType(String type) {
     state = state.copyWith(documentType: type);
+    autoSaveDraft();
   }
 
   void setDocumentNumber(String number) {
     state = state.copyWith(documentNumber: number);
+    autoSaveDraft();
   }
 
   void setDate(DateTime date) {
     state = state.copyWith(date: date);
+    autoSaveDraft();
   }
 
   bool addProduct(PurchaseItemProduct product) {
@@ -217,6 +353,7 @@ class AddPurchaseNotifier extends StateNotifier<AddPurchaseState> {
       return false;
     }
     state = state.copyWith(products: [...state.products, product]);
+    autoSaveDraft();
     return true;
   }
 
@@ -226,6 +363,7 @@ class AddPurchaseNotifier extends StateNotifier<AddPurchaseState> {
           .map((p) => p.id == product.id ? product : p)
           .toList(),
     );
+    autoSaveDraft();
   }
 
   void removeProduct(String productId) {
@@ -233,6 +371,7 @@ class AddPurchaseNotifier extends StateNotifier<AddPurchaseState> {
       products: state.products.where((p) => p.productId != productId).toList(),
       serials: state.serials.where((s) => s.productId != productId).toList(),
     );
+    autoSaveDraft();
   }
 
   void updateProductQuantity(String productId, double quantity) {
@@ -244,6 +383,7 @@ class AddPurchaseNotifier extends StateNotifier<AddPurchaseState> {
           )
           .toList(),
     );
+    autoSaveDraft();
   }
 
   void setProductRequiresSerials(String productId, bool requiresSerials) {
@@ -256,16 +396,19 @@ class AddPurchaseNotifier extends StateNotifier<AddPurchaseState> {
           )
           .toList(),
     );
+    autoSaveDraft();
   }
 
   void addSerial(ProductSerial serial) {
     state = state.copyWith(serials: [...state.serials, serial]);
+    autoSaveDraft();
   }
 
   void removeSerial(String id) {
     state = state.copyWith(
       serials: state.serials.where((s) => s.id != id).toList(),
     );
+    autoSaveDraft();
   }
 
   void updateSerialsForProduct(
@@ -278,6 +421,7 @@ class AddPurchaseNotifier extends StateNotifier<AddPurchaseState> {
         ...productSerials,
       ],
     );
+    autoSaveDraft();
   }
 
   Future<bool> createPurchase() async {
@@ -333,19 +477,24 @@ class AddPurchaseNotifier extends StateNotifier<AddPurchaseState> {
           )
           .toList();
 
+      final wasEditing = state.purchaseId != null && state.purchaseId!.isNotEmpty;
+      final previousPurchaseId = state.purchaseId;
+
       // Save via repository
-      if (state.purchaseId != null) {
+      if (wasEditing) {
         await _repository.updatePurchase(purchase, dbProducts, state.serials);
+        await clearDraft(purchaseId: previousPurchaseId);
       } else {
         await _repository.createPurchase(purchase, dbProducts, state.serials);
+        await clearDraft(purchaseId: null);
       }
 
       _ref.invalidate(paginatedPurchasesListProvider);
       _ref.invalidate(paginatedPurchaseSearchProvider);
       _ref.invalidate(purchasesProvider);
-      if (state.purchaseId != null) {
+      if (wasEditing) {
         // Also invalidate details provider for this specific purchase
-        _ref.invalidate(purchaseDetailsProvider(state.purchaseId!));
+        _ref.invalidate(purchaseDetailsProvider(previousPurchaseId!));
       }
 
       state = state.copyWith(isLoading: false);
@@ -357,9 +506,16 @@ class AddPurchaseNotifier extends StateNotifier<AddPurchaseState> {
     }
   }
 
-  void reset() {
+  void reset({bool clearPersistedDraft = false, String? purchaseId}) {
+    final isEditing =
+        (state.purchaseId != null && state.purchaseId!.isNotEmpty) ||
+        (purchaseId != null && purchaseId.isNotEmpty);
+    final currentId = purchaseId ?? state.purchaseId;
     state = AddPurchaseState();
     updateBaseline();
+    if (clearPersistedDraft) {
+      clearDraft(purchaseId: isEditing ? currentId : null);
+    }
     _loadFinancialParameters(); // Recargar IVA y otros parámetros
   }
 }

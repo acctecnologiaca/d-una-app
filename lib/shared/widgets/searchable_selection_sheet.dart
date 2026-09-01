@@ -5,6 +5,7 @@ class SearchableSelectionSheet<T extends Object> extends StatefulWidget {
   final List<T> items;
   final T? selectedValue;
   final String Function(T) itemLabelBuilder;
+  final String Function(T)? itemSubtitleBuilder;
   final bool showAddOption;
   final String addOptionLabel;
   final VoidCallback? onAddPressed;
@@ -14,6 +15,7 @@ class SearchableSelectionSheet<T extends Object> extends StatefulWidget {
     required this.items,
     required this.selectedValue,
     required this.itemLabelBuilder,
+    this.itemSubtitleBuilder,
     this.showAddOption = false,
     this.addOptionLabel = 'Agregar',
     this.onAddPressed,
@@ -25,6 +27,7 @@ class SearchableSelectionSheet<T extends Object> extends StatefulWidget {
     required List<T> items,
     required T? selectedValue,
     required String Function(T) itemLabelBuilder,
+    String Function(T)? itemSubtitleBuilder,
     bool showAddOption = false,
     String addOptionLabel = 'Agregar',
     VoidCallback? onAddPressed,
@@ -41,6 +44,7 @@ class SearchableSelectionSheet<T extends Object> extends StatefulWidget {
         items: items,
         selectedValue: selectedValue,
         itemLabelBuilder: itemLabelBuilder,
+        itemSubtitleBuilder: itemSubtitleBuilder,
         showAddOption: showAddOption,
         addOptionLabel: addOptionLabel,
         onAddPressed: onAddPressed,
@@ -82,7 +86,10 @@ class _SearchableSelectionSheetState<T extends Object>
     final filteredItems = widget.items.where((item) {
       if (_searchQuery.isEmpty) return true;
       final label = widget.itemLabelBuilder(item).toLowerCase();
-      return label.contains(_searchQuery.toLowerCase());
+      final subtitle =
+          widget.itemSubtitleBuilder?.call(item).toLowerCase() ?? '';
+      return label.contains(_searchQuery.toLowerCase()) ||
+          subtitle.contains(_searchQuery.toLowerCase());
     }).toList();
 
     return DraggableScrollableSheet(
@@ -160,24 +167,35 @@ class _SearchableSelectionSheetState<T extends Object>
 
             // Add Option (if enabled)
             if (widget.showAddOption)
-              ListTile(
-                contentPadding: const EdgeInsets.symmetric(horizontal: 24),
-                leading: CircleAvatar(
-                  backgroundColor: colors.primaryContainer,
-                  child: Icon(Icons.add, color: colors.onPrimaryContainer),
-                ),
-                title: Text(
-                  widget.addOptionLabel,
-                  style: TextStyle(
-                    color: colors.primary,
-                    fontWeight: FontWeight.bold,
-                    fontSize: 16,
-                  ),
-                ),
+              InkWell(
                 onTap: () {
                   Navigator.pop(context);
                   widget.onAddPressed?.call();
                 },
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 24,
+                    vertical: 12,
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(
+                        Icons.add,
+                        color: colors.primary,
+                        size: 20,
+                      ),
+                      const SizedBox(width: 12),
+                      Text(
+                        widget.addOptionLabel,
+                        style: TextStyle(
+                          color: colors.primary,
+                          fontWeight: FontWeight.w600,
+                          fontSize: 15,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
               ),
 
             // Options List
@@ -202,6 +220,7 @@ class _SearchableSelectionSheetState<T extends Object>
                         final item = filteredItems[index];
                         final isSelected = widget.selectedValue == item;
                         final label = widget.itemLabelBuilder(item);
+                        final subtitle = widget.itemSubtitleBuilder?.call(item);
                         final initial = label.isNotEmpty
                             ? label[0].toUpperCase()
                             : '?';
@@ -209,7 +228,6 @@ class _SearchableSelectionSheetState<T extends Object>
                         return ListTile(
                           contentPadding: const EdgeInsets.symmetric(
                             horizontal: 24,
-                            vertical: 4,
                           ),
                           leading: CircleAvatar(
                             backgroundColor: isSelected
@@ -230,11 +248,20 @@ class _SearchableSelectionSheetState<T extends Object>
                             style: TextStyle(
                               fontSize: 16,
                               fontWeight: isSelected
-                                  ? FontWeight.bold
-                                  : FontWeight.w400,
+                                   ? FontWeight.bold
+                                   : FontWeight.w400,
                               color: colors.onSurface,
                             ),
                           ),
+                          subtitle: subtitle != null && subtitle.isNotEmpty
+                              ? Text(
+                                  subtitle,
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    color: colors.onSurfaceVariant,
+                                  ),
+                                )
+                              : null,
                           trailing: isSelected
                               ? Icon(Icons.check, color: colors.primary)
                               : null,

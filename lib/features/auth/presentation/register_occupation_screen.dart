@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:d_una_app/shared/widgets/app_toast.dart';
 import 'package:d_una_app/shared/widgets/friendly_error_widget.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -46,9 +47,7 @@ class _RegisterOccupationScreenState
         }
       } catch (e) {
         if (mounted) {
-          ScaffoldMessenger.of(
-            context,
-          ).showSnackBar(SnackBar(content: Text('Error: $e')));
+          AppToast.error(context, message: 'Error: $e');
         }
       }
     }
@@ -62,8 +61,9 @@ class _RegisterOccupationScreenState
         if (_secondaryOccupationIds.length < 2) {
           _secondaryOccupationIds.add(occupationId);
         } else {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Máximo 2 ocupaciones secundarias')),
+          AppToast.warning(
+            context,
+            message: 'Máximo 2 ocupaciones secundarias',
           );
         }
       }

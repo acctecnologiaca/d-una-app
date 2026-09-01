@@ -157,7 +157,8 @@ class ProfileRepository {
       final data = await _supabase
           .from('verification_documents')
           .select()
-          .eq('user_id', userId);
+          .eq('user_id', userId)
+          .order('created_at', ascending: false);
       return List<Map<String, dynamic>>.from(data);
     } catch (e) {
       throw Exception('Error fetching verification documents: $e');
@@ -183,13 +184,28 @@ class ProfileRepository {
             fileOptions: const FileOptions(upsert: true),
           );
 
-      // Insert record
-      await _supabase.from('verification_documents').insert({
-        'user_id': userId,
-        'document_type': documentType,
-        'file_path': fileName,
-        'status': 'pending',
-      });
+      // Check for existing record of same document_type to update or insert
+      final existing = await _supabase
+          .from('verification_documents')
+          .select('id')
+          .eq('user_id', userId)
+          .eq('document_type', documentType)
+          .maybeSingle();
+
+      if (existing != null) {
+        await _supabase.from('verification_documents').update({
+          'file_path': fileName,
+          'status': 'pending',
+          'created_at': DateTime.now().toIso8601String(),
+        }).eq('id', existing['id']);
+      } else {
+        await _supabase.from('verification_documents').insert({
+          'user_id': userId,
+          'document_type': documentType,
+          'file_path': fileName,
+          'status': 'pending',
+        });
+      }
     } catch (e) {
       throw Exception('Error uploading verification document: $e');
     }

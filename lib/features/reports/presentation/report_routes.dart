@@ -109,6 +109,14 @@ List<RouteBase> serviceReportsRoutes(GlobalKey<NavigatorState> rootNavigatorKey)
             ),
           ],
         ),
+        GoRoute(
+          path: 'view/:id',
+          parentNavigatorKey: rootNavigatorKey,
+          builder: (context, state) {
+            final reportId = state.pathParameters['id']!;
+            return ViewReportScreen(reportId: reportId);
+          },
+        ),
       ],
     ),
   ];

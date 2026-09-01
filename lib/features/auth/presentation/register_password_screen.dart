@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:d_una_app/shared/widgets/app_toast.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../shared/widgets/custom_text_field.dart';
@@ -37,8 +38,9 @@ class _RegisterPasswordScreenState
   void _onNext() {
     if (_formKey.currentState!.validate()) {
       if (_passwordController.text != _confirmController.text) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Las contraseñas no coinciden')),
+        AppToast.error(
+          context,
+          message: 'Las contraseñas no coinciden',
         );
         return;
       }

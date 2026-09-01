@@ -51,11 +51,11 @@ class ServiceReportItemService {
 
   factory ServiceReportItemService.fromJson(Map<String, dynamic> json) {
     return ServiceReportItemService(
-      id: json['id'] as String,
-      reportId: json['report_id'] as String,
+      id: json['id'] as String? ?? '',
+      reportId: json['report_id'] as String? ?? '',
       serviceId: json['service_id'] as String?,
       executionTimeId: json['execution_time_id'] as String?,
-      name: json['name'] as String,
+      name: json['name'] as String? ?? '',
       description: json['description'] as String?,
       quantity: (json['quantity'] as num?)?.toDouble() ?? 1.0,
       costPrice: (json['cost_price'] as num?)?.toDouble() ?? 0.0,

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:d_una_app/shared/widgets/app_toast.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../../../../../shared/widgets/wizard_progress_bar.dart';
@@ -182,16 +183,18 @@ class _AddServiceScreenState extends ConsumerState<AddServiceScreen> {
       }
 
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Servicio guardado exitosamente')),
-        );
         ref.invalidate(servicesProvider); // Refresh list
         context.pop();
+        AppToast.success(
+          context,
+          message: 'Servicio guardado exitosamente',
+        );
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error al guardar servicio: $e')),
+        AppToast.error(
+          context,
+          message: 'Error al guardar servicio: $e',
         );
       }
     }

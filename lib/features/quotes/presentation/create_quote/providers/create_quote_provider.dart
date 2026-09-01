@@ -1,3 +1,7 @@
+import 'package:d_una_app/core/constants/draft_constants.dart';
+import 'package:d_una_app/core/models/draft_data.dart';
+import 'package:d_una_app/core/services/draft_storage_service.dart';
+import 'package:d_una_app/core/providers/draft_providers.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../data/models/models.dart';
 import '../../../domain/repositories/quotes_repository.dart';
@@ -131,6 +135,76 @@ class QuoteState {
       pricingMethod: pricingMethod ?? this.pricingMethod,
       isReadOnly: isReadOnly ?? this.isReadOnly,
       hasProcessedOrders: hasProcessedOrders ?? this.hasProcessedOrders,
+    );
+  }
+
+  Map<String, dynamic> toDraftJson() {
+    return {
+      'quote': quote?.toJson(),
+      'products': products.map((p) => p.toJson()).toList(),
+      'services': services.map((s) => s.toJson()).toList(),
+      'conditions': conditions.map((c) => c.toJson()).toList(),
+      'client_id': clientId,
+      'client_name': clientName,
+      'contact_id': contactId,
+      'contact_name': contactName,
+      'validity_days': validityDays,
+      'category_id': categoryId,
+      'category_name': categoryName,
+      'advisor_id': advisorId,
+      'advisor_name': advisorName,
+      'notes': notes,
+      'label': label,
+      'date_issued': dateIssued.toIso8601String(),
+      'current_quote_number': currentQuoteNumber,
+      'client_type': clientType,
+      'advisor_phone': advisorPhone,
+      'advisor_email': advisorEmail,
+      'global_margin': globalMargin,
+      'global_tax_rate': globalTaxRate,
+      'pricing_method': pricingMethod,
+      'is_read_only': isReadOnly,
+      'has_processed_orders': hasProcessedOrders,
+    };
+  }
+
+  factory QuoteState.fromDraftJson(Map<String, dynamic> json) {
+    return QuoteState(
+      quote: json['quote'] != null
+          ? Quote.fromJson(json['quote'] as Map<String, dynamic>)
+          : null,
+      products: (json['products'] as List? ?? [])
+          .map((p) => QuoteItemProduct.fromJson(p as Map<String, dynamic>))
+          .toList(),
+      services: (json['services'] as List? ?? [])
+          .map((s) => QuoteItemService.fromJson(s as Map<String, dynamic>))
+          .toList(),
+      conditions: (json['conditions'] as List? ?? [])
+          .map((c) => QuoteCondition.fromJson(c as Map<String, dynamic>))
+          .toList(),
+      clientId: json['client_id'] as String?,
+      clientName: json['client_name'] as String?,
+      contactId: json['contact_id'] as String?,
+      contactName: json['contact_name'] as String?,
+      validityDays: (json['validity_days'] as num?)?.toInt() ?? 15,
+      categoryId: json['category_id'] as String?,
+      categoryName: json['category_name'] as String?,
+      advisorId: json['advisor_id'] as String?,
+      advisorName: json['advisor_name'] as String?,
+      notes: json['notes'] as String?,
+      label: json['label'] as String?,
+      dateIssued:
+          DateTime.tryParse(json['date_issued'] as String? ?? '') ??
+          DateTime.now(),
+      currentQuoteNumber: json['current_quote_number'] as String?,
+      clientType: json['client_type'] as String?,
+      advisorPhone: json['advisor_phone'] as String?,
+      advisorEmail: json['advisor_email'] as String?,
+      globalMargin: (json['global_margin'] as num?)?.toDouble() ?? 0.0,
+      globalTaxRate: (json['global_tax_rate'] as num?)?.toDouble() ?? 0.0,
+      pricingMethod: json['pricing_method'] as String? ?? 'margin',
+      isReadOnly: json['is_read_only'] as bool? ?? false,
+      hasProcessedOrders: json['has_processed_orders'] as bool? ?? false,
     );
   }
 
@@ -324,9 +398,105 @@ class CreateQuoteNotifier extends StateNotifier<QuoteState> {
        _lookupRepository = lookupRepository,
        super(QuoteState());
 
-  void reset() {
+  DraftStorageService get _draftStorage =>
+      _ref.read(draftStorageServiceProvider);
+
+  String _getDraftKey({String? quoteId}) {
+    if (quoteId != null && quoteId.isNotEmpty) {
+      return '${DraftConstants.quotesModule}_$quoteId';
+    }
+    if (state.quote != null && state.quote!.id.isNotEmpty) {
+      return '${DraftConstants.quotesModule}_${state.quote!.id}';
+    }
+    return DraftConstants.quotesModule;
+  }
+
+  void autoSaveDraft({int tabIndex = 0, String? quoteId}) {
+    final isEditing =
+        (state.quote != null && state.quote!.id.isNotEmpty) ||
+        (quoteId != null && quoteId.isNotEmpty);
+
+    if (isEditing) {
+      if (!state.hasChanges) return;
+    } else {
+      final hasData =
+          state.products.isNotEmpty ||
+          state.services.isNotEmpty ||
+          state.clientId != null ||
+          (state.notes != null && state.notes!.trim().isNotEmpty);
+
+      if (!hasData) return;
+    }
+
+    final key = _getDraftKey(quoteId: quoteId);
+    final draft = DraftData(
+      moduleKey: key,
+      savedAt: DateTime.now(),
+      tabIndex: tabIndex,
+      summaryTitle:
+          state.clientName != null
+              ? '${isEditing ? "Modificación" : "Cotización"} - ${state.clientName}'
+              : 'Cotización sin cliente',
+      data: state.toDraftJson(),
+    );
+    _draftStorage.saveDraftDebounced(draft);
+  }
+
+  Future<void> saveDraftNow({int tabIndex = 0, String? quoteId}) async {
+    final isEditing =
+        (state.quote != null && state.quote!.id.isNotEmpty) ||
+        (quoteId != null && quoteId.isNotEmpty);
+
+    if (isEditing) {
+      if (!state.hasChanges) return;
+    } else {
+      final hasData =
+          state.products.isNotEmpty ||
+          state.services.isNotEmpty ||
+          state.clientId != null ||
+          (state.notes != null && state.notes!.trim().isNotEmpty);
+
+      if (!hasData) return;
+    }
+
+    final key = _getDraftKey(quoteId: quoteId);
+    final draft = DraftData(
+      moduleKey: key,
+      savedAt: DateTime.now(),
+      tabIndex: tabIndex,
+      summaryTitle:
+          state.clientName != null
+              ? '${isEditing ? "Modificación" : "Cotización"} - ${state.clientName}'
+              : 'Cotización sin cliente',
+      data: state.toDraftJson(),
+    );
+    await _draftStorage.saveDraftNow(draft);
+  }
+
+  Future<DraftData?> checkAndRestoreDraft({String? quoteId}) async {
+    final key = _getDraftKey(quoteId: quoteId);
+    final draft = await _draftStorage.getDraft(key);
+    if (draft != null && draft.data.isNotEmpty) {
+      state = QuoteState.fromDraftJson(draft.data);
+      return draft;
+    }
+    return null;
+  }
+
+  Future<void> clearDraft({String? quoteId}) async {
+    final key = _getDraftKey(quoteId: quoteId);
+    await _draftStorage.clearDraft(key);
+  }
+
+  void reset({bool clearPersistedDraft = false, String? quoteId}) {
+    final isEditing =
+        (state.quote != null && state.quote!.id.isNotEmpty) ||
+        (quoteId != null && quoteId.isNotEmpty);
+    final currentId = quoteId ?? state.quote?.id;
     state = QuoteState();
-    initQuote();
+    if (clearPersistedDraft) {
+      clearDraft(quoteId: isEditing ? currentId : null);
+    }
   }
 
   Future<void> loadQuote(String id) async {
@@ -1134,7 +1304,16 @@ class CreateQuoteNotifier extends StateNotifier<QuoteState> {
         );
       }
 
+      final wasEditing = isEditing;
+      final previousQuoteId = state.quote?.id;
+
       state = state.copyWith(quote: savedQuote, isLoading: false);
+
+      if (wasEditing) {
+        await clearDraft(quoteId: previousQuoteId);
+      } else {
+        await clearDraft(quoteId: null);
+      }
 
       // Auto-refresh the list & view provider
       _ref.invalidate(viewQuoteProvider(savedQuote.id));

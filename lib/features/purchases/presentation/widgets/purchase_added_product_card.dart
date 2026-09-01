@@ -4,6 +4,8 @@ import '../../../../core/utils/string_extensions.dart';
 import '../../../../shared/utils/currency_formatter.dart';
 import 'package:d_una_app/features/purchases/data/models/purchase_item_product.dart';
 import 'package:d_una_app/shared/widgets/expandable_action_card.dart';
+import 'package:d_una_app/shared/widgets/editable_quantity_stepper.dart';
+import 'package:d_una_app/shared/widgets/custom_dialog.dart';
 import 'package:d_una_app/shared/widgets/uom_status_badge.dart';
 
 class PurchaseAddedProductCard extends StatelessWidget {
@@ -85,46 +87,67 @@ class PurchaseAddedProductCard extends StatelessWidget {
         ],
       ),
       actions: [
-        if (isEditable)
+        if (isEditable && !isReadOnly)
           IconButton(
             icon: const Icon(Symbols.delete, fontWeight: FontWeight.w500),
             color: colors.onSurfaceVariant,
-            onPressed: onDelete,
+            visualDensity: VisualDensity.compact,
+            onPressed: () {
+              CustomDialog.show(
+                context: context,
+                dialog: CustomDialog.destructive(
+                  title: '¿Eliminar producto?',
+                  contentText:
+                      '¿Estás seguro de que deseas eliminar este producto de la compra?',
+                  actions: [
+                    TextButton(
+                      onPressed: () =>
+                          Navigator.of(context, rootNavigator: true).pop(),
+                      child: const Text('Cancelar'),
+                    ),
+                    FilledButton(
+                      onPressed: () {
+                        Navigator.of(context, rootNavigator: true).pop();
+                        onDelete();
+                      },
+                      style: FilledButton.styleFrom(
+                        backgroundColor: colors.error,
+                        foregroundColor: colors.onError,
+                      ),
+                      child: const Text('Eliminar'),
+                    ),
+                  ],
+                ),
+              );
+            },
             tooltip: 'Eliminar producto',
           ),
-        IconButton(
-          icon: Image.asset(
-            'assets/icons/package_edit.png',
-            width: 24,
-            height: 24,
+        if (!isReadOnly)
+          IconButton(
+            icon: const Icon(Symbols.sell),
             color: colors.onSurfaceVariant,
+            visualDensity: VisualDensity.compact,
+            onPressed: onEdit,
+            tooltip: 'Ajustar detalles de compra',
           ),
-          onPressed: onEdit,
-          tooltip: 'Editar detalles',
-        ),
-        IconButton(
-          icon: const Icon(Symbols.barcode),
-          color: colors.onSurfaceVariant,
-          onPressed: onAddSerials,
-          tooltip: 'Gestionar seriales',
-        ),
+        if (!isReadOnly)
+          IconButton(
+            icon: const Icon(Symbols.barcode),
+            color: colors.onSurfaceVariant,
+            visualDensity: VisualDensity.compact,
+            onPressed: onAddSerials,
+            tooltip: 'Gestionar seriales',
+          ),
       ],
-      expandedTrailing: Builder(
-        builder: (context) {
-          if (item.warrantyTime == null || item.warrantyTime == 0) {
-            return Text(
-              'Sin garantía',
-              style: TextStyle(fontSize: 13, color: colors.onSurfaceVariant),
-            );
-          }
-          final unitMap = {'days': 'días', 'months': 'meses', 'years': 'años'};
-          final unit = unitMap[item.warrantyUnit] ?? item.warrantyUnit ?? '';
-          return Text(
-            'Garantía: ${item.warrantyTime} $unit',
-            style: TextStyle(fontSize: 13, color: colors.onSurfaceVariant),
-          );
-        },
-      ),
+      expandedTrailing: (isReadOnly || !isEditable)
+          ? null
+          : EditableQuantityStepper(
+              label: 'Cantidad:',
+              value: item.quantity,
+              min: 1,
+              max: 99999,
+              onChanged: onQuantityChanged,
+            ),
     );
   }
 }

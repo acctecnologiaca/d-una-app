@@ -12,6 +12,8 @@ import '../../providers/lookup_providers.dart';
 import '../../../../../shared/widgets/filter_bottom_sheet.dart';
 import '../../../data/models/category_model.dart';
 import '../../../data/models/brand_model.dart';
+import '../../../../profile/presentation/providers/profile_provider.dart';
+import '../../../../ads/presentation/providers/ads_provider.dart';
 
 class ProductSearchScreen extends ConsumerStatefulWidget {
   const ProductSearchScreen({super.key});
@@ -128,12 +130,31 @@ class _ProductSearchScreenState extends ConsumerState<ProductSearchScreen> {
   @override
   Widget build(BuildContext context) {
     final paginatedAsync = ref.watch(paginatedProductSearchProvider);
+    final userProfile = ref.watch(userProfileProvider).valueOrNull;
+    final occupationIds = <String>[
+      if (userProfile?.occupationId != null) userProfile!.occupationId!,
+      ...userProfile?.secondaryOccupationIds ?? [],
+    ];
+
+    final isAdsEnabled =
+        ref.watch(isAdPlacementEnabledProvider('product_search'));
+    final adBannersAsync = isAdsEnabled
+        ? ref.watch(
+            adBannersProvider(
+              AdBannerParams(
+                occupationIds: occupationIds,
+              ),
+            ),
+          )
+        : null;
 
     return GenericSearchScreen<Product>(
       hintText: 'Buscar productos...',
       historyKey: _getHistoryKey(),
       isPaginatedMode: true,
       paginatedDataAsync: paginatedAsync,
+      banners: isAdsEnabled ? adBannersAsync?.valueOrNull : null,
+      screenContext: 'own_inventory_search',
       onServerSearch: (query) {
         ref.read(paginatedProductSearchProvider.notifier).updateSearch(query);
       },

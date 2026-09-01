@@ -53,3 +53,6 @@ Create these essential files to bootstrap the feature.
 
 ## 4. Router Registration
 - Remind the user (or automate if possible) to register the new screen in `lib/core/router/app_router.dart`.
+
+## 5. Drafts & Auto-Save (For Editable Documents & Forms)
+- If the feature includes document creation, editing, or multi-step wizards, follow the standard in [Draftable Module Guide](file:///c:/Users/aleja/flutter_apps/MVP/d_una_app/.agents/skills/development_safety_guardrails/draftable_module_guide.md) and the `implement_draftable_module` skill to implement `DraftStorageService`, debounced auto-save, and `DraftToast`.

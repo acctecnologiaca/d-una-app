@@ -5,6 +5,9 @@ import '../../../shared/widgets/custom_text_field.dart';
 import '../../../shared/widgets/custom_button.dart';
 import 'providers/register_provider.dart'; // To access authRepositoryProvider
 import '../../../shared/widgets/custom_dialog.dart';
+import 'package:d_una_app/shared/widgets/app_toast.dart';
+
+// ignore_for_file: deprecated_member_use
 
 class LoginScreen extends ConsumerStatefulWidget {
   const LoginScreen({super.key});
@@ -39,26 +42,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
         }
       } catch (_) {
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Row(
-                children: const [
-                  Icon(Icons.error_outline, color: Colors.white),
-                  SizedBox(width: 12),
-                  Expanded(
-                    child: Text(
-                      'Correo o contraseña incorrecta',
-                      style: TextStyle(color: Colors.white),
-                    ),
-                  ),
-                ],
-              ),
-              backgroundColor: Theme.of(context).colorScheme.error,
-              behavior: SnackBarBehavior.floating,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(8),
-              ),
-            ),
+          AppToast.error(
+            context,
+            message: 'Correo o contraseña incorrecta',
           );
         }
       }
@@ -113,36 +99,22 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
           FilledButton(
             onPressed: () async {
               if (formKey.currentState!.validate()) {
-                // Since CustomDialog.confirmation doesn't expose its own setState,
-                // and the original used a nested StatefulBuilder for isLoading,
-                // we should probably handle loading state inside the action if needed,
-                // or just rely on the button disabling logic if we kept the StatefulBuilder.
-                // However, CustomDialog doesn't easily support dynamic actions yet without
-                // rebuilds of the whole dialog.
-
-                // Let's stick to the simplest migration first.
                 try {
                   await ref
                       .read(authRepositoryProvider)
                       .resetPassword(email: emailController.text.trim());
                   if (mounted) {
                     context.pop();
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text(
-                          'Se ha enviado un correo de recuperación',
-                        ),
-                        backgroundColor: Colors.green,
-                      ),
+                    AppToast.success(
+                      context,
+                      message: 'Se ha enviado un correo de recuperación',
                     );
                   }
                 } catch (e) {
                   if (mounted) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: Text('Error al enviar solicitud: $e'),
-                        backgroundColor: Theme.of(context).colorScheme.error,
-                      ),
+                    AppToast.error(
+                      context,
+                      message: 'Error al enviar solicitud: $e',
                     );
                   }
                 }

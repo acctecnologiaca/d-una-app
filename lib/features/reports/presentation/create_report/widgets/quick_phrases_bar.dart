@@ -3,11 +3,13 @@ import 'package:flutter/material.dart';
 class QuickPhrasesBar extends StatelessWidget {
   final List<String> phrases;
   final ValueChanged<String> onPhraseSelected;
+  final EdgeInsetsGeometry? padding;
 
   const QuickPhrasesBar({
     super.key,
     required this.phrases,
     required this.onPhraseSelected,
+    this.padding,
   });
 
   @override
@@ -19,6 +21,7 @@ class QuickPhrasesBar extends StatelessWidget {
     return SizedBox(
       height: 36,
       child: ListView.separated(
+        padding: padding ?? const EdgeInsets.symmetric(horizontal: 16),
         scrollDirection: Axis.horizontal,
         itemCount: phrases.length,
         separatorBuilder: (context, index) => const SizedBox(width: 8),
@@ -27,24 +30,23 @@ class QuickPhrasesBar extends StatelessWidget {
           return ActionChip(
             avatar: Icon(
               Icons.add_circle_outline,
-              size: 14,
+              size: 16,
               color: colors.primary,
             ),
             label: Text(
               phrase,
               style: TextStyle(
-                fontSize: 12,
+                fontSize: 13,
+                fontWeight: FontWeight.w500,
                 color: colors.onSurface,
               ),
             ),
-            backgroundColor:
-                colors.surfaceContainerHighest.withValues(alpha: 0.6),
-            side:
-                BorderSide(color: colors.outlineVariant.withValues(alpha: 0.5)),
+            backgroundColor: colors.surface,
+            side: BorderSide(color: colors.outline.withValues(alpha: 0.3)),
             shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(16),
+              borderRadius: BorderRadius.circular(8),
             ),
-            padding: const EdgeInsets.symmetric(horizontal: 4),
+            padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
             onPressed: () => onPhraseSelected(phrase),
           );
         },

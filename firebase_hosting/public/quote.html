@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Cotización - D-UNA</title>
+  <title>Cotización · D-UNA</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
@@ -99,7 +99,7 @@
       border: 1px solid var(--neutral-border-dark);
       color: var(--neutral-dark);
       padding: 8px 16px;
-      border-radius: 20px;
+      border-radius: 8px;
       font-size: 13px;
       font-weight: 600;
       display: inline-flex;
@@ -251,7 +251,7 @@
     }
     .action-container {
       width: 100%;
-      max-width: 360px;
+      max-width: 480px;
       display: flex;
       flex-direction: column;
       align-items: center;
@@ -259,15 +259,15 @@
     }
     .btn-group {
       display: flex;
-      gap: 10px;
+      gap: 12px;
       width: 100%;
     }
-    @media (max-width: 480px) {
+    @media (max-width: 520px) {
       .btn-group { flex-direction: column; }
     }
     .btn {
       flex: 1;
-      padding: 11px 16px;
+      padding: 12px 16px;
       border-radius: 10px;
       font-weight: 600;
       font-size: 14px;
@@ -277,6 +277,7 @@
       align-items: center;
       justify-content: center;
       text-align: center;
+      white-space: nowrap;
       transition: transform 0.15s ease;
       text-decoration: none;
     }
@@ -320,6 +321,82 @@
       margin: 40px auto;
     }
     @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* === PRINT STYLES === */
+    .print-fab {
+      position: fixed;
+      bottom: 24px;
+      right: 24px;
+      background: var(--neutral-dark);
+      color: #fff;
+      border: none;
+      padding: 12px 20px;
+      border-radius: 12px;
+      font-weight: 700;
+      font-size: 13px;
+      font-family: inherit;
+      cursor: pointer;
+      box-shadow: 0 4px 14px rgba(15, 23, 42, 0.25);
+      z-index: 9999;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      transition: transform 0.15s ease, box-shadow 0.15s ease;
+    }
+    .print-fab:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 20px rgba(15, 23, 42, 0.35);
+    }
+    .print-fab:active {
+      transform: scale(0.97);
+    }
+
+    @media print {
+      body {
+        padding: 0 !important;
+        background: white !important;
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+      }
+      .container {
+        max-width: 100% !important;
+        box-shadow: none !important;
+        margin: 0 !important;
+        padding: 0 !important;
+      }
+      .card {
+        border: none !important;
+        box-shadow: none !important;
+        border-radius: 0 !important;
+      }
+      .print-fab,
+      .action-panel,
+      .action-container,
+      .btn-group,
+      .btn,
+      .alert-banner,
+      .disclaimer-card,
+      .footer,
+      .no-print {
+        display: none !important;
+      }
+      .header-banner {
+        border-bottom: 2px solid #000;
+        padding: 16px 24px;
+      }
+      .body-content {
+        padding: 16px 24px;
+      }
+      .table-container {
+        overflow: visible;
+      }
+      table {
+        page-break-inside: auto;
+      }
+      tr {
+        page-break-inside: avoid;
+      }
+    }
   </style>
 </head>
 <body>
@@ -349,6 +426,7 @@
       const spinner = document.getElementById('spinner');
       const content = document.getElementById('content');
       const apiUrl = 'https://fdkswvzrozijbizdthge.supabase.co/functions/v1/quotes_action';
+      const anonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZka3N3dnpyb3ppamJpemR0aGdlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njc0NzQ2MzMsImV4cCI6MjA4MzA1MDYzM30.ZENEwSy2E8iSHuy4Y4uTd7CBd32iaE-tJmSww6cw0TY';
 
       if (!token) {
         showError('Enlace Inválido', 'Faltan parámetros de seguridad en la solicitud.');
@@ -356,7 +434,12 @@
       }
 
       try {
-        const res = await fetch(`${apiUrl}?token=${encodeURIComponent(token)}&action=get_details`);
+        const res = await fetch(`${apiUrl}?token=${encodeURIComponent(token)}&action=get_details`, {
+          headers: {
+            'apikey': anonKey,
+            'Authorization': `Bearer ${anonKey}`,
+          },
+        });
         const data = await res.json();
 
         if (data.status !== 'success' || !data.quote) {
@@ -377,6 +460,11 @@
         const items = data.items;
         const conditions = data.conditions || [];
         const isExpired = data.is_expired;
+
+        // Establecer título dinámico de la pestaña
+        if (q.quote_number) {
+          document.title = `Cotización · ${esc(q.quote_number)}`;
+        }
 
         function parseDateParts(dateStr) {
           if (!dateStr) return null;
@@ -474,8 +562,8 @@
         });
 
         const statusBadge = isCommerciallyExpired
-          ? `<div class="validity-badge" style="color:#DC2626; background:#FEF2F2; border-color:#FCA5A5;">⚠️ Oferta Vencida (${commercialExpiresDate})</div>`
-          : `<div class="validity-badge">⌛ Válida hasta: ${commercialExpiresDate}</div>`;
+          ? `<div class="validity-badge" style="color:#DC2626; background:#FEF2F2; border-color:#FCA5A5;">⚠️ Oferta vencida (${commercialExpiresDate})</div>`
+          : `<div class="validity-badge">⌛ Vigente hasta: ${commercialExpiresDate}</div>`;
 
         let actionHtml = '';
 
@@ -503,10 +591,16 @@
                 Ha marcado esta propuesta como en evaluación. Su asesor comercial ha sido notificado. Si desea concretar o dar una respuesta definitiva, puede aprobar o rechazar a continuación:
               </span>
             </div>
-            <div class="action-container" style="margin-top: 12px;">
+            <div class="action-container" style="margin-top: 14px;">
               <div class="btn-group">
                 <button class="btn btn-success" id="btn-approve">Aprobar</button>
                 <button class="btn btn-danger" id="btn-reject">Rechazar</button>
+              </div>
+              <div class="action-notice" style="font-size: 12px; color: var(--neutral-muted); text-align: center; line-height: 1.4; margin-top: 6px;">
+                Al responder, su asesor comercial será notificado automáticamente para dar curso a su solicitud.
+              </div>
+              <div class="expiration-badge" style="font-size: 11px; font-weight: 800; color: #DC2626; letter-spacing: 0.5px; margin-top: 6px; text-align: center;">
+                COTIZACIÓN DISPONIBLE HASTA EL ${commercialExpiresDate.toUpperCase()}
               </div>
             </div>`;
         } else if (isCommerciallyExpired) {
@@ -520,26 +614,21 @@
         } else {
           actionHtml = `
             <div class="action-container">
+              <div class="action-title" style="font-size: 13px; font-weight: 700; color: var(--neutral-dark); margin-bottom: 6px; text-align: center;">
+                Por favor seleccione una opción para responder a esta cotización:
+              </div>
               <div class="btn-group">
                 <button class="btn btn-success" id="btn-approve">Aprobar</button>
                 <button class="btn btn-evaluate" id="btn-evaluate">En evaluación</button>
                 <button class="btn btn-danger" id="btn-reject">Rechazar</button>
               </div>
+              <div class="action-notice" style="font-size: 12px; color: var(--neutral-muted); text-align: center; line-height: 1.4; margin-top: 6px;">
+                Al responder, su asesor comercial será notificado automáticamente para dar curso a su solicitud.
+              </div>
+              <div class="expiration-badge" style="font-size: 11px; font-weight: 800; color: #DC2626; letter-spacing: 0.5px; margin-top: 6px; text-align: center;">
+                COTIZACIÓN DISPONIBLE HASTA EL ${commercialExpiresDate.toUpperCase()}
+              </div>
             </div>`;
-        }
-
-        // PDF download button (secondary) with download expiration notice
-        if (q.pdf_url) {
-          const downloadBtnHtml = `
-            <div class="action-container" style="${(q.status === 'approved' || q.status === 'rejected' || isCommerciallyExpired) ? 'margin-top: 12px;' : 'margin-top: 2px;'}">
-              <a href="${esc(q.pdf_url)}" target="_blank" class="btn btn-secondary">
-                Descargar versión PDF
-              </a>
-              <p style="font-size: 11px; color: var(--neutral-muted); margin-top: 4px;">
-                Disponible para descarga hasta el ${downloadExpiresDate}
-              </p>
-            </div>`;
-          actionHtml += downloadBtnHtml;
         }
 
         // Issuer Membrete Info (Dirección completa con Ciudad, Estado, País)
@@ -559,7 +648,7 @@
           <div class="issuer-letterhead">
             <strong>${esc(issuerHeaderTitle)}</strong><br>
             ${issuerTaxId ? `RIF / ID Fiscal: ${esc(issuerTaxId)}<br>` : ''}
-            ${issuerFullAddress ? `${esc(issuerFullAddress)}<br>` : ''}
+            ${issuerFullAddress ? `Dirección: ${esc(issuerFullAddress)}<br>` : ''}
             ${issuerPhone ? `Teléfono: ${esc(issuerPhone)}` : ''}
           </div>`;
 
@@ -568,6 +657,7 @@
         const isCompany = c.type === 'company' || (rawTaxId.length > 0 && rawTaxId.toUpperCase().startsWith('J'));
         const clientNameLabel = isCompany ? 'Razón Social' : 'Nombre';
         const clientTaxLabel = isCompany ? 'RIF' : 'Cédula';
+        const showAttention = isCompany && c.contact_name && c.contact_name.trim() !== '' && c.contact_name !== '-';
 
         content.innerHTML = `
           <div class="header-banner">
@@ -590,7 +680,7 @@
                 <h3>Datos del Cliente</h3>
                 <p><strong>${clientNameLabel}:</strong> ${esc(c.name)}</p>
                 <p><strong>${clientTaxLabel}:</strong> ${esc(c.tax_id)}</p>
-                <p><strong>Atención:</strong> ${esc(c.contact_name)}</p>
+                ${showAttention ? `<p><strong>Atención:</strong> ${esc(c.contact_name)}</p>` : ''}
                 <p><strong>Teléfono:</strong> ${esc(c.phone)}</p>
                 <p><strong>Email:</strong> ${esc(c.email)}</p>
               </div>
@@ -660,6 +750,10 @@
 
         content.style.display = 'block';
 
+        // Mostrar botón de impresión
+        const btnPrint = document.getElementById('btn-print');
+        if (btnPrint) btnPrint.style.display = 'flex';
+
         // Event listeners for Approve / Evaluate / Reject (redirect to custom confirmation card screen)
         const btnApprove = document.getElementById('btn-approve');
         const btnEvaluate = document.getElementById('btn-evaluate');
@@ -704,5 +798,8 @@
       }
     })();
   </script>
+    <button class="print-fab" id="btn-print" onclick="window.print()" title="Imprimir / Guardar como PDF" style="display:none;">
+    🖨️ Imprimir / Guardar PDF
+  </button>
 </body>
 </html>

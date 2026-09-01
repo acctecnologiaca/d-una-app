@@ -1,5 +1,4 @@
-import 'dart:typed_data';
-import 'package:intl/intl.dart';
+import 'package:flutter/foundation.dart';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import '../pdf_theme.dart';
@@ -29,123 +28,183 @@ class QuotePdfTemplate {
   });
 
   Future<Uint8List> generate(PdfPageFormat format) async {
-    // 0. Validación de Seguridad (Early Return si datos críticos fallan)
-    if (quote.id.isEmpty) {
-      final errorPdf = pw.Document();
-      errorPdf.addPage(
-        pw.Page(
-          build: (context) => pw.Center(
-            child: pw.Text('Error: Datos de cotización incompletos.'),
+    try {
+      // 0. Validación de Seguridad
+      if (quote.id.isEmpty) {
+        return _buildErrorDocument('Datos de cotización incompletos.');
+      }
+
+      final pdf = pw.Document(theme: PdfThemeConfig.buildTheme());
+
+      // Resolver info del emisor
+      final senderInfo = PdfHelpers.resolvePdfSenderInfo(userProfile, userEmail);
+
+      // Cargar logo si existe (con timeout de seguridad)
+      final logoImage = await PdfHelpers.loadNetworkImage(senderInfo.logoUrl);
+
+      // Cargar imagen de marca para el footer
+      final footerImage = await PdfHelpers.loadAssetImage(
+        'assets/images/creado_con_d_una.png',
+      );
+
+      // Calcular fecha de vigencia para el badge
+      String? validityBadgeText;
+      if (quote.validityDays > 0) {
+        final expiryDate = quote.dateIssued.add(Duration(days: quote.validityDays));
+        validityBadgeText = 'Vigente hasta: ${PdfHelpers.formatDate(expiryDate)}';
+      }
+
+      pdf.addPage(
+        pw.MultiPage(
+          pageFormat: format,
+          margin: const pw.EdgeInsets.symmetric(
+            horizontal: PdfThemeConfig.horizontalMargin,
+            vertical: PdfThemeConfig.verticalMargin,
           ),
+          header: (context) => PdfCommonSections.buildLetterhead(
+            title: 'COTIZACIÓN',
+            documentNumber: quote.quoteNumber ?? '-',
+            date: quote.dateIssued,
+            senderInfo: senderInfo,
+            logoImage: logoImage,
+            badgeText: validityBadgeText,
+          ),
+          footer: (context) =>
+              PdfCommonSections.buildFooter(context, footerLogoImage: footerImage),
+          build: (context) => [
+            _buildInfoGrid(),
+            pw.SizedBox(height: 14),
+            _buildItemsTable(),
+            pw.SizedBox(height: 12),
+            _buildTotalsBlock(),
+            if (conditions.isNotEmpty || (quote.notes != null && quote.notes!.trim().isNotEmpty)) ...[
+              pw.SizedBox(height: 14),
+              _buildConditionsBlock(),
+            ],
+          ],
         ),
       );
-      return errorPdf.save();
+
+      return await pdf.save();
+    } catch (e, stack) {
+      debugPrint('Error generating Quote PDF: $e\n$stack');
+      return _buildErrorDocument('Error al generar PDF: $e');
     }
-
-    final pdf = pw.Document(theme: PdfThemeConfig.buildTheme());
-
-    // Resolver info del emisor (con fallback)
-    final senderInfo = PdfHelpers.resolvePdfSenderInfo(userProfile, userEmail);
-
-    // Cargar logo si existe
-    final logoImage = await PdfHelpers.loadNetworkImage(senderInfo.logoUrl);
-
-    // Cargar imagen de marca para el footer
-    final footerImage = await PdfHelpers.loadAssetImage(
-      'assets/images/creado_con_d_una.png',
-    );
-
-    pdf.addPage(
-      pw.MultiPage(
-        pageFormat: format,
-        margin: const pw.EdgeInsets.all(PdfThemeConfig.horizontalMargin),
-        header: (context) => PdfCommonSections.buildLetterhead(
-          title: 'COTIZACIÓN',
-          documentNumber: quote.quoteNumber ?? '-',
-          date: quote.dateIssued,
-          dateLabel: 'Fecha de Emisión',
-          senderInfo: senderInfo,
-          logoImage: logoImage,
-        ),
-        footer: (context) =>
-            PdfCommonSections.buildFooter(context, footerImage: footerImage),
-        build: (context) => [
-          _buildInfoGrid(senderInfo),
-          pw.SizedBox(height: 20),
-          _buildItemsTable(),
-          pw.SizedBox(height: 10),
-          _buildTotalsBlock(),
-          pw.SizedBox(height: 20),
-          _buildConditionsBlock(),
-        ],
-      ),
-    );
-
-    return pdf.save();
   }
 
-  /// Grid de 2 columnas: Datos del Cliente y Asesor Comercial
-  pw.Widget _buildInfoGrid(PdfSenderInfo senderInfo) {
+  Future<Uint8List> _buildErrorDocument(String message) async {
+    final errorPdf = pw.Document(theme: PdfThemeConfig.buildTheme());
+    errorPdf.addPage(
+      pw.Page(
+        build: (context) => pw.Center(
+          child: pw.Padding(
+            padding: const pw.EdgeInsets.all(24),
+            child: pw.Column(
+              mainAxisSize: pw.MainAxisSize.min,
+              children: [
+                pw.Text(
+                  'No se pudo generar el documento PDF',
+                  style: pw.TextStyle(
+                    fontSize: 14,
+                    fontWeight: pw.FontWeight.bold,
+                    color: PdfThemeConfig.slate900,
+                  ),
+                ),
+                pw.SizedBox(height: 8),
+                pw.Text(
+                  message,
+                  textAlign: pw.TextAlign.center,
+                  style: const pw.TextStyle(
+                    fontSize: 10,
+                    color: PdfThemeConfig.slate500,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+    return errorPdf.save();
+  }
+
+  /// Grilla de 2 columnas: Datos del Cliente y Asesor Comercial
+  pw.Widget _buildInfoGrid() {
+    final rawTaxId = (quote.clientTaxId ?? '').trim();
+    final isCompany = quote.clientType == 'company' ||
+        (rawTaxId.isNotEmpty && rawTaxId.toUpperCase().startsWith('J'));
+    final clientNameLabel = isCompany ? 'Razón Social:' : 'Nombre:';
+    final clientTaxLabel = isCompany ? 'RIF:' : 'Cédula:';
+
+    final contactName = (quote.contactName != null && quote.contactName!.trim() != '-' && quote.contactName!.trim().isNotEmpty)
+        ? quote.contactName!
+        : null;
+    final showAttention = isCompany && contactName != null;
+
+    final phone = (quote.clientPhone != null && quote.clientPhone!.trim().isNotEmpty && quote.clientPhone!.trim() != '-')
+        ? quote.clientPhone!.trim()
+        : ((quote.contactPhone != null && quote.contactPhone!.trim().isNotEmpty && quote.contactPhone!.trim() != '-')
+            ? quote.contactPhone!.trim()
+            : null);
+
+    final email = (quote.clientEmail != null && quote.clientEmail!.trim().isNotEmpty && quote.clientEmail!.trim() != '-')
+        ? quote.clientEmail!.trim()
+        : ((quote.contactEmail != null && quote.contactEmail!.trim().isNotEmpty && quote.contactEmail!.trim() != '-')
+            ? quote.contactEmail!.trim()
+            : null);
+
+    final addressParts = <String>[
+      if (quote.clientAddress != null && quote.clientAddress!.trim().isNotEmpty && quote.clientAddress!.trim() != '-')
+        quote.clientAddress!.trim(),
+      if (quote.clientCity != null && quote.clientCity!.trim().isNotEmpty && quote.clientCity!.trim() != '-')
+        quote.clientCity!.trim(),
+      if (quote.clientState != null && quote.clientState!.trim().isNotEmpty && quote.clientState!.trim() != '-')
+        quote.clientState!.trim(),
+    ];
+    final fullClientAddress = addressParts.isNotEmpty ? addressParts.join(', ') : null;
+
+    final advisorName = quote.advisorName ??
+        '${userProfile.firstName ?? ''} ${userProfile.lastName ?? ''}'.trim();
+
     return pw.Row(
       crossAxisAlignment: pw.CrossAxisAlignment.start,
       children: [
-        // Columna Izquierda: Datos del Cliente
+        // Tarjeta 1: Datos del Cliente
         pw.Expanded(
-          child: pw.Column(
-            crossAxisAlignment: pw.CrossAxisAlignment.start,
+          child: PdfCommonSections.buildInfoCard(
+            title: 'DATOS DEL CLIENTE',
             children: [
-              pw.Text(
-                'Datos del Cliente',
-                style: PdfThemeConfig.headerStyle.copyWith(
-                  fontStyle: pw.FontStyle.italic,
-                  decoration: pw.TextDecoration.underline,
-                ),
+              PdfCommonSections.buildInfoRow(
+                clientNameLabel,
+                quote.clientName ?? 'Cliente Particular',
               ),
-              pw.SizedBox(height: 4),
-              _infoRow(
-                quote.clientType == 'person' ? 'Nombre:' : 'Razón Social:',
-                quote.clientName ?? '-',
-              ),
-              _infoRow(
-                quote.clientType == 'person' ? 'Cédula:' : 'RIF:',
-                quote.clientTaxId ?? '-',
-              ),
-              if (quote.clientType != 'person')
-                _infoRow('Atención:', quote.contactName ?? '-'),
-              _infoRow(
-                'Teléfono:',
-                quote.contactPhone ?? quote.clientPhone ?? '-',
-              ),
-              _infoRow(
-                'Email:',
-                quote.contactEmail ?? quote.clientEmail ?? '-',
-              ),
+              if (rawTaxId.isNotEmpty && rawTaxId != '-')
+                PdfCommonSections.buildInfoRow(clientTaxLabel, rawTaxId),
+              if (showAttention)
+                PdfCommonSections.buildInfoRow('Atención:', contactName),
+              if (phone != null)
+                PdfCommonSections.buildInfoRow('Teléfono:', phone),
+              if (email != null)
+                PdfCommonSections.buildInfoRow('Email:', email),
+              if (fullClientAddress != null)
+                PdfCommonSections.buildInfoRow('Dirección:', fullClientAddress),
             ],
           ),
         ),
-
-        pw.SizedBox(width: 40),
-
-        // Columna Derecha: Asesor Comercial
+        pw.SizedBox(width: 12),
+        // Tarjeta 2: Asesor Comercial
         pw.Expanded(
-          child: pw.Column(
-            crossAxisAlignment: pw.CrossAxisAlignment.start,
+          child: PdfCommonSections.buildInfoCard(
+            title: 'ASESOR COMERCIAL',
             children: [
-              pw.Text(
-                'Asesor Comercial',
-                style: PdfThemeConfig.headerStyle.copyWith(
-                  fontStyle: pw.FontStyle.italic,
-                  decoration: pw.TextDecoration.underline,
-                ),
+              PdfCommonSections.buildInfoRow(
+                'Nombre:',
+                advisorName.isNotEmpty ? advisorName : 'Asesor Comercial',
               ),
-              pw.SizedBox(height: 4),
-              _infoRow(
-                'Nombre y Apellido:',
-                quote.advisorName ??
-                    '${userProfile.firstName ?? ''} ${userProfile.lastName ?? ''}',
-              ),
-              _infoRow('Teléfono:', userProfile.phone ?? '-'),
-              _infoRow('Email:', userEmail ?? '-'),
+              if (userProfile.phone != null && userProfile.phone != '-')
+                PdfCommonSections.buildInfoRow('Teléfono:', userProfile.phone!),
+              if (userEmail != null && userEmail != '-')
+                PdfCommonSections.buildInfoRow('Email:', userEmail!),
             ],
           ),
         ),
@@ -153,242 +212,323 @@ class QuotePdfTemplate {
     );
   }
 
-  pw.Widget _infoRow(String label, String value) {
-    return pw.Padding(
-      padding: const pw.EdgeInsets.only(bottom: 2),
-      child: pw.RichText(
-        text: pw.TextSpan(
-          children: [
-            pw.TextSpan(
-              text: '$label ',
-              style: PdfThemeConfig.bodyStyle.copyWith(
-                fontWeight: pw.FontWeight.bold,
-              ),
-            ),
-            pw.TextSpan(text: value, style: PdfThemeConfig.bodyStyle),
-          ],
-        ),
-      ),
-    );
-  }
-
-  /// Tabla única para productos y servicios
+  /// Tabla única unificada para productos y servicios
   pw.Widget _buildItemsTable() {
     // 1. Agrupar productos por groupIndex
     final groupedProducts = <int, List<QuoteItemProduct>>{};
     for (var product in products) {
-      if (!groupedProducts.containsKey(product.groupIndex)) {
-        groupedProducts[product.groupIndex] = [];
-      }
-      groupedProducts[product.groupIndex]!.add(product);
+      groupedProducts.putIfAbsent(product.groupIndex, () => []).add(product);
     }
-
-    // 2. Ordenar las llaves (índices) para mantener el orden correcto
     final sortedGroupIndices = groupedProducts.keys.toList()..sort();
 
-    final headers = [
-      'CANT.',
-      'PRODUCTO / SERVICIO',
-      'GARANTÍA',
-      'P. UNIT',
-      'TOTAL',
-    ];
-
-    final columnWidths = {
-      0: const pw.FixedColumnWidth(35), // Cantidad
-      1: const pw.FlexColumnWidth(1), // Producto/Servicio (Ocupa el resto)
-      2: const pw.FixedColumnWidth(55), // Garantía
-      3: const pw.FixedColumnWidth(70), // P. Unitario
-      4: const pw.FixedColumnWidth(70), // Sub-total
-    };
-
-    final normalStyle = PdfThemeConfig.bodyStyle.copyWith(fontSize: 7);
-    final boldStyle = PdfThemeConfig.bodyStyle.copyWith(
-      fontSize: 8,
-      fontWeight: pw.FontWeight.bold,
-    );
-    final softItalicStyle = PdfThemeConfig.bodyStyle.copyWith(
-      fontSize: 6.5,
-      color: PdfColors.grey700,
-      fontItalic: pw.Font.helveticaOblique(),
-    );
-
-    final dataRows = [
-      // Filas de Productos
-      ...sortedGroupIndices.map((index) {
-        final items = groupedProducts[index]!;
-        final firstItem = items.first;
-
-        // Calcular totales del grupo
-        double totalQuantity = 0;
-        double subtotal = 0;
-        for (var item in items) {
-          totalQuantity += item.quantity;
-          subtotal += item.totalPrice;
-        }
-
-        return [
-          pw.Text(totalQuantity.toStringAsFixed(0), style: boldStyle),
-          pw.Column(
-            crossAxisAlignment: pw.CrossAxisAlignment.start,
-            children: [
-              pw.Text(firstItem.name, style: boldStyle), //Producto
-              // Metadatos consolidadores (Modelo y Marca)
-              if (firstItem.model != 'NO APLICA' && firstItem.model != null)
-                pw.Text(
-                  'Modelo: ${firstItem.model} (${firstItem.brand != "Sin marca" && firstItem.brand != null ? firstItem.brand : ""})',
-                  style: softItalicStyle,
-                ),
-              if (firstItem.description != null &&
-                  firstItem.description!.isNotEmpty)
-                pw.Text(
-                  '${firstItem.description}',
-                  style: softItalicStyle,
-                ), //Descripion producto propio
-            ],
+    // 2. Preparar lista de filas
+    final rows = <pw.TableRow>[
+      // Cabecera de la tabla
+      pw.TableRow(
+        decoration: const pw.BoxDecoration(
+          color: PdfThemeConfig.slate100,
+          border: pw.Border(
+            bottom: pw.BorderSide(color: PdfThemeConfig.slate300, width: 1.5),
           ),
-          pw.Text(
-            firstItem.warrantyDisplay ?? '-',
-            style: normalStyle,
-          ), //Garantía
-          PdfHelpers.formatCurrency(firstItem.unitPrice), //P. Unitario
-          PdfHelpers.formatCurrency(subtotal), //Sub-total
-        ];
-      }),
-      // Filas de Servicios
-      ...services.map(
-        (s) => [
-          pw.Text(s.quantity.toStringAsFixed(0), style: boldStyle),
-          pw.Column(
-            crossAxisAlignment: pw.CrossAxisAlignment.start,
-            children: [
-              pw.Text(s.name, style: boldStyle), //Servicio
-              if (s.description != null && s.description!.isNotEmpty)
-                pw.Text(
-                  '${s.description}',
-                  style: softItalicStyle,
-                ), //Descripcion servicio
-            ],
+        ),
+        children: [
+          PdfCommonSections.buildTableHeaderCell(
+            'PRODUCTO / SERVICIO',
+            pw.Alignment.centerLeft,
           ),
-          pw.Text(s.warrantyDisplay ?? '-', style: normalStyle), // Garantía
-          PdfHelpers.formatCurrency(s.unitPrice), // Precio Unit.
-          PdfHelpers.formatCurrency(s.totalPrice), // Sub-total
+          PdfCommonSections.buildTableHeaderCell(
+            'GARANTÍA',
+            pw.Alignment.center,
+          ),
+          PdfCommonSections.buildTableHeaderCell(
+            'CANT.',
+            pw.Alignment.centerRight,
+          ),
+          PdfCommonSections.buildTableHeaderCell(
+            'P. UNIT',
+            pw.Alignment.centerRight,
+          ),
+          PdfCommonSections.buildTableHeaderCell(
+            'TOTAL',
+            pw.Alignment.centerRight,
+          ),
         ],
       ),
     ];
 
-    if (dataRows.isEmpty) {
-      return pw.Container(
-        padding: const pw.EdgeInsets.all(10),
-        child: pw.Text(
-          'Esta cotización no contiene productos ni servicios registrados.',
-          style: normalStyle,
+    int rowIndex = 0;
+
+    // Filas de Productos
+    for (var index in sortedGroupIndices) {
+      final items = groupedProducts[index]!;
+      final firstItem = items.first;
+
+      double totalQuantity = 0;
+      double subtotal = 0;
+      for (var item in items) {
+        totalQuantity += item.quantity;
+        subtotal += item.totalPrice;
+      }
+
+      final isEven = rowIndex % 2 == 1;
+      rowIndex++;
+
+      // Subtítulo con marca/modelo o descripción
+      String? subtitle;
+      final modelParts = [
+        if (firstItem.brand != null && firstItem.brand != 'Sin marca' && firstItem.brand!.isNotEmpty)
+          firstItem.brand,
+        if (firstItem.model != null && firstItem.model != 'NO APLICA' && firstItem.model!.isNotEmpty)
+          firstItem.model,
+      ];
+      if (modelParts.isNotEmpty) {
+        subtitle = modelParts.join(' - ');
+      } else if (firstItem.description != null && firstItem.description!.isNotEmpty) {
+        subtitle = firstItem.description;
+      }
+
+      final warrantyStr = _formatWarranty(firstItem.warrantyTime, firstItem.warrantyUnit);
+      final qtyStr = totalQuantity % 1 == 0
+          ? '${totalQuantity.toInt()} Ud'
+          : '${totalQuantity.toStringAsFixed(2)} Ud';
+
+      rows.add(
+        _buildItemTableRow(
+          name: firstItem.name,
+          subtitle: subtitle,
+          warranty: warrantyStr,
+          quantity: qtyStr,
+          unitPrice: PdfHelpers.formatCurrency(firstItem.unitPrice),
+          totalPrice: PdfHelpers.formatCurrency(subtotal),
+          isEven: isEven,
         ),
       );
     }
 
-    return pw.Column(
-      children: [
-        // 1. Tabla de Cabecera
-        pw.Table(
-          columnWidths: columnWidths,
-          children: [
-            pw.TableRow(
-              decoration: const pw.BoxDecoration(
-                color: PdfThemeConfig.accentColor,
-              ),
-              children: headers.map((h) {
-                final index = headers.indexOf(h);
-                pw.Alignment alignment = pw.Alignment.centerLeft;
-                if (index == 0) alignment = pw.Alignment.center;
-                if (index == 1) alignment = pw.Alignment.center;
-                if (index >= 3) alignment = pw.Alignment.centerRight;
+    // Filas de Servicios
+    for (var service in services) {
+      final isEven = rowIndex % 2 == 1;
+      rowIndex++;
 
-                return pw.Container(
-                  alignment: alignment,
-                  padding: const pw.EdgeInsets.symmetric(
-                    vertical: 2,
-                    horizontal: 3,
-                  ),
-                  child: pw.Text(h, style: PdfThemeConfig.tableHeaderStyle),
-                );
-              }).toList(),
-            ),
-          ],
+      final warrantyStr = _formatWarranty(service.warrantyTime, service.warrantyUnit);
+      final qtyStr = service.quantity % 1 == 0
+          ? '${service.quantity.toInt()} ${service.rateSymbol}'
+          : '${service.quantity.toStringAsFixed(2)} ${service.rateSymbol}';
+
+      rows.add(
+        _buildItemTableRow(
+          name: service.name,
+          subtitle: service.description,
+          warranty: warrantyStr,
+          quantity: qtyStr,
+          unitPrice: PdfHelpers.formatCurrency(service.unitPrice),
+          totalPrice: PdfHelpers.formatCurrency(service.totalPrice),
+          isEven: isEven,
         ),
-        pw.SizedBox(height: 10), // Espacio solicitado
-        // 2. Tabla de Contenido
-        pw.Table(
-          columnWidths: columnWidths,
-          border: const pw.TableBorder(
-            left: pw.BorderSide(color: PdfColors.grey400, width: 0.5),
-            right: pw.BorderSide(color: PdfColors.grey400, width: 0.5),
-            top: pw.BorderSide(color: PdfColors.grey400, width: 0.5),
-            bottom: pw.BorderSide(color: PdfColors.grey400, width: 0.5),
-          ),
-          children: dataRows.map((row) {
-            return pw.TableRow(
-              children: row.map((cell) {
-                final index = row.indexOf(cell);
-                pw.Alignment alignment = pw.Alignment.topLeft;
-                if (index == 0) alignment = pw.Alignment.topCenter;
-                if (index >= 3) alignment = pw.Alignment.topRight;
+      );
+    }
 
-                return pw.Container(
-                  alignment: alignment,
-                  padding: const pw.EdgeInsets.all(5),
-                  child: cell is pw.Widget
-                      ? cell
-                      : pw.Text(
-                          cell.toString(),
-                          style: PdfThemeConfig.bodyStyle,
-                        ),
-                );
-              }).toList(),
-            );
-          }).toList(),
+    return pw.Table(
+      border: const pw.TableBorder(
+        top: pw.BorderSide(color: PdfThemeConfig.slate200, width: 1),
+        bottom: pw.BorderSide(color: PdfThemeConfig.slate200, width: 1),
+        left: pw.BorderSide(color: PdfThemeConfig.slate200, width: 1),
+        right: pw.BorderSide(color: PdfThemeConfig.slate200, width: 1),
+        horizontalInside: pw.BorderSide(color: PdfThemeConfig.slate200, width: 0.5),
+      ),
+      columnWidths: const {
+        0: pw.FlexColumnWidth(1),
+        1: pw.FixedColumnWidth(60),
+        2: pw.FixedColumnWidth(48),
+        3: pw.FixedColumnWidth(65),
+        4: pw.FixedColumnWidth(70),
+      },
+      children: rows,
+    );
+  }
+
+  pw.TableRow _buildItemTableRow({
+    required String name,
+    String? subtitle,
+    required String warranty,
+    required String quantity,
+    required String unitPrice,
+    required String totalPrice,
+    required bool isEven,
+  }) {
+    return pw.TableRow(
+      decoration: pw.BoxDecoration(
+        color: isEven ? PdfThemeConfig.slate50 : PdfThemeConfig.white,
+        border: const pw.Border(
+          bottom: pw.BorderSide(color: PdfThemeConfig.slate200, width: 0.5),
+        ),
+      ),
+      children: [
+        // Producto / Servicio + Subtítulo
+        pw.Padding(
+          padding: const pw.EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+          child: pw.Column(
+            crossAxisAlignment: pw.CrossAxisAlignment.start,
+            children: [
+              pw.Text(
+                name,
+                style: pw.TextStyle(
+                  fontSize: 7.5,
+                  fontWeight: pw.FontWeight.bold,
+                  color: PdfThemeConfig.slate900,
+                ),
+              ),
+              if (subtitle != null && subtitle.isNotEmpty) ...[
+                pw.SizedBox(height: 1.5),
+                pw.Text(
+                  subtitle,
+                  style: const pw.TextStyle(
+                    fontSize: 6.5,
+                    color: PdfThemeConfig.slate500,
+                  ),
+                ),
+              ],
+            ],
+          ),
+        ),
+        // Garantía
+        pw.Container(
+          alignment: pw.Alignment.center,
+          padding: const pw.EdgeInsets.symmetric(horizontal: 4, vertical: 6),
+          child: pw.Text(
+            warranty,
+            style: const pw.TextStyle(
+              fontSize: 7,
+              color: PdfThemeConfig.slate700,
+            ),
+          ),
+        ),
+        // Cantidad
+        pw.Container(
+          alignment: pw.Alignment.centerRight,
+          padding: const pw.EdgeInsets.symmetric(horizontal: 4, vertical: 6),
+          child: pw.Text(
+            quantity,
+            style: const pw.TextStyle(
+              fontSize: 7.5,
+              color: PdfThemeConfig.slate700,
+            ),
+          ),
+        ),
+        // Precio Unitario
+        pw.Container(
+          alignment: pw.Alignment.centerRight,
+          padding: const pw.EdgeInsets.symmetric(horizontal: 6, vertical: 6),
+          child: pw.Text(
+            unitPrice,
+            style: const pw.TextStyle(
+              fontSize: 7.5,
+              color: PdfThemeConfig.slate700,
+            ),
+          ),
+        ),
+        // Total
+        pw.Container(
+          alignment: pw.Alignment.centerRight,
+          padding: const pw.EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+          child: pw.Text(
+            totalPrice,
+            style: pw.TextStyle(
+              fontSize: 7.5,
+              fontWeight: pw.FontWeight.bold,
+              color: PdfThemeConfig.slate900,
+            ),
+          ),
         ),
       ],
     );
   }
 
-  /// Bloque de Totales alineado a la derecha
+  /// Tarjeta de Totales alineada a la derecha
   pw.Widget _buildTotalsBlock() {
-    final taxRate = quote.subtotal > 0
-        ? (quote.taxAmount / quote.subtotal * 100).toStringAsFixed(0)
-        : '16';
+    final subtotal = quote.subtotal;
+    final tax = quote.taxAmount;
+    final total = quote.total;
+    final taxRatePct = subtotal > 0 ? ((tax / subtotal) * 100).round() : 16;
 
     return pw.Row(
       mainAxisAlignment: pw.MainAxisAlignment.end,
       children: [
         pw.Container(
-          width: 150,
-          padding: const pw.EdgeInsets.all(5),
+          width: 190,
           decoration: pw.BoxDecoration(
-            border: pw.TableBorder(
-              bottom: pw.BorderSide(color: PdfColors.grey400, width: 0.5),
-              top: pw.BorderSide(color: PdfColors.grey400, width: 0.5),
-              left: pw.BorderSide(color: PdfColors.grey400, width: 0.5),
-              right: pw.BorderSide(color: PdfColors.grey400, width: 0.5),
-            ),
+            color: PdfThemeConfig.slate50,
+            border: pw.Border.all(color: PdfThemeConfig.slate300, width: 1),
+            borderRadius: const pw.BorderRadius.all(pw.Radius.circular(8)),
           ),
           child: pw.Column(
             children: [
-              _totalRow(
-                'Sub-Total (USD):',
-                PdfHelpers.formatCurrency(quote.subtotal),
+              pw.Padding(
+                padding: const pw.EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                child: pw.Row(
+                  mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+                  children: [
+                    pw.Text(
+                      'SUB-TOTAL:',
+                      style: const pw.TextStyle(
+                        fontSize: 7.5,
+                        color: PdfThemeConfig.slate500,
+                      ),
+                    ),
+                    pw.Text(
+                      PdfHelpers.formatCurrency(subtotal),
+                      style: const pw.TextStyle(
+                        fontSize: 7.5,
+                        color: PdfThemeConfig.slate700,
+                      ),
+                    ),
+                  ],
+                ),
               ),
-              pw.SizedBox(height: 5),
-              _totalRow(
-                'IVA ($taxRate%):',
-                PdfHelpers.formatCurrency(quote.taxAmount),
+              pw.Padding(
+                padding: const pw.EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                child: pw.Row(
+                  mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+                  children: [
+                    pw.Text(
+                      'IVA ($taxRatePct%):',
+                      style: const pw.TextStyle(
+                        fontSize: 7.5,
+                        color: PdfThemeConfig.slate500,
+                      ),
+                    ),
+                    pw.Text(
+                      PdfHelpers.formatCurrency(tax),
+                      style: const pw.TextStyle(
+                        fontSize: 7.5,
+                        color: PdfThemeConfig.slate700,
+                      ),
+                    ),
+                  ],
+                ),
               ),
-              pw.Divider(color: PdfColors.grey300),
-              _totalRow(
-                'Total (USD):',
-                PdfHelpers.formatCurrency(quote.total),
-                isBold: true,
-                fontSize: 11,
+              // Divisor oscuro del total
+              pw.Container(
+                width: double.infinity,
+                height: 1.5,
+                color: PdfThemeConfig.slate900,
+              ),
+              // Grand Total
+              pw.Padding(
+                padding: const pw.EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+                child: pw.Row(
+                  mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+                  children: [
+                    pw.Text(
+                      'TOTAL USD:',
+                      style: PdfThemeConfig.grandTotalStyle,
+                    ),
+                    pw.Text(
+                      PdfHelpers.formatCurrency(total),
+                      style: PdfThemeConfig.grandTotalStyle,
+                    ),
+                  ],
+                ),
               ),
             ],
           ),
@@ -397,60 +537,82 @@ class QuotePdfTemplate {
     );
   }
 
-  pw.Widget _totalRow(
-    String label,
-    String value, {
-    bool isBold = false,
-    double fontSize = 9,
-  }) {
-    final style = PdfThemeConfig.bodyStyle.copyWith(
-      fontWeight: isBold ? pw.FontWeight.bold : pw.FontWeight.normal,
-      fontSize: fontSize,
-    );
-    return pw.Row(
-      mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
-      children: [
-        pw.Text(label, style: style),
-        pw.Text(value, style: style),
-      ],
+  /// Tarjeta de Condiciones Comerciales
+  pw.Widget _buildConditionsBlock() {
+    return pw.Container(
+      width: double.infinity,
+      padding: const pw.EdgeInsets.all(10),
+      decoration: pw.BoxDecoration(
+        color: PdfThemeConfig.slate50,
+        border: pw.Border.all(color: PdfThemeConfig.slate200, width: 1),
+        borderRadius: const pw.BorderRadius.all(pw.Radius.circular(8)),
+      ),
+      child: pw.Column(
+        crossAxisAlignment: pw.CrossAxisAlignment.start,
+        children: [
+          pw.Container(
+            width: double.infinity,
+            padding: const pw.EdgeInsets.only(bottom: 4),
+            margin: const pw.EdgeInsets.only(bottom: 6),
+            decoration: const pw.BoxDecoration(
+              border: pw.Border(
+                bottom: pw.BorderSide(color: PdfThemeConfig.slate300, width: 1.5),
+              ),
+            ),
+            child: pw.Text(
+              'TÉRMINOS Y CONDICIONES COMERCIALES',
+              style: PdfThemeConfig.cardHeaderStyle,
+            ),
+          ),
+          ...conditions.map(
+            (c) => PdfCommonSections.buildBulletPoint(
+              c.description,
+              PdfThemeConfig.slate700,
+            ),
+          ),
+          if (quote.notes != null && quote.notes!.trim().isNotEmpty) ...[
+            pw.SizedBox(height: 6),
+            pw.RichText(
+              text: pw.TextSpan(
+                children: [
+                  pw.TextSpan(
+                    text: 'Notas adicionales: ',
+                    style: pw.TextStyle(
+                      fontSize: 7.5,
+                      fontWeight: pw.FontWeight.bold,
+                      color: PdfThemeConfig.slate900,
+                    ),
+                  ),
+                  pw.TextSpan(
+                    text: quote.notes!.trim(),
+                    style: const pw.TextStyle(
+                      fontSize: 7.5,
+                      color: PdfThemeConfig.slate700,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ],
+      ),
     );
   }
 
-  /// Condiciones comerciales y notas
-  pw.Widget _buildConditionsBlock() {
-    final dateFormat = DateFormat('dd/MM/yyyy');
-    final expirationDate =
-        quote.dateIssued.add(Duration(days: quote.validityDays));
+  String _formatWarranty(dynamic time, String? unit) {
+    final numTime = num.tryParse(time.toString()) ?? 0;
+    if (numTime <= 0) return '---';
 
-    return pw.Column(
-      crossAxisAlignment: pw.CrossAxisAlignment.start,
-      children: [
-        pw.Text(
-          'Condiciones comerciales:',
-          style: PdfThemeConfig.bodyBoldStyle,
-        ),
-        pw.Text(
-          '- Validez de la oferta: ${quote.validityDays} días continuos a partir de su emisión (Válida hasta el ${dateFormat.format(expirationDate)}).',
-          style: PdfThemeConfig.smallStyle,
-        ),
-        ...conditions.map((c) {
-          final isImportant =
-              c.description.toLowerCase().contains('importante') ||
-              c.description.toLowerCase().contains('retención');
+    final normalizedUnit = (unit ?? '').toLowerCase().trim();
+    String unitStr = 'Días';
+    if (normalizedUnit.contains('day') || normalizedUnit.contains('dia')) {
+      unitStr = numTime == 1 ? 'Día' : 'Días';
+    } else if (normalizedUnit.contains('month') || normalizedUnit.contains('mes')) {
+      unitStr = numTime == 1 ? 'Mes' : 'Meses';
+    } else if (normalizedUnit.contains('year') || normalizedUnit.contains('a')) {
+      unitStr = numTime == 1 ? 'Año' : 'Años';
+    }
 
-          return pw.Text(
-            '- ${c.description}',
-            style: isImportant
-                ? PdfThemeConfig.importantStyle
-                : PdfThemeConfig.smallStyle,
-          );
-        }),
-        if (quote.notes != null && quote.notes!.isNotEmpty) ...[
-          pw.SizedBox(height: 10),
-          pw.Text('Notas adicionales:', style: PdfThemeConfig.bodyBoldStyle),
-          pw.Text(quote.notes!, style: PdfThemeConfig.smallStyle),
-        ],
-      ],
-    );
+    return '$numTime $unitStr';
   }
 }

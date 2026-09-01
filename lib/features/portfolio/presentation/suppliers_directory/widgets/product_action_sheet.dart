@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:d_una_app/shared/widgets/app_toast.dart';
 import 'package:go_router/go_router.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:uuid/uuid.dart';
@@ -225,15 +226,11 @@ class ProductActionSheet {
     // Defensive stock validation
     if (stock <= 0) {
       if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            duration: const Duration(seconds: 5),
-            content: Text(
+        AppToast.error(
+          context,
+          message:
               'No se puede agregar este producto. El stock del proveedor es 0 $uom',
-            ),
-            behavior: SnackBarBehavior.floating,
-            backgroundColor: Colors.redAccent,
-          ),
+          duration: const Duration(seconds: 5),
         );
       }
       return;
@@ -308,7 +305,6 @@ class ProductActionSheet {
     String? brand,
     String? model,
   }) async {
-    final colors = Theme.of(context).colorScheme;
     final quoteState = ref.read(createQuoteProvider);
     final existingProducts = quoteState.products;
 
@@ -331,16 +327,11 @@ class ProductActionSheet {
       if (newQty > availableStock) {
         // Show max-stock error
         if (context.mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              duration: const Duration(seconds: 8),
-              content: const Text(
+          AppToast.error(
+            context,
+            message:
                 'No se puede agregar más de este producto. La cotización ya tiene agregada el stock máximo disponible.',
-              ),
-              behavior: SnackBarBehavior.floating,
-              backgroundColor: colors.error,
-              showCloseIcon: true,
-            ),
+            duration: const Duration(seconds: 8),
           );
           _navigateToQuote(context, quoteState.quote?.id);
         }
@@ -360,15 +351,11 @@ class ProductActionSheet {
       ref.read(createQuoteProvider.notifier).updateProduct(updatedItem);
 
       if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            duration: const Duration(seconds: 8),
-            content: Text(
+        AppToast.info(
+          context,
+          message:
               'Este producto ya se encuentra en la cotización. Se ha actualizado la cantidad a ${newQty.toStringAsFixed(newQty.truncateToDouble() == newQty ? 0 : 2)} $uom',
-            ),
-            behavior: SnackBarBehavior.floating,
-            showCloseIcon: true,
-          ),
+          duration: const Duration(seconds: 8),
         );
         _navigateToQuote(context, quoteState.quote?.id);
       }
@@ -378,16 +365,11 @@ class ProductActionSheet {
     // Defensive stock validation
     if (stock <= 0) {
       if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            duration: const Duration(seconds: 8),
-            content: Text(
+        AppToast.error(
+          context,
+          message:
               'No se puede agregar este producto. El stock del proveedor es 0 $uom',
-            ),
-            behavior: SnackBarBehavior.floating,
-            backgroundColor: colors.error,
-            showCloseIcon: true,
-          ),
+          duration: const Duration(seconds: 8),
         );
       }
       return;
@@ -470,7 +452,6 @@ class ProductActionSheet {
     String? brand,
     String? model,
   }) async {
-    final colors = Theme.of(context).colorScheme;
     final orderState = ref.read(createSupplierOrderProvider);
     final existingItems = orderState.items;
 
@@ -502,16 +483,11 @@ class ProductActionSheet {
 
       if (newQty > maxAvailable) {
         if (context.mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              duration: const Duration(seconds: 8),
-              content: Text(
+          AppToast.error(
+            context,
+            message:
                 'No se puede agregar más de este producto. La orden de compra ya tiene el stock máximo disponible ($maxAvailable $uom).',
-              ),
-              behavior: SnackBarBehavior.floating,
-              backgroundColor: colors.error,
-              showCloseIcon: true,
-            ),
+            duration: const Duration(seconds: 8),
           );
           _navigateToSupplierOrder(context, orderState.id);
         }
@@ -524,15 +500,11 @@ class ProductActionSheet {
           .updateItem(existingItem.id, quantity: newQty);
 
       if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            duration: const Duration(seconds: 8),
-            content: Text(
+        AppToast.info(
+          context,
+          message:
               'Este producto ya se encontraba en la orden. Se actualizó la cantidad a ${newQty.toStringAsFixed(newQty.truncateToDouble() == newQty ? 0 : 2)} $uom.',
-            ),
-            behavior: SnackBarBehavior.floating,
-            showCloseIcon: true,
-          ),
+          duration: const Duration(seconds: 8),
         );
         _navigateToSupplierOrder(context, orderState.id);
       }
@@ -542,16 +514,11 @@ class ProductActionSheet {
     // Defensive stock check
     if (stock <= 0) {
       if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            duration: const Duration(seconds: 8),
-            content: Text(
+        AppToast.error(
+          context,
+          message:
               'No se puede agregar este producto. El stock en la sucursal es 0 $uom.',
-            ),
-            behavior: SnackBarBehavior.floating,
-            backgroundColor: colors.error,
-            showCloseIcon: true,
-          ),
+          duration: const Duration(seconds: 8),
         );
       }
       return;
@@ -573,13 +540,10 @@ class ProductActionSheet {
         );
 
     if (context.mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          duration: const Duration(seconds: 4),
-          content: Text('Se agregó "$productName" a la orden de compra.'),
-          behavior: SnackBarBehavior.floating,
-          showCloseIcon: true,
-        ),
+      AppToast.success(
+        context,
+        message: 'Se agregó "$productName" a la orden de compra.',
+        duration: const Duration(seconds: 4),
       );
       _navigateToSupplierOrder(context, orderState.id);
     }

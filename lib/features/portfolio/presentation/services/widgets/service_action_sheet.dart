@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:d_una_app/shared/widgets/app_toast.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../../../shared/widgets/bottom_sheet_action_item.dart';
@@ -112,15 +113,11 @@ class ServiceActionSheet {
       ref.read(createQuoteProvider.notifier).updateService(updatedItem);
 
       if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            duration: const Duration(seconds: 8),
-            content: Text(
+        AppToast.info(
+          context,
+          message:
               'Este servicio ya se encuentra en la cotización. Se ha actualizado la cantidad a ${newQty.toStringAsFixed(newQty.truncateToDouble() == newQty ? 0 : 2)}',
-            ),
-            behavior: SnackBarBehavior.floating,
-            showCloseIcon: true,
-          ),
+          duration: const Duration(seconds: 8),
         );
 
         final quoteId = quoteState.quote?.id;

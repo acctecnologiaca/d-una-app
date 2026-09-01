@@ -674,11 +674,10 @@ class PaginatedQuoteSearch
   }
 }
 
-void refreshAllQuoteProviders(WidgetRef ref) {
+void refreshAllQuoteProviders(dynamic ref) {
   ref.invalidate(quotesListProvider);
   ref.invalidate(paginatedQuotesListProvider);
   ref.invalidate(paginatedQuoteSearchProvider);
-  ref.read(paginatedQuotesListProvider.notifier).refresh();
 }
 
 Map<String, Map<String, double>> _computeApprovedPriorAllocations(

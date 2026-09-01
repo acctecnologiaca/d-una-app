@@ -21,7 +21,8 @@ class _CollaboratorsScreenState extends ConsumerState<CollaboratorsScreen> {
   Widget build(BuildContext context) {
     final colors = Theme.of(context).colorScheme;
     final textTheme = Theme.of(context).textTheme;
-    final collaboratorsAsync = ref.watch(externalCollaboratorsProvider);
+    final currentFilter = ref.watch(collaboratorFilterProvider);
+    final collaboratorsAsync = ref.watch(filteredCollaboratorsProvider);
 
     return GenericListScreen<Collaborator>(
       title: 'Colaboradores',
@@ -29,7 +30,7 @@ class _CollaboratorsScreenState extends ConsumerState<CollaboratorsScreen> {
         children: [
           Image.asset(
             'assets/images/collaborators.png',
-            height: 200,
+            height: 180,
             fit: BoxFit.contain,
           ),
           const SizedBox(height: 16),
@@ -43,6 +44,33 @@ class _CollaboratorsScreenState extends ConsumerState<CollaboratorsScreen> {
               ),
             ),
           ),
+          const SizedBox(height: 16),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16.0),
+            child: SizedBox(
+              width: double.infinity,
+              child: SegmentedButton<CollaboratorFilter>(
+                segments: const [
+                  ButtonSegment(
+                    value: CollaboratorFilter.active,
+                    label: Text('Activos'),
+                    icon: Icon(Icons.people_outline),
+                  ),
+                  ButtonSegment(
+                    value: CollaboratorFilter.inactive,
+                    label: Text('Inactivos'),
+                    icon: Icon(Icons.person_off_outlined),
+                  ),
+                ],
+                selected: {currentFilter},
+                onSelectionChanged: (newSelection) {
+                  ref.read(collaboratorFilterProvider.notifier).state =
+                      newSelection.first;
+                },
+              ),
+            ),
+          ),
+          const SizedBox(height: 8),
         ],
       ),
       itemsAsync: collaboratorsAsync,
@@ -61,7 +89,9 @@ class _CollaboratorsScreenState extends ConsumerState<CollaboratorsScreen> {
         return matchName || matchRole;
       },
       onAddPressed: () => context.push('/collaborators/add'),
-      emptyListMessage: 'No tienes colaboradores registrados.',
+      emptyListMessage: currentFilter == CollaboratorFilter.active
+          ? 'No tienes colaboradores activos registrados.'
+          : 'No tienes colaboradores inactivos.',
       itemBuilder: (context, collaborator) {
         return CollaboratorListTile(
           name: collaborator.fullName,
@@ -69,6 +99,7 @@ class _CollaboratorsScreenState extends ConsumerState<CollaboratorsScreen> {
           initial: collaborator.fullName.isNotEmpty
               ? collaborator.fullName[0].toUpperCase()
               : '?',
+          isActive: collaborator.isActive,
           onWhatsAppTap: () => ContactUtils.launchWhatsApp(collaborator.phone),
           onPhoneTap: () => ContactUtils.makePhoneCall(collaborator.phone),
           onTap: () {

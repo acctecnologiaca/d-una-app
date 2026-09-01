@@ -1,15 +1,153 @@
-import { createTransport } from "npm:nodemailer";
+import { createTransport } from "npm:nodemailer@6.9.13";
 import { createClient } from "jsr:@supabase/supabase-js@2";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+};
+
+interface UserContext {
+  name?: string;
+  companyName?: string;
+  phone?: string;
+  replyToEmail?: string;
+  companyLogo?: string;
+}
+
+interface DocumentConfig {
+  viewerPath: string;
+  buttonLabel: string;
+  emailTitle: string;
+  showValidityBadge: boolean;
+  validityLabel: string;
+}
+
+function getDocumentConfig(docType: string): DocumentConfig {
+  switch (docType) {
+    case 'quote':
+      return {
+        viewerPath: 'quote.html',
+        buttonLabel: 'Ver cotización',
+        emailTitle: 'Cotización D-UNA',
+        showValidityBadge: true,
+        validityLabel: 'cotización',
+      };
+    case 'report':
+    case 'service_report':
+      return {
+        viewerPath: 'report.html',
+        buttonLabel: 'Ver reporte de servicio',
+        emailTitle: 'Reporte de Servicio D-UNA',
+        showValidityBadge: true,
+        validityLabel: 'reporte de servicio',
+      };
+    case 'supplier_order':
+    case 'oc':
+      return {
+        viewerPath: 'order.html',
+        buttonLabel: 'Ver orden de compra',
+        emailTitle: 'Orden de Compra D-UNA',
+        showValidityBadge: true,
+        validityLabel: 'orden de compra',
+      };
+    default:
+      return {
+        viewerPath: '',
+        buttonLabel: 'Ver documento',
+        emailTitle: 'Documento D-UNA',
+        showValidityBadge: false,
+        validityLabel: 'documento',
+      };
+  }
+}
+
+function buildStandardEmailHtml(params: {
+  config: DocumentConfig;
+  viewerUrl: string;
+  formattedUserBody: string;
+  validityDays: number;
+  userContext?: UserContext;
+}): string {
+  const { config, viewerUrl, formattedUserBody, validityDays, userContext } = params;
+
+  const logoHtml = userContext?.companyLogo ? `
+    <td style="width: 120px; vertical-align: middle; padding-right: 20px;">
+      <img src="${userContext.companyLogo}" style="max-width: 110px; max-height: 110px; border-radius: 8px; object-fit: contain; display: block;" alt="Logo">
+    </td>
+  ` : '';
+
+  const validityBadgeHtml = config.showValidityBadge ? `
+    <p style="font-size: 13px; color: #64748B; margin: 0 0 24px 0; background-color: #F8FAFC; padding: 10px 14px; border-radius: 8px;">
+      <strong>⚠Importante:</strong> El enlace al documento estará disponible <strong>solo por ${validityDays} días</strong>. Le recomendamos abrir el documento y guardarlo en sus registros.
+    </p>
+  ` : '';
+
+  return `
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>${config.emailTitle}</title>
+</head>
+<body style="font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; background-color: #F8FAFC; margin: 0; padding: 24px 16px; color: #1E293B; line-height: 1.6;">
+  <div style="max-width: 640px; margin: 0 auto; background-color: #FFFFFF; border-radius: 12px; overflow: hidden; border: 1px solid #E2E8F0; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);">
+    
+    <div style="padding: 28px 24px;">
+      <!-- CUERPO DEFINIDO POR EL USUARIO -->
+      <div style="font-size: 14px; color: #334155; margin-bottom: 20px;">
+        ${formattedUserBody}
+      </div>
+
+      <!-- NOTA DE VIGENCIA -->
+      ${validityBadgeHtml}
+
+      <!-- BOTÓN PRINCIPAL DE ACCIÓN -->
+      <div style="text-align: center; margin: 28px 0 14px 0;">
+        <a href="${viewerUrl}" style="background-color: #0F172A; color: #FFFFFF; text-decoration: none; padding: 14px 28px; border-radius: 10px; font-weight: 700; font-size: 14px; display: inline-block; box-shadow: 0 4px 12px rgba(15, 23, 42, 0.25);">
+          ${config.buttonLabel}
+        </a>
+      </div>
+
+      <!-- RESPALDO CON ENLACE DIRECTO -->
+      <p style="font-size: 12px; color: #64748B; text-align: center; margin: 0 0 20px 0; line-height: 1.5;">
+        Si el botón no funciona en su gestor de correo, copie y pegue este enlace en su navegador:<br>
+        <a href="${viewerUrl}" style="color: #0284C7; word-break: break-all; text-decoration: underline;">${viewerUrl}</a>
+      </p>
+
+      <!-- FIRMA COMERCIAL DEL EMISOR -->
+      <div style="margin-top: 28px; border-top: 1px solid #E2E8F0; padding-top: 20px;">
+        <table cellpadding="0" cellspacing="0" style="width: 100%; border-collapse: collapse;">
+          <tr>
+            ${logoHtml}
+            <td style="vertical-align: middle;">
+              <div style="font-size: 15px; font-weight: 700; color: #0F172A;">${userContext?.name || 'Asesor Comercial'}</div>
+              ${userContext?.companyName ? `<div style="font-size: 13px; color: #64748B; margin-top: 2px;">${userContext.companyName}</div>` : ''}
+              <div style="margin-top: 6px; font-size: 12px; color: #64748B; line-height: 1.6;">
+                ${userContext?.phone ? `<div>📞 ${userContext.phone}</div>` : ''}
+                ${userContext?.replyToEmail ? `<div style="margin-top: 2px;">✉️ <a href="mailto:${userContext.replyToEmail}" style="color: #0284C7; text-decoration: none;">${userContext.replyToEmail}</a></div>` : ''}
+              </div>
+            </td>
+          </tr>
+        </table>
+      </div>
+    </div>
+
+    <!-- FOOTER INSTITUCIONAL -->
+    <div style="background-color: #F1F5F9; padding: 18px 20px; border-top: 1px solid #E2E8F0; text-align: center;">
+      <img src="https://fdkswvzrozijbizdthge.supabase.co/storage/v1/object/sign/app_images/creado_con_d_una.png?token=eyJraWQiOiJzdG9yYWdlLXVybC1zaWduaW5nLWtleV8yNjZhOWZkMS0xYWQyLTQ3OWEtOGNlYS1kYjQzMjA0OGNlMjkiLCJhbGciOiJIUzI1NiJ9.eyJ1cmwiOiJhcHBfaW1hZ2VzL2NyZWFkb19jb25fZF91bmEucG5nIiwiaWF0IjoxNzc4MjUwNzI0LCJleHAiOjQ5MzE4NTA3MjR9.sP-lgLmlurZ3oMZxk6IGFwaRQ6_OTKZgMmiZQ0CM4Mc" width="110" style="display: inline-block; opacity: 0.85;" alt="Creado con D-UNA">
+    </div>
+
+  </div>
+</body>
+</html>
+  `;
 }
 
 Deno.serve(async (req) => {
   // Handle CORS
   if (req.method === 'OPTIONS') {
-    return new Response('ok', { headers: corsHeaders })
+    return new Response('ok', { headers: corsHeaders });
   }
 
   try {
@@ -18,8 +156,6 @@ Deno.serve(async (req) => {
     console.log(JSON.stringify(body, null, 2));
 
     const { 
-      documentBase64, 
-      fileName, 
       recipientEmails, 
       userContext, 
       emailContent,
@@ -142,6 +278,33 @@ Deno.serve(async (req) => {
     // END RATE LIMITING & CREDITS VALIDATION
     // ============================================================
 
+    // Construct HTML Body: dinámico según documentType
+    const isSupplierOrder = documentType === 'supplier_order' || documentType === 'oc';
+    const config = getDocumentConfig(documentType);
+    let fullBodyHtml = '';
+
+    if (isSupplierOrder) {
+      fullBodyHtml = emailContent.bodyHtml;
+    } else {
+      const viewerUrl = actionToken 
+        ? `https://d-una.app/${config.viewerPath}?token=${actionToken}` 
+        : 'https://d-una.app';
+      
+      const formattedUserBody = (emailContent.bodyHtml || '')
+        .split('\n')
+        .filter((line: string) => line.trim().length > 0)
+        .map((line: string) => `<p style="margin: 0 0 12px 0;">${line}</p>`)
+        .join('');
+
+      fullBodyHtml = buildStandardEmailHtml({
+        config,
+        viewerUrl,
+        formattedUserBody,
+        validityDays,
+        userContext,
+      });
+    }
+
     const provider = Deno.env.get('MAIL_PROVIDER') || 'GOOGLE';
     console.log('Proveedor de correo:', provider);
 
@@ -179,98 +342,6 @@ Deno.serve(async (req) => {
         socketTimeout: 10000,
       });
 
-      // Construct HTML Body: para Órdenes de Compra (supplier_order / oc) se usa directamente bodyHtml sin firma duplicada
-      const isSupplierOrder = documentType === 'supplier_order' || documentType === 'oc';
-      let fullBodyHtml = '';
-
-      if (isSupplierOrder) {
-        fullBodyHtml = emailContent.bodyHtml;
-      } else {
-        const viewerUrl = actionToken 
-          ? `https://d-una.app/quote.html?token=${actionToken}` 
-          : 'https://d-una.app';
-        
-        const formattedUserBody = (emailContent.bodyHtml || '')
-          .split('\n')
-          .filter((line: string) => line.trim().length > 0)
-          .map((line: string) => `<p style="margin: 0 0 12px 0;">${line}</p>`)
-          .join('');
-
-        const logoHtml = userContext?.companyLogo ? `
-          <td style="width: 120px; vertical-align: middle; padding-right: 20px;">
-            <img src="${userContext.companyLogo}" style="max-width: 110px; max-height: 110px; border-radius: 8px; object-fit: contain; display: block;" alt="Logo">
-          </td>
-        ` : '';
-
-        const contactParts = [];
-        if (userContext?.phone) contactParts.push(`📞 ${userContext.phone}`);
-        if (userContext?.replyToEmail) contactParts.push(`✉️ <a href="mailto:${userContext.replyToEmail}" style="color: #36618E; text-decoration: none;">${userContext.replyToEmail}</a>`);
-        const contactInfoLine = contactParts.join('&nbsp;&bull;&nbsp;');
-
-        fullBodyHtml = `
-<!DOCTYPE html>
-<html lang="es">
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Cotización D-UNA</title>
-</head>
-<body style="font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; background-color: #F8FAFC; margin: 0; padding: 24px 16px; color: #1E293B; line-height: 1.6;">
-  <div style="max-width: 640px; margin: 0 auto; background-color: #FFFFFF; border-radius: 12px; overflow: hidden; border: 1px solid #E2E8F0; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);">
-    
-    <div style="padding: 28px 24px;">
-      <!-- CUERPO DEFINIDO POR EL USUARIO -->
-      <div style="font-size: 14px; color: #334155; margin-bottom: 20px;">
-        ${formattedUserBody}
-      </div>
-
-      <!-- NOTA DE VIGENCIA -->
-      <p style="font-size: 13px; color: #64748B; margin: 0 0 24px 0; background-color: #F8FAFC; padding: 10px 14px; border-radius: 8px; border-left: 3px solid #0F172A;">
-        📝 <strong>Validez:</strong> Esta cotización es válida durante <strong>${validityDays} días</strong> desde su emisión.
-      </p>
-
-      <!-- BOTÓN PRINCIPAL DE ACCIÓN -->
-      <div style="text-align: center; margin: 28px 0 14px 0;">
-        <a href="${viewerUrl}" style="background-color: #0F172A; color: #FFFFFF; text-decoration: none; padding: 14px 28px; border-radius: 10px; font-weight: 700; font-size: 14px; display: inline-block; box-shadow: 0 4px 12px rgba(15, 23, 42, 0.25);">
-          Ver cotización
-        </a>
-      </div>
-
-      <!-- RESPALDO CON ENLACE DIRECTO -->
-      <p style="font-size: 12px; color: #64748B; text-align: center; margin: 0 0 20px 0; line-height: 1.5;">
-        Si el botón no funciona en su gestor de correo, copie y pegue este enlace en su navegador:<br>
-        <a href="${viewerUrl}" style="color: #0284C7; word-break: break-all; text-decoration: underline;">${viewerUrl}</a>
-      </p>
-
-      <!-- FIRMA COMERCIAL DEL EMISOR -->
-      <div style="margin-top: 28px; border-top: 1px solid #E2E8F0; padding-top: 20px;">
-        <table cellpadding="0" cellspacing="0" style="width: 100%; border-collapse: collapse;">
-          <tr>
-            ${logoHtml}
-            <td style="vertical-align: middle;">
-              <div style="font-size: 15px; font-weight: 700; color: #0F172A;">${userContext?.name || 'Asesor Comercial'}</div>
-              ${userContext?.companyName ? `<div style="font-size: 13px; color: #64748B; margin-top: 2px;">${userContext.companyName}</div>` : ''}
-              <div style="margin-top: 6px; font-size: 12px; color: #64748B; line-height: 1.6;">
-                ${userContext?.phone ? `<div>📞 ${userContext.phone}</div>` : ''}
-                ${userContext?.replyToEmail ? `<div style="margin-top: 2px;">✉️ <a href="mailto:${userContext.replyToEmail}" style="color: #0284C7; text-decoration: none;">${userContext.replyToEmail}</a></div>` : ''}
-              </div>
-            </td>
-          </tr>
-        </table>
-      </div>
-    </div>
-
-    <!-- FOOTER INSTITUCIONAL -->
-    <div style="background-color: #F1F5F9; padding: 18px 20px; border-top: 1px solid #E2E8F0; text-align: center;">
-      <img src="https://fdkswvzrozijbizdthge.supabase.co/storage/v1/object/sign/app_images/creado_con_d_una.png?token=eyJraWQiOiJzdG9yYWdlLXVybC1zaWduaW5nLWtleV8yNjZhOWZkMS0xYWQyLTQ3OWEtOGNlYS1kYjQzMjA0OGNlMjkiLCJhbGciOiJIUzI1NiJ9.eyJ1cmwiOiJhcHBfaW1hZ2VzL2NyZWFkb19jb25fZF91bmEucG5nIiwiaWF0IjoxNzc4MjUwNzI0LCJleHAiOjQ5MzE4NTA3MjR9.sP-lgLmlurZ3oMZxk6IGFwaRQ6_OTKZgMmiZQ0CM4Mc" width="110" style="display: inline-block; opacity: 0.85;" alt="Creado con D-UNA">
-    </div>
-
-  </div>
-</body>
-</html>
-        `;
-      }
-
       const mailOptions = {
         from: `"${userContext.name}" <${smtpFrom}>`,
         to: cleanRecipients.join(', '),
@@ -281,15 +352,6 @@ Deno.serve(async (req) => {
           from: smtpUser,
           to: cleanRecipients,
         },
-        attachments: documentBase64
-          ? [
-              {
-                filename: fileName || 'documento.pdf',
-                content: documentBase64,
-                encoding: 'base64',
-              },
-            ]
-          : [],
       };
 
       const info = await transporter.sendMail(mailOptions);
@@ -299,92 +361,6 @@ Deno.serve(async (req) => {
       const resendApiKey = Deno.env.get('RESEND_API_KEY');
       if (!resendApiKey) {
         throw new Error('RESEND_API_KEY not configured');
-      }
-
-      const isSupplierOrder = documentType === 'supplier_order' || documentType === 'oc';
-      let fullBodyHtml = '';
-
-      if (isSupplierOrder) {
-        fullBodyHtml = emailContent.bodyHtml;
-      } else {
-        const viewerUrl = actionToken 
-          ? `https://d-una.app/quote.html?token=${actionToken}` 
-          : 'https://d-una.app';
-        
-        const formattedUserBody = (emailContent.bodyHtml || '')
-          .split('\n')
-          .filter((line: string) => line.trim().length > 0)
-          .map((line: string) => `<p style="margin: 0 0 12px 0;">${line}</p>`)
-          .join('');
-
-        const logoHtml = userContext?.companyLogo ? `
-          <td style="width: 120px; vertical-align: middle; padding-right: 20px;">
-            <img src="${userContext.companyLogo}" style="max-width: 110px; max-height: 110px; border-radius: 8px; object-fit: contain; display: block;" alt="Logo">
-          </td>
-        ` : '';
-
-        fullBodyHtml = `
-<!DOCTYPE html>
-<html lang="es">
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Cotización D-UNA</title>
-</head>
-<body style="font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; background-color: #F8FAFC; margin: 0; padding: 24px 16px; color: #1E293B; line-height: 1.6;">
-  <div style="max-width: 640px; margin: 0 auto; background-color: #FFFFFF; border-radius: 12px; overflow: hidden; border: 1px solid #E2E8F0; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);">
-    
-    <div style="padding: 28px 24px;">
-      <!-- CUERPO DEFINIDO POR EL USUARIO -->
-      <div style="font-size: 14px; color: #334155; margin-bottom: 20px;">
-        ${formattedUserBody}
-      </div>
-
-      <!-- NOTA DE VIGENCIA -->
-      <p style="font-size: 13px; color: #64748B; margin: 0 0 24px 0; background-color: #F8FAFC; padding: 10px 14px; border-radius: 8px; border-left: 3px solid #0F172A;">
-        📝 <strong>Validez:</strong> Esta cotización es válida durante <strong>${validityDays} días</strong> desde su emisión.
-      </p>
-
-      <!-- BOTÓN PRINCIPAL DE ACCIÓN -->
-      <div style="text-align: center; margin: 28px 0 14px 0;">
-        <a href="${viewerUrl}" style="background-color: #0F172A; color: #FFFFFF; text-decoration: none; padding: 14px 28px; border-radius: 10px; font-weight: 700; font-size: 14px; display: inline-block; box-shadow: 0 4px 12px rgba(15, 23, 42, 0.25);">
-          Ver cotización
-        </a>
-      </div>
-
-      <!-- RESPALDO CON ENLACE DIRECTO -->
-      <p style="font-size: 12px; color: #64748B; text-align: center; margin: 0 0 20px 0; line-height: 1.5;">
-        Si el botón no funciona en su gestor de correo, copie y pegue este enlace en su navegador:<br>
-        <a href="${viewerUrl}" style="color: #0284C7; word-break: break-all; text-decoration: underline;">${viewerUrl}</a>
-      </p>
-
-      <!-- FIRMA COMERCIAL DEL EMISOR -->
-      <div style="margin-top: 28px; border-top: 1px solid #E2E8F0; padding-top: 20px;">
-        <table cellpadding="0" cellspacing="0" style="width: 100%; border-collapse: collapse;">
-          <tr>
-            ${logoHtml}
-            <td style="vertical-align: middle;">
-              <div style="font-size: 15px; font-weight: 700; color: #0F172A;">${userContext?.name || 'Asesor Comercial'}</div>
-              ${userContext?.companyName ? `<div style="font-size: 13px; color: #64748B; margin-top: 2px;">${userContext.companyName}</div>` : ''}
-              <div style="margin-top: 6px; font-size: 12px; color: #64748B; line-height: 1.6;">
-                ${userContext?.phone ? `<div>📞 ${userContext.phone}</div>` : ''}
-                ${userContext?.replyToEmail ? `<div style="margin-top: 2px;">✉️ <a href="mailto:${userContext.replyToEmail}" style="color: #0284C7; text-decoration: none;">${userContext.replyToEmail}</a></div>` : ''}
-              </div>
-            </td>
-          </tr>
-        </table>
-      </div>
-    </div>
-
-    <!-- FOOTER INSTITUCIONAL -->
-    <div style="background-color: #F1F5F9; padding: 18px 20px; border-top: 1px solid #E2E8F0; text-align: center;">
-      <img src="https://fdkswvzrozijbizdthge.supabase.co/storage/v1/object/sign/app_images/creado_con_d_una.png?token=eyJraWQiOiJzdG9yYWdlLXVybC1zaWduaW5nLWtleV8yNjZhOWZkMS0xYWQyLTQ3OWEtOGNlYS1kYjQzMjA0OGNlMjkiLCJhbGciOiJIUzI1NiJ9.eyJ1cmwiOiJhcHBfaW1hZ2VzL2NyZWFkb19jb25fZF91bmEucG5nIiwiaWF0IjoxNzc4MjUwNzI0LCJleHAiOjQ5MzE4NTA3MjR9.sP-lgLmlurZ3oMZxk6IGFwaRQ6_OTKZgMmiZQ0CM4Mc" width="110" style="display: inline-block; opacity: 0.85;" alt="Creado con D-UNA">
-    </div>
-
-  </div>
-</body>
-</html>
-        `;
       }
 
       const res = await fetch('https://api.resend.com/emails', {
@@ -399,14 +375,6 @@ Deno.serve(async (req) => {
           reply_to: userContext.replyToEmail,
           subject: emailContent.subject,
           html: fullBodyHtml,
-          attachments: documentBase64
-            ? [
-                {
-                  filename: fileName || 'documento.pdf',
-                  content: documentBase64,
-                },
-              ]
-            : undefined,
         }),
       });
 
@@ -466,7 +434,7 @@ Deno.serve(async (req) => {
     }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       status: 200,
-    })
+    });
 
   } catch (error: unknown) {
     const errorMessage = error instanceof Error ? error.message : String(error);
@@ -478,6 +446,6 @@ Deno.serve(async (req) => {
     return new Response(JSON.stringify({ success: false, error: errorMessage }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       status: 400,
-    })
+    });
   }
-})
+});

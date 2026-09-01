@@ -152,6 +152,18 @@ class _ProductDetailsScreenState extends ConsumerState<ProductDetailsScreen> {
               child: Row(
                 children: [
                   OutlinedButton.icon(
+                    style: OutlinedButton.styleFrom(
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      side: BorderSide(
+                        color: colors.outline.withValues(alpha: 0.3),
+                      ),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 8,
+                      ),
+                    ),
                     onPressed: () {
                       final queryText = currentProduct.model?.isNotEmpty == true
                           ? currentProduct.model!
@@ -166,6 +178,18 @@ class _ProductDetailsScreenState extends ConsumerState<ProductDetailsScreen> {
                   ),
                   const SizedBox(width: 12),
                   OutlinedButton.icon(
+                    style: OutlinedButton.styleFrom(
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      side: BorderSide(
+                        color: colors.outline.withValues(alpha: 0.3),
+                      ),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 8,
+                      ),
+                    ),
                     onPressed: () {
                       final queryText = currentProduct.model?.isNotEmpty == true
                           ? currentProduct.model!

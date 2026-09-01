@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:d_una_app/shared/widgets/app_toast.dart';
 import 'package:d_una_app/shared/widgets/friendly_error_widget.dart';
 import 'package:d_una_app/shared/widgets/custom_dialog.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -8,7 +9,6 @@ import '../../../profile/presentation/providers/profile_provider.dart';
 import '../../../../../shared/widgets/generic_list_screen.dart';
 import '../../../../../shared/widgets/standard_list_item.dart';
 import '../../../portfolio/presentation/providers/lookup_providers.dart';
-import '../../../../core/utils/error_handler.dart';
 
 class ShippingMethodsScreen extends ConsumerStatefulWidget {
   const ShippingMethodsScreen({super.key});
@@ -20,7 +20,6 @@ class ShippingMethodsScreen extends ConsumerStatefulWidget {
 
 class _ShippingMethodsScreenState extends ConsumerState<ShippingMethodsScreen> {
   Future<void> _removeMethod(ShippingMethod method) async {
-    // ... existing remove logic ...
     final colors = Theme.of(context).colorScheme;
     final confirmed = await CustomDialog.show<bool>(
       context: context,
@@ -50,13 +49,11 @@ class _ShippingMethodsScreenState extends ConsumerState<ShippingMethodsScreen> {
             .deleteShippingMethod(method.id);
         ref.invalidate(shippingMethodsProvider);
         if (mounted) {
-          ScaffoldMessenger.of(
-            context,
-          ).showSnackBar(const SnackBar(content: Text('Método eliminado')));
+          AppToast.success(context, message: 'Método de envío eliminado');
         }
       } catch (e) {
         if (mounted) {
-          ErrorHandler.showErrorSnackBar(context, e);
+          AppToast.error(context, message: 'Error al eliminar método: $e');
         }
       }
     }

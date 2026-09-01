@@ -71,7 +71,21 @@ class SettingsScreen extends StatelessWidget {
           ),
           const Divider(height: 32),
 
-          // Group 3: Términos y condiciones
+          // Group 3: Textos y plantillas
+          _buildSectionHeader('Textos y plantillas', textTheme, colors),
+          _buildSettingsItem(
+            'Frases de acceso rápido (reportes)',
+            context,
+            onTap: () => context.push('/settings/quick-phrases'),
+          ),
+          _buildSettingsItem(
+            'Plantillas de correos electrónicos',
+            context,
+            onTap: () => context.push('/settings/email-templates'),
+          ),
+          const Divider(height: 32),
+
+          // Group 4: Términos y condiciones
           _buildSectionHeader('Términos y condiciones', textTheme, colors),
           _buildSettingsItem(
             'Condiciones comerciales',
@@ -82,11 +96,6 @@ class SettingsScreen extends StatelessWidget {
             'Observaciones',
             context,
             onTap: () => context.push('/settings/observations'),
-          ),
-          _buildSettingsItem(
-            'Plantillas de correos electrónicos',
-            context,
-            onTap: () => context.push('/settings/email-templates'),
           ),
           const Divider(height: 32),
 

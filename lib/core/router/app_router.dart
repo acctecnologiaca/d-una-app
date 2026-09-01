@@ -63,6 +63,7 @@ import 'package:d_una_app/features/settings/presentation/screens/shipping_compan
 import '../../features/settings/presentation/screens/delivery_times_list_screen.dart';
 import '../../features/settings/presentation/screens/commercial_conditions_list_screen.dart';
 import '../../features/settings/presentation/screens/observations_list_screen.dart';
+import '../../features/settings/presentation/screens/quick_phrases_list_screen.dart';
 import '../../features/settings/presentation/screens/financial_parameters_screen.dart';
 import '../../features/purchases/presentation/screens/purchases_list_screen.dart';
 import '../../features/purchases/presentation/screens/purchase_details_screen.dart';
@@ -561,10 +562,19 @@ final routerProvider = Provider<GoRouter>((ref) {
           builder: (context, state) {
             final extra = state.extra;
             int tabIndex = 0;
-            if (extra is Map<String, dynamic> && extra.containsKey('initialTabIndex')) {
-              tabIndex = extra['initialTabIndex'] as int;
+            String? purchaseId;
+            if (extra is Map<String, dynamic>) {
+              if (extra.containsKey('initialTabIndex')) {
+                tabIndex = extra['initialTabIndex'] as int;
+              }
+              if (extra.containsKey('purchaseId')) {
+                purchaseId = extra['purchaseId'] as String?;
+              }
             }
-            return AddPurchaseScreen(initialTabIndex: tabIndex);
+            return AddPurchaseScreen(
+              purchaseId: purchaseId,
+              initialTabIndex: tabIndex,
+            );
           },
           routes: [
             GoRoute(
@@ -687,9 +697,12 @@ final routerProvider = Provider<GoRouter>((ref) {
         GoRoute(
           path: 'edit/:id',
           builder: (context, state) {
+            final id = state.pathParameters['id'];
             final tabParam = state.uri.queryParameters['tab'];
-            final initialTab = tabParam != null ? int.tryParse(tabParam) : null;
+            final initialTab =
+                tabParam != null ? int.tryParse(tabParam) : null;
             return CreateSupplierOrderScreen(
+              orderId: id,
               editMode: true,
               initialTab: initialTab,
             );
@@ -765,6 +778,10 @@ final routerProvider = Provider<GoRouter>((ref) {
         GoRoute(
           path: 'observations',
           builder: (context, state) => const ObservationsListScreen(),
+        ),
+        GoRoute(
+          path: 'quick-phrases',
+          builder: (context, state) => const QuickPhrasesListScreen(),
         ),
         GoRoute(
           path: 'financial-parameters',

@@ -4,6 +4,7 @@ class CollaboratorListTile extends StatelessWidget {
   final String name;
   final String role;
   final String initial;
+  final bool isActive;
   final VoidCallback? onTap;
   final VoidCallback? onWhatsAppTap;
   final VoidCallback? onPhoneTap;
@@ -13,6 +14,7 @@ class CollaboratorListTile extends StatelessWidget {
     required this.name,
     required this.role,
     required this.initial,
+    this.isActive = true,
     this.onTap,
     this.onWhatsAppTap,
     this.onPhoneTap,
@@ -31,11 +33,15 @@ class CollaboratorListTile extends StatelessWidget {
           children: [
             CircleAvatar(
               radius: 24,
-              backgroundColor: colors.primaryContainer,
+              backgroundColor: isActive
+                  ? colors.primaryContainer
+                  : colors.surfaceContainerHighest,
               child: Text(
                 initial,
                 style: TextStyle(
-                  color: colors.onPrimaryContainer,
+                  color: isActive
+                      ? colors.onPrimaryContainer
+                      : colors.onSurfaceVariant.withValues(alpha: 0.38),
                   fontWeight: FontWeight.bold,
                   fontSize: 18,
                 ),
@@ -50,7 +56,9 @@ class CollaboratorListTile extends StatelessWidget {
                     name,
                     style: textTheme.bodyLarge?.copyWith(
                       fontWeight: FontWeight.w500,
-                      color: colors.onSurface,
+                      color: isActive
+                          ? colors.onSurface
+                          : colors.onSurface.withValues(alpha: 0.38),
                       fontSize: 16,
                     ),
                     overflow: TextOverflow.ellipsis,
@@ -59,31 +67,44 @@ class CollaboratorListTile extends StatelessWidget {
                   Text(
                     role,
                     style: textTheme.bodyMedium?.copyWith(
-                      color: colors.onSurfaceVariant,
+                      color: isActive
+                          ? colors.onSurfaceVariant
+                          : colors.onSurfaceVariant.withValues(alpha: 0.38),
                     ),
                   ),
                 ],
               ),
             ),
             IconButton(
-              onPressed: onWhatsAppTap ?? () {},
-              icon: Image.asset(
-                'assets/icons/whatsapp_icon.png',
-                width: 32,
-                height: 32,
-                errorBuilder: (context, error, stackTrace) {
-                  return Icon(
-                    Icons.chat_bubble_outline,
-                    color: colors.onSurfaceVariant,
-                  );
-                },
+              onPressed: isActive ? onWhatsAppTap : null,
+              icon: Opacity(
+                opacity: isActive ? 1.0 : 0.38,
+                child: Image.asset(
+                  'assets/icons/whatsapp_icon.png',
+                  width: 32,
+                  height: 32,
+                  errorBuilder: (context, error, stackTrace) {
+                    return Icon(
+                      Icons.chat_bubble_outline,
+                      color: isActive
+                          ? colors.onSurfaceVariant
+                          : colors.onSurfaceVariant.withValues(alpha: 0.38),
+                    );
+                  },
+                ),
               ),
-              color: colors.onSurfaceVariant,
+              color: isActive
+                  ? colors.onSurfaceVariant
+                  : colors.onSurfaceVariant.withValues(alpha: 0.38),
             ),
             IconButton(
-              onPressed: onPhoneTap ?? () {},
-              icon: const Icon(Icons.phone_outlined),
-              color: colors.onSurfaceVariant,
+              onPressed: isActive ? onPhoneTap : null,
+              icon: Icon(
+                Icons.phone_outlined,
+                color: isActive
+                    ? colors.onSurfaceVariant
+                    : colors.onSurfaceVariant.withValues(alpha: 0.38),
+              ),
             ),
           ],
         ),

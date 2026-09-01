@@ -8,14 +8,20 @@ class SupabaseClientsRepository {
 
   SupabaseClientsRepository(this._supabase);
 
-  Future<List<Client>> getClients() async {
+  Future<List<Client>> getClients({bool includeArchived = false}) async {
     final userId = _supabase.auth.currentUser?.id;
     if (userId == null) return [];
 
-    final response = await _supabase
+    var query = _supabase
         .from('clients')
         .select('*, contacts(*)')
         .eq('user_id', userId); // Fetch clients only for current user
+
+    if (!includeArchived) {
+      query = query.or('is_archived.eq.false,is_archived.is.null');
+    }
+
+    final response = await query;
 
     // ignore: unnecessary_cast
     final data = response as List<dynamic>;
@@ -29,6 +35,7 @@ class SupabaseClientsRepository {
     bool ascending = false,
     String? searchQuery,
     String? typeFilter,
+    bool onlyArchived = false,
   }) async {
     final userId = _supabase.auth.currentUser?.id;
     if (userId == null) return [];
@@ -37,6 +44,12 @@ class SupabaseClientsRepository {
         .from('clients')
         .select('*, contacts(*)')
         .eq('user_id', userId);
+
+    if (onlyArchived) {
+      query = query.eq('is_archived', true);
+    } else {
+      query = query.or('is_archived.eq.false,is_archived.is.null');
+    }
 
     if (searchQuery != null && searchQuery.trim().isNotEmpty) {
       final normalizedQuery = searchQuery.trim();
@@ -170,6 +183,36 @@ class SupabaseClientsRepository {
       );
     }
     await _supabase.from('clients').delete().eq('id', id);
+  }
+
+  Future<void> archiveClient(String id) async {
+    final userId = _supabase.auth.currentUser?.id;
+    if (userId == null) return;
+    await _supabase
+        .from('clients')
+        .update({'is_archived': true})
+        .eq('id', id)
+        .eq('user_id', userId);
+  }
+
+  Future<void> unarchiveClient(String id) async {
+    final userId = _supabase.auth.currentUser?.id;
+    if (userId == null) return;
+    await _supabase
+        .from('clients')
+        .update({'is_archived': false})
+        .eq('id', id)
+        .eq('user_id', userId);
+  }
+
+  Future<void> batchArchiveClients(List<String> ids, bool isArchived) async {
+    final userId = _supabase.auth.currentUser?.id;
+    if (userId == null || ids.isEmpty) return;
+    await _supabase
+        .from('clients')
+        .update({'is_archived': isArchived})
+        .inFilter('id', ids)
+        .eq('user_id', userId);
   }
 
   // Contact Operations

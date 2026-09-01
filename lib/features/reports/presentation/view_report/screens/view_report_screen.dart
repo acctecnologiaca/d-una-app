@@ -43,6 +43,7 @@ class _ViewReportScreenState extends ConsumerState<ViewReportScreen>
     with SingleTickerProviderStateMixin, WidgetsBindingObserver {
   late final TabController _tabController;
   bool _hasTriggeredSend = false;
+  RealtimeChannel? _singleReportChannel;
 
   @override
   void initState() {
@@ -54,6 +55,32 @@ class _ViewReportScreenState extends ConsumerState<ViewReportScreen>
     _tabController.addListener(() {
       if (!_tabController.indexIsChanging) setState(() {});
     });
+
+    _initSingleReportRealtime();
+  }
+
+  void _initSingleReportRealtime() {
+    _singleReportChannel = Supabase.instance.client
+        .channel(
+          'public:service_report_${widget.reportId}_${DateTime.now().millisecondsSinceEpoch}',
+        )
+        .onPostgresChanges(
+          event: PostgresChangeEvent.all,
+          schema: 'public',
+          table: 'service_reports',
+          filter: PostgresChangeFilter(
+            type: PostgresChangeFilterType.eq,
+            column: 'id',
+            value: widget.reportId,
+          ),
+          callback: (payload) {
+            if (mounted) {
+              ref.invalidate(viewReportProvider(widget.reportId));
+              refreshAllReportProviders(ref);
+            }
+          },
+        )
+        .subscribe();
   }
 
   @override
@@ -65,6 +92,8 @@ class _ViewReportScreenState extends ConsumerState<ViewReportScreen>
 
   @override
   void dispose() {
+    _singleReportChannel?.unsubscribe();
+    _singleReportChannel = null;
     WidgetsBinding.instance.removeObserver(this);
     _tabController.dispose();
     super.dispose();
@@ -141,7 +170,7 @@ class _ViewReportScreenState extends ConsumerState<ViewReportScreen>
               indicatorColor: colors.primary,
               labelStyle: const TextStyle(fontWeight: FontWeight.bold),
               tabs: const [
-                Tab(text: 'Reporte'),
+                Tab(text: 'Informe'),
                 Tab(text: 'Productos'),
                 Tab(text: 'Servicios'),
                 Tab(text: 'Cliente'),

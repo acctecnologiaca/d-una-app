@@ -7,6 +7,7 @@ import '../../../domain/repositories/service_reports_repository.dart';
 import '../../../data/repositories/supabase_service_reports_repository.dart';
 import '../../../domain/models/service_report_model.dart' as domain;
 import '../../../data/models/service_report.dart' as data;
+import '../../view_report/providers/view_report_provider.dart';
 
 final serviceReportsRepositoryProvider = Provider<ServiceReportsRepository>((ref) {
   return SupabaseServiceReportsRepository(Supabase.instance.client);
@@ -53,9 +54,22 @@ class ReportSelectionNotifier extends StateNotifier<ReportSelectionState> {
     );
   }
 
+  void toggleItem(String id) => toggle(id);
+
+  void toggleSelectionMode() {
+    state = state.copyWith(
+      isSelectionMode: !state.isSelectionMode,
+      selectedIds: {},
+    );
+  }
+
+  void exitSelectionMode() {
+    clear();
+  }
+
   void selectAll(List<String> allIds) {
     state = state.copyWith(
-      selectedIds: allIds.toSet(),
+      selectedIds: Set.from(allIds),
       isSelectionMode: allIds.isNotEmpty,
     );
   }
@@ -63,6 +77,8 @@ class ReportSelectionNotifier extends StateNotifier<ReportSelectionState> {
   void clear() {
     state = const ReportSelectionState();
   }
+
+  void clearSelection() => clear();
 }
 
 final reportSelectionProvider =
@@ -70,7 +86,7 @@ final reportSelectionProvider =
   return ReportSelectionNotifier();
 });
 
-class ReportsFilter {
+class ReportFilterState {
   final String? status;
   final String? categoryId;
   final DateTimeRange? dateRange;
@@ -78,7 +94,7 @@ class ReportsFilter {
   final String? productId;
   final String? clientId;
 
-  const ReportsFilter({
+  const ReportFilterState({
     this.status,
     this.categoryId,
     this.dateRange,
@@ -87,25 +103,30 @@ class ReportsFilter {
     this.clientId,
   });
 
-  ReportsFilter copyWith({
+  ReportFilterState copyWith({
     String? status,
     String? categoryId,
     DateTimeRange? dateRange,
     bool? includeArchived,
     String? productId,
     String? clientId,
+    bool clearStatus = false,
+    bool clearCategory = false,
+    bool clearDateRange = false,
+    bool clearProduct = false,
+    bool clearClient = false,
   }) {
-    return ReportsFilter(
-      status: status ?? this.status,
-      categoryId: categoryId ?? this.categoryId,
-      dateRange: dateRange ?? this.dateRange,
+    return ReportFilterState(
+      status: clearStatus ? null : (status ?? this.status),
+      categoryId: clearCategory ? null : (categoryId ?? this.categoryId),
+      dateRange: clearDateRange ? null : (dateRange ?? this.dateRange),
       includeArchived: includeArchived ?? this.includeArchived,
-      productId: productId ?? this.productId,
-      clientId: clientId ?? this.clientId,
+      productId: clearProduct ? null : (productId ?? this.productId),
+      clientId: clearClient ? null : (clientId ?? this.clientId),
     );
   }
 
-  bool get hasFilters =>
+  bool get hasActiveFilters =>
       status != null ||
       categoryId != null ||
       dateRange != null ||
@@ -114,119 +135,62 @@ class ReportsFilter {
       clientId != null;
 }
 
-final reportsFilterProvider = StateProvider<ReportsFilter>((ref) {
-  return const ReportsFilter();
-});
+class ReportFilterNotifier extends StateNotifier<ReportFilterState> {
+  ReportFilterNotifier() : super(const ReportFilterState());
 
-class PaginatedReportsNotifier
-    extends StateNotifier<AsyncValue<PaginatedState<domain.ServiceReportSummary>>> {
-  final Ref ref;
-  String _orderBy = 'service_date';
-  bool _ascending = false;
-  String? _searchQuery;
-
-  PaginatedReportsNotifier(this.ref) : super(const AsyncValue.loading()) {
-    loadFirstPage();
-  }
-
-  Future<void> loadFirstPage({
-    String? orderBy,
-    bool? ascending,
-    String? searchQuery,
-  }) async {
-    if (orderBy != null) _orderBy = orderBy;
-    if (ascending != null) _ascending = ascending;
-    if (searchQuery != null) _searchQuery = searchQuery;
-
-    state = const AsyncValue.loading();
-    try {
-      final repo = ref.read(serviceReportsRepositoryProvider);
-      final filter = ref.read(reportsFilterProvider);
-
-      final reports = await repo.getReportsPaginated(
-        offset: 0,
-        limit: 25,
-        orderBy: _orderBy,
-        ascending: _ascending,
-        searchQuery: _searchQuery,
-        statusFilter: filter.status,
-        categoryFilter: filter.categoryId,
-        dateRange: filter.dateRange,
-        includeArchived: filter.includeArchived,
-        productId: filter.productId,
-        clientId: filter.clientId,
-      );
-
-      final summaries = reports.map((r) => _mapToSummary(r)).toList();
-
-      state = AsyncValue.data(
-        PaginatedState(
-          items: summaries,
-          hasReachedEnd: reports.length < 25,
-          currentOffset: summaries.length,
-          isLoadingMore: false,
-        ),
-      );
-    } catch (e, st) {
-      state = AsyncValue.error(e, st);
+  void setStatus(String? status) {
+    if (status == null) {
+      state = state.copyWith(clearStatus: true);
+    } else {
+      state = state.copyWith(status: status);
     }
   }
 
-  Future<void> loadNextPage() async {
-    final current = state.valueOrNull;
-    if (current == null || current.hasReachedEnd || current.isLoadingMore) return;
-
-    state = AsyncValue.data(current.copyWith(isLoadingMore: true));
-
-    try {
-      final repo = ref.read(serviceReportsRepositoryProvider);
-      final filter = ref.read(reportsFilterProvider);
-
-      final reports = await repo.getReportsPaginated(
-        offset: current.currentOffset,
-        limit: 25,
-        orderBy: _orderBy,
-        ascending: _ascending,
-        searchQuery: _searchQuery,
-        statusFilter: filter.status,
-        categoryFilter: filter.categoryId,
-        dateRange: filter.dateRange,
-        includeArchived: filter.includeArchived,
-        productId: filter.productId,
-        clientId: filter.clientId,
-      );
-
-      final summaries = reports.map((r) => _mapToSummary(r)).toList();
-
-      state = AsyncValue.data(
-        current.copyWith(
-          items: [...current.items, ...summaries],
-          hasReachedEnd: reports.length < 25,
-          currentOffset: current.currentOffset + summaries.length,
-          isLoadingMore: false,
-        ),
-      );
-    } catch (e) {
-      state = AsyncValue.data(current.copyWith(isLoadingMore: false, error: e));
+  void setCategory(String? categoryId) {
+    if (categoryId == null) {
+      state = state.copyWith(clearCategory: true);
+    } else {
+      state = state.copyWith(categoryId: categoryId);
     }
   }
 
-  Future<void> updateSort(String orderBy, bool ascending) async {
-    _orderBy = orderBy;
-    _ascending = ascending;
-    await loadFirstPage();
+  void setDateRange(DateTimeRange? range) {
+    if (range == null) {
+      state = state.copyWith(clearDateRange: true);
+    } else {
+      state = state.copyWith(dateRange: range);
+    }
   }
 
-  Future<void> updateFilters({
+  void setIncludeArchived(bool include) {
+    state = state.copyWith(includeArchived: include);
+  }
+
+  void setProduct(String? productId) {
+    if (productId == null) {
+      state = state.copyWith(clearProduct: true);
+    } else {
+      state = state.copyWith(productId: productId);
+    }
+  }
+
+  void setClient(String? clientId) {
+    if (clientId == null) {
+      state = state.copyWith(clearClient: true);
+    } else {
+      state = state.copyWith(clientId: clientId);
+    }
+  }
+
+  void updateFilters({
     String? status,
     String? categoryId,
     DateTimeRange? dateRange,
     bool? includeArchived,
     String? productId,
     String? clientId,
-  }) async {
-    final current = ref.read(reportsFilterProvider);
-    ref.read(reportsFilterProvider.notifier).state = current.copyWith(
+  }) {
+    state = state.copyWith(
       status: status,
       categoryId: categoryId,
       dateRange: dateRange,
@@ -234,20 +198,152 @@ class PaginatedReportsNotifier
       productId: productId,
       clientId: clientId,
     );
-    await loadFirstPage();
   }
 
-  Future<void> updateSearch(String? query) async {
-    _searchQuery = query;
-    await loadFirstPage();
+  void reset() {
+    state = const ReportFilterState();
+  }
+}
+
+final reportsFilterProvider =
+    StateNotifierProvider<ReportFilterNotifier, ReportFilterState>((ref) {
+  return ReportFilterNotifier();
+});
+
+class PaginatedReportsNotifier
+    extends AsyncNotifier<PaginatedState<domain.ServiceReportSummary>> {
+  static const int _limit = 25;
+  String _orderBy = 'service_date';
+  bool _ascending = false;
+  String? _searchQuery;
+  String? _statusFilter;
+  String? _categoryFilter;
+  DateTimeRange? _dateRange;
+  bool _includeArchived = false;
+  String? _productId;
+  String? _clientId;
+  RealtimeChannel? _realtimeChannel;
+
+  @override
+  FutureOr<PaginatedState<domain.ServiceReportSummary>> build() async {
+    _initRealtimeSubscription();
+    return _fetchPage(0);
+  }
+
+  void _initRealtimeSubscription() {
+    if (_realtimeChannel != null) return;
+
+    final channel = Supabase.instance.client
+        .channel('public:service_reports_changes_${DateTime.now().millisecondsSinceEpoch}')
+        .onPostgresChanges(
+          event: PostgresChangeEvent.update,
+          schema: 'public',
+          table: 'service_reports',
+          callback: (payload) {
+            final updatedRecord = payload.newRecord;
+            final updatedId = updatedRecord['id'] as String?;
+            if (updatedId != null) {
+              ref.invalidate(viewReportProvider(updatedId));
+            }
+            refresh();
+          },
+        )
+        .subscribe();
+
+    _realtimeChannel = channel;
+
+    ref.onDispose(() {
+      _realtimeChannel?.unsubscribe();
+      _realtimeChannel = null;
+    });
+  }
+
+  Future<PaginatedState<domain.ServiceReportSummary>> _fetchPage(int offset) async {
+    final repo = ref.read(serviceReportsRepositoryProvider);
+    final filter = ref.read(reportsFilterProvider);
+
+    final reports = await repo.getReportsPaginated(
+      offset: offset,
+      limit: _limit,
+      orderBy: _orderBy,
+      ascending: _ascending,
+      searchQuery: _searchQuery,
+      statusFilter: _statusFilter ?? filter.status,
+      categoryFilter: _categoryFilter ?? filter.categoryId,
+      dateRange: _dateRange ?? filter.dateRange,
+      includeArchived: _includeArchived || filter.includeArchived,
+      productId: _productId ?? filter.productId,
+      clientId: _clientId ?? filter.clientId,
+    );
+
+    final summaries = reports.map((r) => _mapToSummary(r)).toList();
+
+    return PaginatedState(
+      items: summaries,
+      hasReachedEnd: reports.length < _limit,
+      currentOffset: offset,
+      isLoadingMore: false,
+    );
   }
 
   Future<void> loadMore() async {
-    await loadNextPage();
+    final current = state.valueOrNull;
+    if (current == null || current.isLoadingMore || current.hasReachedEnd) return;
+
+    state = AsyncData(current.copyWith(isLoadingMore: true));
+    try {
+      final nextOffset = current.currentOffset + _limit;
+      final newPage = await _fetchPage(nextOffset);
+      state = AsyncData(current.copyWith(
+        items: [...current.items, ...newPage.items],
+        currentOffset: nextOffset,
+        hasReachedEnd: newPage.hasReachedEnd,
+        isLoadingMore: false,
+      ));
+    } catch (e) {
+      state = AsyncData(current.copyWith(isLoadingMore: false, error: e));
+    }
   }
 
   Future<void> refresh() async {
-    await loadFirstPage();
+    state = const AsyncLoading();
+    state = await AsyncValue.guard(() => _fetchPage(0));
+  }
+
+  void updateSort(String orderBy, bool ascending) {
+    _orderBy = orderBy;
+    _ascending = ascending;
+    refresh();
+  }
+
+  void updateFilters({
+    String? status,
+    String? categoryId,
+    DateTimeRange? dateRange,
+    bool? includeArchived,
+    String? productId,
+    String? clientId,
+  }) {
+    ref.read(reportsFilterProvider.notifier).updateFilters(
+      status: status,
+      categoryId: categoryId,
+      dateRange: dateRange,
+      includeArchived: includeArchived,
+      productId: productId,
+      clientId: clientId,
+    );
+    _statusFilter = status;
+    _categoryFilter = categoryId;
+    _dateRange = dateRange;
+    if (includeArchived != null) _includeArchived = includeArchived;
+    if (productId != null) _productId = productId;
+    if (clientId != null) _clientId = clientId;
+    refresh();
+  }
+
+  void updateSearch(String? query) {
+    _searchQuery = query;
+    refresh();
   }
 
   domain.ServiceReportSummary _mapToSummary(data.ServiceReport r) {
@@ -296,9 +392,11 @@ class ReportsListNotifier extends StateNotifier<AsyncValue<List<domain.ServiceRe
     try {
       final repo = ref.read(serviceReportsRepositoryProvider);
       final raw = await repo.getReports(includeArchived: true);
+      if (!mounted) return;
       final summaries = raw.map((r) => _mapToSummary(r)).toList();
       state = AsyncValue.data(summaries);
     } catch (e, st) {
+      if (!mounted) return;
       state = AsyncValue.error(e, st);
     }
   }
@@ -364,10 +462,10 @@ void refreshAllReportProviders(dynamic ref) {
   ref.invalidate(paginatedReportSearchProvider);
 }
 
-final paginatedReportsListProvider = StateNotifierProvider<
+final paginatedReportsListProvider = AsyncNotifierProvider<
     PaginatedReportsNotifier,
-    AsyncValue<PaginatedState<domain.ServiceReportSummary>>>((ref) {
-  return PaginatedReportsNotifier(ref);
+    PaginatedState<domain.ServiceReportSummary>>(() {
+  return PaginatedReportsNotifier();
 });
 
 class ReportSearchArgs {
@@ -388,16 +486,135 @@ class ReportSearchArgs {
   int get hashCode => Object.hash(productId, clientId);
 }
 
-final paginatedReportSearchProvider = StateNotifierProvider.family<
-    PaginatedReportsNotifier,
-    AsyncValue<PaginatedState<domain.ServiceReportSummary>>,
-    ReportSearchArgs?>((ref, args) {
-  final notifier = PaginatedReportsNotifier(ref);
-  if (args != null) {
-    notifier.updateFilters(
-      productId: args.productId,
-      clientId: args.clientId,
+final paginatedReportSearchProvider = AutoDisposeAsyncNotifierProviderFamily<
+    PaginatedReportSearch,
+    PaginatedState<domain.ServiceReportSummary>,
+    ReportSearchArgs?>(() {
+  return PaginatedReportSearch();
+});
+
+class PaginatedReportSearch extends AutoDisposeFamilyAsyncNotifier<
+    PaginatedState<domain.ServiceReportSummary>,
+    ReportSearchArgs?> {
+  static const int _limit = 25;
+  String _orderBy = 'service_date';
+  bool _ascending = false;
+  String? _searchQuery;
+  String? _statusFilter;
+  String? _categoryFilter;
+  DateTimeRange? _dateRange;
+  bool _includeArchived = true;
+
+  @override
+  FutureOr<PaginatedState<domain.ServiceReportSummary>> build(ReportSearchArgs? arg) async {
+    return _fetchPage(0, arg);
+  }
+
+  Future<PaginatedState<domain.ServiceReportSummary>> _fetchPage(int offset, ReportSearchArgs? arg) async {
+    final repo = ref.read(serviceReportsRepositoryProvider);
+
+    final reports = await repo.getReportsPaginated(
+      offset: offset,
+      limit: _limit,
+      orderBy: _orderBy,
+      ascending: _ascending,
+      searchQuery: _searchQuery,
+      statusFilter: _statusFilter,
+      categoryFilter: _categoryFilter,
+      dateRange: _dateRange,
+      includeArchived: _includeArchived,
+      productId: arg?.productId,
+      clientId: arg?.clientId,
+    );
+
+    final summaries = reports.map((r) => _mapToSummary(r)).toList();
+
+    return PaginatedState(
+      items: summaries,
+      hasReachedEnd: reports.length < _limit,
+      currentOffset: offset,
+      isLoadingMore: false,
     );
   }
-  return notifier;
-});
+
+  Future<void> loadMore() async {
+    final current = state.valueOrNull;
+    if (current == null || current.isLoadingMore || current.hasReachedEnd) return;
+
+    state = AsyncData(current.copyWith(isLoadingMore: true));
+    try {
+      final nextOffset = current.currentOffset + _limit;
+      final newPage = await _fetchPage(nextOffset, arg);
+      state = AsyncData(current.copyWith(
+        items: [...current.items, ...newPage.items],
+        currentOffset: nextOffset,
+        hasReachedEnd: newPage.hasReachedEnd,
+        isLoadingMore: false,
+      ));
+    } catch (e) {
+      state = AsyncData(current.copyWith(isLoadingMore: false, error: e));
+    }
+  }
+
+  Future<void> refresh() async {
+    state = const AsyncLoading();
+    state = await AsyncValue.guard(() => _fetchPage(0, arg));
+  }
+
+  void updateSort(String orderBy, bool ascending) {
+    _orderBy = orderBy;
+    _ascending = ascending;
+    refresh();
+  }
+
+  void updateFilters({
+    String? status,
+    String? categoryId,
+    DateTimeRange? dateRange,
+    bool? includeArchived,
+  }) {
+    _statusFilter = status;
+    _categoryFilter = categoryId;
+    if (dateRange != null) _dateRange = dateRange;
+    if (includeArchived != null) _includeArchived = includeArchived;
+    refresh();
+  }
+
+  void updateSearch(String? query) {
+    _searchQuery = query;
+    refresh();
+  }
+
+  domain.ServiceReportSummary _mapToSummary(data.ServiceReport r) {
+    String? duration;
+    if (r.durationMinutes != null && r.durationMinutes! > 0) {
+      final hours = r.durationMinutes! ~/ 60;
+      final mins = r.durationMinutes! % 60;
+      if (hours > 0 && mins > 0) {
+        duration = '${hours}h ${mins}m';
+      } else if (hours > 0) {
+        duration = '${hours}h';
+      } else {
+        duration = '${mins}m';
+      }
+    }
+
+    return domain.ServiceReportSummary(
+      id: r.id,
+      reportNumber: r.reportNumber ?? 'RS-PENDIENTE',
+      clientName: r.clientName ?? 'Cliente Desconocido',
+      date: r.serviceDate,
+      amount: r.total,
+      categoryId: r.categoryId,
+      categoryName: r.categoryName,
+      advisorId: r.advisorId,
+      advisorName: r.advisorName,
+      status: domain.ServiceReportStatus.fromDbValue(r.status),
+      interventionType: domain.InterventionType.fromDbValue(r.interventionType),
+      isArchived: r.isArchived,
+      reportTag: r.reportTag,
+      createdAt: r.createdAt,
+      durationText: duration,
+    );
+  }
+}

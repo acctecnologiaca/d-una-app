@@ -13,6 +13,7 @@ import '../../../../../shared/widgets/custom_dropdown.dart';
 import '../../../../../shared/widgets/custom_dialog.dart';
 import '../../../../../shared/widgets/form_bottom_bar.dart';
 import '../../../../../shared/widgets/custom_stepper.dart';
+import '../../../../../shared/widgets/collapsible_card_block.dart';
 import '../../../../../features/portfolio/presentation/providers/lookup_providers.dart';
 import '../../../../../features/portfolio/data/models/delivery_time_model.dart';
 import '../../../data/models/quote_item_product.dart';
@@ -69,6 +70,95 @@ class _AddTemporalProductScreenState
   // Delivery Time
   String? _selectedDeliveryTimeId;
   late final String _pricingMethod;
+
+  // Collapsible Block Controllers
+  final ExpansibleController _controller1 = ExpansibleController();
+  final ExpansibleController _controller2 = ExpansibleController();
+  final ExpansibleController _controller3 = ExpansibleController();
+  int? _expandedIndex = 0;
+
+  void _onExpandBlock(int index) {
+    if (_expandedIndex != index) {
+      if (_expandedIndex == 0 && _controller1.isExpanded) {
+        _controller1.collapse();
+      }
+      if (_expandedIndex == 1 && _controller2.isExpanded) {
+        _controller2.collapse();
+      }
+      if (_expandedIndex == 2 && _controller3.isExpanded) {
+        _controller3.collapse();
+      }
+      setState(() {
+        _expandedIndex = index;
+      });
+    }
+  }
+
+  void _onCollapseBlock(int index) {
+    if (_expandedIndex == index) {
+      setState(() {
+        _expandedIndex = null;
+      });
+    }
+  }
+
+  bool _isBlock1Complete() {
+    final name = _nameController.text.trim();
+    final qty =
+        double.tryParse(_quantityController.text.replaceAll(',', '.')) ?? 0;
+    return name.isNotEmpty && qty > 0 && _selectedMeasure.isNotEmpty;
+  }
+
+  String _getBlock1Subtitle() {
+    final name = _nameController.text.trim();
+    final qtyStr = _quantityController.text.trim();
+    final brand = _selectedBrand.trim();
+    final model = _modelController.text.trim();
+
+    if (name.isEmpty) return 'Pendiente de identificación';
+    final parts = <String>[];
+    parts.add(name);
+    if (qtyStr.isNotEmpty) parts.add('$qtyStr $_selectedMeasure');
+    if (brand.isNotEmpty && brand != 'SIN MARCA') parts.add(brand);
+    if (model.isNotEmpty && model != 'NO APLICA') parts.add(model);
+    return parts.join(' • ');
+  }
+
+  bool _isBlock2Complete() {
+    final cost = CurrencyFormatter.parse(_costController.text) ?? 0;
+    final sale = CurrencyFormatter.parse(_salePriceController.text) ?? 0;
+    return cost > 0 && sale > 0;
+  }
+
+  String _getBlock2Subtitle() {
+    final sale = CurrencyFormatter.parse(_salePriceController.text) ?? 0;
+    final cost = CurrencyFormatter.parse(_costController.text) ?? 0;
+    final margin = _marginController.text.trim();
+    if (sale <= 0 && cost <= 0) return 'Pendiente de precios';
+    final parts = <String>[];
+    if (sale > 0) parts.add('Venta: ${CurrencyFormatter.format(sale)}');
+    if (margin.isNotEmpty) parts.add('Margen: $margin%');
+    if (sale > cost && cost > 0) {
+      parts.add('Ganancia: ${CurrencyFormatter.format(sale - cost)}');
+    }
+    return parts.join(' • ');
+  }
+
+  bool _isBlock3Complete() {
+    if (_noWarranty) return true;
+    final wQty = int.tryParse(_warrantyQtyController.text.trim()) ?? 0;
+    return wQty > 0;
+  }
+
+  String _getBlock3Subtitle() {
+    final warrantyText = _noWarranty
+        ? 'Sin garantía'
+        : 'Garantía: ${_warrantyQtyController.text.trim()} $_warrantyPeriod';
+    final invText = _addToInventory
+        ? 'Guardar en inventario propio'
+        : 'Solo en esta cotización';
+    return '$warrantyText • $invText';
+  }
 
   // Seguimiento de valores originales para habilitar el botón "Confirmar"
   String _originalName = '';
@@ -225,6 +315,9 @@ class _AddTemporalProductScreenState
     _marginController.dispose();
     _salePriceController.dispose();
     _warrantyQtyController.dispose();
+    _controller1.dispose();
+    _controller2.dispose();
+    _controller3.dispose();
     super.dispose();
   }
 
@@ -268,15 +361,12 @@ class _AddTemporalProductScreenState
     if (cost > 0 && salePrice > 0) {
       double margin;
       if (_pricingMethod == 'margin') {
-        // Margin: margin = (1 - cost/price)
-        margin = 1 - (cost / salePrice);
+        margin = (salePrice - cost) / salePrice;
       } else {
-        // Markup: margin = (price - cost) / cost
         margin = (salePrice - cost) / cost;
       }
-      _marginController.text = (margin * 100)
-          .toStringAsFixed(2)
-          .replaceAll('.', ',');
+      _marginController.text =
+          (margin * 100).toStringAsFixed(2).replaceAll('.', ',');
     } else {
       _marginController.text = '';
     }
@@ -284,6 +374,7 @@ class _AddTemporalProductScreenState
     _isCalculating = false;
     setState(() {});
   }
+
 
   Future<void> _showAddUomDialog() async {
     final newUom = await showModalBottomSheet<Uom>(
@@ -306,7 +397,16 @@ class _AddTemporalProductScreenState
   }
 
   Future<void> _saveProduct() async {
-    if (!_formKey.currentState!.validate()) return;
+    if (!_formKey.currentState!.validate()) {
+      if (!_isBlock1Complete()) {
+        _onExpandBlock(0);
+      } else if (!_isBlock2Complete()) {
+        _onExpandBlock(1);
+      } else if (!_isBlock3Complete()) {
+        _onExpandBlock(2);
+      }
+      return;
+    }
 
     final quoteState = ref.read(createQuoteProvider);
     final cost = CurrencyFormatter.parse(_costController.text) ?? 0;
@@ -843,7 +943,7 @@ class _AddTemporalProductScreenState
       body: Form(
         key: _formKey,
         child: ListView(
-          padding: const EdgeInsets.all(16),
+          padding: const EdgeInsets.fromLTRB(16, 16, 16, 40),
           children: [
             Text(
               'Usa este apartado solo para incluir productos que no existan en tu inventario o en el inventario de proveedores afiliados.',
@@ -853,351 +953,454 @@ class _AddTemporalProductScreenState
                 color: colors.onSurface,
               ),
             ),
-            const SizedBox(height: 24),
-            CustomTextField(
-              controller: _nameController,
-              label: 'Nombre del producto*',
-              hintText: 'Ej: Cámara Web 4K',
-              onChanged: (_) => _checkInventoryDuplicate(),
-              validator: (v) => v == null || v.isEmpty ? 'Requerido' : null,
-            ),
-            const SizedBox(height: 24),
-            CustomTextField(
-              controller: _modelController,
-              label: 'Modelo/Nro. parte',
-              onChanged: (_) => _checkInventoryDuplicate(),
-            ),
-            const SizedBox(height: 24),
-            CustomDropdown<String>(
-              value: brandItems.contains(_selectedBrand)
-                  ? _selectedBrand
-                  : null,
-              items: brandItems,
-              label: 'Marca',
-              itemLabelBuilder: (String value) => value.toTitleCase,
-              searchable: true,
-              showAddOption: true,
-              addOptionValue: '___ADD___',
-              addOptionLabel: 'Agregar marca',
-              onAddPressed: _showAddBrandDialog,
-              onChanged: (newValue) {
-                if (newValue != null) {
-                  final brand = brands.firstWhere((b) => b.name == newValue);
-                  setState(() {
-                    _selectedBrand = newValue;
-                    _selectedBrandId = brand.id;
-                  });
-                  _checkInventoryDuplicate();
+            const SizedBox(height: 16),
+
+            // =========================================================
+            // BLOQUE 1: Identificación y Medida
+            // =========================================================
+            CollapsibleCardBlock(
+              controller: _controller1,
+              initiallyExpanded: true,
+              onExpansionChanged: (expanded) {
+                if (expanded) {
+                  _onExpandBlock(0);
+                } else {
+                  _onCollapseBlock(0);
                 }
               },
-            ),
-            const SizedBox(height: 24),
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
+              leading: Icon(
+                Icons.inventory_2_outlined,
+                size: 28,
+                color: colors.onSurfaceVariant,
+              ),
+              title: 'Identificación y medida',
+              subtitle: _getBlock1Subtitle(),
+              isComplete: _isBlock1Complete(),
               children: [
-                Expanded(
-                  flex: 1,
-                  child: CustomTextField(
-                    controller: _quantityController,
-                    label: 'Cantidad*',
-                    keyboardType: const TextInputType.numberWithOptions(
-                      decimal: true,
+                CustomTextField(
+                  controller: _nameController,
+                  label: 'Nombre del producto*',
+                  hintText: 'Ej: Cámara Web 4K',
+                  onChanged: (_) {
+                    setState(() {});
+                    _checkInventoryDuplicate();
+                  },
+                  validator: (v) =>
+                      v == null || v.isEmpty ? 'Requerido' : null,
+                ),
+                const SizedBox(height: 16),
+                CustomTextField(
+                  controller: _modelController,
+                  label: 'Modelo/Nro. parte',
+                  onChanged: (_) {
+                    setState(() {});
+                    _checkInventoryDuplicate();
+                  },
+                ),
+                const SizedBox(height: 16),
+                CustomDropdown<String>(
+                  value: brandItems.contains(_selectedBrand)
+                      ? _selectedBrand
+                      : null,
+                  items: brandItems,
+                  label: 'Marca',
+                  itemLabelBuilder: (String value) => value.toTitleCase,
+                  searchable: true,
+                  showAddOption: true,
+                  addOptionValue: '___ADD___',
+                  addOptionLabel: 'Agregar marca',
+                  onAddPressed: _showAddBrandDialog,
+                  onChanged: (newValue) {
+                    if (newValue != null) {
+                      final brand =
+                          brands.firstWhere((b) => b.name == newValue);
+                      setState(() {
+                        _selectedBrand = newValue;
+                        _selectedBrandId = brand.id;
+                      });
+                      _checkInventoryDuplicate();
+                    }
+                  },
+                ),
+                const SizedBox(height: 16),
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Expanded(
+                      flex: 1,
+                      child: CustomTextField(
+                        controller: _quantityController,
+                        label: 'Cantidad*',
+                        keyboardType: const TextInputType.numberWithOptions(
+                          decimal: true,
+                        ),
+                        inputFormatters: [
+                          FilteringTextInputFormatter.allow(
+                            RegExp(r'^\d*[.,]?\d*'),
+                          ),
+                        ],
+                        onChanged: (_) => setState(() {}),
+                        validator: (v) {
+                          if (v == null || v.isEmpty) {
+                            return 'Requerido';
+                          }
+                          if (double.tryParse(v.replaceAll(',', '.')) ==
+                              null) {
+                            return 'Inválido';
+                          }
+                          if (double.parse(v.replaceAll(',', '.')) <= 0) {
+                            return 'Mayor a 0';
+                          }
+                          return null;
+                        },
+                      ),
                     ),
-                    inputFormatters: [
-                      FilteringTextInputFormatter.allow(
-                        RegExp(r'^\d*[.,]?\d*'),
+                    const SizedBox(width: 16),
+                    Expanded(
+                      flex: 2,
+                      child: CustomDropdown<Uom>(
+                        value: uoms.any((u) => u.symbol == _selectedMeasure)
+                            ? uoms.firstWhere(
+                                (u) => u.symbol == _selectedMeasure,
+                              )
+                            : (uoms.isNotEmpty ? uoms.last : null),
+                        items: uoms,
+                        label: 'Medida',
+                        searchable: true,
+                        itemLabelBuilder: (u) =>
+                            '${u.name.toTitleCase} (${u.symbol})',
+                        onChanged: (newValue) {
+                          if (newValue != null && newValue.id != '___ADD___') {
+                            setState(() {
+                              _selectedMeasure = newValue.symbol;
+                              _selectedUomId = newValue.id;
+                            });
+                            _checkInventoryDuplicate();
+                          }
+                        },
+                        showAddOption: true,
+                        addOptionLabel: 'Agregar unidad',
+                        addOptionValue: const Uom(
+                          id: '___ADD___',
+                          name: '___ADD___',
+                          symbol: '',
+                        ),
+                        onAddPressed: _showAddUomDialog,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+              ],
+            ),
+
+            // =========================================================
+            // BLOQUE 2: Precios y Rentabilidad
+            // =========================================================
+            CollapsibleCardBlock(
+              controller: _controller2,
+              initiallyExpanded: false,
+              onExpansionChanged: (expanded) {
+                if (expanded) {
+                  _onExpandBlock(1);
+                } else {
+                  _onCollapseBlock(1);
+                }
+              },
+              leading: Icon(
+                Icons.price_change_outlined,
+                size: 28,
+                color: colors.onSurfaceVariant,
+              ),
+              title: 'Precios y rentabilidad',
+              subtitle: _getBlock2Subtitle(),
+              isComplete: _isBlock2Complete(),
+              children: [
+                CustomTextField(
+                  controller: _costController,
+                  label: 'Precio costo unitario*',
+                  prefixText: '\$ ',
+                  keyboardType: const TextInputType.numberWithOptions(
+                    decimal: true,
+                  ),
+                  inputFormatters: [CurrencyInputFormatter()],
+                  helperText: 'Sin impuesto',
+                  onChanged: (_) {
+                    _calculateSalePriceFromMargin();
+                    setState(() {});
+                  },
+                  validator: (v) {
+                    if (v == null || v.isEmpty) {
+                      return 'Requerido';
+                    }
+                    if (CurrencyFormatter.parse(v) == null) {
+                      return 'Inválido';
+                    }
+                    return null;
+                  },
+                ),
+                const SizedBox(height: 16),
+                Text(
+                  'Precio de venta unitario',
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.bold,
+                    color: colors.onSurface,
+                  ),
+                ),
+                const SizedBox(height: 12),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.start,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    CustomStepper(
+                      controller: _marginController,
+                      label: 'Porcentaje',
+                      prefixText: '%',
+                      onIncrement: () {
+                        final current = double.tryParse(
+                              _marginController.text.replaceAll(',', '.'),
+                            ) ??
+                            0;
+                        _marginController.text = (current + 1)
+                            .toStringAsFixed(2)
+                            .replaceAll('.', ',');
+                        _calculateSalePriceFromMargin();
+                        setState(() {});
+                      },
+                      onDecrement: () {
+                        final current = double.tryParse(
+                              _marginController.text.replaceAll(',', '.'),
+                            ) ??
+                            0;
+                        if (current >= 1) {
+                          _marginController.text = (current - 1)
+                              .toStringAsFixed(2)
+                              .replaceAll('.', ',');
+                          _calculateSalePriceFromMargin();
+                          setState(() {});
+                        }
+                      },
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: CustomTextField(
+                        controller: _salePriceController,
+                        label: 'Precio*',
+                        prefixText: '\$ ',
+                        keyboardType: const TextInputType.numberWithOptions(
+                          decimal: true,
+                        ),
+                        inputFormatters: [CurrencyInputFormatter()],
+                        helperText: 'Sin impuesto',
+                        onChanged: (_) {
+                          _calculateMarginFromSalePrice();
+                          setState(() {});
+                        },
+                        validator: (v) {
+                          if (v == null || v.isEmpty) {
+                            return 'Requerido';
+                          }
+                          if (CurrencyFormatter.parse(v) == null) {
+                            return 'Inválido';
+                          }
+                          return null;
+                        },
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+              ],
+            ),
+
+            // =========================================================
+            // BLOQUE 3: Garantía, Entrega e Inventario Propio
+            // =========================================================
+            CollapsibleCardBlock(
+              controller: _controller3,
+              initiallyExpanded: false,
+              onExpansionChanged: (expanded) {
+                if (expanded) {
+                  _onExpandBlock(2);
+                } else {
+                  _onCollapseBlock(2);
+                }
+              },
+              leading: Icon(
+                Icons.verified_user_outlined,
+                size: 28,
+                color: colors.onSurfaceVariant,
+              ),
+              title: 'Garantía e inventario propio',
+              subtitle: _getBlock3Subtitle(),
+              isComplete: _isBlock3Complete(),
+              children: [
+                SwitchListTile(
+                  contentPadding: EdgeInsets.zero,
+                  title: const Text(
+                    'Este producto no tiene garantía',
+                    style:
+                        TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
+                  ),
+                  value: _noWarranty,
+                  onChanged: (v) => setState(() => _noWarranty = v),
+                  activeThumbColor: colors.onPrimary,
+                  activeTrackColor: colors.primary,
+                ),
+                if (!_noWarranty) ...[
+                  const SizedBox(height: 8),
+                  Text(
+                    'Garantía',
+                    style: TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.bold,
+                      color: colors.onSurface,
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Expanded(
+                        child: CustomTextField(
+                          controller: _warrantyQtyController,
+                          label: 'Cantidad',
+                          keyboardType: TextInputType.number,
+                          inputFormatters: [
+                            FilteringTextInputFormatter.digitsOnly,
+                          ],
+                          onChanged: (_) => setState(() {}),
+                        ),
+                      ),
+                      const SizedBox(width: 16),
+                      Expanded(
+                        child: CustomDropdown<String>(
+                          value: _warrantyPeriod,
+                          items: const ['Días', 'Meses', 'Años'],
+                          label: 'Período',
+                          itemLabelBuilder: (String value) => value,
+                          onChanged: (newValue) {
+                            if (newValue != null) {
+                              setState(() {
+                                _warrantyPeriod = newValue;
+                              });
+                            }
+                          },
+                        ),
                       ),
                     ],
-                    onChanged: (_) => setState(() {}),
-                    validator: (v) {
-                      if (v == null || v.isEmpty) {
-                        return 'Requerido';
-                      }
-                      if (double.tryParse(v.replaceAll(',', '.')) == null) {
-                        return 'Inválido';
-                      }
-                      if (double.parse(v.replaceAll(',', '.')) <= 0) {
-                        return 'Mayor a 0';
-                      }
-                      return null;
-                    },
-                  ),
-                ),
-                const SizedBox(width: 16),
-                Expanded(
-                  flex: 2,
-                  child: CustomDropdown<Uom>(
-                    value: uoms.any((u) => u.symbol == _selectedMeasure)
-                        ? uoms.firstWhere((u) => u.symbol == _selectedMeasure)
-                        : (uoms.isNotEmpty ? uoms.last : null),
-                    items: uoms,
-                    label: 'Medida',
-                    searchable: true,
-                    itemLabelBuilder: (u) =>
-                        '${u.name.toTitleCase} (${u.symbol})',
-                    onChanged: (newValue) {
-                      if (newValue != null && newValue.id != '___ADD___') {
-                        setState(() {
-                          _selectedMeasure = newValue.symbol;
-                          _selectedUomId = newValue.id;
-                        });
-                        _checkInventoryDuplicate();
-                      }
-                    },
-                    showAddOption: true,
-                    addOptionLabel: 'Agregar unidad',
-                    addOptionValue: const Uom(
-                      id: '___ADD___',
-                      name: '___ADD___',
-                      symbol: '',
-                    ),
-                    onAddPressed: _showAddUomDialog,
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 24),
-            CustomTextField(
-              controller: _costController,
-              label: 'Precio costo unitario*',
-              prefixText: '\$ ',
-              keyboardType: const TextInputType.numberWithOptions(
-                decimal: true,
-              ),
-              inputFormatters: [CurrencyInputFormatter()],
-              helperText: 'Sin impuesto',
-              validator: (v) {
-                if (v == null || v.isEmpty) {
-                  return 'Requerido';
-                }
-                if (CurrencyFormatter.parse(v) == null) {
-                  return 'Inválido';
-                }
-                return null;
-              },
-            ),
-            const SizedBox(height: 24),
-            Text(
-              'Precio de venta unitario',
-              style: TextStyle(
-                fontSize: 14,
-                fontWeight: FontWeight.bold,
-                color: colors.onSurface,
-              ),
-            ),
-            const SizedBox(height: 16),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // const Spacer(),
-                CustomStepper(
-                  controller: _marginController,
-                  label: 'Porcentaje',
-                  prefixText: '%',
-                  onIncrement: () {
-                    final current =
-                        double.tryParse(
-                          _marginController.text.replaceAll(',', '.'),
-                        ) ??
-                        0;
-                    _marginController.text = (current + 1)
-                        .toStringAsFixed(2)
-                        .replaceAll('.', ',');
-                  },
-                  onDecrement: () {
-                    final current =
-                        double.tryParse(
-                          _marginController.text.replaceAll(',', '.'),
-                        ) ??
-                        0;
-                    if (current >= 1) {
-                      _marginController.text = (current - 1)
-                          .toStringAsFixed(2)
-                          .replaceAll('.', ',');
-                    }
-                  },
-                ),
-                const SizedBox(width: 4),
-                Expanded(
-                  child: CustomTextField(
-                    controller: _salePriceController,
-                    label: 'Precio*',
-                    prefixText: '\$ ',
-                    keyboardType: const TextInputType.numberWithOptions(
-                      decimal: true,
-                    ),
-                    inputFormatters: [CurrencyInputFormatter()],
-                    helperText: 'Sin impuesto',
-                    onChanged: (_) => _calculateMarginFromSalePrice(),
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 24),
-
-            SwitchListTile(
-              contentPadding: EdgeInsets.zero,
-              title: const Text(
-                'Este producto no tiene garantía',
-                style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
-              ),
-              value: _noWarranty,
-              onChanged: (v) => setState(() => _noWarranty = v),
-              activeThumbColor: colors.onPrimary,
-              activeTrackColor: colors.primary,
-            ),
-            if (!_noWarranty) ...[
-              const SizedBox(height: 8),
-              Text(
-                'Garantía',
-                style: TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.bold,
-                  color: colors.onSurface,
-                ),
-              ),
-              const SizedBox(height: 24),
-              Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Expanded(
-                    child: CustomTextField(
-                      controller: _warrantyQtyController,
-                      label: 'Cantidad',
-                      keyboardType: TextInputType.number,
-                      inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-                    ),
-                  ),
-                  const SizedBox(width: 16),
-                  Expanded(
-                    child: CustomDropdown<String>(
-                      value: _warrantyPeriod,
-                      items: const ['Días', 'Meses', 'Años'],
-                      label: 'Período',
-                      itemLabelBuilder: (String value) => value,
-                      onChanged: (newValue) {
-                        if (newValue != null) {
-                          setState(() {
-                            _warrantyPeriod = newValue;
-                          });
-                        }
-                      },
-                    ),
                   ),
                 ],
-              ),
-            ],
-            const SizedBox(height: 16),
-            const SizedBox(height: 8),
-            Text(
-              'Tiempo de entrega',
-              style: TextStyle(
-                fontSize: 14,
-                fontWeight: FontWeight.bold,
-                color: colors.onSurface,
-              ),
-            ),
-            const SizedBox(height: 16),
-            ref
-                .watch(deliveryTimesForDeliveryProvider)
-                .when(
-                  data: (deliveryTimes) {
-                    if (_selectedDeliveryTimeId == null &&
-                        deliveryTimes.isNotEmpty) {
-                      WidgetsBinding.instance.addPostFrameCallback((_) {
-                        if (mounted) {
-                          setState(() {
-                            _selectedDeliveryTimeId = deliveryTimes.first.id;
+                const SizedBox(height: 12),
+                Text(
+                  'Tiempo de entrega',
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.bold,
+                    color: colors.onSurface,
+                  ),
+                ),
+                const SizedBox(height: 12),
+                ref.watch(deliveryTimesForDeliveryProvider).when(
+                      data: (deliveryTimes) {
+                        if (_selectedDeliveryTimeId == null &&
+                            deliveryTimes.isNotEmpty) {
+                          WidgetsBinding.instance.addPostFrameCallback((_) {
+                            if (mounted) {
+                              setState(() {
+                                _selectedDeliveryTimeId =
+                                    deliveryTimes.first.id;
+                              });
+                            }
                           });
                         }
-                      });
-                    }
 
-                    return CustomDropdown<String>(
-                      value: _selectedDeliveryTimeId,
-                      items: deliveryTimes.map((e) => e.id).toList(),
-                      label: 'Seleccionar tiempo',
-                      itemLabelBuilder: (id) {
-                        final dt = deliveryTimes.firstWhere(
-                          (e) => e.id == id,
-                          orElse: () => DeliveryTime(
-                            id: '',
-                            name: 'Desconocido',
-                            unit: 'days',
-                            type: 'delivery',
-                            orderIdx: 0,
-                          ),
+                        return CustomDropdown<String>(
+                          value: _selectedDeliveryTimeId,
+                          items: deliveryTimes.map((e) => e.id).toList(),
+                          label: 'Seleccionar tiempo',
+                          itemLabelBuilder: (id) {
+                            final dt = deliveryTimes.firstWhere(
+                              (e) => e.id == id,
+                              orElse: () => DeliveryTime(
+                                id: '',
+                                name: 'Desconocido',
+                                unit: 'days',
+                                type: 'delivery',
+                                orderIdx: 0,
+                              ),
+                            );
+                            return dt.name;
+                          },
+                          onChanged: (val) {
+                            if (val != null) {
+                              setState(() => _selectedDeliveryTimeId = val);
+                            }
+                          },
                         );
-                        return dt.name;
                       },
-                      onChanged: (val) {
-                        if (val != null) {
-                          setState(() => _selectedDeliveryTimeId = val);
-                        }
-                      },
-                    );
-                  },
-                  loading: () =>
-                      const Center(child: CircularProgressIndicator()),
-                  error: (err, stack) => FriendlyErrorWidget(error: err),
+                      loading: () =>
+                          const Center(child: CircularProgressIndicator()),
+                      error: (err, stack) => FriendlyErrorWidget(error: err),
+                    ),
+                const SizedBox(height: 12),
+                Text(
+                  'Proveedor Externo',
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.bold,
+                    color: colors.onSurface,
+                  ),
                 ),
-            const SizedBox(height: 16),
-            Text(
-              'Proveedor Externo',
-              style: TextStyle(
-                fontSize: 14,
-                fontWeight: FontWeight.bold,
-                color: colors.onSurface,
-              ),
-            ),
-            const SizedBox(height: 16),
-            SizedBox(
-              height: 56, // Match CustomTextField height roughly
-              child: RawAutocomplete<String>(
-                textEditingController: _externalProviderController,
-                focusNode: _externalProviderFocusNode,
-                optionsBuilder: (TextEditingValue textEditingValue) {
-                  if (textEditingValue.text.isEmpty) {
-                    return const Iterable<String>.empty();
-                  }
-                  final suppliers =
-                      ref.read(unaffiliatedSuppliersProvider).value ?? [];
-                  final lowercaseQuery = textEditingValue.text.toLowerCase();
+                const SizedBox(height: 12),
+                SizedBox(
+                  height: 56,
+                  child: RawAutocomplete<String>(
+                    textEditingController: _externalProviderController,
+                    focusNode: _externalProviderFocusNode,
+                    optionsBuilder: (TextEditingValue textEditingValue) {
+                      if (textEditingValue.text.isEmpty) {
+                        return const Iterable<String>.empty();
+                      }
+                      final suppliers =
+                          ref.read(unaffiliatedSuppliersProvider).value ?? [];
+                      final lowercaseQuery =
+                          textEditingValue.text.toLowerCase();
 
-                  final matches = suppliers
-                      .where((supplier) {
-                        final nameMatch = supplier.name.toLowerCase().contains(
-                          lowercaseQuery,
-                        );
-                        final legalNameMatch =
-                            supplier.legalName?.toLowerCase().contains(
-                              lowercaseQuery,
-                            ) ??
-                            false;
-                        return nameMatch || legalNameMatch;
-                      })
-                      .map((s) {
-                        final namePart = s.name.toLowerCase();
-                        final legalPart = s.legalName?.toLowerCase() ?? '';
+                      final matches = suppliers
+                          .where((supplier) {
+                            final nameMatch = supplier.name
+                                .toLowerCase()
+                                .contains(lowercaseQuery);
+                            final legalNameMatch = supplier.legalName
+                                    ?.toLowerCase()
+                                    .contains(lowercaseQuery) ??
+                                false;
+                            return nameMatch || legalNameMatch;
+                          })
+                          .map((s) {
+                            final namePart = s.name.toLowerCase();
+                            final legalPart =
+                                s.legalName?.toLowerCase() ?? '';
 
-                        if (legalPart.contains(lowercaseQuery) &&
-                            !namePart.contains(lowercaseQuery)) {
-                          return s.legalName!;
-                        }
-                        return s.name;
+                            if (legalPart.contains(lowercaseQuery) &&
+                                !namePart.contains(lowercaseQuery)) {
+                              return s.legalName!;
+                            }
+                            return s.name;
+                          });
+
+                      return matches;
+                    },
+                    onSelected: (String selection) {
+                      _externalProviderController.text = selection;
+                      setState(() {
+                        _externalProviderName = selection;
                       });
-
-                  return matches;
-                },
-                onSelected: (String selection) {
-                  _externalProviderController.text = selection;
-                  setState(() {
-                    _externalProviderName = selection;
-                  });
-                },
-                fieldViewBuilder:
-                    (context, controller, focusNode, onFieldSubmitted) {
+                    },
+                    fieldViewBuilder:
+                        (context, controller, focusNode, onFieldSubmitted) {
                       return CustomTextField(
                         controller: controller,
                         focusNode: focusNode,
@@ -1209,89 +1412,94 @@ class _AddTemporalProductScreenState
                         },
                       );
                     },
-                optionsViewBuilder: (context, onSelected, options) {
-                  return Align(
-                    alignment: Alignment.topLeft,
-                    child: Material(
-                      elevation: 4.0,
-                      borderRadius: BorderRadius.circular(8),
-                      color: colors.surfaceContainerHighest,
-                      child: ConstrainedBox(
-                        constraints: BoxConstraints(
-                          maxHeight: 200,
-                          minWidth: MediaQuery.of(context).size.width - 32,
+                    optionsViewBuilder: (context, onSelected, options) {
+                      return Align(
+                        alignment: Alignment.topLeft,
+                        child: Material(
+                          elevation: 4.0,
+                          borderRadius: BorderRadius.circular(8),
+                          color: colors.surfaceContainerHighest,
+                          child: ConstrainedBox(
+                            constraints: BoxConstraints(
+                              maxHeight: 200,
+                              minWidth: MediaQuery.of(context).size.width - 32,
+                            ),
+                            child: ListView.builder(
+                              padding: EdgeInsets.zero,
+                              shrinkWrap: true,
+                              itemCount: options.length,
+                              itemBuilder: (BuildContext context, int index) {
+                                final String option =
+                                    options.elementAt(index);
+                                return InkWell(
+                                  onTap: () => onSelected(option),
+                                  child: Padding(
+                                    padding: const EdgeInsets.all(12.0),
+                                    child: Text(
+                                      option,
+                                      style: const TextStyle(fontSize: 14),
+                                    ),
+                                  ),
+                                );
+                              },
+                            ),
+                          ),
                         ),
-                        child: ListView.builder(
-                          padding: EdgeInsets.zero,
-                          shrinkWrap: true,
-                          itemCount: options.length,
-                          itemBuilder: (BuildContext context, int index) {
-                            final String option = options.elementAt(index);
-                            return InkWell(
-                              onTap: () => onSelected(option),
-                              child: Padding(
-                                padding: const EdgeInsets.all(12.0),
-                                child: Text(
-                                  option,
-                                  style: const TextStyle(fontSize: 14),
-                                ),
-                              ),
-                            );
-                          },
-                        ),
-                      ),
-                    ),
-                  );
-                },
-              ),
-            ),
-            const SizedBox(height: 16),
-            SwitchListTile(
-              contentPadding: EdgeInsets.zero,
-              title: const Text(
-                'Incluir en el inventario propio',
-                style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
-              ),
-              subtitle: Text(
-                (_alreadyInInventory && widget.existingItem != null)
-                    ? 'Este producto ya fue incluído en tu inventario.'
-                    : 'Luego deberás completar otros datos.',
-                style: TextStyle(
-                  color: _alreadyInInventory ? colors.primary : colors.outline,
-                  fontWeight: _alreadyInInventory ? FontWeight.bold : null,
-                  fontSize: 12,
+                      );
+                    },
+                  ),
                 ),
-              ),
-              value: _addToInventory,
-              // SOLO deshabilitamos visualmente si hay duplicado Y estamos en MODO EDICIÓN
-              onChanged: (_alreadyInInventory && widget.existingItem != null)
-                  ? null
-                  : (v) => setState(() => _addToInventory = v),
-              activeThumbColor:
-                  (_alreadyInInventory && widget.existingItem != null)
-                  ? colors.outline.withValues(
-                      alpha: 0.5,
-                    ) // Color gris si está bloqueado
-                  : colors.onPrimary,
-              activeTrackColor:
-                  (_alreadyInInventory && widget.existingItem != null)
-                  ? colors.outline.withValues(
-                      alpha: 0.2,
-                    ) // Track gris si está bloqueado
-                  : colors.primary,
+                const SizedBox(height: 12),
+                SwitchListTile(
+                  contentPadding: EdgeInsets.zero,
+                  title: const Text(
+                    'Guardar en inventario propio',
+                    style:
+                        TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
+                  ),
+                  subtitle: Text(
+                    (_alreadyInInventory && widget.existingItem != null)
+                        ? 'Este producto ya fue incluído en tu inventario.'
+                        : 'Luego podrás gestionar su stock y compras.',
+                    style: TextStyle(
+                      color: _alreadyInInventory
+                          ? colors.primary
+                          : colors.outline,
+                      fontWeight:
+                          _alreadyInInventory ? FontWeight.bold : null,
+                      fontSize: 12,
+                    ),
+                  ),
+                  value: _addToInventory,
+                  onChanged:
+                      (_alreadyInInventory && widget.existingItem != null)
+                          ? null
+                          : (v) => setState(() => _addToInventory = v),
+                  activeThumbColor:
+                      (_alreadyInInventory && widget.existingItem != null)
+                          ? colors.outline.withValues(alpha: 0.5)
+                          : colors.onPrimary,
+                  activeTrackColor:
+                      (_alreadyInInventory && widget.existingItem != null)
+                          ? colors.outline.withValues(alpha: 0.2)
+                          : colors.primary,
+                ),
+                const SizedBox(height: 8),
+              ],
             ),
-            const SizedBox(height: 32),
+
+            const SizedBox(height: 24),
             Padding(
               padding: EdgeInsets.only(
-                top: 16.0,
+                top: 8.0,
                 bottom: MediaQuery.of(context).padding.bottom > 0
                     ? MediaQuery.of(context).padding.bottom
-                    : 40.0,
+                    : 24.0,
               ),
               child: FormBottomBar(
                 onCancel: () => context.pop(),
-                onSave:
-                    (_hasChanges() && _nameController.text.trim().isNotEmpty)
+                onSave: (_hasChanges() &&
+                        _nameController.text.trim().isNotEmpty)
                     ? _saveProduct
                     : null,
                 saveLabel:

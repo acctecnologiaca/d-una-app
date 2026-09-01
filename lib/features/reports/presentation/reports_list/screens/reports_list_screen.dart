@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:material_symbols_icons/symbols.dart';
-import '../../../../../features/profile/domain/models/user_profile.dart';
 import '../../../../../features/profile/presentation/providers/profile_provider.dart';
 import '../../../../../shared/widgets/custom_search_bar.dart';
 import '../../../../../shared/widgets/sort_selector.dart';
@@ -50,12 +49,10 @@ class _ReportsListScreenState extends ConsumerState<ReportsListScreen>
   @override
   Widget build(BuildContext context) {
     final colors = Theme.of(context).colorScheme;
-    final userProfileAsync = ref.watch(userProfileProvider);
     final selection = ref.watch(reportSelectionProvider);
     final paginatedStateAsync = ref.watch(paginatedReportsListProvider);
 
     final allReports = paginatedStateAsync.valueOrNull?.items ?? [];
-    final isError = paginatedStateAsync.hasError || userProfileAsync.hasError;
 
     return Scaffold(
       backgroundColor: colors.surface,
@@ -65,70 +62,76 @@ class _ReportsListScreenState extends ConsumerState<ReportsListScreen>
             // Header
             selection.isSelectionMode
                 ? _buildSelectionHeader(context, ref, selection, allReports)
-                : _buildNormalHeader(context, ref, userProfileAsync, isError),
+                : _buildNormalHeader(context),
             const SizedBox(height: 16),
 
-            if (!isError) ...[
-              // Search Bar
-              Padding(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 16.0,
-                  vertical: 8.0,
-                ),
-                child: CustomSearchBar(
-                  hintText: 'Buscar...',
-                  readOnly: true,
-                  showFilterIcon: true,
-                  onFilterTap: () {},
-                  onTap: () {
-                    context.push('/reports/search');
-                  },
-                ),
+            // Search Bar
+            Padding(
+              padding: const EdgeInsets.symmetric(
+                horizontal: 16.0,
+                vertical: 8.0,
               ),
-              const SizedBox(height: 16),
-              // Sort Header
-              Padding(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 16.0,
-                  vertical: 8.0,
-                ),
-                child: Row(
-                  children: [
-                    SortSelector(
-                      currentSort: _currentSort,
-                      onSortChanged: (val) {
-                        setState(() => _currentSort = val);
-                        String orderBy = 'service_date';
-                        bool ascending = false;
-                        if (val == SortOption.recent) {
-                          orderBy = 'service_date';
-                          ascending = false;
-                        } else if (val == SortOption.oldest) {
-                          orderBy = 'service_date';
-                          ascending = true;
-                        } else if (val == SortOption.highestPrice) {
-                          orderBy = 'total';
-                          ascending = false;
-                        } else if (val == SortOption.lowestPrice) {
-                          orderBy = 'total';
-                          ascending = true;
-                        }
-                        ref
-                            .read(paginatedReportsListProvider.notifier)
-                            .updateSort(orderBy, ascending);
-                      },
-                      options: const [
-                        SortOption.recent,
-                        SortOption.oldest,
-                        SortOption.highestPrice,
-                        SortOption.lowestPrice,
-                      ],
-                    ),
-                  ],
-                ),
+              child: CustomSearchBar(
+                hintText: 'Buscar...',
+                readOnly: true,
+                showFilterIcon: true,
+                onFilterTap: () {},
+                onTap: () {
+                  context.push('/reports/search');
+                },
               ),
-              const SizedBox(height: 16),
-            ],
+            ),
+            const SizedBox(height: 16),
+            // Sort Header
+            Padding(
+              padding: const EdgeInsets.symmetric(
+                horizontal: 16.0,
+                vertical: 8.0,
+              ),
+              child: Row(
+                children: [
+                  SortSelector(
+                    currentSort: _currentSort,
+                    onSortChanged: (val) {
+                      setState(() => _currentSort = val);
+                      String orderBy = 'service_date';
+                      bool ascending = false;
+                      if (val == SortOption.recent) {
+                        orderBy = 'service_date';
+                        ascending = false;
+                      } else if (val == SortOption.oldest) {
+                        orderBy = 'service_date';
+                        ascending = true;
+                      } else if (val == SortOption.highestPrice) {
+                        orderBy = 'total';
+                        ascending = false;
+                      } else if (val == SortOption.lowestPrice) {
+                        orderBy = 'total';
+                        ascending = true;
+                      } else if (val == SortOption.nameAZ) {
+                        orderBy = 'clients(name)';
+                        ascending = true;
+                      } else if (val == SortOption.nameZA) {
+                        orderBy = 'clients(name)';
+                        ascending = false;
+                      }
+                      ref
+                          .read(paginatedReportsListProvider.notifier)
+                          .updateSort(orderBy, ascending);
+                    },
+                    options: const [
+                      SortOption.recent,
+                      SortOption.oldest,
+                      SortOption.highestPrice,
+                      SortOption.lowestPrice,
+                      SortOption.nameAZ,
+                      SortOption.nameZA,
+                    ],
+                  ),
+                ],
+              ),
+            ),
+            //const SizedBox(height: 16),
             // List
             Expanded(
               child: RefreshIndicator(
@@ -138,17 +141,8 @@ class _ReportsListScreenState extends ConsumerState<ReportsListScreen>
                       .read(paginatedReportsListProvider.notifier)
                       .refresh();
                 },
-                child: userProfileAsync.when(
-                  loading: () =>
-                      const Center(child: CircularProgressIndicator()),
-                  error: (err, stack) => FriendlyErrorWidget(
-                    error: err,
-                    onRetry: () {
-                      ref.invalidate(userProfileProvider);
-                      ref.read(paginatedReportsListProvider.notifier).refresh();
-                    },
-                  ),
-                  data: (_) {
+                child: Builder(
+                  builder: (context) {
                     final paginatedState = paginatedStateAsync.valueOrNull;
                     if (paginatedState == null ||
                         paginatedState.isInitialLoading) {
@@ -172,8 +166,7 @@ class _ReportsListScreenState extends ConsumerState<ReportsListScreen>
                           height: MediaQuery.of(context).size.height * 0.5,
                           child: const EmptyListState(
                             icon: Icons.assignment_outlined,
-                            message:
-                                'No hay reportes de servicios registrados.',
+                            message: 'No hay reportes de servicio registrados.',
                           ),
                         ),
                       );
@@ -216,7 +209,7 @@ class _ReportsListScreenState extends ConsumerState<ReportsListScreen>
           ],
         ),
       ),
-      floatingActionButton: selection.isSelectionMode || isError
+      floatingActionButton: selection.isSelectionMode
           ? null
           : Padding(
               padding: const EdgeInsets.only(bottom: 0.0),
@@ -232,12 +225,7 @@ class _ReportsListScreenState extends ConsumerState<ReportsListScreen>
     );
   }
 
-  Widget _buildNormalHeader(
-    BuildContext context,
-    WidgetRef ref,
-    AsyncValue<UserProfile?> userProfileAsync,
-    bool isError,
-  ) {
+  Widget _buildNormalHeader(BuildContext context) {
     return Padding(
       padding: const EdgeInsets.fromLTRB(4, 4, 16, 0),
       child: Row(
@@ -245,11 +233,9 @@ class _ReportsListScreenState extends ConsumerState<ReportsListScreen>
         children: [
           IconButton(
             icon: const Icon(Icons.menu),
-            onPressed: isError
-                ? null
-                : () {
-                    Scaffold.of(context).openDrawer();
-                  },
+            onPressed: () {
+              Scaffold.of(context).openDrawer();
+            },
           ),
           Text(
             'Reportes de servicio',
@@ -258,7 +244,7 @@ class _ReportsListScreenState extends ConsumerState<ReportsListScreen>
               fontWeight: FontWeight.w500,
             ),
           ),
-          UserProfileAvatar(enabled: !isError),
+          const UserProfileAvatar(),
         ],
       ),
     );

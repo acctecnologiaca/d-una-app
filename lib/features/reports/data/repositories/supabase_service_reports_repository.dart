@@ -119,8 +119,8 @@ class SupabaseServiceReportsRepository implements ServiceReportsRepository {
     if (userId == null) throw Exception('Usuario no autenticado');
 
     final selectQuery = productId != null
-        ? '*, clients(name), categories(name), service_report_items_products!inner(*), service_report_items_services(*)'
-        : '*, clients(name), categories(name), service_report_items_products(*), service_report_items_services(*)';
+        ? '*, clients(name), categories(name), collaborators!advisor_id(full_name), service_report_collaborators(collaborator_id, collaborators(*)), service_report_items_products!inner(*), service_report_items_services(*)'
+        : '*, clients(name), categories(name), collaborators!advisor_id(full_name), service_report_collaborators(collaborator_id, collaborators(*)), service_report_items_products(*), service_report_items_services(*)';
 
     var query = _client
         .from('service_reports')
@@ -213,7 +213,7 @@ class SupabaseServiceReportsRepository implements ServiceReportsRepository {
     final response = await _client
         .from('service_reports')
         .select(
-          '*, clients(name), categories(name), service_report_items_products(*), service_report_items_services(*), service_report_conditions(*)',
+          '*, clients(name), categories(name), collaborators!advisor_id(full_name), service_report_collaborators(collaborator_id, collaborators(*)), service_report_items_products(*), service_report_items_services(*), service_report_conditions(*)',
         )
         .eq('id', id)
         .single();
@@ -226,7 +226,7 @@ class SupabaseServiceReportsRepository implements ServiceReportsRepository {
     final response = await _client
         .from('service_reports')
         .select(
-          '*, clients(*), contacts(*), collaborators!advisor_id(full_name), categories(name), service_report_items_products(*), service_report_items_services(*), service_report_conditions(*)',
+          '*, clients(*), contacts(*), collaborators!advisor_id(full_name), service_report_collaborators(collaborator_id, collaborators(*)), categories(name), service_report_items_products(*), service_report_items_services(*), service_report_conditions(*)',
         )
         .eq('id', id)
         .single();
@@ -256,6 +256,7 @@ class SupabaseServiceReportsRepository implements ServiceReportsRepository {
     List<ServiceReportItemProduct>? products,
     List<ServiceReportItemService>? services,
     List<ServiceReportCondition>? conditions,
+    List<String>? technicianIds,
   }) async {
     final userId = _client.auth.currentUser?.id;
     if (userId == null) throw Exception('Usuario no autenticado');
@@ -370,6 +371,25 @@ class SupabaseServiceReportsRepository implements ServiceReportsRepository {
           .insert(conditionsData);
     }
 
+    // 5. Insert Collaborators/Technicians
+    final finalTechIds =
+        technicianIds ?? report.technicians?.map((t) => t.id).toList();
+    if (finalTechIds != null && finalTechIds.isNotEmpty) {
+      final collabData = finalTechIds
+          .toSet()
+          .map(
+            (collabId) => {
+              'report_id': newReportId,
+              'collaborator_id': collabId,
+            },
+          )
+          .toList();
+
+      await _client
+          .from('service_report_collaborators')
+          .insert(collabData);
+    }
+
     return getReportWithDetails(newReportId);
   }
 
@@ -379,6 +399,7 @@ class SupabaseServiceReportsRepository implements ServiceReportsRepository {
     List<ServiceReportItemProduct>? products,
     List<ServiceReportItemService>? services,
     List<ServiceReportCondition>? conditions,
+    List<String>? technicianIds,
   }) async {
     // 1. Update Header
     await _client.from('service_reports').update({
@@ -504,6 +525,32 @@ class SupabaseServiceReportsRepository implements ServiceReportsRepository {
       }
     }
 
+    // 5. Sync Collaborators/Technicians
+    final finalTechIds =
+        technicianIds ?? report.technicians?.map((t) => t.id).toList();
+    if (finalTechIds != null) {
+      await _client
+          .from('service_report_collaborators')
+          .delete()
+          .eq('report_id', report.id);
+
+      if (finalTechIds.isNotEmpty) {
+        final collabData = finalTechIds
+            .toSet()
+            .map(
+              (collabId) => {
+                'report_id': report.id,
+                'collaborator_id': collabId,
+              },
+            )
+            .toList();
+
+        await _client
+            .from('service_report_collaborators')
+            .insert(collabData);
+      }
+    }
+
     return getReportWithDetails(report.id);
   }
 
@@ -593,31 +640,15 @@ class SupabaseServiceReportsRepository implements ServiceReportsRepository {
 
   @override
   Future<String> generateActionToken(String reportId) async {
-    final response = await _client
-        .from('service_reports')
-        .select('action_token, action_token_expires_at')
-        .eq('id', reportId)
-        .single();
+    final response = await _client.rpc(
+      'generate_report_action_token',
+      params: {'p_report_id': reportId},
+    );
 
-    final existingToken = response['action_token'] as String?;
-    final expiresAtStr = response['action_token_expires_at'] as String?;
-
-    if (existingToken != null && expiresAtStr != null) {
-      final expiresAt = DateTime.parse(expiresAtStr);
-      if (expiresAt.isAfter(DateTime.now().add(const Duration(days: 1)))) {
-        return existingToken;
-      }
+    if (response == null) {
+      throw Exception('Error al generar token de acción para reporte de servicio');
     }
 
-    final newToken =
-        '${DateTime.now().millisecondsSinceEpoch}_${reportId.replaceAll('-', '').substring(0, 12)}';
-    final newExpiresAt = DateTime.now().add(const Duration(days: 90));
-
-    await _client.from('service_reports').update({
-      'action_token': newToken,
-      'action_token_expires_at': newExpiresAt.toIso8601String(),
-    }).eq('id', reportId);
-
-    return newToken;
+    return response.toString();
   }
 }
