@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../domain/models/user_profile.dart';
+import '../../domain/models/user_company.dart';
 import '../../../settings/data/models/shipping_method.dart';
 import '../../domain/models/verification_document.dart';
 import '../../data/repositories/profile_repository.dart';
@@ -61,13 +62,10 @@ final userProfileProvider = StreamProvider.autoDispose<UserProfile?>((
       // Stream completed normally
       break;
     } on RealtimeSubscribeException catch (e) {
-      // Check for token expiry error
-      // Error: RealtimeSubscribeException(status: channelError, details: Exception: "InvalidJWTToken: ...")
       final msg = e.toString();
       if (msg.contains('expired') ||
           msg.contains('InvalidJWTToken') ||
           msg.contains('JWT')) {
-        // Attempt to refresh session and retry
         try {
           await supabase.auth.refreshSession();
           continue; // Retry loop
@@ -77,20 +75,86 @@ final userProfileProvider = StreamProvider.autoDispose<UserProfile?>((
           return;
         }
       }
-      // Si ocurre desconexión de red / caída de WebSocket, no sobreescribir con null
       if (lastKnownProfile != null) {
         rethrow;
       }
       yield null;
       return;
     } catch (e) {
-      // Re-throw to allow dependent providers and UI to handle the error state
       rethrow;
     }
   }
 });
 
-// Single fetch (Future) if needed, but Stream is better for reactive UI
+// Stream of User Company
+final userCompanyProvider = StreamProvider.autoDispose<UserCompany?>((
+  ref,
+) async* {
+  final supabase = Supabase.instance.client;
+
+  UserCompany? lastKnownCompany;
+
+  while (true) {
+    final user = supabase.auth.currentUser;
+    if (user == null) {
+      yield null;
+      return;
+    }
+
+    // Proactive Expiry Check (60s buffer)
+    final session = supabase.auth.currentSession;
+    if (session != null) {
+      final expiresAt = DateTime.fromMillisecondsSinceEpoch(
+        session.expiresAt! * 1000,
+      );
+      if (DateTime.now().add(const Duration(seconds: 60)).isAfter(expiresAt)) {
+        try {
+          await supabase.auth.refreshSession();
+        } catch (_) {}
+      }
+    }
+
+    try {
+      final stream = supabase
+          .from('user_companies')
+          .stream(primaryKey: ['id'])
+          .eq('user_id', user.id);
+
+      await for (final data in stream) {
+        if (data.isNotEmpty) {
+          lastKnownCompany = UserCompany.fromJson(data.first);
+          yield lastKnownCompany;
+        } else {
+          yield null;
+        }
+      }
+      break;
+    } on RealtimeSubscribeException catch (e) {
+      final msg = e.toString();
+      if (msg.contains('expired') ||
+          msg.contains('InvalidJWTToken') ||
+          msg.contains('JWT')) {
+        try {
+          await supabase.auth.refreshSession();
+          continue;
+        } catch (_) {
+          if (lastKnownCompany != null) rethrow;
+          yield null;
+          return;
+        }
+      }
+      if (lastKnownCompany != null) {
+        rethrow;
+      }
+      yield null;
+      return;
+    } catch (e) {
+      rethrow;
+    }
+  }
+});
+
+// Single fetch (Future) if needed
 final fetchUserProfileProvider = FutureProvider.autoDispose<UserProfile?>((
   ref,
 ) async {
@@ -114,7 +178,6 @@ final shippingMethodsProvider =
           return;
         }
 
-        // Proactive Expiry Check (60s buffer)
         final session = supabase.auth.currentSession;
         if (session != null) {
           final expiresAt = DateTime.fromMillisecondsSinceEpoch(
@@ -130,7 +193,6 @@ final shippingMethodsProvider =
         }
 
         try {
-          // Fetch global (system) methods once
           final globalMethods = await supabase
               .from('shipping_methods')
               .select()
@@ -148,8 +210,9 @@ final shippingMethodsProvider =
               .order('created_at', ascending: true);
 
           await for (final data in stream) {
-            final userList = data.map((json) => ShippingMethod.fromJson(json)).toList();
-            // Yield user methods first, then system methods at the end
+            final userList = data
+                .map((json) => ShippingMethod.fromJson(json))
+                .toList();
             yield [...userList, ...globalList];
           }
           break;
@@ -187,7 +250,6 @@ final verificationDocumentsProvider =
           return;
         }
 
-        // Proactive Expiry Check (60s buffer)
         final session = supabase.auth.currentSession;
         if (session != null) {
           final expiresAt = DateTime.fromMillisecondsSinceEpoch(

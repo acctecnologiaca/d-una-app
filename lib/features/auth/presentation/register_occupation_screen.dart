@@ -6,6 +6,9 @@ import 'package:go_router/go_router.dart';
 import 'widgets/register_layout.dart';
 import 'providers/register_provider.dart';
 import '../../profile/presentation/providers/occupations_provider.dart';
+import '../../../shared/widgets/custom_dropdown.dart';
+import '../../../shared/widgets/custom_multi_dropdown.dart';
+import '../../../core/utils/error_handler.dart';
 
 class RegisterOccupationScreen extends ConsumerStatefulWidget {
   const RegisterOccupationScreen({super.key});
@@ -21,7 +24,6 @@ class _RegisterOccupationScreenState
 
   String? _primaryOccupationId;
   List<String> _secondaryOccupationIds = [];
-  bool _isSecondaryExpanded = false;
 
   @override
   void initState() {
@@ -47,71 +49,53 @@ class _RegisterOccupationScreenState
         }
       } catch (e) {
         if (mounted) {
-          AppToast.error(context, message: 'Error: $e');
+          AppToast.error(context, message: ErrorHandler.getFriendlyMessage(e));
         }
       }
     }
   }
 
-  void _toggleSecondary(String occupationId) {
-    setState(() {
-      if (_secondaryOccupationIds.contains(occupationId)) {
-        _secondaryOccupationIds.remove(occupationId);
-      } else {
-        if (_secondaryOccupationIds.length < 2) {
-          _secondaryOccupationIds.add(occupationId);
-        } else {
-          AppToast.warning(
-            context,
-            message: 'Máximo 2 ocupaciones secundarias',
-          );
-        }
-      }
-    });
-  }
-
   @override
   Widget build(BuildContext context) {
     final occupationsAsync = ref.watch(occupationsProvider);
+    final registerState = ref.watch(registerProvider);
 
     return RegisterLayout(
       title: '¿A qué te dedicas?',
       subtitle:
           'Saber esto, nos permitirá conectarte con los proveedores adecuados.',
-      progress: 4, //
+      progress: 4,
       onNext: _onNext,
+      isLoading: registerState.isLoading,
       content: occupationsAsync.when(
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (e, stack) => FriendlyErrorWidget(error: e),
         data: (occupationsList) {
+          final secondaryItems = occupationsList
+              .map((e) => e['id'] as String)
+              .where((id) => id != _primaryOccupationId)
+              .toList();
+
           return Form(
             key: _formKey,
             child: Column(
               children: [
-                // Primary Occupation Dropdown
-                DropdownButtonFormField<String>(
-                  // ignore: deprecated_member_use
+                // Primary Occupation Dropdown (Searchable)
+                CustomDropdown<String>(
+                  label: 'Ocupación principal',
+                  searchable: true,
+                  isRequired: true,
                   value: _primaryOccupationId,
-                  isExpanded: true,
-                  decoration: InputDecoration(
-                    labelText: 'Ocupación principal*',
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    contentPadding: const EdgeInsets.symmetric(
-                      horizontal: 16,
-                      vertical: 16,
-                    ),
-                  ),
-                  items: occupationsList.map((occ) {
-                    return DropdownMenuItem(
-                      value: occ['id'] as String,
-                      child: Text(
-                        occ['name'] as String,
-                        overflow: TextOverflow.ellipsis,
-                      ),
+                  items: occupationsList
+                      .map((e) => e['id'] as String)
+                      .toList(),
+                  itemLabelBuilder: (id) {
+                    final occ = occupationsList.firstWhere(
+                      (element) => element['id'] == id,
+                      orElse: () => {'name': 'Desconocido'},
                     );
-                  }).toList(),
+                    return occ['name'] as String;
+                  },
                   onChanged: (val) {
                     setState(() {
                       _primaryOccupationId = val;
@@ -132,115 +116,25 @@ class _RegisterOccupationScreenState
 
                 const SizedBox(height: 24),
 
-                // Secondary Occupations Custom Dropdown/Expander
-                Container(
-                  decoration: BoxDecoration(
-                    border: Border.all(
-                      color: _isSecondaryExpanded
-                          ? Theme.of(context).colorScheme.primary
-                          : Colors.grey.shade400,
-                      width: _isSecondaryExpanded ? 2 : 1,
-                    ),
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Column(
-                    children: [
-                      InkWell(
-                        onTap: () {
-                          setState(
-                            () => _isSecondaryExpanded = !_isSecondaryExpanded,
-                          );
-                        },
-                        child: Padding(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 16,
-                            vertical: 16,
-                          ),
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    if (_secondaryOccupationIds.isEmpty)
-                                      Text(
-                                        'Otras ocupaciones',
-                                        style: TextStyle(
-                                          color: Colors.grey.shade600,
-                                          fontSize: 16,
-                                        ),
-                                      )
-                                    else
-                                      Text(
-                                        _secondaryOccupationIds
-                                            .map((id) {
-                                              final occ = occupationsList
-                                                  .firstWhere(
-                                                    (element) =>
-                                                        element['id'] == id,
-                                                    orElse: () => {
-                                                      'name': 'Desconocido',
-                                                    },
-                                                  );
-                                              return occ['name'];
-                                            })
-                                            .join(', '),
-                                        style: TextStyle(
-                                          color: Theme.of(
-                                            context,
-                                          ).colorScheme.onSurface,
-                                          fontSize: 14,
-                                        ),
-                                        maxLines: 1,
-                                        overflow: TextOverflow.ellipsis,
-                                      ),
-                                  ],
-                                ),
-                              ),
-                              Icon(
-                                _isSecondaryExpanded ? Icons.remove : Icons.add,
-                                color: Theme.of(context).colorScheme.onSurface,
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                      if (_isSecondaryExpanded)
-                        Container(
-                          height: 200, // Fixed height scrollable area
-                          decoration: const BoxDecoration(
-                            border: Border(top: BorderSide(color: Colors.grey)),
-                            color: Color(0xFFF0F0F0),
-                          ),
-                          child: ListView.builder(
-                            itemCount: occupationsList.length,
-                            itemBuilder: (context, index) {
-                              final occ = occupationsList[index];
-                              final id = occ['id'] as String;
-                              final name = occ['name'] as String;
-
-                              // Skip primary if selected
-                              if (id == _primaryOccupationId) {
-                                return const SizedBox.shrink();
-                              }
-
-                              final isSelected = _secondaryOccupationIds
-                                  .contains(id);
-                              return CheckboxListTile(
-                                title: Text(name),
-                                value: isSelected,
-                                controlAffinity:
-                                    ListTileControlAffinity.trailing,
-                                onChanged: (bool? checked) {
-                                  _toggleSecondary(id);
-                                },
-                              );
-                            },
-                          ),
-                        ),
-                    ],
-                  ),
+                // Secondary Occupations (CustomMultiDropdown with Search and max 2 selections)
+                CustomMultiDropdown<String>(
+                  label: 'Otras ocupaciones',
+                  isRequired: false,
+                  maxSelections: 2,
+                  selectedValues: _secondaryOccupationIds,
+                  items: secondaryItems,
+                  itemLabelBuilder: (id) {
+                    final occ = occupationsList.firstWhere(
+                      (element) => element['id'] == id,
+                      orElse: () => {'name': 'Desconocido'},
+                    );
+                    return occ['name'] as String;
+                  },
+                  onChanged: (newIds) {
+                    setState(() {
+                      _secondaryOccupationIds = newIds;
+                    });
+                  },
                 ),
               ],
             ),

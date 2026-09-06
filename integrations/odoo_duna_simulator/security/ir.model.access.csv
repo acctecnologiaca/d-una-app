@@ -1,0 +1,8 @@
+id,name,model_id:id,group_id:id,perm_read,perm_write,perm_create,perm_unlink
+access_duna_simulator_config_user,duna.simulator.config.user,model_duna_simulator_config,stock.group_stock_user,1,0,0,0
+access_duna_simulator_config_manager,duna.simulator.config.manager,model_duna_simulator_config,stock.group_stock_manager,1,1,1,1
+access_duna_simulator_log_user,duna.simulator.log.user,model_duna_simulator_log,stock.group_stock_user,1,0,0,0
+access_duna_simulator_log_manager,duna.simulator.log.manager,model_duna_simulator_log,stock.group_stock_manager,1,1,1,1
+access_duna_simulator_peak_sale_wizard,duna.simulator.peak.sale.wizard,model_duna_simulator_peak_sale_wizard,stock.group_stock_manager,1,1,1,1
+access_duna_simulator_container_wizard,duna.simulator.container.wizard,model_duna_simulator_container_wizard,stock.group_stock_manager,1,1,1,1
+access_duna_simulator_price_wizard,duna.simulator.price.wizard,model_duna_simulator_price_wizard,stock.group_stock_manager,1,1,1,1

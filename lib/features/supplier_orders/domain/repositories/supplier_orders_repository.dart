@@ -29,6 +29,7 @@ abstract class SupplierOrdersRepository {
   Future<Map<String, dynamic>> batchGenerateFromQuote(
     String quoteId, {
     List<String>? selectedSupplierIds,
+    Map<String, bool>? supplierDestinations,
   });
 
   Future<List<QuoteSupplierOcStatus>> getQuoteSuppliersOcStatus(String quoteId);

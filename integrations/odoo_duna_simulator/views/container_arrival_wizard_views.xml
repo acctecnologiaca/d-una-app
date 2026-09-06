@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="view_duna_simulator_container_wizard_form" model="ir.ui.view">
+        <field name="name">duna.simulator.container.wizard.form</field>
+        <field name="model">duna.simulator.container.wizard</field>
+        <field name="arch" type="xml">
+            <form string="Simular Llegada de Contenedor">
+                <div class="alert alert-info mb-3" role="alert">
+                    <h5 class="alert-heading font-weight-bold">📦 Escenario: Llegada de Contenedor (Reabastecimiento)</h5>
+                    <p class="mb-0">
+                        Inyecta un volumen considerable de inventario a un grupo de productos filtrados por Marca o Categoría,
+                        emulando la descarga y recepción formal de un pedido de importación o proveedor mayorista.
+                    </p>
+                </div>
+                <group>
+                    <group string="Destino y Filtros">
+                        <field name="warehouse_id" options="{'no_create': True}"/>
+                        <field name="brand_filter" placeholder="Ej: Samsung, Xiaomi, LG..."/>
+                        <field name="category_id" options="{'no_create': True}"/>
+                    </group>
+                    <group string="Volumen a Inyectar">
+                        <field name="mode"/>
+                        <field name="fixed_qty" invisible="mode != 'fixed'"/>
+                        <field name="min_qty" invisible="mode != 'random_range'"/>
+                        <field name="max_qty" invisible="mode != 'random_range'"/>
+                    </group>
+                </group>
+                <footer>
+                    <button name="action_execute_container_arrival"
+                            type="object"
+                            string="📦 Recibir e Inyectar Mercancía"
+                            class="btn-info text-white"/>
+                    <button string="Cancelar" class="btn-secondary" special="cancel"/>
+                </footer>
+            </form>
+        </field>
+    </record>
+
+    <record id="action_duna_simulator_container_wizard" model="ir.actions.act_window">
+        <field name="name">Simular Llegada de Contenedor</field>
+        <field name="res_model">duna.simulator.container.wizard</field>
+        <field name="view_mode">form</field>
+        <field name="target">new</field>
+    </record>
+</odoo>

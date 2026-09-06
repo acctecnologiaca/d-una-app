@@ -70,6 +70,7 @@ class ProfileScreen extends ConsumerWidget {
     final colors = Theme.of(context).colorScheme;
     final textTheme = Theme.of(context).textTheme;
     final profileAsync = ref.watch(userProfileProvider);
+    final companyAsync = ref.watch(userCompanyProvider);
 
     return Scaffold(
       backgroundColor: colors.surface,
@@ -165,8 +166,31 @@ class ProfileScreen extends ConsumerWidget {
                       const SizedBox(height: 8),
                       // Verification Badge
                       () {
-                        final status =
+                        final personalStatus =
                             profile?.verificationStatus ?? 'unverified';
+                        final isBusiness = profile?.isBusinessOwner ?? false;
+                        final company = companyAsync.valueOrNull;
+                        final companyStatus =
+                            company?.verificationStatus ?? 'unverified';
+
+                        String status;
+                        if (isBusiness) {
+                          if (personalStatus == 'rejected' ||
+                              companyStatus == 'rejected') {
+                            status = 'rejected';
+                          } else if (personalStatus == 'pending' ||
+                              companyStatus == 'pending') {
+                            status = 'pending';
+                          } else if (personalStatus == 'verified' &&
+                              companyStatus == 'verified') {
+                            status = 'verified';
+                          } else {
+                            status = 'unverified';
+                          }
+                        } else {
+                          status = personalStatus;
+                        }
+
                         Widget icon;
                         String text;
                         Color backgroundColor;
@@ -180,7 +204,8 @@ class ProfileScreen extends ConsumerWidget {
                               width: 14,
                               height: 14,
                             );
-                            backgroundColor = Colors.green.withValues(alpha: 0.1);
+                            backgroundColor =
+                                Colors.green.withValues(alpha: 0.1);
                             textColor = Colors.green.shade700;
                             break;
                           case 'pending':
@@ -190,7 +215,8 @@ class ProfileScreen extends ConsumerWidget {
                               width: 14,
                               height: 14,
                             );
-                            backgroundColor = Colors.orange.withValues(alpha: 0.1);
+                            backgroundColor =
+                                Colors.orange.withValues(alpha: 0.1);
                             textColor = Colors.orange.shade800;
                             break;
                           case 'rejected':
@@ -200,7 +226,8 @@ class ProfileScreen extends ConsumerWidget {
                               width: 14,
                               height: 14,
                             );
-                            backgroundColor = colors.error.withValues(alpha: 0.1);
+                            backgroundColor =
+                                colors.error.withValues(alpha: 0.1);
                             textColor = colors.error;
                             break;
                           case 'unverified':
@@ -211,7 +238,8 @@ class ProfileScreen extends ConsumerWidget {
                               size: 14,
                               color: colors.onSurfaceVariant,
                             );
-                            backgroundColor = colors.surfaceContainerHighest.withValues(alpha: 0.5);
+                            backgroundColor = colors.surfaceContainerHighest
+                                .withValues(alpha: 0.5);
                             textColor = colors.onSurfaceVariant;
                             break;
                         }

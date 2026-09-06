@@ -24,6 +24,7 @@ class EmailTemplatesListScreen extends ConsumerWidget {
         'icon': Icons.receipt_long_outlined,
       },
       {'id': 'report', 'label': 'Reportes', 'icon': Symbols.contract},
+      {'id': 'delivery_note', 'label': 'Notas de entrega', 'icon': Symbols.list_alt},
     ];
 
     return Scaffold(

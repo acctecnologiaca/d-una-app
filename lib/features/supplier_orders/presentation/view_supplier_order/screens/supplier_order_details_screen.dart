@@ -215,6 +215,20 @@ class _SupplierOrderDetailsScreenState
                             _finalizeOrderFlow(order, items);
                           },
                         ),
+                      if (order.status == SupplierOrderStatus.approved ||
+                          order.status == SupplierOrderStatus.finalized)
+                        BottomSheetActionItem(
+                          icon: Symbols.list_alt,
+                          label: 'Generar nota de entrega',
+                          subtitle:
+                              'Generar documento de entrega al cliente a partir de esta orden',
+                          onTap: () {
+                            context.pop();
+                            context.push(
+                              '/delivery-notes/create?supplierOrderId=${order.id}',
+                            );
+                          },
+                        ),
                       if (canEdit)
                         BottomSheetActionItem(
                           icon: Icons.cancel_outlined,

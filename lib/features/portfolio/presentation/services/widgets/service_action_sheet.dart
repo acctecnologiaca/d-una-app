@@ -58,9 +58,14 @@ class ServiceActionSheet {
             );
             if (selectedQuote == null || !context.mounted) return;
 
-            await ref
+            final draft = await ref
                 .read(createQuoteProvider.notifier)
-                .loadQuote(selectedQuote.id);
+                .checkAndRestoreDraft(quoteId: selectedQuote.id);
+            if (draft == null) {
+              await ref
+                  .read(createQuoteProvider.notifier)
+                  .loadQuote(selectedQuote.id);
+            }
 
             if (context.mounted) {
               await _addServiceToExistingQuote(context, ref, service);
@@ -111,6 +116,12 @@ class ServiceActionSheet {
       );
 
       ref.read(createQuoteProvider.notifier).updateService(updatedItem);
+      final currentQuoteId = quoteState.quote?.id;
+      if (currentQuoteId != null) {
+        await ref
+            .read(createQuoteProvider.notifier)
+            .saveDraftNow(quoteId: currentQuoteId, tabIndex: 1);
+      }
 
       if (context.mounted) {
         AppToast.info(
@@ -147,6 +158,13 @@ class ServiceActionSheet {
     );
 
     ref.read(createQuoteProvider.notifier).addService(updatedResult);
+
+    final finalQuoteId = ref.read(createQuoteProvider).quote?.id;
+    if (finalQuoteId != null) {
+      await ref
+          .read(createQuoteProvider.notifier)
+          .saveDraftNow(quoteId: finalQuoteId, tabIndex: 1);
+    }
 
     if (context.mounted) {
       final quoteId = ref.read(createQuoteProvider).quote?.id;

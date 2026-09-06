@@ -10,7 +10,7 @@ class RegisterIntroScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     return Scaffold(
-      // backgroundColor: Colors.white, // Removed to use Theme Surface
+      backgroundColor: Theme.of(context).colorScheme.surface,
       body: SafeArea(
         child: LayoutBuilder(
           builder: (context, constraints) {
@@ -90,7 +90,11 @@ class RegisterIntroScreen extends ConsumerWidget {
 
                       TextButton(
                         onPressed: () {
-                          context.pop(); // Go back to Login
+                          if (context.canPop()) {
+                            context.pop();
+                          } else {
+                            context.go('/login');
+                          }
                         },
                         child: Text(
                           'Salir',

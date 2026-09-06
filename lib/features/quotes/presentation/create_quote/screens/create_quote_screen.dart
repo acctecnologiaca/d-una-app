@@ -77,62 +77,78 @@ class _CreateQuoteScreenState extends ConsumerState<CreateQuoteScreen>
 
       if (widget.quoteId != null) {
         // Modo EDICIÓN:
-        // 1. Buscar si existen cambios locales no guardados para esta cotización
-        final draft = await ref
-            .read(createQuoteProvider.notifier)
-            .checkAndRestoreDraft(quoteId: widget.quoteId);
-
-        if (draft != null && mounted) {
-          setState(() {
-            if (draft.tabIndex >= 0 && draft.tabIndex < 6) {
-              _tabController.index = draft.tabIndex;
-            }
-          });
-
-          DraftToast.show(
-            context,
-            message: 'Cambios restaurados automáticamente',
-            onDiscard: () async {
-              final colors = Theme.of(context).colorScheme;
-              final shouldDiscard = await CustomDialog.show<bool>(
-                context: context,
-                dialog: CustomDialog.destructive(
-                  title: '¿Descartar cambios locales?',
-                  contentText:
-                      'Se eliminarán las modificaciones sin guardar y se recargarán los datos del servidor.',
-                  actions: [
-                    TextButton(
-                      onPressed: () => Navigator.pop(context, false),
-                      child: const Text('Cancelar'),
-                    ),
-                    FilledButton(
-                      onPressed: () => Navigator.pop(context, true),
-                      style: FilledButton.styleFrom(
-                        backgroundColor: colors.error,
-                        foregroundColor: colors.onError,
-                      ),
-                      child: const Text('Descartar'),
-                    ),
-                  ],
-                ),
-              );
-
-              if (shouldDiscard == true && mounted) {
-                await ref
-                    .read(createQuoteProvider.notifier)
-                    .clearDraft(quoteId: widget.quoteId);
-                await ref
-                    .read(createQuoteProvider.notifier)
-                    .loadQuote(widget.quoteId!);
-                setState(() {
-                  _tabController.index = 0;
-                });
+        if (currentState.quote?.id == widget.quoteId) {
+          // La cotización ya está cargada en memoria (p. ej. producto/servicio agregado desde Action Sheet).
+          // Verificamos si hay borrador para sincronizar el tabIndex sin destruir el estado en memoria.
+          final draft = await ref
+              .read(createQuoteProvider.notifier)
+              .checkAndRestoreDraft(quoteId: widget.quoteId);
+          if (draft != null && mounted) {
+            setState(() {
+              if (draft.tabIndex >= 0 && draft.tabIndex < 6) {
+                _tabController.index = draft.tabIndex;
               }
-            },
-          );
+            });
+          }
         } else {
-          // No hay borrador local, cargar datos frescos desde la base de datos
-          ref.read(createQuoteProvider.notifier).loadQuote(widget.quoteId!);
+          // La cotización no está en memoria (ej. apertura directa desde listado o detalle).
+          // 1. Buscar si existen cambios locales no guardados para esta cotización
+          final draft = await ref
+              .read(createQuoteProvider.notifier)
+              .checkAndRestoreDraft(quoteId: widget.quoteId);
+
+          if (draft != null && mounted) {
+            setState(() {
+              if (draft.tabIndex >= 0 && draft.tabIndex < 6) {
+                _tabController.index = draft.tabIndex;
+              }
+            });
+
+            DraftToast.show(
+              context,
+              message: 'Cambios restaurados automáticamente',
+              onDiscard: () async {
+                final colors = Theme.of(context).colorScheme;
+                final shouldDiscard = await CustomDialog.show<bool>(
+                  context: context,
+                  dialog: CustomDialog.destructive(
+                    title: '¿Descartar cambios locales?',
+                    contentText:
+                        'Se eliminarán las modificaciones sin guardar y se recargarán los datos del servidor.',
+                    actions: [
+                      TextButton(
+                        onPressed: () => Navigator.pop(context, false),
+                        child: const Text('Cancelar'),
+                      ),
+                      FilledButton(
+                        onPressed: () => Navigator.pop(context, true),
+                        style: FilledButton.styleFrom(
+                          backgroundColor: colors.error,
+                          foregroundColor: colors.onError,
+                        ),
+                        child: const Text('Descartar'),
+                      ),
+                    ],
+                  ),
+                );
+
+                if (shouldDiscard == true && mounted) {
+                  await ref
+                      .read(createQuoteProvider.notifier)
+                      .clearDraft(quoteId: widget.quoteId);
+                  await ref
+                      .read(createQuoteProvider.notifier)
+                      .loadQuote(widget.quoteId!);
+                  setState(() {
+                    _tabController.index = 0;
+                  });
+                }
+              },
+            );
+          } else {
+            // No hay borrador local, cargar datos frescos desde la base de datos
+            ref.read(createQuoteProvider.notifier).loadQuote(widget.quoteId!);
+          }
         }
       } else {
         // Modo CREACIÓN (nueva cotización):

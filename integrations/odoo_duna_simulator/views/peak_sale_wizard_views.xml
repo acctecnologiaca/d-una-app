@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="view_duna_simulator_peak_sale_wizard_form" model="ir.ui.view">
+        <field name="name">duna.simulator.peak.sale.wizard.form</field>
+        <field name="model">duna.simulator.peak.sale.wizard</field>
+        <field name="arch" type="xml">
+            <form string="Simular Jornada Pico de Ventas">
+                <div class="alert alert-warning mb-3" role="alert">
+                    <h5 class="alert-heading font-weight-bold">⚡ Escenario de Estrés: Jornada Pico</h5>
+                    <p class="mb-0">
+                        Este escenario simula una afluencia masiva de clientes en la sucursal seleccionada.
+                        Permite descontar un porcentaje significativo de existencias y <strong>forzar productos específicos a 0</strong>,
+                        ideal para verificar cómo reacciona la app móvil D-Una ante productos agotados en tiempo real.
+                    </p>
+                </div>
+                <group>
+                    <group string="Ubicación y Alcance">
+                        <field name="warehouse_id" options="{'no_create': True}"/>
+                        <field name="products_count"/>
+                    </group>
+                    <group string="Impacto en Existencias">
+                        <field name="zero_out_count"/>
+                        <field name="reduction_pct"/>
+                    </group>
+                </group>
+                <footer>
+                    <button name="action_execute_peak_sale"
+                            type="object"
+                            string="🚀 Ejecutar Jornada Pico"
+                            class="btn-warning"/>
+                    <button string="Cancelar" class="btn-secondary" special="cancel"/>
+                </footer>
+            </form>
+        </field>
+    </record>
+
+    <record id="action_duna_simulator_peak_sale_wizard" model="ir.actions.act_window">
+        <field name="name">Simular Jornada Pico de Ventas</field>
+        <field name="res_model">duna.simulator.peak.sale.wizard</field>
+        <field name="view_mode">form</field>
+        <field name="target">new</field>
+    </record>
+</odoo>

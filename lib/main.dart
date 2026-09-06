@@ -96,9 +96,7 @@ class RootAppState extends State<RootApp> {
   Widget build(BuildContext context) {
     return ProviderScope(
       key: _providerScopeKey,
-      overrides: [
-        sharedPreferencesProvider.overrideWithValue(widget.prefs),
-      ],
+      overrides: [sharedPreferencesProvider.overrideWithValue(widget.prefs)],
       child: const DUnaApp(),
     );
   }
@@ -162,7 +160,13 @@ class _DUnaAppState extends ConsumerState<DUnaApp> with WidgetsBindingObserver {
       ],
       supportedLocales: const [Locale('es', 'ES'), Locale('en', 'US')],
       builder: (context, child) {
-        return ConnectivityGate(child: child ?? const SizedBox.shrink());
+        return GestureDetector(
+          behavior: HitTestBehavior.translucent,
+          onTap: () {
+            FocusManager.instance.primaryFocus?.unfocus();
+          },
+          child: ConnectivityGate(child: child ?? const SizedBox.shrink()),
+        );
       },
     );
   }

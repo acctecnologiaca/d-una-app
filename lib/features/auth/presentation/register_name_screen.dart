@@ -37,8 +37,8 @@ class _RegisterNameScreenState extends ConsumerState<RegisterNameScreen> {
       ref
           .read(registerProvider.notifier)
           .updateName(
-            firstName: _firstNameController.text,
-            lastName: _lastNameController.text,
+            firstName: _firstNameController.text.trim(),
+            lastName: _lastNameController.text.trim(),
           );
       context.push('/register/occupation');
     }
@@ -57,8 +57,9 @@ class _RegisterNameScreenState extends ConsumerState<RegisterNameScreen> {
             CustomTextField(
               label: 'Nombre*',
               controller: _firstNameController,
+              textCapitalization: TextCapitalization.words,
               validator: (value) {
-                if (value == null || value.isEmpty) {
+                if (value == null || value.trim().isEmpty) {
                   return 'Este campo es obligatorio';
                 }
                 return null;
@@ -68,8 +69,9 @@ class _RegisterNameScreenState extends ConsumerState<RegisterNameScreen> {
             CustomTextField(
               label: 'Apellido*',
               controller: _lastNameController,
+              textCapitalization: TextCapitalization.words,
               validator: (value) {
-                if (value == null || value.isEmpty) {
+                if (value == null || value.trim().isEmpty) {
                   return 'Este campo es obligatorio';
                 }
                 return null;

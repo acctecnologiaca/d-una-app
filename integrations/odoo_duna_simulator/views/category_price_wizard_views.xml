@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="view_duna_simulator_price_wizard_form" model="ir.ui.view">
+        <field name="name">duna.simulator.price.wizard.form</field>
+        <field name="model">duna.simulator.price.wizard</field>
+        <field name="arch" type="xml">
+            <form string="Simular Cambio de Precios por Categoría">
+                <div class="alert alert-secondary mb-3" role="alert">
+                    <h5 class="alert-heading font-weight-bold">🏷️ Escenario: Ajuste Masivo de Tarifas</h5>
+                    <p class="mb-0">
+                        Modifica porcentualmente los precios de venta de todos los productos pertenecientes a una categoría,
+                        verificando la reacción del conector delta y la actualización de precios en USD en la plataforma D-Una.
+                    </p>
+                </div>
+                <group>
+                    <group string="Segmentación">
+                        <field name="category_id" options="{'no_create': True}"/>
+                        <field name="apply_to_child_categories"/>
+                    </group>
+                    <group string="Variación Porcentual">
+                        <field name="adjustment_type"/>
+                        <field name="percentage"/>
+                    </group>
+                </group>
+                <footer>
+                    <button name="action_execute_price_adjustment"
+                            type="object"
+                            string="🏷️ Aplicar Ajuste de Precios"
+                            class="btn-secondary text-white"/>
+                    <button string="Cancelar" class="btn-secondary" special="cancel"/>
+                </footer>
+            </form>
+        </field>
+    </record>
+
+    <record id="action_duna_simulator_price_wizard" model="ir.actions.act_window">
+        <field name="name">Simular Cambio de Precios por Categoría</field>
+        <field name="res_model">duna.simulator.price.wizard</field>
+        <field name="view_mode">form</field>
+        <field name="target">new</field>
+    </record>
+</odoo>

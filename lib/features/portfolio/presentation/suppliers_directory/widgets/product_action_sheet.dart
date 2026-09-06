@@ -184,10 +184,15 @@ class ProductActionSheet {
               extra: {'rejected', 'finalized', 'cancelled'},
             );
             if (selectedQuote == null || !context.mounted) return;
-            // 2. Load the selected quote into the provider
-            await ref
+            // 2. Load the selected quote into the provider (respecting draft if exists)
+            final draft = await ref
                 .read(createQuoteProvider.notifier)
-                .loadQuote(selectedQuote.id);
+                .checkAndRestoreDraft(quoteId: selectedQuote.id);
+            if (draft == null) {
+              await ref
+                  .read(createQuoteProvider.notifier)
+                  .loadQuote(selectedQuote.id);
+            }
             // 3. Show details sheet and add product
             if (context.mounted) {
               await _addSupplierProductToExistingQuote(
@@ -349,6 +354,9 @@ class ProductActionSheet {
       );
 
       ref.read(createQuoteProvider.notifier).updateProduct(updatedItem);
+      await ref
+          .read(createQuoteProvider.notifier)
+          .saveDraftNow(quoteId: quoteState.quote?.id);
 
       if (context.mounted) {
         AppToast.info(
@@ -424,6 +432,9 @@ class ProductActionSheet {
 
     // 3. Add to state
     ref.read(createQuoteProvider.notifier).addProduct(quoteItem);
+    await ref
+        .read(createQuoteProvider.notifier)
+        .saveDraftNow(quoteId: ref.read(createQuoteProvider).quote?.id);
 
     // 4. Navigate to edit/create quote screen
     if (context.mounted) {

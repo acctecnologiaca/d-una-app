@@ -176,7 +176,7 @@ class _ClientListScreenState extends ConsumerState<ClientListScreen> {
                       onLoadMore: () => ref
                           .read(paginatedClientsProvider.notifier)
                           .loadMore(),
-                      padding: const EdgeInsets.fromLTRB(0, 8, 0, 90),
+                      padding: const EdgeInsets.fromLTRB(0, 8, 0, 64),
                       separatorBuilder: (context, index) => const Divider(
                         height: 1,
                         indent: 16,

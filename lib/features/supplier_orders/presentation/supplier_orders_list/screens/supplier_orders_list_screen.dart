@@ -171,12 +171,14 @@ class _SupplierOrdersListScreenState
 
                     var items = state.items;
                     // Local sorting according to selected option
-                     if (_currentSort == SortOption.orderNumberDesc) {
-                      items = List.from(items)
-                        ..sort((a, b) => b.orderNumber.compareTo(a.orderNumber));
+                    if (_currentSort == SortOption.orderNumberDesc) {
+                      items = List.from(
+                        items,
+                      )..sort((a, b) => b.orderNumber.compareTo(a.orderNumber));
                     } else if (_currentSort == SortOption.orderNumberAsc) {
-                      items = List.from(items)
-                        ..sort((a, b) => a.orderNumber.compareTo(b.orderNumber));
+                      items = List.from(
+                        items,
+                      )..sort((a, b) => a.orderNumber.compareTo(b.orderNumber));
                     } else if (_currentSort == SortOption.recent) {
                       items = List.from(items)
                         ..sort((a, b) => b.date.compareTo(a.date));

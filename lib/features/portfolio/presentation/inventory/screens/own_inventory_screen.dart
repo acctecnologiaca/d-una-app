@@ -36,13 +36,12 @@ class _OwnInventoryScreenState extends ConsumerState<OwnInventoryScreen> {
       ...userProfile?.secondaryOccupationIds ?? [],
     ];
 
-    final isAdsEnabled =
-        ref.watch(isAdPlacementEnabledProvider('own_inventory_list'));
+    final isAdsEnabled = ref.watch(
+      isAdPlacementEnabledProvider('own_inventory_list'),
+    );
     final adBannersAsync = isAdsEnabled
         ? ref.watch(
-            adBannersProvider(
-              AdBannerParams(occupationIds: occupationIds),
-            ),
+            adBannersProvider(AdBannerParams(occupationIds: occupationIds)),
           )
         : null;
 
@@ -194,7 +193,7 @@ class _OwnInventoryScreenState extends ConsumerState<OwnInventoryScreen> {
                         ref.read(paginatedProductsProvider.notifier).loadMore(),
                     banners: adBannersAsync?.valueOrNull,
                     screenContext: 'own_inventory_list',
-                    padding: const EdgeInsets.fromLTRB(0, 8, 0, 120),
+                    padding: const EdgeInsets.fromLTRB(0, 8, 0, 132),
                     separatorBuilder: (context, index) =>
                         const Divider(height: 1, color: Colors.transparent),
                     itemBuilder: (context, index, product) {

@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- Acción para Reglas de Garantía -->
+    <record id="action_duna_warranty_rules" model="ir.actions.act_window">
+        <field name="name">Reglas de Garantía D-Una</field>
+        <field name="res_model">duna.warranty.rule</field>
+        <field name="view_mode">tree,form</field>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">
+                Cree su primera regla de garantía comercial
+            </p>
+            <p>
+                Asigne garantías comerciales automáticas combinando Marcas y Categorías de productos.
+            </p>
+        </field>
+    </record>
+
+    <!-- Menú principal en el módulo de Inventario -->
+    <menuitem id="menu_duna_root"
+              name="Conector D-Una"
+              parent="stock.menu_stock_root"
+              sequence="90"/>
+
+    <menuitem id="menu_duna_sync_logs"
+              name="Historial de Sincronización"
+              parent="menu_duna_root"
+              action="action_duna_sync_log"
+              sequence="10"/>
+
+    <menuitem id="menu_duna_warranty_rules"
+              name="Reglas de Garantía"
+              parent="menu_duna_root"
+              action="action_duna_warranty_rules"
+              sequence="15"/>
+
+    <menuitem id="menu_duna_settings"
+              name="Configuración"
+              parent="menu_duna_root"
+              action="action_duna_config_settings"
+              sequence="20"/>
+</odoo>

@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data noupdate="1">
+        <record id="duna_simulator_default_config" model="duna.simulator.config">
+            <field name="name">Panel de Control Simulador D-Una</field>
+            <field name="is_active">False</field>
+            <field name="cron_interval_minutes">15</field>
+            <field name="prob_counter_sale">70</field>
+            <field name="prob_replenishment">20</field>
+            <field name="prob_price_change">10</field>
+            <field name="sale_min_qty">1</field>
+            <field name="sale_max_qty">3</field>
+            <field name="sale_max_products">2</field>
+            <field name="restock_min_qty">10</field>
+            <field name="restock_max_qty">25</field>
+            <field name="restock_threshold">5.0</field>
+            <field name="price_min_pct">3.0</field>
+            <field name="price_max_pct">5.0</field>
+        </record>
+    </data>
+</odoo>

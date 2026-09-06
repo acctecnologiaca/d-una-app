@@ -20,6 +20,7 @@ import '../create_quote/providers/create_quote_provider.dart';
 import '../view_quote/providers/view_quote_provider.dart';
 import '../view_quote/widgets/select_oc_suppliers_sheet.dart';
 import '../../../supplier_orders/presentation/supplier_orders_list/providers/supplier_orders_providers.dart';
+import '../../../supplier_orders/domain/models/supplier_order_status.dart';
 import 'package:intl/intl.dart';
 
 /// Shared action methods for quote multi-selection, used in both
@@ -255,12 +256,15 @@ class QuoteSelectionActions {
                     return;
                   }
 
-                  final selectedIds = await SelectOcSuppliersSheet.show(
+                  final selection = await SelectOcSuppliersSheet.show(
                     context: context,
                     suppliers: statuses,
                   );
 
-                  if (selectedIds == null || selectedIds.isEmpty) return;
+                  if (selection == null ||
+                      selection.selectedSupplierIds.isEmpty) {
+                    return;
+                  }
 
                   messenger.showSnackBar(
                     const SnackBar(
@@ -271,7 +275,8 @@ class QuoteSelectionActions {
 
                   final result = await repo.batchGenerateFromQuote(
                     quote.id,
-                    selectedSupplierIds: selectedIds,
+                    selectedSupplierIds: selection.selectedSupplierIds,
+                    supplierDestinations: selection.supplierDestinations,
                   );
 
                   final skipped =
@@ -332,18 +337,65 @@ class QuoteSelectionActions {
             );
           },
         ),
-        /* BottomSheetActionItem(
-          icon: Icons.receipt_outlined,
+        BottomSheetActionItem(
+          icon: Symbols.list_alt,
           label: 'Generar nota de entrega',
           enabled: !isBlockedForOcNe,
           subtitle: isBlockedForOcNe
               ? 'No disponible para cotizaciones rechazadas, finalizadas o canceladas'
               : null,
-          onTap: () {
+          onTap: () async {
             context.pop();
-            showComingSoon(context, 'Generar nota de entrega');
+
+            // Monetization guardrail check:
+            final ocRepo = ref.read(supplierOrdersRepositoryProvider);
+            final supplierStatuses =
+                await ocRepo.getQuoteSuppliersOcStatus(quote.id);
+
+            if (supplierStatuses.isNotEmpty) {
+              final orders = await ocRepo.getSupplierOrdersByQuoteId(quote.id);
+              final approvedSupplierIds = orders
+                  .where(
+                    (o) =>
+                        o.status == SupplierOrderStatus.approved ||
+                        o.status == SupplierOrderStatus.finalized,
+                  )
+                  .map((o) => o.supplierId)
+                  .toSet();
+
+              final pendingSuppliers = supplierStatuses
+                  .where((s) => !approvedSupplierIds.contains(s.supplierId))
+                  .toList();
+
+              if (pendingSuppliers.isNotEmpty && context.mounted) {
+                await CustomDialog.show(
+                  context: context,
+                  dialog: CustomDialog.confirmation(
+                    icon: Symbols.lock,
+                    title: 'Orden de Compra Requerida',
+                    contentText:
+                        'Esta cotización contiene productos de proveedores afiliados (${pendingSuppliers.map((s) => s.supplierName).join(', ')}) que no cuentan con una Orden de Compra aprobada o finalizada en la plataforma.\n\nPara garantizar el despacho formal y la correcta trazabilidad, debe emitir y aprobar la Orden de Compra antes de generar la Nota de Entrega.',
+                    actions: [
+                      TextButton(
+                        onPressed: () => Navigator.of(
+                          context,
+                          rootNavigator: true,
+                        ).pop(),
+                        child: const Text('Entendido'),
+                      ),
+                    ],
+                  ),
+                );
+                return;
+              }
+            }
+
+            if (context.mounted) {
+              ref.read(quoteSelectionProvider.notifier).clearSelection();
+              context.push('/delivery-notes/create?quoteId=${quote.id}');
+            }
           },
-        ), */
+        ),
         const Divider(height: 1, indent: 16, endIndent: 16),
         BottomSheetActionItem(
           icon: Icons.content_copy_outlined,

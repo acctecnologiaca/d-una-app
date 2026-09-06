@@ -62,6 +62,8 @@ class EmailContentGenerator {
         return 'Pedido #{{numero}}';
       case 'report':
         return 'Reporte de {{categoria}}';
+      case 'delivery_note':
+        return 'Nota de Entrega #{{numero}}';
       default:
         return 'Envío de {{tipo_documento}} #{{numero}}';
     }
@@ -72,6 +74,13 @@ class EmailContentGenerator {
       return 'Estimado(a) {{nombre_cliente}},\n\n'
           'Es un gusto saludarle. Adjunto encontrará el reporte de servicio solicitado.\n\n'
           'Quedamos atentos a cualquier duda o comentario.\n\n'
+          'Atentamente,\n'
+          '{{nombre_empresa}}';
+    }
+    if (type == 'delivery_note') {
+      return 'Estimado(a) {{nombre_cliente}},\n\n'
+          'Es un gusto saludarle. Adjunto encontrará la nota de entrega correspondiente a su solicitud.\n\n'
+          'Puede consultar los detalles y seriales de los equipos entregados en el enlace adjunto.\n\n'
           'Atentamente,\n'
           '{{nombre_empresa}}';
     }

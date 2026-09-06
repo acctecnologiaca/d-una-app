@@ -6,8 +6,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:file_picker/file_picker.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import '../providers/profile_provider.dart';
 import '../../domain/models/user_profile.dart';
+import '../../domain/models/user_company.dart';
 import '../../domain/models/verification_document.dart';
 import '../../../../shared/widgets/custom_text_field.dart';
 import '../../../../shared/widgets/custom_dialog.dart';
@@ -25,6 +27,7 @@ class _VerificationScreenState extends ConsumerState<VerificationScreen> {
 
   bool _isBusiness = false;
   bool _isLoading = false;
+  bool _isSendingRequest = false;
 
   // Store selected files: Key = Document Label, Value = PlatformFile
   final Map<String, PlatformFile?> _individualFiles = {
@@ -87,19 +90,19 @@ class _VerificationScreenState extends ConsumerState<VerificationScreen> {
     super.dispose();
   }
 
-  void _initializeData(UserProfile profile) {
+  void _initializeData(UserProfile profile, UserCompany? company) {
     if (_isInitialized) return;
     setState(() {
       _isBusiness = profile.isBusinessOwner;
-      _companyNameController.text = profile.companyName ?? '';
-      _rifController.text = profile.companyRif ?? '';
-      _fiscalAddressController.text = profile.companyAddress ?? '';
+      _companyNameController.text = company?.companyName ?? '';
+      _rifController.text = company?.companyRif ?? '';
+      _fiscalAddressController.text = company?.companyAddress ?? '';
 
       // Capture initial state
       _initialIsBusiness = profile.isBusinessOwner;
-      _initialCompanyName = profile.companyName ?? '';
-      _initialRif = profile.companyRif ?? '';
-      _initialFiscalAddress = profile.companyAddress ?? '';
+      _initialCompanyName = company?.companyName ?? '';
+      _initialRif = company?.companyRif ?? '';
+      _initialFiscalAddress = company?.companyAddress ?? '';
 
       _isInitialized = true;
     });
@@ -111,9 +114,14 @@ class _VerificationScreenState extends ConsumerState<VerificationScreen> {
 
     // 2. Check Text Fields and Logo (only if Business mode is active)
     if (_isBusiness) {
-      if (_companyNameController.text.trim() != _initialCompanyName.trim()) return true;
+      if (_companyNameController.text.trim() != _initialCompanyName.trim()) {
+        return true;
+      }
       if (_rifController.text.trim() != _initialRif.trim()) return true;
-      if (_fiscalAddressController.text.trim() != _initialFiscalAddress.trim()) return true;
+      if (_fiscalAddressController.text.trim() !=
+          _initialFiscalAddress.trim()) {
+        return true;
+      }
       if (_companyLogo != null) return true;
     }
 
@@ -130,18 +138,32 @@ class _VerificationScreenState extends ConsumerState<VerificationScreen> {
   Map<String, PlatformFile?> get _currentFiles =>
       _isBusiness ? _businessFiles : _individualFiles;
 
-  bool _isUploaded(String label, List<VerificationDocument> uploadedDocs) {
-    final type = _mapLabelToType(label);
-    return uploadedDocs.any((doc) => doc.documentType == type);
+  bool _isUploaded(
+    String label,
+    List<VerificationDocument> uploadedDocs,
+    UserCompany? company,
+  ) {
+    return _getUploadedDoc(label, uploadedDocs, company) != null;
   }
 
   VerificationDocument? _getUploadedDoc(
     String label,
     List<VerificationDocument> uploadedDocs,
+    UserCompany? company,
   ) {
     final type = _mapLabelToType(label);
     try {
-      return uploadedDocs.firstWhere((doc) => doc.documentType == type);
+      if (_isBusiness) {
+        return uploadedDocs.firstWhere(
+          (doc) =>
+              doc.documentType == type &&
+              (company == null || doc.companyId == company.id),
+        );
+      } else {
+        return uploadedDocs.firstWhere(
+          (doc) => doc.documentType == type && doc.companyId == null,
+        );
+      }
     } catch (_) {
       return null;
     }
@@ -167,10 +189,7 @@ class _VerificationScreenState extends ConsumerState<VerificationScreen> {
       }
     } catch (e) {
       if (mounted) {
-        AppToast.error(
-          context,
-          message: 'Error al seleccionar logo: $e',
-        );
+        AppToast.error(context, message: 'Error al seleccionar logo: $e');
       }
     }
   }
@@ -199,10 +218,7 @@ class _VerificationScreenState extends ConsumerState<VerificationScreen> {
       }
     } catch (e) {
       if (mounted) {
-        AppToast.error(
-          context,
-          message: 'Error al seleccionar archivo: $e',
-        );
+        AppToast.error(context, message: 'Error al seleccionar archivo: $e');
       }
     }
   }
@@ -213,9 +229,11 @@ class _VerificationScreenState extends ConsumerState<VerificationScreen> {
     });
   }
 
-  bool _validateDocumentRules(List<VerificationDocument> uploadedDocs) {
+  bool _validateDocumentRules(
+    List<VerificationDocument> uploadedDocs,
+    UserCompany? company,
+  ) {
     if (_isBusiness) {
-      // Form fields validation for Business
       if (!_formKey.currentState!.validate()) {
         AppToast.warning(
           context,
@@ -224,9 +242,13 @@ class _VerificationScreenState extends ConsumerState<VerificationScreen> {
         return false;
       }
 
-      // Business Document Rules: Acta and RIF required, Reference optional
-      final hasActa = _businessFiles['Documento o acta constitutiva'] != null ||
-          _isUploaded('Documento o acta constitutiva', uploadedDocs);
+      final hasActa =
+          _businessFiles['Documento o acta constitutiva'] != null ||
+          _isUploaded(
+            'Documento o acta constitutiva',
+            uploadedDocs,
+            company,
+          );
       if (!hasActa) {
         AppToast.warning(
           context,
@@ -235,8 +257,9 @@ class _VerificationScreenState extends ConsumerState<VerificationScreen> {
         return false;
       }
 
-      final hasRif = _businessFiles['RIF de la empresa (vigente)'] != null ||
-          _isUploaded('RIF de la empresa (vigente)', uploadedDocs);
+      final hasRif =
+          _businessFiles['RIF de la empresa (vigente)'] != null ||
+          _isUploaded('RIF de la empresa (vigente)', uploadedDocs, company);
       if (!hasRif) {
         AppToast.warning(
           context,
@@ -245,9 +268,9 @@ class _VerificationScreenState extends ConsumerState<VerificationScreen> {
         return false;
       }
     } else {
-      // Personal Document Rules: Cedula required + (Certificado OR Referencia required)
-      final hasCedula = _individualFiles['Cédula de identidad o DNI'] != null ||
-          _isUploaded('Cédula de identidad o DNI', uploadedDocs);
+      final hasCedula =
+          _individualFiles['Cédula de identidad o DNI'] != null ||
+          _isUploaded('Cédula de identidad o DNI', uploadedDocs, company);
       if (!hasCedula) {
         AppToast.warning(
           context,
@@ -256,10 +279,16 @@ class _VerificationScreenState extends ConsumerState<VerificationScreen> {
         return false;
       }
 
-      final hasCert = _individualFiles['Certificado de curso o taller'] != null ||
-          _isUploaded('Certificado de curso o taller', uploadedDocs);
-      final hasRef = _individualFiles['Referencia comercial'] != null ||
-          _isUploaded('Referencia comercial', uploadedDocs);
+      final hasCert =
+          _individualFiles['Certificado de curso o taller'] != null ||
+          _isUploaded(
+            'Certificado de curso o taller',
+            uploadedDocs,
+            company,
+          );
+      final hasRef =
+          _individualFiles['Referencia comercial'] != null ||
+          _isUploaded('Referencia comercial', uploadedDocs, company);
 
       if (!hasCert && !hasRef) {
         AppToast.warning(
@@ -275,15 +304,16 @@ class _VerificationScreenState extends ConsumerState<VerificationScreen> {
 
   Future<void> _save(
     UserProfile currentProfile,
+    UserCompany? currentCompany,
     List<VerificationDocument> uploadedDocs,
   ) async {
     final colors = Theme.of(context).colorScheme;
 
-    // Validate business and personal document rules
-    if (!_validateDocumentRules(uploadedDocs)) return;
+    if (!_validateDocumentRules(uploadedDocs, currentCompany)) return;
 
-    // Check if verification status is active (verified)
-    final isVerified = currentProfile.verificationStatus == 'verified';
+    final isVerified = _isBusiness
+        ? (currentCompany?.verificationStatus == 'verified')
+        : (currentProfile.verificationStatus == 'verified');
 
     if (isVerified) {
       final confirmed = await CustomDialog.show<bool>(
@@ -291,7 +321,7 @@ class _VerificationScreenState extends ConsumerState<VerificationScreen> {
         dialog: CustomDialog.destructive(
           title: 'Modificar información',
           contentText:
-              'Al modificar tus documentos o datos, perderás tu estatus de verificación actual y tu perfil pasará nuevamente a revisión. ¿Deseas continuar?',
+              'Al modificar tus documentos o datos, perderás tu estatus de verificación actual y pasará nuevamente a revisión. ¿Deseas continuar?',
           actions: [
             TextButton(
               onPressed: () => context.pop(false),
@@ -316,31 +346,53 @@ class _VerificationScreenState extends ConsumerState<VerificationScreen> {
     final repo = ref.read(profileRepositoryProvider);
 
     try {
-      // 1. Upload Logo if selected
-      String? newLogoUrl = currentProfile.companyLogoUrl;
-      if (_isBusiness && _companyLogo != null && _companyLogo!.path != null) {
-        final file = File(_companyLogo!.path!);
-        final bytes = await file.readAsBytes();
-        final ext = _companyLogo!.path!.split('.').last;
-        newLogoUrl = await repo.uploadCompanyLogo(
-          currentProfile.id,
-          bytes,
-          ext,
+      String? targetCompanyId;
+
+      if (_isBusiness) {
+        String? newLogoUrl = currentCompany?.companyLogoUrl;
+        if (_companyLogo != null && _companyLogo!.path != null) {
+          final file = File(_companyLogo!.path!);
+          final bytes = await file.readAsBytes();
+          final ext = _companyLogo!.path!.split('.').last;
+          newLogoUrl = await repo.uploadCompanyLogo(
+            currentCompany?.id ?? currentProfile.id,
+            bytes,
+            ext,
+          );
+        }
+
+        final companyToSave = UserCompany(
+          id: currentCompany?.id ?? '',
+          userId: currentProfile.id,
+          companyName: _companyNameController.text.trim(),
+          companyRif: _rifController.text.trim().isNotEmpty
+              ? _rifController.text.trim()
+              : null,
+          companyAddress: _fiscalAddressController.text.trim().isNotEmpty
+              ? _fiscalAddressController.text.trim()
+              : null,
+          companyLogoUrl: newLogoUrl,
+          verificationStatus: 'pending',
         );
+        final savedCompany = await repo.upsertCompany(companyToSave);
+        targetCompanyId = savedCompany.id;
+
+        final updatedProfile = currentProfile.copyWith(
+          isBusinessOwner: true,
+          verificationType: 'business',
+          verificationStatus: 'pending',
+          company: savedCompany,
+        );
+        await repo.updateProfile(updatedProfile);
+      } else {
+        final updatedProfile = currentProfile.copyWith(
+          isBusinessOwner: false,
+          verificationType: 'individual',
+          verificationStatus: 'pending',
+        );
+        await repo.updateProfile(updatedProfile);
       }
 
-      // 2. Update Profile Data
-      final updatedProfile = currentProfile.copyWith(
-        isBusinessOwner: _isBusiness,
-        companyName: _isBusiness ? _companyNameController.text.trim() : null,
-        companyRif: _isBusiness ? _rifController.text.trim() : null,
-        companyAddress: _isBusiness ? _fiscalAddressController.text.trim() : null,
-        companyLogoUrl: _isBusiness ? newLogoUrl : null,
-        verificationStatus: 'pending',
-      );
-      await repo.updateProfile(updatedProfile);
-
-      // 3. Upload Selected Documents
       final filesToUpload = _currentFiles;
       for (var entry in filesToUpload.entries) {
         final label = entry.key;
@@ -356,11 +408,13 @@ class _VerificationScreenState extends ConsumerState<VerificationScreen> {
             _mapLabelToType(label),
             bytes,
             ext,
+            companyId: _isBusiness ? targetCompanyId : null,
           );
         }
       }
 
       ref.invalidate(userProfileProvider);
+      ref.invalidate(userCompanyProvider);
       ref.invalidate(verificationDocumentsProvider);
 
       if (mounted) {
@@ -372,14 +426,68 @@ class _VerificationScreenState extends ConsumerState<VerificationScreen> {
       }
     } catch (e) {
       if (mounted) {
-        AppToast.error(
-          context,
-          message: 'Error guardando datos: $e',
-        );
+        AppToast.error(context, message: 'Error guardando datos: $e');
       }
     } finally {
       if (mounted) {
         setState(() => _isLoading = false);
+      }
+    }
+  }
+
+  Future<void> _showRequestChangeDialog(
+    UserProfile profile,
+    UserCompany? company,
+  ) async {
+    final confirmed = await CustomDialog.show<bool>(
+      context: context,
+      dialog: CustomDialog.confirmation(
+        title: 'Solicitar modificación',
+        contentText:
+            '¿Deseas enviar una solicitud a nuestro equipo de soporte para actualizar tus documentos o tipo de verificación?\n\nTe contactaremos a tu correo registrado para asistirte en el proceso.',
+        actions: [
+          TextButton(
+            onPressed: () => context.pop(false),
+            child: const Text('Cancelar'),
+          ),
+          FilledButton(
+            onPressed: () => context.pop(true),
+            child: const Text('Enviar solicitud'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true) return;
+
+    setState(() => _isSendingRequest = true);
+
+    try {
+      final userEmail =
+          Supabase.instance.client.auth.currentUser?.email ?? '';
+      await ref.read(profileRepositoryProvider).sendVerificationChangeRequest(
+            profile: profile,
+            company: company,
+            userEmail: userEmail,
+          );
+
+      if (mounted) {
+        AppToast.success(
+          context,
+          message:
+              'Solicitud enviada con éxito. Nuestro equipo te contactará.',
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        AppToast.error(
+          context,
+          message: 'Error al enviar solicitud: $e',
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isSendingRequest = false);
       }
     }
   }
@@ -444,10 +552,7 @@ class _VerificationScreenState extends ConsumerState<VerificationScreen> {
 
     return Text(
       'No adjuntado',
-      style: TextStyle(
-        fontSize: 12,
-        color: colors.onSurfaceVariant,
-      ),
+      style: TextStyle(fontSize: 12, color: colors.onSurfaceVariant),
     );
   }
 
@@ -466,11 +571,150 @@ class _VerificationScreenState extends ConsumerState<VerificationScreen> {
     }
   }
 
+  Widget _buildStatusAlertCard(
+    BuildContext context,
+    String status,
+    bool isBusinessMode,
+  ) {
+    final colors = Theme.of(context).colorScheme;
+    final textTheme = Theme.of(context).textTheme;
+
+    if (status == 'verified') {
+      return Container(
+        margin: const EdgeInsets.only(bottom: 24),
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: Colors.green.withValues(alpha: 0.1),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: Colors.green.withValues(alpha: 0.3)),
+        ),
+        child: Row(
+          children: [
+            Image.asset(
+              'assets/icons/status_approved.png',
+              width: 24,
+              height: 24,
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    isBusinessMode
+                        ? '¡Empresa Verificada!'
+                        : '¡Cuenta Verificada!',
+                    style: textTheme.titleSmall?.copyWith(
+                      fontWeight: FontWeight.bold,
+                      color: Colors.green.shade800,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    'Tus documentos han sido aprobados con éxito.',
+                    style: textTheme.bodySmall?.copyWith(
+                      color: Colors.green.shade700,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      );
+    } else if (status == 'rejected') {
+      return Container(
+        margin: const EdgeInsets.only(bottom: 24),
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: colors.error.withValues(alpha: 0.1),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: colors.error.withValues(alpha: 0.3)),
+        ),
+        child: Row(
+          children: [
+            Image.asset(
+              'assets/icons/status_rejected.png',
+              width: 24,
+              height: 24,
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    isBusinessMode
+                        ? 'Verificación de Empresa Rechazada'
+                        : 'Verificación Rechazada',
+                    style: textTheme.titleSmall?.copyWith(
+                      fontWeight: FontWeight.bold,
+                      color: colors.error,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    'Uno o más documentos fueron rechazados. Por favor reemplaza los documentos marcados en rojo.',
+                    style: textTheme.bodySmall?.copyWith(color: colors.error),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      );
+    } else if (status == 'pending') {
+      return Container(
+        margin: const EdgeInsets.only(bottom: 24),
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: Colors.orange.withValues(alpha: 0.1),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: Colors.orange.withValues(alpha: 0.3)),
+        ),
+        child: Row(
+          children: [
+            Image.asset(
+              'assets/icons/status_review.png',
+              width: 24,
+              height: 24,
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Documentos en Revisión',
+                    style: textTheme.titleSmall?.copyWith(
+                      fontWeight: FontWeight.bold,
+                      color: Colors.orange.shade900,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    'Tus documentos están siendo validados por nuestro equipo.',
+                    style: textTheme.bodySmall?.copyWith(
+                      color: Colors.orange.shade800,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    return const SizedBox.shrink();
+  }
+
   @override
   Widget build(BuildContext context) {
     final colors = Theme.of(context).colorScheme;
     final textTheme = Theme.of(context).textTheme;
     final userProfileAsync = ref.watch(userProfileProvider);
+    final userCompanyAsync = ref.watch(userCompanyProvider);
     final verificationDocsAsync = ref.watch(verificationDocumentsProvider);
 
     return Scaffold(
@@ -500,18 +744,26 @@ class _VerificationScreenState extends ConsumerState<VerificationScreen> {
             return const Center(child: Text('Perfil no encontrado'));
           }
 
+          final company = userCompanyAsync.valueOrNull;
+
           if (!_isInitialized) {
             WidgetsBinding.instance.addPostFrameCallback((_) {
               if (mounted) {
-                _initializeData(profile);
+                _initializeData(profile, company);
               }
             });
           }
 
           return verificationDocsAsync.when(
             loading: () => const Center(child: CircularProgressIndicator()),
-            error: (e, st) => Center(child: Text('Error al cargar documentos: $e')),
+            error: (e, st) =>
+                Center(child: Text('Error al cargar documentos: $e')),
             data: (uploadedDocs) {
+              final isAccountVerified = profile.verificationStatus == 'verified';
+              final currentStatus = _isBusiness
+                  ? (company?.verificationStatus ?? 'unverified')
+                  : profile.verificationStatus;
+
               return SingleChildScrollView(
                 padding: const EdgeInsets.fromLTRB(16, 24, 16, 40),
                 child: Form(
@@ -528,136 +780,12 @@ class _VerificationScreenState extends ConsumerState<VerificationScreen> {
                       ),
                       const SizedBox(height: 24),
 
-                      // Verification Status Alert Card
-                      if (profile.verificationStatus == 'verified')
-                        Container(
-                          margin: const EdgeInsets.only(bottom: 24),
-                          padding: const EdgeInsets.all(16),
-                          decoration: BoxDecoration(
-                            color: Colors.green.withValues(alpha: 0.1),
-                            borderRadius: BorderRadius.circular(12),
-                            border: Border.all(
-                              color: Colors.green.withValues(alpha: 0.3),
-                            ),
-                          ),
-                          child: Row(
-                            children: [
-                              Image.asset(
-                                'assets/icons/status_approved.png',
-                                width: 24,
-                                height: 24,
-                              ),
-                              const SizedBox(width: 12),
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      '¡Cuenta Verificada!',
-                                      style: textTheme.titleSmall?.copyWith(
-                                        fontWeight: FontWeight.bold,
-                                        color: Colors.green.shade800,
-                                      ),
-                                    ),
-                                    const SizedBox(height: 2),
-                                    Text(
-                                      'Tus documentos han sido aprobados con éxito.',
-                                      style: textTheme.bodySmall?.copyWith(
-                                        color: Colors.green.shade700,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ],
-                          ),
-                        )
-                      else if (profile.verificationStatus == 'rejected')
-                        Container(
-                          margin: const EdgeInsets.only(bottom: 24),
-                          padding: const EdgeInsets.all(16),
-                          decoration: BoxDecoration(
-                            color: colors.error.withValues(alpha: 0.1),
-                            borderRadius: BorderRadius.circular(12),
-                            border: Border.all(
-                              color: colors.error.withValues(alpha: 0.3),
-                            ),
-                          ),
-                          child: Row(
-                            children: [
-                              Image.asset(
-                                'assets/icons/status_rejected.png',
-                                width: 24,
-                                height: 24,
-                              ),
-                              const SizedBox(width: 12),
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      'Verificación Rechazada',
-                                      style: textTheme.titleSmall?.copyWith(
-                                        fontWeight: FontWeight.bold,
-                                        color: colors.error,
-                                      ),
-                                    ),
-                                    const SizedBox(height: 2),
-                                    Text(
-                                      'Uno o más documentos fueron rechazados. Por favor reemplaza los documentos marcados en rojo.',
-                                      style: textTheme.bodySmall?.copyWith(
-                                        color: colors.error,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ],
-                          ),
-                        )
-                      else if (profile.verificationStatus == 'pending')
-                        Container(
-                          margin: const EdgeInsets.only(bottom: 24),
-                          padding: const EdgeInsets.all(16),
-                          decoration: BoxDecoration(
-                            color: Colors.orange.withValues(alpha: 0.1),
-                            borderRadius: BorderRadius.circular(12),
-                            border: Border.all(
-                              color: Colors.orange.withValues(alpha: 0.3),
-                            ),
-                          ),
-                          child: Row(
-                            children: [
-                              Image.asset(
-                                'assets/icons/status_review.png',
-                                width: 24,
-                                height: 24,
-                              ),
-                              const SizedBox(width: 12),
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      'Documentos en Revisión',
-                                      style: textTheme.titleSmall?.copyWith(
-                                        fontWeight: FontWeight.bold,
-                                        color: Colors.orange.shade900,
-                                      ),
-                                    ),
-                                    const SizedBox(height: 2),
-                                    Text(
-                                      'Tus documentos están siendo validados por nuestro equipo.',
-                                      style: textTheme.bodySmall?.copyWith(
-                                        color: Colors.orange.shade800,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
+                      // Contextual Verification Status Alert Card
+                      _buildStatusAlertCard(
+                        context,
+                        currentStatus,
+                        _isBusiness,
+                      ),
 
                       // Description
                       Text(
@@ -669,7 +797,7 @@ class _VerificationScreenState extends ConsumerState<VerificationScreen> {
                       ),
                       const SizedBox(height: 24),
 
-                      // Switch
+                      // Switch: disabled if account is verified
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
@@ -683,9 +811,11 @@ class _VerificationScreenState extends ConsumerState<VerificationScreen> {
                             scale: 0.9,
                             child: Switch(
                               value: _isBusiness,
-                              onChanged: (val) {
-                                setState(() => _isBusiness = val);
-                              },
+                              onChanged: isAccountVerified
+                                  ? null
+                                  : (val) {
+                                      setState(() => _isBusiness = val);
+                                    },
                             ),
                           ),
                         ],
@@ -697,7 +827,9 @@ class _VerificationScreenState extends ConsumerState<VerificationScreen> {
                         Container(
                           padding: const EdgeInsets.all(12),
                           decoration: BoxDecoration(
-                            color: colors.primaryContainer.withValues(alpha: 0.3),
+                            color: colors.primaryContainer.withValues(
+                              alpha: 0.3,
+                            ),
                             borderRadius: BorderRadius.circular(8),
                             border: Border.all(
                               color: colors.primary.withValues(alpha: 0.3),
@@ -749,8 +881,10 @@ class _VerificationScreenState extends ConsumerState<VerificationScreen> {
                         CustomTextField(
                           controller: _companyNameController,
                           label: 'Nombre o razón social*',
+                          enabled: !isAccountVerified,
                           validator: (v) {
-                            if (_isBusiness && (v == null || v.trim().isEmpty)) {
+                            if (_isBusiness &&
+                                (v == null || v.trim().isEmpty)) {
                               return 'Ingresa el nombre o razón social';
                             }
                             return null;
@@ -761,8 +895,10 @@ class _VerificationScreenState extends ConsumerState<VerificationScreen> {
                         CustomTextField(
                           controller: _rifController,
                           label: 'RIF/NIF/RUT* (Identificación Tributaria)',
+                          enabled: !isAccountVerified,
                           validator: (v) {
-                            if (_isBusiness && (v == null || v.trim().isEmpty)) {
+                            if (_isBusiness &&
+                                (v == null || v.trim().isEmpty)) {
                               return 'Ingresa el RIF/NIF/RUT';
                             }
                             return null;
@@ -773,11 +909,13 @@ class _VerificationScreenState extends ConsumerState<VerificationScreen> {
                         CustomTextField(
                           controller: _fiscalAddressController,
                           label: 'Dirección fiscal*',
+                          enabled: !isAccountVerified,
                           helperText:
                               'Debe ser igual a la que aparece en el RIF/NIF/RUT.',
                           maxLines: 2,
                           validator: (v) {
-                            if (_isBusiness && (v == null || v.trim().isEmpty)) {
+                            if (_isBusiness &&
+                                (v == null || v.trim().isEmpty)) {
                               return 'Ingresa la dirección fiscal';
                             }
                             return null;
@@ -788,7 +926,7 @@ class _VerificationScreenState extends ConsumerState<VerificationScreen> {
 
                         // Logo Picker
                         InkWell(
-                          onTap: _pickLogo,
+                          onTap: isAccountVerified ? null : _pickLogo,
                           borderRadius: BorderRadius.circular(8),
                           child: Container(
                             height: 150,
@@ -808,70 +946,75 @@ class _VerificationScreenState extends ConsumerState<VerificationScreen> {
                                           fit: BoxFit.contain,
                                         ),
                                       ),
-                                      Positioned(
-                                        top: 8,
-                                        right: 8,
-                                        child: CircleAvatar(
-                                          backgroundColor: Colors.white,
-                                          radius: 16,
-                                          child: IconButton(
-                                            padding: EdgeInsets.zero,
-                                            icon: const Icon(
-                                              Icons.edit,
-                                              size: 16,
+                                      if (!isAccountVerified)
+                                        Positioned(
+                                          top: 8,
+                                          right: 8,
+                                          child: CircleAvatar(
+                                            backgroundColor: Colors.white,
+                                            radius: 16,
+                                            child: IconButton(
+                                              padding: EdgeInsets.zero,
+                                              icon: const Icon(
+                                                Icons.edit,
+                                                size: 16,
+                                              ),
+                                              onPressed: _pickLogo,
                                             ),
-                                            onPressed: _pickLogo,
                                           ),
                                         ),
-                                      ),
                                     ],
                                   )
-                                : (profile.companyLogoUrl != null
-                                    ? Stack(
-                                        children: [
-                                          Center(
-                                            child: Image.network(
-                                              profile.companyLogoUrl!,
-                                              fit: BoxFit.contain,
-                                            ),
-                                          ),
-                                          Positioned(
-                                            top: 8,
-                                            right: 8,
-                                            child: CircleAvatar(
-                                              backgroundColor: Colors.white,
-                                              radius: 16,
-                                              child: IconButton(
-                                                padding: EdgeInsets.zero,
-                                                icon: const Icon(
-                                                  Icons.edit,
-                                                  size: 16,
-                                                ),
-                                                onPressed: _pickLogo,
+                                : ((company?.companyLogoUrl != null ||
+                                          profile.companyLogoUrl != null)
+                                      ? Stack(
+                                          children: [
+                                            Center(
+                                              child: Image.network(
+                                                company?.companyLogoUrl ??
+                                                    profile.companyLogoUrl!,
+                                                fit: BoxFit.contain,
                                               ),
                                             ),
-                                          ),
-                                        ],
-                                      )
-                                    : Column(
-                                        mainAxisAlignment:
-                                            MainAxisAlignment.center,
-                                        children: [
-                                          Icon(
-                                            Icons.add_photo_alternate_outlined,
-                                            size: 40,
-                                            color: colors.primary,
-                                          ),
-                                          const SizedBox(height: 8),
-                                          Text(
-                                            'Cargar Logo',
-                                            style: TextStyle(
+                                            if (!isAccountVerified)
+                                              Positioned(
+                                                top: 8,
+                                                right: 8,
+                                                child: CircleAvatar(
+                                                  backgroundColor: Colors.white,
+                                                  radius: 16,
+                                                  child: IconButton(
+                                                    padding: EdgeInsets.zero,
+                                                    icon: const Icon(
+                                                      Icons.edit,
+                                                      size: 16,
+                                                    ),
+                                                    onPressed: _pickLogo,
+                                                  ),
+                                                ),
+                                              ),
+                                          ],
+                                        )
+                                      : Column(
+                                          mainAxisAlignment:
+                                              MainAxisAlignment.center,
+                                          children: [
+                                            Icon(
+                                              Icons
+                                                  .add_photo_alternate_outlined,
+                                              size: 40,
                                               color: colors.primary,
-                                              fontWeight: FontWeight.bold,
                                             ),
-                                          ),
-                                        ],
-                                      )),
+                                            const SizedBox(height: 8),
+                                            Text(
+                                              'Cargar Logo',
+                                              style: TextStyle(
+                                                color: colors.primary,
+                                                fontWeight: FontWeight.bold,
+                                              ),
+                                            ),
+                                          ],
+                                        )),
                           ),
                         ),
                         const SizedBox(height: 32),
@@ -904,7 +1047,11 @@ class _VerificationScreenState extends ConsumerState<VerificationScreen> {
 
                       ..._currentFiles.keys.map((key) {
                         final selectedFile = _currentFiles[key];
-                        final uploadedDoc = _getUploadedDoc(key, uploadedDocs);
+                        final uploadedDoc = _getUploadedDoc(
+                          key,
+                          uploadedDocs,
+                          company,
+                        );
                         final isSelected = selectedFile != null;
                         final isDone = uploadedDoc != null || isSelected;
 
@@ -978,30 +1125,31 @@ class _VerificationScreenState extends ConsumerState<VerificationScreen> {
                                 ),
                               ),
 
-                              // Action Button
-                              if (isSelected)
-                                IconButton(
-                                  icon: const Icon(
-                                    Icons.close,
-                                    color: Colors.grey,
+                              // Action Button: Hidden if account is verified
+                              if (!isAccountVerified)
+                                if (isSelected)
+                                  IconButton(
+                                    icon: const Icon(
+                                      Icons.close,
+                                      color: Colors.grey,
+                                    ),
+                                    tooltip: 'Eliminar selección',
+                                    onPressed: () => _removeFile(key),
+                                  )
+                                else
+                                  IconButton(
+                                    icon: Icon(
+                                      uploadedDoc != null
+                                          ? Icons.edit_outlined
+                                          : Icons.arrow_forward_ios,
+                                      size: uploadedDoc != null ? 20 : 16,
+                                      color: colors.primary,
+                                    ),
+                                    tooltip: uploadedDoc != null
+                                        ? 'Reemplazar documento'
+                                        : 'Adjuntar documento',
+                                    onPressed: () => _pickFile(key),
                                   ),
-                                  tooltip: 'Eliminar selección',
-                                  onPressed: () => _removeFile(key),
-                                )
-                              else
-                                IconButton(
-                                  icon: Icon(
-                                    uploadedDoc != null
-                                        ? Icons.edit_outlined
-                                        : Icons.arrow_forward_ios,
-                                    size: uploadedDoc != null ? 20 : 16,
-                                    color: colors.primary,
-                                  ),
-                                  tooltip: uploadedDoc != null
-                                      ? 'Reemplazar documento'
-                                      : 'Adjuntar documento',
-                                  onPressed: () => _pickFile(key),
-                                ),
                             ],
                           ),
                         );
@@ -1009,23 +1157,98 @@ class _VerificationScreenState extends ConsumerState<VerificationScreen> {
 
                       const SizedBox(height: 16),
 
-                      // Verification Note
-                      Text(
-                        'La verificación de la documentación puede tomar de 48h a 72h hábiles.',
-                        style: textTheme.bodySmall?.copyWith(color: Colors.grey),
-                        textAlign: TextAlign.center,
-                      ),
-                      const SizedBox(height: 32),
+                      // Protected Information Card & Request Change Button (when verified)
+                      if (isAccountVerified) ...[
+                        Container(
+                          margin: const EdgeInsets.only(top: 8, bottom: 24),
+                          padding: const EdgeInsets.all(16),
+                          decoration: BoxDecoration(
+                            color: colors.surfaceContainerHighest
+                                .withValues(alpha: 0.35),
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(
+                              color:
+                                  colors.outlineVariant.withValues(alpha: 0.5),
+                            ),
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                children: [
+                                  Icon(
+                                    Icons.lock_outline,
+                                    size: 20,
+                                    color: colors.primary,
+                                  ),
+                                  const SizedBox(width: 8),
+                                  Text(
+                                    'Información verificada y protegida',
+                                    style: textTheme.titleSmall?.copyWith(
+                                      fontWeight: FontWeight.bold,
+                                      color: colors.onSurface,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 8),
+                              Text(
+                                'Para mantener la seguridad y validez de tu cuenta ante proveedores, los datos y documentos verificados no pueden modificarse directamente. Si requieres actualizar algún documento o cambiar el tipo de verificación, puedes enviar una solicitud a nuestro equipo.',
+                                style: textTheme.bodySmall?.copyWith(
+                                  color: colors.onSurfaceVariant,
+                                  height: 1.4,
+                                ),
+                              ),
+                              const SizedBox(height: 12),
+                              Center(
+                                child: TextButton.icon(
+                                  onPressed: _isSendingRequest
+                                      ? null
+                                      : () => _showRequestChangeDialog(
+                                            profile,
+                                            company,
+                                          ),
+                                  icon: _isSendingRequest
+                                      ? const SizedBox(
+                                          width: 16,
+                                          height: 16,
+                                          child: CircularProgressIndicator(
+                                            strokeWidth: 2,
+                                          ),
+                                        )
+                                      : const Icon(
+                                          Icons.mail_outline,
+                                          size: 18,
+                                        ),
+                                  label: const Text(
+                                    'Solicitar modificación de datos',
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ] else ...[
+                        // Verification Note for unverified users
+                        Text(
+                          'La verificación de la documentación puede tomar de 48h a 72h hábiles.',
+                          style: textTheme.bodySmall?.copyWith(
+                            color: Colors.grey,
+                          ),
+                          textAlign: TextAlign.center,
+                        ),
+                        const SizedBox(height: 32),
 
-                      // Actions
-                      FormBottomBar(
-                        onCancel: () => context.pop(),
-                        onSave: (_isLoading || !_hasChanges)
-                            ? null
-                            : () => _save(profile, uploadedDocs),
-                        isSaveEnabled: !_isLoading && _hasChanges,
-                        isLoading: _isLoading,
-                      ),
+                        // Form Actions (only when unverified/editable)
+                        FormBottomBar(
+                          onCancel: () => context.pop(),
+                          onSave: (_isLoading || !_hasChanges)
+                              ? null
+                              : () => _save(profile, company, uploadedDocs),
+                          isSaveEnabled: !_isLoading && _hasChanges,
+                          isLoading: _isLoading,
+                        ),
+                      ],
                     ],
                   ),
                 ),

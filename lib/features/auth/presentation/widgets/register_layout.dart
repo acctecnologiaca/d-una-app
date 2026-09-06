@@ -45,13 +45,13 @@ class RegisterLayout extends StatelessWidget {
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
-        leading: IconButton(
-          icon: Icon(
-            Icons.arrow_back,
-            color: showBackButton ? colors.onSurface : Colors.grey.shade400,
-          ),
-          onPressed: showBackButton ? (onBack ?? () => context.pop()) : null,
-        ),
+        automaticallyImplyLeading: false,
+        leading: showBackButton
+            ? IconButton(
+                icon: Icon(Icons.arrow_back, color: colors.onSurface),
+                onPressed: onBack ?? () => context.pop(),
+              )
+            : null,
         title: Text(
           'Crea una cuenta',
           style: textTheme.titleLarge?.copyWith(
@@ -74,8 +74,7 @@ class RegisterLayout extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              const SizedBox(height: 16),
-              const SizedBox(height: 32),
+              const SizedBox(height: 48),
 
               // Main Title/Question
               Text(
@@ -112,7 +111,6 @@ class RegisterLayout extends StatelessWidget {
 
               const SizedBox(height: 60),
 
-              // Footer Navigation
               // Footer Navigation
               WizardButtonBar(
                 onCancel: onCancel ?? () => context.go('/login'),

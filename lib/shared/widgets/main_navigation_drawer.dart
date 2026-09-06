@@ -40,14 +40,14 @@ class MainNavigationDrawer extends StatelessWidget {
               child: ListView(
                 padding: const EdgeInsets.symmetric(horizontal: 12.0),
                 children: [
-                  /* _buildMenuItem(
+                  _buildMenuItem(
                     context: context,
                     icon: Symbols.list_alt,
                     label: 'Notas de entrega',
-                    route: '/delivery-notes', // Placeholder route
+                    route: '/delivery-notes',
                     currentRoute: currentRoute,
                   ),
-                  _buildMenuItem(
+                  /* _buildMenuItem(
                     context: context,
                     icon: Symbols.receipt,
                     label: 'Recibos',
@@ -163,7 +163,8 @@ class MainNavigationDrawer extends StatelessWidget {
         if (route == '/settings' ||
             route == '/collaborators' ||
             route == '/my-purchases' ||
-            route == '/supplier-orders') {
+            route == '/supplier-orders' ||
+            route == '/delivery-notes') {
           context.push(route);
         } else {
           // Disable navigation if route is placeholder and doesn't exist yet,

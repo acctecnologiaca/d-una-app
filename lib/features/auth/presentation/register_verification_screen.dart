@@ -32,6 +32,19 @@ class _RegisterVerificationScreenState
   void initState() {
     super.initState();
     _startResendTimer();
+    for (int i = 0; i < 6; i++) {
+      _focusNodes[i].onKeyEvent = (node, event) {
+        if (event is KeyDownEvent &&
+            event.logicalKey == LogicalKeyboardKey.backspace &&
+            _controllers[i].text.isEmpty &&
+            i > 0) {
+          _controllers[i - 1].clear();
+          _focusNodes[i - 1].requestFocus();
+          return KeyEventResult.handled;
+        }
+        return KeyEventResult.ignored;
+      };
+    }
   }
 
   void _startResendTimer() {
@@ -161,7 +174,7 @@ class _RegisterVerificationScreenState
   @override
   Widget build(BuildContext context) {
     // Read email from state
-    final state = ref.read(registerProvider);
+    final state = ref.watch(registerProvider);
     final email = state.email.isNotEmpty
         ? state.email
         : 'tu correo electrónico';
@@ -190,6 +203,7 @@ class _RegisterVerificationScreenState
         showBackButton: false, // Ocultar flecha del AppBar
         onNext: _onVerify,
         nextButtonText: 'Verificar',
+        isLoading: state.isLoading,
         content: Form(
           key: _formKey,
           child: Column(
@@ -224,7 +238,7 @@ class _RegisterVerificationScreenState
                           borderSide: BorderSide(color: Colors.grey.shade400),
                         ),
                         filled: true,
-                        fillColor: Colors.white,
+                        fillColor: Theme.of(context).colorScheme.surface,
                       ),
                       style: const TextStyle(
                         fontSize: 20,
@@ -285,8 +299,8 @@ class _RegisterVerificationScreenState
               Center(
                 child: TextButton(
                   onPressed: () {
-                    // Limpiar el estado y volver al paso del correo
-                    ref.read(registerProvider.notifier).reset();
+                    // Solo limpiar el correo y volver al paso 1, preservando nombre, contraseña y ocupaciones
+                    ref.read(registerProvider.notifier).updateEmail('');
                     context.go('/register/email');
                   },
                   child: Text(

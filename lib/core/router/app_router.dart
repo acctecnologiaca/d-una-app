@@ -73,6 +73,7 @@ import '../../features/purchases/presentation/screens/add_purchase_product_searc
 import '../../features/purchases/presentation/screens/manage_product_serials_screen.dart';
 import '../../features/purchases/presentation/screens/purchases_search_screen.dart';
 import '../../features/settings/presentation/screens/email_templates_list_screen.dart';
+import 'package:d_una_app/features/delivery_notes/presentation/delivery_notes_routes.dart';
 import '../../features/settings/presentation/screens/edit_email_template_screen.dart';
 import '../../features/settings/data/models/email_template.dart';
 import '../../features/supplier_orders/presentation/supplier_orders_list/screens/supplier_orders_list_screen.dart';
@@ -112,17 +113,25 @@ final routerProvider = Provider<GoRouter>((ref) {
     ),
     redirect: (context, state) {
       final session = Supabase.instance.client.auth.currentUser;
-      final isLoggingIn = state.uri.toString() == '/login' ||
-          state.uri.toString() == '/register' ||
-          state.uri.toString().startsWith('/register/');
+      final uri = state.uri.toString();
 
-      // If not logged in and not on login/register pages, redirect to login
-      if (session == null && !isLoggingIn) {
+      // Rutas que deben mostrarse al usuario incluso con sesión activa
+      // (necesarias para completar el flujo de registro post-verificación OTP)
+      final isPostVerificationRoute =
+          uri == '/register/success' || uri == '/register/verification';
+
+      final isAuthRoute = uri == '/login' ||
+          uri == '/register' ||
+          uri.startsWith('/register/');
+
+      // Si no hay sesión y no está en rutas de auth, redirigir a login
+      if (session == null && !isAuthRoute) {
         return '/login';
       }
 
-      // If logged in and on login/register pages, redirect to home (portfolio)
-      if (session != null && isLoggingIn) {
+      // Si hay sesión y está en rutas de auth, redirigir a portfolio
+      // EXCEPTO si está en las rutas post-verificación (para que vea la pantalla de éxito)
+      if (session != null && isAuthRoute && !isPostVerificationRoute) {
         return '/portfolio';
       }
 
@@ -718,6 +727,7 @@ final routerProvider = Provider<GoRouter>((ref) {
         ),
       ],
     ),
+    ...deliveryNotesRoutes,
     GoRoute(
       path: '/settings',
       builder: (context, state) => const SettingsScreen(),

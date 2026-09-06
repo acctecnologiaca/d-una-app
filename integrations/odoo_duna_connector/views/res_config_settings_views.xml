@@ -1,0 +1,123 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="res_config_settings_view_form_duna" model="ir.ui.view">
+        <field name="name">res.config.settings.view.form.inherit.duna</field>
+        <field name="model">res.config.settings</field>
+        <field name="priority" eval="90"/>
+        <field name="inherit_id" ref="base.res_config_settings_view_form"/>
+        <field name="arch" type="xml">
+            <xpath expr="//form" position="inside">
+                <app data-string="Conector D-Una" string="Conector D-Una" name="odoo_duna_connector">
+                    <block title="Estado y Credenciales" id="duna_auth_settings">
+                        <setting id="duna_is_active_setting" help="Active o pause globalmente la sincronización en tiempo real hacia D-Una.">
+                            <field name="duna_is_active"/>
+                        </setting>
+                        <setting id="duna_test_connection_setting" help="Verifique si el API Key y la URL son válidos y reconocidos por D-Una.">
+                            <button name="action_test_duna_connection" type="object" string="Probar Conexión con D-Una" class="btn btn-secondary"/>
+                        </setting>
+                        <setting id="duna_endpoint_url_setting" help="Endpoint HTTPS provisto por D-Una.">
+                            <field name="duna_endpoint_url" placeholder="https://.../functions/v1/odoo_webhook"/>
+                        </setting>
+                        <setting id="duna_api_key_setting" help="Token secreto asignado a su empresa en la plataforma D-Una.">
+                            <field name="duna_api_key" password="True" placeholder="API Key secreta otorgada por D-Una"/>
+                        </setting>
+                    </block>
+
+                    <block title="Sucursales y Catálogo" id="duna_catalog_settings">
+                        <setting id="duna_warehouse_ids_setting" help="Seleccione las sucursales físicas que desea exponer en D-Una.">
+                            <field name="duna_warehouse_ids" widget="many2many_tags" placeholder="Todos los almacenes"/>
+                        </setting>
+                        <setting id="duna_category_ids_setting" help="Si desea filtrar, seleccione qué categorías sincronizar. Deje vacío para incluir todas.">
+                            <field name="duna_category_ids" widget="many2many_tags" placeholder="Todas las categorías"/>
+                        </setting>
+                    </block>
+
+                    <block title="Precios y Moneda (Conversión a USD)" id="duna_pricing_settings">
+                        <setting id="duna_pricelist_id_setting" help="Tarifa base para calcular los precios publicados en D-Una.">
+                            <field name="duna_pricelist_id" placeholder="Precio de Venta Público Base"/>
+                        </setting>
+                        <setting id="duna_currency_mode_setting" help="D-Una opera en USD. Indique cómo convertir sus precios si su moneda contable es distinta.">
+                            <field name="duna_currency_mode"/>
+                            <div invisible="duna_currency_mode != 'custom_rate'" class="mt-2">
+                                <label for="duna_custom_rate"/>
+                                <field name="duna_custom_rate"/>
+                            </div>
+                        </setting>
+                    </block>
+
+                    <block title="Reglas de Inventario y Seguridad" id="duna_stock_settings">
+                        <setting id="duna_stock_mode_setting" help="Recomendamos Stock Libre (descontando pedidos de venta en preparación).">
+                            <field name="duna_stock_mode"/>
+                        </setting>
+                        <setting id="duna_safety_stock_setting" help="Unidades de reserva que se restarán antes de reportar a D-Una.">
+                            <field name="duna_safety_stock"/>
+                            <div class="mt-2">
+                                <field name="duna_hide_zero_stock"/>
+                                <label for="duna_hide_zero_stock"/>
+                            </div>
+                        </setting>
+                    </block>
+
+                    <block title="Marcas e Imágenes (Opcional)" id="duna_brand_images_settings">
+                        <setting id="duna_brand_mode_setting" help="Elija si desea enlazar un campo existente de su Odoo, habilitar el campo auxiliar o dejar que D-Una detecte la marca por texto.">
+                            <field name="duna_brand_mode"/>
+                            <div invisible="duna_brand_mode != 'existing_field'" class="mt-2">
+                                <label for="duna_brand_field_name"/>
+                                <field name="duna_brand_field_name" placeholder="ej: product_brand_id, brand_id, x_marca"/>
+                            </div>
+                        </setting>
+                        <setting id="duna_sync_images_setting" help="Habilite para transmitir la URL de la imagen del producto a D-Una para enriquecer el catálogo.">
+                            <field name="duna_sync_images"/>
+                        </setting>
+                    </block>
+
+                    <block title="Políticas y Reglas de Garantía Comercial" id="duna_warranty_settings">
+                        <setting id="duna_warranty_mode_setting" help="Elija cómo determinar la garantía de los productos para la red D-Una.">
+                            <field name="duna_warranty_mode"/>
+                            <div invisible="duna_warranty_mode != 'existing_field'" class="mt-2">
+                                <label for="duna_warranty_field_name"/>
+                                <field name="duna_warranty_field_name" placeholder="ej: x_garantia, warranty_duration"/>
+                            </div>
+                            <div invisible="duna_warranty_mode == 'none'" class="mt-2">
+                                <field name="duna_warranty_extract_from_text"/>
+                                <label for="duna_warranty_extract_from_text"/>
+                            </div>
+                        </setting>
+
+                        <setting id="duna_warranty_rules_setting" invisible="duna_warranty_mode != 'cascade'" help="Configure la matriz de garantías por marca y/o categoría. Se evalúan en estricto orden de prioridad (de arriba hacia abajo).">
+                            <span class="o_form_label">Matriz de Reglas de Garantía</span>
+                            <div class="text-muted mb-2">
+                                Edite directamente en la tabla. Arrastre para reordenar la prioridad. Si un producto no coincide con ninguna regla, se enviará sin garantía (Cero Riesgo).
+                            </div>
+                            <field name="duna_warranty_rule_ids" class="w-100">
+                                <tree editable="bottom">
+                                    <field name="sequence" widget="handle"/>
+                                    <field name="brand_name" placeholder="Ej: Hikvision (o vacío para cualquiera)"/>
+                                    <field name="category_id" placeholder="Todas las categorías"/>
+                                    <field name="warranty_time"/>
+                                    <field name="warranty_unit"/>
+                                    <field name="name" string="Resumen" readonly="1" optional="hide"/>
+                                </tree>
+                            </field>
+                        </setting>
+                    </block>
+
+                    <block title="Sincronización Masiva Inicial" id="duna_sync_block">
+                        <setting id="duna_sync_all_now_setting" help="Transmite todos los productos y existencias seleccionados en una sola operación en segundo plano.">
+                            <button name="action_sync_all_now" type="object" string="Sincronizar Catálogo Completo Ahora" class="btn btn-primary"/>
+                        </setting>
+                    </block>
+                </app>
+            </xpath>
+        </field>
+    </record>
+
+    <record id="action_duna_config_settings" model="ir.actions.act_window">
+        <field name="name">Ajustes Conector D-Una</field>
+        <field name="type">ir.actions.act_window</field>
+        <field name="res_model">res.config.settings</field>
+        <field name="view_mode">form</field>
+        <field name="target">inline</field>
+        <field name="context">{'module': 'odoo_duna_connector'}</field>
+    </record>
+</odoo>

@@ -6,6 +6,7 @@ class QuoteSupplierOcStatus {
   final bool hasExistingOc;
   final String? existingOrderNumber;
   final String? existingOrderId;
+  final bool allowsDropshipping;
 
   const QuoteSupplierOcStatus({
     required this.supplierId,
@@ -15,5 +16,6 @@ class QuoteSupplierOcStatus {
     required this.hasExistingOc,
     this.existingOrderNumber,
     this.existingOrderId,
+    this.allowsDropshipping = true,
   });
 }

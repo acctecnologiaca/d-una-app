@@ -179,7 +179,7 @@ class _ReportsListScreenState extends ConsumerState<ReportsListScreen>
                       onLoadMore: () => ref
                           .read(paginatedReportsListProvider.notifier)
                           .loadMore(),
-                      padding: const EdgeInsets.fromLTRB(0, 0, 0, 90),
+                      padding: const EdgeInsets.fromLTRB(0, 0, 0, 64),
                       separatorBuilder: (context, index) => const Divider(
                         height: 0,
                         indent: 16,

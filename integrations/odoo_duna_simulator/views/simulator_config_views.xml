@@ -1,0 +1,168 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- Vista Formulario / Panel de Control -->
+    <record id="view_duna_simulator_config_form" model="ir.ui.view">
+        <field name="name">duna.simulator.config.form</field>
+        <field name="model">duna.simulator.config</field>
+        <field name="arch" type="xml">
+            <form string="Panel de Control Simulador D-Una">
+                <header>
+                    <button name="action_toggle_active"
+                            type="object"
+                            string="Activar Simulación"
+                            class="btn-success"
+                            invisible="is_active"/>
+                    <button name="action_toggle_active"
+                            type="object"
+                            string="Pausar Simulación"
+                            class="btn-outline-secondary"
+                            invisible="not is_active"/>
+                    <button name="action_run_simulation_step"
+                            type="object"
+                            string="⚡ Ejecutar 1 Ciclo Ahora"
+                            class="btn-primary"
+                            help="Ejecuta de forma inmediata un evento probabilístico (venta, reabastecimiento o precio)."/>
+                    <button name="action_view_logs"
+                            type="object"
+                            string="📋 Ver Historial de Logs"
+                            class="btn-secondary"/>
+                </header>
+                <sheet>
+                    <widget name="web_ribbon" title="ACTIVO" bg_color="text-bg-success" invisible="not is_active"/>
+                    <widget name="web_ribbon" title="PAUSADO" bg_color="text-bg-warning" invisible="is_active"/>
+
+                    <div class="oe_title">
+                        <span class="o_form_label text-muted">Gemelo Digital D-Una</span>
+                        <h1>
+                            <field name="name" placeholder="Panel de Control"/>
+                        </h1>
+                    </div>
+
+                    <!-- Métricas y Resumen -->
+                    <div class="row mt-3 mb-4">
+                        <div class="col-md-4">
+                            <div class="card p-3 shadow-sm border-0 bg-light">
+                                <span class="text-muted small">Eventos Ejecutados</span>
+                                <h3 class="mt-1 mb-0">
+                                    <field name="total_events_count" readonly="1"/>
+                                </h3>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="card p-3 shadow-sm border-0 bg-light">
+                                <span class="text-muted small">Fecha Último Evento</span>
+                                <div class="mt-1 font-weight-bold">
+                                    <field name="last_event_date" readonly="1"/>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="card p-3 shadow-sm border-0 bg-light">
+                                <span class="text-muted small">Estado de Transmisión</span>
+                                <div class="mt-1">
+                                    <span class="badge text-bg-info">Conector Delta Odoo 17</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="alert alert-info" role="alert" invisible="not last_event_summary">
+                        <strong>Último Impacto:</strong>
+                        <field name="last_event_summary" readonly="1"/>
+                    </div>
+
+                    <!-- Escenarios Manuales de Estrés -->
+                    <div class="card my-3 p-3 border-primary shadow-sm">
+                        <h4 class="text-primary mb-2">Escenarios de Estrés y Demostración en Vivo</h4>
+                        <p class="text-muted small mb-3">
+                            Dispara eventos de gran escala para observar en tiempo real la actualización de existencias,
+                            estados de productos agotados y ajustes de tarifas en la app móvil de D-Una:
+                        </p>
+                        <div class="d-flex flex-wrap gap-2">
+                            <button name="action_open_peak_sale_wizard"
+                                    type="object"
+                                    string="🛒 Simular Jornada Pico de Ventas (Agotar Stock)"
+                                    class="btn btn-warning"/>
+                            <button name="action_open_container_wizard"
+                                    type="object"
+                                    string="📦 Simular Llegada de Contenedor (Inyección)"
+                                    class="btn btn-info text-white"/>
+                            <button name="action_open_category_price_wizard"
+                                    type="object"
+                                    string="🏷️ Simular Cambio de Precios por Categoría"
+                                    class="btn btn-secondary"/>
+                        </div>
+                    </div>
+
+                    <!-- Pestañas de Ajustes -->
+                    <notebook>
+                        <page string="Pesos Probabilísticos (Motor ir.cron)">
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <group string="Distribución de Probabilidad (Suma 100%)">
+                                        <field name="prob_counter_sale" widget="progressbar"/>
+                                        <field name="prob_replenishment" widget="progressbar"/>
+                                        <field name="prob_price_change" widget="progressbar"/>
+                                    </group>
+                                </div>
+                                <div class="col-md-6">
+                                    <group string="Frecuencia y Tarea Programada">
+                                        <field name="cron_interval_minutes"/>
+                                        <field name="is_active"/>
+                                    </group>
+                                </div>
+                            </div>
+                        </page>
+
+                        <page string="Límites y Rangos de Simulación">
+                            <div class="row">
+                                <div class="col-md-4">
+                                    <group string="Venta de Mostrador">
+                                        <field name="sale_min_qty"/>
+                                        <field name="sale_max_qty"/>
+                                        <field name="sale_max_products"/>
+                                    </group>
+                                </div>
+                                <div class="col-md-4">
+                                    <group string="Reabastecimiento">
+                                        <field name="restock_min_qty"/>
+                                        <field name="restock_max_qty"/>
+                                        <field name="restock_threshold"/>
+                                    </group>
+                                </div>
+                                <div class="col-md-4">
+                                    <group string="Micro-Ajustes de Tarifa">
+                                        <field name="price_min_pct"/>
+                                        <field name="price_max_pct"/>
+                                    </group>
+                                </div>
+                            </div>
+                        </page>
+
+                        <page string="Filtros de Almacenes">
+                            <group string="Sucursales Autorizadas">
+                                <field name="warehouse_ids" widget="many2many_tags"
+                                       options="{'no_create': True}"
+                                       placeholder="Dejar vacío para incluir todos los almacenes configurados en D-Una..."/>
+                            </group>
+                        </page>
+                    </notebook>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <!-- Acción de Ventana para el Panel de Control -->
+    <record id="action_duna_simulator_config" model="ir.actions.act_window">
+        <field name="name">Panel de Control Simulador D-Una</field>
+        <field name="res_model">duna.simulator.config</field>
+        <field name="view_mode">form</field>
+        <field name="res_id" ref="duna_simulator_default_config"/>
+        <field name="target">current</field>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">
+                Inicie la simulación de actividad comercial para D-Una
+            </p>
+        </field>
+    </record>
+</odoo>

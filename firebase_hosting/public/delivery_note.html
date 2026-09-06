@@ -1,0 +1,899 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Nota de Entrega · D-UNA</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --neutral-dark: #0F172A;
+      --neutral-medium: #334155;
+      --neutral-muted: #64748B;
+      --neutral-border: #E2E8F0;
+      --neutral-border-dark: #CBD5E1;
+      --neutral-bg-subtle: #F8FAFC;
+      --neutral-bg-header: #F1F5F9;
+      --primary-color: #1E293B;
+      --accent-color: #0284C7;
+      --success-color: #10B981;
+    }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background: #F1F5F9;
+      color: var(--neutral-dark);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 24px 16px;
+    }
+    .container {
+      max-width: 780px;
+      width: 100%;
+      margin: 0 auto;
+    }
+    .card {
+      background: #FFFFFF;
+      border-radius: 16px;
+      box-shadow: 0 10px 25px -5px rgba(15, 23, 42, 0.05);
+      overflow: hidden;
+      border: 1px solid var(--neutral-border);
+    }
+    .header-banner {
+      background: #FFFFFF;
+      padding: 24px 32px;
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      flex-wrap: wrap;
+      gap: 16px;
+      border-bottom: 2px solid var(--neutral-dark);
+    }
+    .header-banner .brand-container {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .header-banner .brand-logo-row {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+    }
+    .header-banner .brand-logo-row img {
+      max-height: 48px;
+      width: auto;
+      object-fit: contain;
+    }
+    .header-banner .doc-meta {
+      text-align: right;
+    }
+    .header-banner .doc-meta h1 {
+      font-size: 22px;
+      font-weight: 800;
+      color: var(--neutral-dark);
+      letter-spacing: 0.5px;
+      line-height: 1.2;
+    }
+    .header-banner .doc-meta .doc-num {
+      font-size: 13px;
+      color: var(--neutral-muted);
+      font-weight: 600;
+      margin-top: 2px;
+    }
+    .issuer-letterhead {
+      font-size: 11px;
+      color: var(--neutral-muted);
+      line-height: 1.4;
+      margin-top: 4px;
+    }
+    .issuer-letterhead strong {
+      color: var(--neutral-dark);
+      font-size: 12px;
+      font-weight: 700;
+    }
+    .status-badge-row {
+      display: flex;
+      align-items: center;
+      justify-content: flex-end;
+      gap: 8px;
+      margin-top: 6px;
+    }
+    .status-badge-row img {
+      height: 20px;
+      width: auto;
+    }
+    .content-body {
+      padding: 24px 32px;
+    }
+    .info-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 24px;
+      margin-bottom: 24px;
+    }
+    .info-box {
+      background: var(--neutral-bg-subtle);
+      border: 1px solid var(--neutral-border);
+      border-radius: 12px;
+      padding: 16px;
+    }
+    .info-box h3 {
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: var(--neutral-muted);
+      margin-bottom: 10px;
+      font-weight: 700;
+    }
+    .info-box p {
+      font-size: 13px;
+      line-height: 1.5;
+      color: var(--neutral-medium);
+      margin-bottom: 4px;
+    }
+    .info-box p:last-child { margin-bottom: 0; }
+    .info-box p strong {
+      color: var(--neutral-dark);
+    }
+    .table-container {
+      border: 1px solid var(--neutral-border);
+      border-radius: 12px;
+      overflow: hidden;
+      margin-bottom: 24px;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13px;
+    }
+    thead th {
+      background: var(--neutral-bg-header);
+      padding: 12px 14px;
+      font-weight: 600;
+      color: var(--neutral-medium);
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      border-bottom: 1px solid var(--neutral-border);
+    }
+    tbody td {
+      padding: 12px 14px;
+      border-bottom: 1px solid var(--neutral-border);
+      color: var(--neutral-medium);
+      vertical-align: top;
+    }
+    tbody tr:last-child td {
+      border-bottom: none;
+    }
+    tbody tr:nth-child(even) {
+      background: var(--neutral-bg-subtle);
+    }
+    .text-left { text-align: left; }
+    .text-center { text-align: center; }
+    .text-right { text-align: right; }
+    .serial-chip {
+      display: inline-block;
+      font-family: monospace;
+      font-size: 11px;
+      background: #E0F2FE;
+      color: #0369A1;
+      padding: 2px 6px;
+      border-radius: 4px;
+      margin: 2px 4px 2px 0;
+      border: 1px solid #BAE6FD;
+    }
+    .totals-block {
+      display: flex;
+      justify-content: flex-end;
+      margin-bottom: 24px;
+    }
+    .totals-card {
+      width: 280px;
+      background: var(--neutral-bg-subtle);
+      border: 1px solid var(--neutral-border);
+      border-radius: 12px;
+      padding: 14px 18px;
+    }
+    .totals-row {
+      display: flex;
+      justify-content: space-between;
+      font-size: 13px;
+      color: var(--neutral-muted);
+      margin-bottom: 6px;
+    }
+    .totals-row.grand-total {
+      font-size: 16px;
+      font-weight: 800;
+      color: var(--neutral-dark);
+      border-top: 2px solid var(--neutral-dark);
+      padding-top: 8px;
+      margin-top: 8px;
+      margin-bottom: 0;
+    }
+    .conditions-box {
+      background: var(--neutral-bg-subtle);
+      border: 1px solid var(--neutral-border);
+      border-radius: 12px;
+      padding: 16px;
+      margin-bottom: 24px;
+    }
+    .conditions-box h4 {
+      font-size: 12px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: var(--neutral-dark);
+      margin-bottom: 8px;
+    }
+    .conditions-box ul {
+      padding-left: 18px;
+      font-size: 12px;
+      color: var(--neutral-medium);
+      line-height: 1.6;
+    }
+    /* SECCIÓN DE RECEPCIÓN / CONFORMIDAD */
+    .reception-card {
+      border: 2px solid var(--neutral-border-dark);
+      border-radius: 12px;
+      padding: 20px;
+      background: #FFFFFF;
+      margin-bottom: 24px;
+    }
+    .reception-card.finalized {
+      border-color: #A7F3D0;
+      background: #F0FDF4;
+    }
+    .reception-header {
+      font-size: 14px;
+      font-weight: 800;
+      color: var(--neutral-dark);
+      margin-bottom: 12px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .form-group {
+      margin-bottom: 14px;
+    }
+    .form-group label {
+      display: block;
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--neutral-medium);
+      margin-bottom: 4px;
+    }
+    .form-control {
+      width: 100%;
+      padding: 8px 12px;
+      font-size: 13px;
+      border: 1px solid var(--neutral-border-dark);
+      border-radius: 6px;
+      outline: none;
+      font-family: inherit;
+    }
+    .form-control:focus {
+      border-color: var(--neutral-dark);
+    }
+    .canvas-container {
+      border: 1px dashed var(--neutral-border-dark);
+      border-radius: 6px;
+      background: #FAFAFA;
+      position: relative;
+      margin-bottom: 8px;
+    }
+    canvas {
+      width: 100%;
+      height: 140px;
+      display: block;
+      touch-action: none;
+    }
+    .canvas-actions {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 16px;
+    }
+    .btn-secondary {
+      background: transparent;
+      border: 1px solid var(--neutral-border-dark);
+      padding: 6px 12px;
+      border-radius: 6px;
+      font-size: 12px;
+      color: var(--neutral-medium);
+      cursor: pointer;
+    }
+    .btn-secondary:hover {
+      background: var(--neutral-bg-subtle);
+    }
+    .btn-submit {
+      background: var(--neutral-dark);
+      color: #FFFFFF;
+      border: none;
+      padding: 12px 20px;
+      border-radius: 8px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      width: 100%;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      gap: 8px;
+    }
+    .btn-submit:hover {
+      background: #1E293B;
+    }
+    .signature-preview-img {
+      max-height: 90px;
+      width: auto;
+      border: 1px solid var(--neutral-border);
+      border-radius: 4px;
+      background: #FFFFFF;
+      padding: 4px;
+      margin-top: 6px;
+    }
+    .disclaimer-card {
+      font-size: 11px;
+      color: var(--neutral-muted);
+      line-height: 1.5;
+      padding: 16px;
+      text-align: center;
+      margin-top: 16px;
+    }
+    .footer {
+      text-align: center;
+      font-size: 11px;
+      color: var(--neutral-muted);
+      margin-top: 16px;
+      line-height: 1.6;
+    }
+    .spinner {
+      border: 3px solid rgba(15, 23, 42, 0.1);
+      border-top: 3px solid var(--neutral-dark);
+      border-radius: 50%;
+      width: 36px;
+      height: 36px;
+      animation: spin 0.8s linear infinite;
+      margin: 60px auto;
+    }
+    @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+    .print-fab {
+      position: fixed;
+      bottom: 24px;
+      right: 24px;
+      background: var(--neutral-dark);
+      color: #FFFFFF;
+      border: none;
+      border-radius: 28px;
+      padding: 12px 20px;
+      font-size: 13px;
+      font-weight: 600;
+      box-shadow: 0 4px 12px rgba(15, 23, 42, 0.2);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      z-index: 100;
+    }
+    @media print {
+      body { background: #FFFFFF; padding: 0; }
+      .container { max-width: 100%; }
+      .card { border: none; box-shadow: none; }
+      .print-fab, .btn-submit, .canvas-actions, .canvas-container { display: none !important; }
+      .disclaimer-card, .footer { margin-top: 8px; }
+    }
+    @media (max-width: 600px) {
+      .info-grid { grid-template-columns: 1fr; }
+      .header-banner { flex-direction: column; align-items: flex-start; }
+      .header-banner .doc-meta { text-align: left; margin-top: 12px; }
+      .status-badge-row { justify-content: flex-start; }
+      .content-body { padding: 16px; }
+    }
+  </style>
+</head>
+<body>
+
+  <div class="container">
+    <div class="card" id="main-card">
+      <div class="spinner" id="spinner"></div>
+      <div id="content" style="display: none;"></div>
+    </div>
+
+    <!-- AVISO DE CONFORMIDAD Y ENTREGA -->
+    <div class="disclaimer-card">
+      <strong>Aviso de Conformidad y Entrega de Mercancía:</strong><br>
+      La presente nota de entrega certifica el despacho, recepción y verificación de los productos y seriales aquí descritos, emitida bajo responsabilidad del despachador identificado. D-UNA opera exclusivamente como plataforma tecnológica transaccional y de control logístico, sin asumir responsabilidad sobre el transporte de encomiendas externas ni acuerdos comerciales privados entre las partes.
+    </div>
+
+    <div class="footer">
+      <img src="https://fdkswvzrozijbizdthge.supabase.co/storage/v1/object/public/app_images/logo_d_una.png" alt="D-UNA Logo" style="height: 24px; margin-bottom: 6px; vertical-align: middle; object-fit: contain;"><br>
+      Tecnología D-UNA &bull; Plataforma de Gestión Transaccional &bull; &copy; 2026 Todos los derechos reservados.
+    </div>
+  </div>
+
+  <button class="print-fab" id="btn-print" onclick="window.print()" title="Imprimir / Guardar como PDF" style="display:none;">
+    🖨️ Imprimir / Guardar PDF
+  </button>
+
+  <script>
+    (async function() {
+      const params = new URLSearchParams(window.location.search);
+      const token = params.get('token');
+      const spinner = document.getElementById('spinner');
+      const content = document.getElementById('content');
+      const apiUrl = 'https://fdkswvzrozijbizdthge.supabase.co/functions/v1/delivery_notes_action';
+      const anonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZka3N3dnpyb3ppamJpemR0aGdlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njc0NzQ2MzMsImV4cCI6MjA4MzA1MDYzM30.ZENEwSy2E8iSHuy4Y4uTd7CBd32iaE-tJmSww6cw0TY';
+
+      if (!token) {
+        showError('Enlace Inválido', 'Faltan parámetros de seguridad en la solicitud.');
+        return;
+      }
+
+      let currentNote = null;
+
+      try {
+        const res = await fetch(`${apiUrl}?token=${encodeURIComponent(token)}&action=get_details`, {
+          headers: {
+            'apikey': anonKey,
+            'Authorization': `Bearer ${anonKey}`,
+          },
+        });
+        const data = await res.json();
+
+        if (data.status !== 'success' || !data.delivery_note) {
+          showError('Nota de entrega no encontrada', data.message || 'Este enlace ya no es válido o ha caducado.');
+          return;
+        }
+
+        currentNote = data;
+        renderDeliveryNote(data);
+      } catch (err) {
+        showError('Error de Conexión', 'No se pudo conectar con el servidor. Intente nuevamente.');
+      }
+
+      function renderDeliveryNote(data) {
+        spinner.remove();
+        const n = data.delivery_note;
+        const issuer = data.issuer || {};
+        const client = n.client || {};
+        const items = n.items || [];
+        const observations = n.observations || [];
+
+        if (n.delivery_note_number) {
+          document.title = `Nota de Entrega · ${esc(n.delivery_note_number)}`;
+        }
+
+        function parseDate(dateStr) {
+          if (!dateStr) return 'Fecha no especificada';
+          const parts = String(dateStr).split('T')[0].split('-');
+          if (parts.length === 3) return `${parts[2]}/${parts[1]}/${parts[0]}`;
+          return dateStr;
+        }
+
+        const formattedDate = parseDate(n.date);
+        const formattedDeliveryDate = n.delivery_date ? parseDate(n.delivery_date) : formattedDate;
+
+        const issuerHeaderTitle = issuer.company_name || issuer.user_name || 'Despachos Comerciales';
+        const issuerTaxId = issuer.tax_id && issuer.tax_id !== '-' ? issuer.tax_id : null;
+        const addressParts = [issuer.address, issuer.city, issuer.state, issuer.country].filter(p => p && p !== '-' && String(p).trim() !== '');
+        const issuerFullAddress = addressParts.length > 0 ? addressParts.join(', ') : null;
+        const issuerPhone = issuer.phone && issuer.phone !== '-' ? issuer.phone : null;
+
+        const rawTaxId = (client.tax_id || '').trim();
+        const isCompany = client.type === 'company' || (rawTaxId.length > 0 && rawTaxId.toUpperCase().startsWith('J'));
+        const clientNameLabel = isCompany ? 'Razón Social' : 'Nombre';
+        const clientTaxLabel = isCompany ? 'RIF' : 'Cédula';
+        const contactName = client.contact_name && client.contact_name !== '-' ? client.contact_name : (n.contact?.name || null);
+        const showAttention = isCompany && contactName && contactName.trim() !== '' && contactName !== '-';
+        const clientPhone = client.phone && client.phone !== '-' ? client.phone : (n.contact?.phone || null);
+        const clientEmail = client.email && client.email !== '-' ? client.email : (n.contact?.email || null);
+
+        // Despacho info
+        const deliveryTypeMap = {
+          'pickup': 'Retiro en Sede / Mostrador',
+          'direct_delivery': 'Entrega Directa / Despacho Propio',
+          'courier': 'Empresa de Encomienda'
+        };
+        const deliveryTypeLabel = deliveryTypeMap[n.delivery_type] || n.delivery_type;
+
+        // Items rows
+        const itemsRowsHtml = items.map((item, idx) => {
+          const title = esc(item.name);
+          const sub = [item.brand, item.model].filter(Boolean).join(' · ');
+          const serials = item.serials || [];
+          const serialsHtml = serials.length > 0
+            ? `<div style="margin-top: 4px;">${serials.map(s => `<span class="serial-chip">SN: ${esc(s)}</span>`).join('')}</div>`
+            : '';
+
+          let warrantyStr = '---';
+          if (item.warranty_time && item.warranty_time > 0) {
+            const unit = String(item.warranty_unit || '').toLowerCase();
+            const unitLabel = (unit === 'months' || unit === 'meses' || unit === 'mes') ? 'meses' : (unit === 'years' || unit === 'años' || unit === 'año') ? 'años' : 'días';
+            warrantyStr = `${item.warranty_time} ${unitLabel}`;
+          }
+
+          return `
+            <tr>
+              <td class="text-left">
+                <strong>${title}</strong>
+                ${sub ? `<br><span style="font-size: 11px; color: var(--neutral-muted);">${esc(sub)}</span>` : ''}
+                ${item.description ? `<br><span style="font-size: 11px; color: var(--neutral-medium);">${esc(item.description)}</span>` : ''}
+                ${serialsHtml}
+              </td>
+              <td class="text-center" style="font-size: 12px;">${esc(warrantyStr)}</td>
+              <td class="text-right">${esc(item.quantity)} ${esc(item.uom || 'Ud')}</td>
+              <td class="text-right">$${fmt(item.unit_price)}</td>
+              <td class="text-right"><strong>$${fmt(item.total_price)}</strong></td>
+            </tr>
+          `;
+        }).join('');
+
+        const taxRatePct = n.tax_rate ? Number(n.tax_rate) : 0;
+        const isFinalized = n.status === 'finalized';
+
+        content.innerHTML = `
+          <div class="header-banner">
+            <div class="brand-container">
+              <div class="brand-logo-row">
+                ${issuer.logo_url ? `<img src="${esc(issuer.logo_url)}" alt="Logo">` : ''}
+                <div class="issuer-letterhead">
+                  <strong>${esc(issuerHeaderTitle)}</strong><br>
+                  ${issuerTaxId ? `RIF / ID Fiscal: ${esc(issuerTaxId)}<br>` : ''}
+                  ${issuerFullAddress ? `Dirección: ${esc(issuerFullAddress)}<br>` : ''}
+                  ${issuerPhone ? `Teléfono: ${esc(issuerPhone)}` : ''}
+                </div>
+              </div>
+            </div>
+            <div class="doc-meta">
+              <h1>NOTA DE ENTREGA</h1>
+              <div class="doc-num">${esc(n.delivery_note_number)}</div>
+              <div class="status-badge-row">
+                <img src="${getStatusBadge(n.status)}" alt="${n.status}">
+              </div>
+            </div>
+          </div>
+
+          <div class="content-body">
+            <div class="info-grid">
+              <div class="info-box">
+                <h3>Datos del Cliente</h3>
+                <p><strong>${clientNameLabel}:</strong> ${esc(client.name || 'Cliente Particular')}</p>
+                ${client.tax_id && client.tax_id !== '-' ? `<p><strong>${clientTaxLabel}:</strong> ${esc(client.tax_id)}</p>` : ''}
+                ${showAttention ? `<p><strong>Atención:</strong> ${esc(contactName)}</p>` : ''}
+                ${clientPhone ? `<p><strong>Teléfono:</strong> ${esc(clientPhone)}</p>` : ''}
+                ${clientEmail ? `<p><strong>Email:</strong> ${esc(clientEmail)}</p>` : ''}
+                ${n.recipient_address ? `<p><strong>Dirección Entrega:</strong> ${esc(n.recipient_address)}${n.recipient_city ? `, ${esc(n.recipient_city)}` : ''}</p>` : ''}
+              </div>
+
+              <div class="info-box">
+                <h3>Detalles del Despacho</h3>
+                <p><strong>Fecha emisión:</strong> ${formattedDate}</p>
+                <p><strong>Fecha de entrega:</strong> ${formattedDeliveryDate}</p>
+                <p><strong>Modalidad:</strong> ${esc(deliveryTypeLabel)}</p>
+                ${n.shipping_company_name ? `<p><strong>Encomienda:</strong> ${esc(n.shipping_company_name)}</p>` : ''}
+                ${n.tracking_number ? `<p><strong>N° de Guía:</strong> ${esc(n.tracking_number)}</p>` : ''}
+                ${n.client_po_number ? `<p><strong>OC del Cliente:</strong> ${esc(n.client_po_number)}</p>` : ''}
+                ${n.delivery_instructions ? `<p><strong>Instrucciones:</strong> ${esc(n.delivery_instructions)}</p>` : ''}
+              </div>
+            </div>
+
+            <!-- TABLA DE PRODUCTOS -->
+            <div class="table-container">
+              <table>
+                <thead>
+                  <tr>
+                    <th class="text-left">Producto / Seriales</th>
+                    <th class="text-center">Garantía</th>
+                    <th class="text-right">Cant.</th>
+                    <th class="text-right">P. Unit</th>
+                    <th class="text-right">Total</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  ${itemsRowsHtml}
+                </tbody>
+              </table>
+            </div>
+
+            <!-- TOTALES -->
+            <div class="totals-block">
+              <div class="totals-card">
+                <div class="totals-row">
+                  <span>SUB-TOTAL:</span>
+                  <span>$${fmt(n.subtotal)}</span>
+                </div>
+                ${taxRatePct > 0 ? `
+                  <div class="totals-row">
+                    <span>IVA (${taxRatePct}%):</span>
+                    <span>$${fmt(n.tax_amount)}</span>
+                  </div>
+                ` : ''}
+                <div class="totals-row grand-total">
+                  <span>TOTAL USD:</span>
+                  <span>$${fmt(n.total)}</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- OBSERVACIONES -->
+            ${observations.length > 0 ? `
+              <div class="conditions-box">
+                <h4>Observaciones y Términos de Entrega</h4>
+                <ul>
+                  ${observations.map(o => `<li>${esc(o.description)}</li>`).join('')}
+                </ul>
+              </div>
+            ` : ''}
+
+            ${(n.notes && n.notes.trim() !== '') ? `
+              <div class="conditions-box" style="margin-top: 12px;">
+                <h4>Notas Adicionales</h4>
+                <p style="font-size: 12px; color: var(--neutral-medium); line-height: 1.6; white-space: pre-wrap;">${esc(n.notes)}</p>
+              </div>
+            ` : ''}
+
+            <!-- CONFORMIDAD Y FIRMA DE RECEPCIÓN -->
+            <div class="reception-card ${isFinalized ? 'finalized' : ''}" id="reception-section">
+              <div class="reception-header">
+                <span>${isFinalized ? '✅ Mercancía Recibida Conforme' : '✍️ Conformidad de Recepción'}</span>
+              </div>
+
+              ${isFinalized ? `
+                <div style="font-size: 13px; color: var(--neutral-medium); line-height: 1.6;">
+                  <p><strong>Recibido por:</strong> ${esc(n.received_by_name || 'Receptor')}</p>
+                  <p><strong>Cédula / Documento:</strong> ${esc(n.received_by_id || '-')}</p>
+                  ${n.received_by_phone ? `<p><strong>Teléfono:</strong> ${esc(n.received_by_phone)}</p>` : ''}
+                  ${n.receiver_relationship ? `<p><strong>Relación:</strong> ${esc(n.receiver_relationship)}</p>` : ''}
+                  <p><strong>Fecha y hora de recepción:</strong> ${n.received_at ? new Date(n.received_at).toLocaleString('es-VE') : '-'}</p>
+                  ${n.signature_data ? `
+                    <div style="margin-top: 10px;">
+                      <p><strong>Firma de conformidad:</strong></p>
+                      <img src="${n.signature_data}" alt="Firma del receptor" class="signature-preview-img">
+                    </div>
+                  ` : ''}
+                </div>
+              ` : `
+                <form id="reception-form" onsubmit="return false;">
+                  <p style="font-size: 13px; color: var(--neutral-muted); margin-bottom: 14px;">
+                    Por favor complete sus datos y firme a continuación para dejar constancia formal de la entrega y buen estado de los productos recibidos.
+                  </p>
+                  <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+                    <div class="form-group">
+                      <label for="rec-name">Nombre y Apellido *</label>
+                      <input type="text" id="rec-name" class="form-control" placeholder="Ej. Juan Pérez" required>
+                    </div>
+                    <div class="form-group">
+                      <label for="rec-id">Cédula o Documento de Identidad *</label>
+                      <input type="text" id="rec-id" class="form-control" placeholder="Ej. V-12.345.678" required>
+                    </div>
+                  </div>
+                  <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+                    <div class="form-group">
+                      <label for="rec-phone">Teléfono de Contacto</label>
+                      <input type="tel" id="rec-phone" class="form-control" placeholder="Ej. 0414-1234567">
+                    </div>
+                    <div class="form-group">
+                      <label for="rec-rel">Relación con el Cliente</label>
+                      <select id="rec-rel" class="form-control">
+                        <option value="Titular">Titular / Cliente</option>
+                        <option value="Representante">Representante Legal / Encargado</option>
+                        <option value="Empleado">Empleado / Personal Autorizado</option>
+                        <option value="Familiar">Familiar</option>
+                        <option value="Vigilancia">Recepción / Vigilancia</option>
+                        <option value="Otro">Otro</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  <div class="form-group">
+                    <label>Firma Digital de Conformidad *</label>
+                    <div class="canvas-container">
+                      <canvas id="sig-canvas"></canvas>
+                    </div>
+                    <div class="canvas-actions">
+                      <span style="font-size: 11px; color: var(--neutral-muted);">Firme dentro del recuadro usando su dedo o puntero</span>
+                      <button type="button" class="btn-secondary" id="btn-clear-sig">Limpiar firma</button>
+                    </div>
+                  </div>
+
+                  <button type="button" class="btn-submit" id="btn-confirm-reception">
+                    Confirmar Entrega y Registrar Firma
+                  </button>
+                  <div id="form-error" style="color: #EF4444; font-size: 12px; margin-top: 8px; display: none;"></div>
+                </form>
+              `}
+            </div>
+
+          </div>
+        `;
+
+        content.style.display = 'block';
+        const btnPrint = document.getElementById('btn-print');
+        if (btnPrint) btnPrint.style.display = 'flex';
+
+        if (!isFinalized) {
+          initSignatureCanvas();
+        }
+      }
+
+      function initSignatureCanvas() {
+        const canvas = document.getElementById('sig-canvas');
+        if (!canvas) return;
+        const ctx = canvas.getContext('2d');
+        let isDrawing = false;
+        let hasSigned = false;
+
+        function resizeCanvas() {
+          const rect = canvas.getBoundingClientRect();
+          canvas.width = rect.width;
+          canvas.height = 140;
+          ctx.lineWidth = 2.5;
+          ctx.lineCap = 'round';
+          ctx.strokeStyle = '#0F172A';
+        }
+        resizeCanvas();
+        window.addEventListener('resize', resizeCanvas);
+
+        function getPos(e) {
+          const rect = canvas.getBoundingClientRect();
+          const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+          const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+          return {
+            x: clientX - rect.left,
+            y: clientY - rect.top,
+          };
+        }
+
+        function start(e) {
+          e.preventDefault();
+          isDrawing = true;
+          hasSigned = true;
+          const pos = getPos(e);
+          ctx.beginPath();
+          ctx.moveTo(pos.x, pos.y);
+        }
+
+        function draw(e) {
+          if (!isDrawing) return;
+          e.preventDefault();
+          const pos = getPos(e);
+          ctx.lineTo(pos.x, pos.y);
+          ctx.stroke();
+        }
+
+        function stop(e) {
+          if (isDrawing) {
+            e.preventDefault();
+            isDrawing = false;
+          }
+        }
+
+        canvas.addEventListener('mousedown', start);
+        canvas.addEventListener('mousemove', draw);
+        canvas.addEventListener('mouseup', stop);
+        canvas.addEventListener('mouseleave', stop);
+
+        canvas.addEventListener('touchstart', start, { passive: false });
+        canvas.addEventListener('touchmove', draw, { passive: false });
+        canvas.addEventListener('touchend', stop);
+
+        document.getElementById('btn-clear-sig')?.addEventListener('click', () => {
+          ctx.clearRect(0, 0, canvas.width, canvas.height);
+          hasSigned = false;
+        });
+
+        document.getElementById('btn-confirm-reception')?.addEventListener('click', async () => {
+          const nameInput = document.getElementById('rec-name');
+          const idInput = document.getElementById('rec-id');
+          const phoneInput = document.getElementById('rec-phone');
+          const relInput = document.getElementById('rec-rel');
+          const errorDiv = document.getElementById('form-error');
+
+          const name = nameInput.value.trim();
+          const id = idInput.value.trim();
+          const phone = phoneInput.value.trim();
+          const rel = relInput.value;
+
+          if (!name) {
+            showFormError('Por favor ingrese el nombre de la persona que recibe.');
+            nameInput.focus();
+            return;
+          }
+          if (!id) {
+            showFormError('Por favor ingrese el número de cédula o documento.');
+            idInput.focus();
+            return;
+          }
+          if (!hasSigned) {
+            showFormError('Por favor ingrese su firma digital en el recuadro para confirmar.');
+            return;
+          }
+
+          errorDiv.style.display = 'none';
+          const btn = document.getElementById('btn-confirm-reception');
+          btn.disabled = true;
+          btn.textContent = 'Registrando conformidad...';
+
+          const sigData = canvas.toDataURL('image/png');
+
+          try {
+            const resp = await fetch(`${apiUrl}`, {
+              method: 'POST',
+              headers: {
+                'apikey': anonKey,
+                'Authorization': `Bearer ${anonKey}`,
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify({
+                token: token,
+                action: 'confirm_reception',
+                received_by_name: name,
+                received_by_id: id,
+                received_by_phone: phone,
+                receiver_relationship: rel,
+                signature_data: sigData,
+              }),
+            });
+
+            const resJson = await resp.json();
+            if (resJson.status === 'success' || resJson.status === 'already_processed') {
+              alert('¡Recepción registrada exitosamente! Muchas gracias.');
+              location.reload();
+            } else {
+              showFormError(resJson.message || 'Ocurrió un error al registrar la entrega.');
+              btn.disabled = false;
+              btn.textContent = 'Confirmar Entrega y Registrar Firma';
+            }
+          } catch (e) {
+            showFormError('Error de comunicación con el servidor. Intente nuevamente.');
+            btn.disabled = false;
+            btn.textContent = 'Confirmar Entrega y Registrar Firma';
+          }
+
+          function showFormError(msg) {
+            errorDiv.textContent = msg;
+            errorDiv.style.display = 'block';
+          }
+        });
+      }
+
+      function getStatusBadge(status) {
+        const map = {
+          'draft': 'status_draft.png',
+          'sent': 'status_sent.png',
+          'resent': 'status_resent.png',
+          'opened': 'status_opened.png',
+          'finalized': 'status_finalized.png',
+          'cancelled': 'status_cancelled.png',
+        };
+        return map[status] || 'status_draft.png';
+      }
+
+      function showError(title, msg) {
+        spinner.remove();
+        content.innerHTML = `
+          <div style="padding: 40px 24px; text-align: center;">
+            <div style="font-size: 48px; margin-bottom: 16px;">⚠️</div>
+            <h2 style="font-size: 20px; margin-bottom: 10px; color: var(--neutral-dark);">${esc(title)}</h2>
+            <p style="color: var(--neutral-muted); font-size: 14px;">${esc(msg)}</p>
+          </div>`;
+        content.style.display = 'block';
+      }
+
+      function fmt(val) {
+        return (Number(val) || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+      }
+
+      function esc(str) {
+        const d = document.createElement('div');
+        d.textContent = str || '';
+        return d.innerHTML;
+      }
+    })();
+  </script>
+</body>
+</html>

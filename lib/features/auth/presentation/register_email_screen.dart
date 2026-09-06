@@ -2,6 +2,8 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:d_una_app/shared/widgets/app_toast.dart';
+import '../../../shared/widgets/custom_dialog.dart';
 import '../../../shared/widgets/custom_text_field.dart';
 import '../../../core/utils/validators.dart';
 import 'widgets/register_layout.dart';
@@ -29,20 +31,21 @@ class _RegisterEmailScreenState extends ConsumerState<RegisterEmailScreen> {
   }
 
   void _onEmailChanged(String value) {
+    final trimmed = value.trim();
     // 1. Clear previous availability error and loading state immediately
-    ref.read(registerProvider.notifier).updateEmail(value);
+    ref.read(registerProvider.notifier).updateEmail(trimmed);
 
     // 2. Handle debounce for the next validation
     if (_debounce?.isActive ?? false) _debounce!.cancel();
     
-    if (value.isEmpty) {
+    if (trimmed.isEmpty) {
       // If empty, we don't start a new check, just ensure everything is clean
       return;
     }
 
     _debounce = Timer(const Duration(milliseconds: 600), () {
-      if (Validators.email(value) == null) {
-        ref.read(registerProvider.notifier).checkEmailAvailability(value);
+      if (Validators.email(trimmed) == null) {
+        ref.read(registerProvider.notifier).checkEmailAvailability(trimmed);
       }
     });
   }
@@ -57,16 +60,57 @@ class _RegisterEmailScreenState extends ConsumerState<RegisterEmailScreen> {
   Future<void> _onNext() async {
     if (_formKey.currentState!.validate()) {
       final notifier = ref.read(registerProvider.notifier);
+      final email = _emailController.text.trim();
       
       // Final check for email status
-      final status = await notifier.checkEmailAvailability(_emailController.text);
+      final status = await notifier.checkEmailAvailability(email);
       
       if (!mounted) return;
 
       if (status == EmailStatus.available) {
         context.push('/register/password');
       } else if (status == EmailStatus.unverified) {
-        context.push('/register/verification');
+        // Mostrar diálogo informativo y ofrecer reenviar OTP
+        final shouldContinue = await CustomDialog.show<bool>(
+          context: context,
+          dialog: CustomDialog.confirmation(
+            title: 'Registro pendiente',
+            contentText:
+                'Este correo tiene un registro pendiente de confirmación. '
+                '¿Deseas recibir un nuevo código de verificación?',
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(false),
+                child: const Text('Cancelar'),
+              ),
+              FilledButton(
+                onPressed: () => Navigator.of(context).pop(true),
+                child: const Text('Reenviar código'),
+              ),
+            ],
+          ),
+        );
+
+        if (shouldContinue == true && mounted) {
+          try {
+            await notifier.resendCode();
+            if (mounted) {
+              context.push('/register/verification');
+            }
+          } catch (e) {
+            if (mounted) {
+              AppToast.error(
+                context,
+                message: 'No se pudo reenviar el código. Intenta de nuevo.',
+              );
+            }
+          }
+        }
+      } else if (status == null) {
+        AppToast.error(
+          context,
+          message: 'No se pudo verificar el correo. Verifica tu conexión.',
+        );
       }
     }
   }

@@ -142,7 +142,7 @@ class _PurchasesListScreenState extends ConsumerState<PurchasesListScreen> {
                     onLoadMore: () => ref
                         .read(paginatedPurchasesListProvider.notifier)
                         .loadMore(),
-                    padding: const EdgeInsets.fromLTRB(0, 8, 0, 90),
+                    padding: const EdgeInsets.fromLTRB(0, 8, 0, 132),
                     separatorBuilder: (context, index) =>
                         const Divider(height: 0, color: Colors.transparent),
                     itemBuilder: (context, index, purchase) {

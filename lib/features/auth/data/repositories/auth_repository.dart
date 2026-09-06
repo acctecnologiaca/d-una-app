@@ -1,4 +1,6 @@
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:google_sign_in/google_sign_in.dart';
+import 'package:d_una_app/core/constants/auth_constants.dart';
 
 enum EmailStatus { available, verified, unverified }
 
@@ -22,6 +24,11 @@ abstract class AuthRepository {
   Future<void> updatePassword(String newPassword);
   Future<EmailStatus> getEmailStatus(String email);
   User? get currentUser;
+
+  /// Inicia sesión con Google (nativo en Android).
+  /// Retorna el AuthResponse de Supabase si fue exitoso.
+  /// Retorna null si el usuario canceló la selección de cuenta.
+  Future<AuthResponse?> signInWithGoogle();
 }
 
 class SupabaseAuthRepository implements AuthRepository {
@@ -62,6 +69,9 @@ class SupabaseAuthRepository implements AuthRepository {
 
   @override
   Future<void> signOut() async {
+    try {
+      await GoogleSignIn().signOut();
+    } catch (_) {}
     await _supabase.auth.signOut();
   }
 
@@ -91,5 +101,40 @@ class SupabaseAuthRepository implements AuthRepository {
       default:
         return EmailStatus.verified;
     }
+  }
+
+  @override
+  Future<AuthResponse?> signInWithGoogle() async {
+    final googleSignIn = GoogleSignIn(
+      serverClientId: AuthConstants.googleWebClientId,
+    );
+
+    // Desconectar sesión en caché para forzar a que Google
+    // siempre muestre el diálogo de selección de cuentas al pulsar el botón
+    try {
+      await googleSignIn.signOut();
+    } catch (_) {}
+
+    final googleUser = await googleSignIn.signIn();
+    if (googleUser == null) {
+      return null;
+    }
+
+    final googleAuth = await googleUser.authentication;
+    final idToken = googleAuth.idToken;
+    final accessToken = googleAuth.accessToken;
+
+    if (idToken == null) {
+      throw const AuthException(
+        'No se pudo obtener el token de autenticación de Google. '
+        'Verifica la configuración de OAuth en Google Cloud Console.',
+      );
+    }
+
+    return await _supabase.auth.signInWithIdToken(
+      provider: OAuthProvider.google,
+      idToken: idToken,
+      accessToken: accessToken,
+    );
   }
 }

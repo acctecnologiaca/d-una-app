@@ -1,3 +1,5 @@
+import 'user_company.dart';
+
 class UserProfile {
   final String id;
   final String? firstName;
@@ -17,15 +19,18 @@ class UserProfile {
   final String? mainState;
   final String? mainCountry;
   final bool isBusinessOwner;
-  final String? companyName;
-  final String? companyRif;
-  final String? companyAddress;
-  final String? companyLogoUrl;
+  final UserCompany? company;
   final String verificationStatus;
   final String? verificationType;
   final int? userNumber;
   final DateTime? updatedAt;
   final DateTime? createdAt;
+
+  // Convenience getters for backwards compatibility with ~50 consumers
+  String? get companyName => company?.companyName;
+  String? get companyRif => company?.companyRif;
+  String? get companyAddress => company?.companyAddress;
+  String? get companyLogoUrl => company?.companyLogoUrl;
 
   UserProfile({
     required this.id,
@@ -46,10 +51,7 @@ class UserProfile {
     this.mainState,
     this.mainCountry,
     this.isBusinessOwner = false,
-    this.companyName,
-    this.companyRif,
-    this.companyAddress,
-    this.companyLogoUrl,
+    this.company,
     this.verificationStatus = 'unverified',
     this.verificationType,
     this.userNumber,
@@ -58,6 +60,33 @@ class UserProfile {
   });
 
   factory UserProfile.fromJson(Map<String, dynamic> json) {
+    UserCompany? company;
+    if (json['user_companies'] != null) {
+      if (json['user_companies'] is List &&
+          (json['user_companies'] as List).isNotEmpty) {
+        company = UserCompany.fromJson(
+          (json['user_companies'] as List).first as Map<String, dynamic>,
+        );
+      } else if (json['user_companies'] is Map<String, dynamic>) {
+        company = UserCompany.fromJson(
+          json['user_companies'] as Map<String, dynamic>,
+        );
+      }
+    } else if (json['company_name'] != null &&
+        (json['company_name'] as String).isNotEmpty) {
+      // Fallback for legacy JSON data or tests
+      company = UserCompany(
+        id: '',
+        userId: json['id'] as String,
+        companyName: json['company_name'] as String,
+        companyRif: json['company_rif'] as String?,
+        companyAddress: json['company_address'] as String?,
+        companyLogoUrl: json['company_logo_url'] as String?,
+        verificationStatus:
+            json['verification_status'] as String? ?? 'unverified',
+      );
+    }
+
     return UserProfile(
       id: json['id'] as String,
       firstName: json['first_name'] as String?,
@@ -87,10 +116,7 @@ class UserProfile {
       mainState: json['main_state'] as String?,
       mainCountry: json['main_country'] as String?,
       isBusinessOwner: json['is_business_owner'] as bool? ?? false,
-      companyName: json['company_name'] as String?,
-      companyRif: json['company_rif'] as String?,
-      companyAddress: json['company_address'] as String?,
-      companyLogoUrl: json['company_logo_url'] as String?,
+      company: company,
       verificationStatus:
           json['verification_status'] as String? ?? 'unverified',
       verificationType: json['verification_type'] as String?,
@@ -115,19 +141,13 @@ class UserProfile {
       'avatar_url': avatarUrl,
       'phone': phone,
       'secondary_phone': secondaryPhone,
-      // 'occupation': occupation, // ELIMINADO: No existe en la BD
       'occupation_id': occupationId,
-      // 'secondary_occupations': secondaryOccupations, // ELIMINADO: No existe en la BD
       'secondary_occupation_ids': secondaryOccupationIds,
       'main_address': mainAddress,
       'main_city': mainCity,
       'main_state': mainState,
       'main_country': mainCountry,
       'is_business_owner': isBusinessOwner,
-      'company_name': companyName,
-      'company_rif': companyRif,
-      'company_address': companyAddress,
-      'company_logo_url': companyLogoUrl,
       'verification_status': verificationStatus,
       'verification_type': verificationType,
       'user_number': userNumber,
@@ -154,10 +174,7 @@ class UserProfile {
     dynamic mainState = _sentinel,
     dynamic mainCountry = _sentinel,
     bool? isBusinessOwner,
-    dynamic companyName = _sentinel,
-    dynamic companyRif = _sentinel,
-    dynamic companyAddress = _sentinel,
-    dynamic companyLogoUrl = _sentinel,
+    dynamic company = _sentinel,
     String? verificationStatus,
     dynamic verificationType = _sentinel,
     dynamic userNumber = _sentinel,
@@ -199,18 +216,7 @@ class UserProfile {
           ? this.mainCountry
           : mainCountry as String?,
       isBusinessOwner: isBusinessOwner ?? this.isBusinessOwner,
-      companyName: companyName == _sentinel
-          ? this.companyName
-          : companyName as String?,
-      companyRif: companyRif == _sentinel
-          ? this.companyRif
-          : companyRif as String?,
-      companyAddress: companyAddress == _sentinel
-          ? this.companyAddress
-          : companyAddress as String?,
-      companyLogoUrl: companyLogoUrl == _sentinel
-          ? this.companyLogoUrl
-          : companyLogoUrl as String?,
+      company: company == _sentinel ? this.company : company as UserCompany?,
       verificationStatus: verificationStatus ?? this.verificationStatus,
       verificationType: verificationType == _sentinel
           ? this.verificationType

@@ -36,26 +36,26 @@ class SuppliersDirectoryScreen extends ConsumerWidget {
         children: [
           Padding(
             padding: const EdgeInsets.all(16.0),
-              child: CustomSearchBar(
-                hintText: 'Buscar proveedores, productos, marcas,...',
-                readOnly: true,
-                showFilterIcon: true,
-                onTap: () {
-                  Navigator.of(context).push(
-                    MaterialPageRoute(
-                      builder: (context) => const SupplierSearchScreen(),
-                    ),
-                  );
-                },
-                onFilterTap: () {
-                  Navigator.of(context).push(
-                    MaterialPageRoute(
-                      builder: (context) => const SupplierSearchScreen(),
-                    ),
-                  );
-                },
-              ),
+            child: CustomSearchBar(
+              hintText: 'Buscar proveedores, productos, marcas,...',
+              readOnly: true,
+              showFilterIcon: true,
+              onTap: () {
+                Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (context) => const SupplierSearchScreen(),
+                  ),
+                );
+              },
+              onFilterTap: () {
+                Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (context) => const SupplierSearchScreen(),
+                  ),
+                );
+              },
             ),
+          ),
 
           Expanded(
             child: RefreshIndicator(
@@ -88,10 +88,7 @@ class SuppliersDirectoryScreen extends ConsumerWidget {
 
                   return ListView.separated(
                     physics: const AlwaysScrollableScrollPhysics(),
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 16,
-                      vertical: 8,
-                    ),
+                    padding: const EdgeInsets.fromLTRB(16, 8, 16, 32),
                     itemCount: suppliers.length,
                     separatorBuilder: (_, _) => const SizedBox(height: 16),
                     itemBuilder: (context, index) {

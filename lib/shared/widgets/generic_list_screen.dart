@@ -182,7 +182,7 @@ class _GenericListScreenState<T> extends ConsumerState<GenericListScreen<T>> {
                 }
 
                 return ListView.separated(
-                  padding: const EdgeInsets.fromLTRB(16, 8, 16, 100),
+                  padding: const EdgeInsets.fromLTRB(16, 8, 16, 132),
                   itemCount: processedList.length,
                   separatorBuilder: (context, index) =>
                       const Divider(height: 8),

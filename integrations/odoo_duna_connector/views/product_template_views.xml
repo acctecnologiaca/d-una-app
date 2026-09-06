@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="product_template_form_view_inherit_duna" model="ir.ui.view">
+        <field name="name">product.template.common.form.inherit.duna</field>
+        <field name="model">product.template</field>
+        <field name="inherit_id" ref="product.product_template_form_view"/>
+        <field name="arch" type="xml">
+            <xpath expr="//div[@name='options']" position="inside">
+                <span class="d-inline-block">
+                    <field name="sync_with_duna"/>
+                    <label for="sync_with_duna"/>
+                </span>
+                <span class="d-inline-block ms-3" title="Marca del producto para homologación en D-Una">
+                    <field name="duna_brand" placeholder="Marca (ej: Hikvision)"/>
+                </span>
+            </xpath>
+
+            <xpath expr="//notebook" position="inside">
+                <page string="Conector D-Una" name="duna_connector_page" invisible="not sync_with_duna">
+                    <group string="Garantía Comercial D-Una">
+                        <group>
+                            <label for="duna_warranty_time" string="Garantía Personalizada"/>
+                            <div class="o_row">
+                                <field name="duna_warranty_time" class="oe_inline"/>
+                                <field name="duna_warranty_unit" class="oe_inline" invisible="duna_warranty_time == 0"/>
+                            </div>
+                            <div class="text-muted" colspan="2">
+                                Deje el tiempo en 0 para resolver automáticamente por regla de marca/categoría o descripción.
+                            </div>
+                        </group>
+                        <group>
+                            <field name="duna_effective_warranty" readonly="1" widget="badge" decoration-info="1"/>
+                        </group>
+                    </group>
+                </page>
+            </xpath>
+        </field>
+    </record>
+</odoo>

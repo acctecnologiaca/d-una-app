@@ -18,11 +18,19 @@ class RegisterPasswordScreen extends ConsumerStatefulWidget {
 class _RegisterPasswordScreenState
     extends ConsumerState<RegisterPasswordScreen> {
   final _formKey = GlobalKey<FormState>();
-  final _passwordController = TextEditingController();
-  final _confirmController = TextEditingController();
+  late TextEditingController _passwordController;
+  late TextEditingController _confirmController;
 
   bool _isPasswordVisible = false;
   bool _isConfirmVisible = false;
+
+  @override
+  void initState() {
+    super.initState();
+    final currentPassword = ref.read(registerProvider).password;
+    _passwordController = TextEditingController(text: currentPassword);
+    _confirmController = TextEditingController(text: currentPassword);
+  }
 
   @override
   void dispose() {

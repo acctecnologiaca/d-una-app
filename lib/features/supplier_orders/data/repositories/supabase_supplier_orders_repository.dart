@@ -639,11 +639,11 @@ class SupabaseSupplierOrdersRepository implements SupplierOrdersRepository {
         .from('quote_items_products')
         .select('''
       *,
-      supplier_branch_stock(branch_id, product_id, supplier_branches(supplier_id, suppliers(name, legal_name, is_affiliated, is_restricted)))
+      supplier_branch_stock(branch_id, product_id, supplier_branches(supplier_id, allows_dropshipping, suppliers(name, legal_name, is_affiliated, is_restricted, allows_dropshipping)))
     ''')
         .eq('quote_id', quoteId);
 
-    final Map<String, ({String name, int count, double subtotal})>
+    final Map<String, ({String name, int count, double subtotal, bool allowsDropshipping})>
     supplierData = {};
 
     for (final qi in (quoteItemsResponse as List)) {
@@ -655,11 +655,13 @@ class SupabaseSupplierOrdersRepository implements SupplierOrdersRepository {
       String? supplierName;
       bool isAffiliated = false;
       bool isRestricted = false;
+      bool allowsDropshipping = true;
 
       if (sbs != null) {
         final sb = sbs['supplier_branches'];
         if (sb != null) {
           supplierId = sb['supplier_id'] as String?;
+          final branchAllows = sb['allows_dropshipping'] != false;
           final supplier = sb['suppliers'];
           if (supplier != null) {
             supplierName =
@@ -667,6 +669,10 @@ class SupabaseSupplierOrdersRepository implements SupplierOrdersRepository {
                 (supplier['legal_name'] as String?);
             isAffiliated = supplier['is_affiliated'] == true;
             isRestricted = supplier['is_restricted'] == true;
+            final supplierAllows = supplier['allows_dropshipping'] != false;
+            allowsDropshipping = branchAllows && supplierAllows;
+          } else {
+            allowsDropshipping = branchAllows;
           }
         }
       }
@@ -680,12 +686,14 @@ class SupabaseSupplierOrdersRepository implements SupplierOrdersRepository {
           name: name,
           count: 1,
           subtotal: costPrice * quantity,
+          allowsDropshipping: allowsDropshipping,
         );
       } else {
         supplierData[supplierId] = (
           name: current.name,
           count: current.count + 1,
           subtotal: current.subtotal + (costPrice * quantity),
+          allowsDropshipping: current.allowsDropshipping && allowsDropshipping,
         );
       }
     }
@@ -723,6 +731,7 @@ class SupabaseSupplierOrdersRepository implements SupplierOrdersRepository {
           hasExistingOc: existingOc != null,
           existingOrderNumber: existingOc?.orderNumber,
           existingOrderId: existingOc?.id,
+          allowsDropshipping: data.allowsDropshipping,
         ),
       );
     }
@@ -734,6 +743,7 @@ class SupabaseSupplierOrdersRepository implements SupplierOrdersRepository {
   Future<Map<String, dynamic>> batchGenerateFromQuote(
     String quoteId, {
     List<String>? selectedSupplierIds,
+    Map<String, bool>? supplierDestinations,
   }) async {
     final currentUserId = _supabase.auth.currentUser?.id;
     if (currentUserId == null) throw Exception('Usuario no autenticado');
@@ -913,6 +923,7 @@ class SupabaseSupplierOrdersRepository implements SupplierOrdersRepository {
         '0',
       );
       final orderNumber = 'OC-$userCode-$yearPrefix$seqFormatted';
+      final isDropshipping = supplierDestinations?[sId] ?? false;
 
       final newOrderResponse = await _supabase
           .from('supplier_orders')
@@ -929,6 +940,7 @@ class SupabaseSupplierOrdersRepository implements SupplierOrdersRepository {
             'subtotal': subtotal,
             'tax': tax,
             'total': total,
+            'is_dropshipping': isDropshipping,
           })
           .select('id')
           .single();

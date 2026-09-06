@@ -1,0 +1,6 @@
+id,name,model_id:id,group_id:id,perm_read,perm_write,perm_create,perm_unlink
+access_duna_sync_log_manager,duna.sync.log manager,model_duna_sync_log,base.group_system,1,1,1,1
+access_duna_sync_log_user,duna.sync.log user,model_duna_sync_log,base.group_user,1,0,0,0
+access_duna_warranty_rule_manager,duna.warranty.rule manager,model_duna_warranty_rule,base.group_system,1,1,1,1
+access_duna_warranty_rule_user,duna.warranty.rule user,model_duna_warranty_rule,base.group_user,1,1,1,1
+access_duna_warranty_rule_all,duna.warranty.rule all,model_duna_warranty_rule,,1,1,1,1

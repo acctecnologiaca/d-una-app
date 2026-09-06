@@ -3,6 +3,7 @@ import 'package:pdf/pdf.dart';
 import 'package:d_una_app/core/pdf/templates/service_report_pdf_template.dart';
 import 'package:d_una_app/features/reports/data/models/models.dart';
 import 'package:d_una_app/features/profile/domain/models/user_profile.dart';
+import 'package:d_una_app/features/profile/domain/models/user_company.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -104,9 +105,13 @@ void main() {
       firstName: 'Juan',
       lastName: 'Pérez',
       isBusinessOwner: true,
-      companyName: 'Servicios de Ingeniería Integral C.A.',
-      companyRif: 'J-12345678-9',
-      companyAddress: 'Av Principal, Local 1',
+      company: UserCompany(
+        id: 'comp-123',
+        userId: 'user-123',
+        companyName: 'Servicios de Ingeniería Integral C.A.',
+        companyRif: 'J-12345678-9',
+        companyAddress: 'Av Principal, Local 1',
+      ),
       phone: '+58 412 1234567',
     );
 

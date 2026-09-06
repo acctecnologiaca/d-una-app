@@ -1,0 +1,108 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- Vista Lista de Logs -->
+    <record id="view_duna_simulator_log_tree" model="ir.ui.view">
+        <field name="name">duna.simulator.log.tree</field>
+        <field name="model">duna.simulator.log</field>
+        <field name="arch" type="xml">
+            <tree string="Historial de Simulación D-Una"
+                  create="false"
+                  edit="false"
+                  decoration-success="state == 'success'"
+                  decoration-warning="state == 'warning'"
+                  decoration-danger="state == 'error'">
+                <field name="date"/>
+                <field name="name"/>
+                <field name="event_type" widget="badge"/>
+                <field name="execution_type"/>
+                <field name="warehouse_id"/>
+                <field name="sku"/>
+                <field name="previous_value"/>
+                <field name="new_value"/>
+                <field name="difference"/>
+                <field name="state" widget="badge"
+                       decoration-success="state == 'success'"
+                       decoration-warning="state == 'warning'"
+                       decoration-danger="state == 'error'"/>
+            </tree>
+        </field>
+    </record>
+
+    <!-- Vista Formulario de Log -->
+    <record id="view_duna_simulator_log_form" model="ir.ui.view">
+        <field name="name">duna.simulator.log.form</field>
+        <field name="model">duna.simulator.log</field>
+        <field name="arch" type="xml">
+            <form string="Registro de Auditoría de Simulación" create="false" edit="false">
+                <header>
+                    <field name="state" widget="statusbar" statusbar_visible="success,warning,error"/>
+                </header>
+                <sheet>
+                    <div class="oe_title">
+                        <h1>
+                            <field name="name"/>
+                        </h1>
+                    </div>
+                    <group>
+                        <group string="Detalles de Ejecución">
+                            <field name="date"/>
+                            <field name="event_type"/>
+                            <field name="execution_type"/>
+                            <field name="warehouse_id"/>
+                        </group>
+                        <group string="Impacto en el Producto">
+                            <field name="product_id"/>
+                            <field name="sku"/>
+                            <field name="previous_value"/>
+                            <field name="new_value"/>
+                            <field name="difference"/>
+                        </group>
+                    </group>
+                    <group string="Detalle Completo">
+                        <field name="details" nolabel="1"/>
+                    </group>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <!-- Vista Búsqueda de Logs -->
+    <record id="view_duna_simulator_log_search" model="ir.ui.view">
+        <field name="name">duna.simulator.log.search</field>
+        <field name="model">duna.simulator.log</field>
+        <field name="arch" type="xml">
+            <search string="Buscar Eventos de Simulación">
+                <field name="name"/>
+                <field name="sku"/>
+                <field name="warehouse_id"/>
+                <filter name="filter_sales" string="Ventas" domain="[('event_type', '=', 'sale')]"/>
+                <filter name="filter_restock" string="Reabastecimientos" domain="[('event_type', '=', 'restock')]"/>
+                <filter name="filter_price" string="Ajustes de Precio" domain="[('event_type', '=', 'price_change')]"/>
+                <filter name="filter_manual" string="Escenarios Manuales" domain="[('execution_type', '=', 'manual')]"/>
+                <separator/>
+                <filter name="filter_errors" string="Errores" domain="[('state', '=', 'error')]"/>
+                <group expand="0" string="Agrupar por">
+                    <filter name="group_by_type" string="Tipo de Evento" context="{'group_by': 'event_type'}"/>
+                    <filter name="group_by_warehouse" string="Almacén" context="{'group_by': 'warehouse_id'}"/>
+                    <filter name="group_by_date" string="Fecha" context="{'group_by': 'date:day'}"/>
+                </group>
+            </search>
+        </field>
+    </record>
+
+    <!-- Acción de Ventana para Logs -->
+    <record id="action_duna_simulator_log" model="ir.actions.act_window">
+        <field name="name">Historial de Simulación D-Una</field>
+        <field name="res_model">duna.simulator.log</field>
+        <field name="view_mode">tree,form</field>
+        <field name="search_view_id" ref="view_duna_simulator_log_search"/>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">
+                Aún no se han registrado eventos de simulación
+            </p>
+            <p>
+                Los eventos generados por el motor autónomo ir.cron o los escenarios manuales aparecerán aquí.
+            </p>
+        </field>
+    </record>
+</odoo>

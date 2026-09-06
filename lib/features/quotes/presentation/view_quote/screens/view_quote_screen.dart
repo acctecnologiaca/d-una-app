@@ -26,6 +26,7 @@ import 'package:d_una_app/features/profile/presentation/providers/profile_provid
 import 'package:pdf/pdf.dart';
 import '../../../../../shared/utils/string_utils.dart';
 import '../../../../supplier_orders/presentation/supplier_orders_list/providers/supplier_orders_providers.dart';
+import 'package:d_una_app/features/supplier_orders/domain/models/supplier_order_status.dart';
 import '../widgets/send_email_bottom_sheet.dart';
 import '../widgets/select_oc_suppliers_sheet.dart';
 import '../widgets/send_whatsapp_bottom_sheet.dart';
@@ -389,13 +390,14 @@ class _ViewQuoteScreenState extends ConsumerState<ViewQuoteScreen>
                               return;
                             }
 
-                            final selectedIds =
+                            final selection =
                                 await SelectOcSuppliersSheet.show(
                                   context: context,
                                   suppliers: statuses,
                                 );
 
-                            if (selectedIds == null || selectedIds.isEmpty) {
+                            if (selection == null ||
+                                selection.selectedSupplierIds.isEmpty) {
                               return;
                             }
 
@@ -408,7 +410,8 @@ class _ViewQuoteScreenState extends ConsumerState<ViewQuoteScreen>
 
                             final result = await repo.batchGenerateFromQuote(
                               quote.id,
-                              selectedSupplierIds: selectedIds,
+                              selectedSupplierIds: selection.selectedSupplierIds,
+                              supplierDestinations: selection.supplierDestinations,
                             );
 
                             final skipped =
@@ -476,7 +479,7 @@ class _ViewQuoteScreenState extends ConsumerState<ViewQuoteScreen>
                       );
                     },
                   ),
-                  /* Builder(
+                  Builder(
                     builder: (context) {
                       final statusStr = state.quote?.status;
                       final isBlockedForOcNe =
@@ -485,18 +488,83 @@ class _ViewQuoteScreenState extends ConsumerState<ViewQuoteScreen>
                           statusStr == QuoteStatus.cancelled.dbValue;
 
                       return BottomSheetActionItem(
-                        icon: Icons.receipt_outlined,
+                        icon: Symbols.list_alt,
                         label: 'Generar nota de entrega',
                         enabled: !isBlockedForOcNe,
                         subtitle: isBlockedForOcNe
                             ? 'No disponible para cotizaciones rechazadas, finalizadas o canceladas'
                             : null,
-                        onTap: () {
-                          context.pop();
+                        onTap: () async {
+                          final quote = state.quote;
+                          if (quote == null) return;
+
+                          Navigator.of(context).pop(); // Close action sheet
+
+                          // Supplier Monetization Guardrail:
+                          // Check if quote contains products from affiliated suppliers
+                          final hasAffiliatedProducts = state.products.any(
+                            (p) =>
+                                p.sourceType == QuoteItemSourceType.affiliated ||
+                                p.supplierBranchStockId != null,
+                          );
+
+                          if (hasAffiliatedProducts) {
+                            final ocRepo =
+                                ref.read(supplierOrdersRepositoryProvider);
+                            final supplierStatuses =
+                                await ocRepo.getQuoteSuppliersOcStatus(quote.id);
+
+                            if (supplierStatuses.isNotEmpty) {
+                              final orders =
+                                  await ocRepo.getSupplierOrdersByQuoteId(quote.id);
+                              final approvedSupplierIds = orders
+                                  .where((o) =>
+                                      o.status == SupplierOrderStatus.approved ||
+                                      o.status == SupplierOrderStatus.finalized)
+                                  .map((o) => o.supplierId)
+                                  .toSet();
+
+                              final pendingSuppliers = supplierStatuses
+                                  .where(
+                                    (s) =>
+                                        !approvedSupplierIds.contains(s.supplierId),
+                                  )
+                                  .toList();
+
+                              if (pendingSuppliers.isNotEmpty &&
+                                  context.mounted) {
+                                await CustomDialog.show(
+                                  context: context,
+                                  dialog: CustomDialog.confirmation(
+                                    icon: Symbols.lock,
+                                    title: 'Orden de Compra Requerida',
+                                    contentText:
+                                        'Esta cotización contiene productos de proveedores afiliados (${pendingSuppliers.map((s) => s.supplierName).join(', ')}) que no cuentan con una Orden de Compra aprobada o finalizada en la plataforma.\n\nPara garantizar el despacho formal y la correcta trazabilidad, debe emitir y aprobar la Orden de Compra antes de generar la Nota de Entrega.',
+                                    actions: [
+                                      TextButton(
+                                        onPressed: () => Navigator.of(
+                                          context,
+                                          rootNavigator: true,
+                                        ).pop(),
+                                        child: const Text('Entendido'),
+                                      ),
+                                    ],
+                                  ),
+                                );
+                                return;
+                              }
+                            }
+                          }
+
+                          if (context.mounted) {
+                            context.push(
+                              '/delivery-notes/create?quoteId=${quote.id}',
+                            );
+                          }
                         },
                       );
                     },
-                  ), */
+                  ),
                   const Divider(height: 1, indent: 16, endIndent: 16),
                   BottomSheetActionItem(
                     icon: Icons.content_copy_outlined,

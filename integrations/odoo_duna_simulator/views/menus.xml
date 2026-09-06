@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- Menú Raíz del Simulador en Inventario -->
+    <menuitem id="menu_duna_simulator_root"
+              name="Simulador D-Una"
+              parent="stock.menu_stock_root"
+              sequence="95"/>
+
+    <!-- Panel de Control Principal -->
+    <menuitem id="menu_duna_simulator_dashboard"
+              name="Panel de Control"
+              parent="menu_duna_simulator_root"
+              action="action_duna_simulator_config"
+              sequence="10"/>
+
+    <!-- Registro de Logs y Auditoría -->
+    <menuitem id="menu_duna_simulator_logs"
+              name="Historial de Simulación"
+              parent="menu_duna_simulator_root"
+              action="action_duna_simulator_log"
+              sequence="20"/>
+
+    <!-- Separador / Menú de Escenarios -->
+    <menuitem id="menu_duna_simulator_scenarios"
+              name="Escenarios Manuales"
+              parent="menu_duna_simulator_root"
+              sequence="30"/>
+
+    <menuitem id="menu_duna_simulator_scenario_peak"
+              name="🛒 Jornada Pico de Ventas"
+              parent="menu_duna_simulator_scenarios"
+              action="action_duna_simulator_peak_sale_wizard"
+              sequence="10"/>
+
+    <menuitem id="menu_duna_simulator_scenario_container"
+              name="📦 Llegada de Contenedor"
+              parent="menu_duna_simulator_scenarios"
+              action="action_duna_simulator_container_wizard"
+              sequence="20"/>
+
+    <menuitem id="menu_duna_simulator_scenario_price"
+              name="🏷️ Ajuste de Precios por Categoría"
+              parent="menu_duna_simulator_scenarios"
+              action="action_duna_simulator_price_wizard"
+              sequence="30"/>
+</odoo>

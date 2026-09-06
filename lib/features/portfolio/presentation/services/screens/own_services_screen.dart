@@ -151,7 +151,7 @@ class _OwnServicesScreenState extends ConsumerState<OwnServicesScreen> {
                     hasReachedEnd: state.hasReachedEnd,
                     onLoadMore: () =>
                         ref.read(paginatedServicesProvider.notifier).loadMore(),
-                    padding: const EdgeInsets.fromLTRB(16, 16, 16, 120),
+                    padding: const EdgeInsets.fromLTRB(16, 16, 16, 132),
                     separatorBuilder: (context, index) =>
                         const Divider(height: 1, color: Colors.transparent),
                     itemBuilder: (context, index, service) {
