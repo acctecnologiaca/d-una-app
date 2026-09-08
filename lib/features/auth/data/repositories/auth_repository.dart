@@ -1,3 +1,4 @@
+import 'package:flutter/services.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:d_una_app/core/constants/auth_constants.dart';
@@ -33,8 +34,15 @@ abstract class AuthRepository {
 
 class SupabaseAuthRepository implements AuthRepository {
   final SupabaseClient _supabase;
+  final GoogleSignIn _googleSignIn;
 
-  SupabaseAuthRepository(this._supabase);
+  SupabaseAuthRepository(
+    this._supabase, {
+    GoogleSignIn? googleSignIn,
+  }) : _googleSignIn = googleSignIn ??
+            GoogleSignIn(
+              serverClientId: AuthConstants.googleWebClientId,
+            );
 
   @override
   User? get currentUser => _supabase.auth.currentUser;
@@ -70,7 +78,7 @@ class SupabaseAuthRepository implements AuthRepository {
   @override
   Future<void> signOut() async {
     try {
-      await GoogleSignIn().signOut();
+      await _googleSignIn.signOut();
     } catch (_) {}
     await _supabase.auth.signOut();
   }
@@ -105,36 +113,53 @@ class SupabaseAuthRepository implements AuthRepository {
 
   @override
   Future<AuthResponse?> signInWithGoogle() async {
-    final googleSignIn = GoogleSignIn(
-      serverClientId: AuthConstants.googleWebClientId,
-    );
-
-    // Desconectar sesión en caché para forzar a que Google
-    // siempre muestre el diálogo de selección de cuentas al pulsar el botón
     try {
-      await googleSignIn.signOut();
-    } catch (_) {}
+      // Desconectar sesión en caché para forzar a que Google
+      // siempre muestre el diálogo de selección de cuentas al pulsar el botón
+      try {
+        await _googleSignIn.signOut();
+      } catch (_) {}
 
-    final googleUser = await googleSignIn.signIn();
-    if (googleUser == null) {
-      return null;
-    }
+      final googleUser = await _googleSignIn.signIn();
+      if (googleUser == null) {
+        return null;
+      }
 
-    final googleAuth = await googleUser.authentication;
-    final idToken = googleAuth.idToken;
-    final accessToken = googleAuth.accessToken;
+      final googleAuth = await googleUser.authentication;
+      final idToken = googleAuth.idToken;
+      final accessToken = googleAuth.accessToken;
 
-    if (idToken == null) {
-      throw const AuthException(
-        'No se pudo obtener el token de autenticación de Google. '
-        'Verifica la configuración de OAuth en Google Cloud Console.',
+      if (idToken == null) {
+        throw const AuthException(
+          'No se pudo obtener el token de autenticación de Google. '
+          'Verifica la configuración de OAuth en Google Cloud Console.',
+        );
+      }
+
+      return await _supabase.auth.signInWithIdToken(
+        provider: OAuthProvider.google,
+        idToken: idToken,
+        accessToken: accessToken,
       );
+    } on PlatformException catch (e) {
+      if (e.code == 'sign_in_canceled' ||
+          (e.code == 'network_error' &&
+              e.message?.contains('canceled') == true)) {
+        return null;
+      }
+      if (e.code == '10' ||
+          e.message?.contains('10') == true ||
+          e.code == 'DEVELOPER_ERROR') {
+        throw const AuthException(
+          'Error de configuración en Google Sign In (SHA-1 o Client ID). Contacta a soporte.',
+        );
+      }
+      if (e.code == '7' || e.code == 'network_error') {
+        throw const AuthException(
+          'Error de red al conectar con Google. Verifica tu conexión.',
+        );
+      }
+      throw AuthException('Error de Google Sign In: ${e.message ?? e.code}');
     }
-
-    return await _supabase.auth.signInWithIdToken(
-      provider: OAuthProvider.google,
-      idToken: idToken,
-      accessToken: accessToken,
-    );
   }
 }

@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../../core/utils/error_handler.dart';
 import '../../../core/utils/validators.dart';
+import '../../../core/utils/session_manager.dart';
 import '../../../shared/widgets/custom_text_field.dart';
 import '../../../shared/widgets/custom_button.dart';
 import 'providers/register_provider.dart'; // To access authRepositoryProvider
@@ -25,6 +26,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   bool _isLoading = false;
   bool _isLoadingGoogle = false;
 
+  bool get _isAnyLoading => _isLoading || _isLoadingGoogle;
+
   @override
   void dispose() {
     _emailController.dispose();
@@ -41,6 +44,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
           email: _emailController.text.trim(),
           password: _passwordController.text,
         );
+        await SessionManager().updateLastActive();
         // El redirect global del router manejará la navegación automática a /portfolio
       } catch (e) {
         if (mounted) {
@@ -160,7 +164,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 
   Future<void> _onGoogleLogin() async {
     // Bloquear si ya hay una operación de login en curso
-    if (_isLoading || _isLoadingGoogle) return;
+    if (_isAnyLoading) return;
 
     setState(() => _isLoadingGoogle = true);
     try {
@@ -172,6 +176,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
         // No mostrar error, simplemente retornar al estado normal
         return;
       }
+      // Sincronizar timestamp de sesión
+      await SessionManager().updateLastActive();
       // Si llegamos aquí, signInWithIdToken fue exitoso.
       // GoRouter detecta automáticamente la sesión nueva vía onAuthStateChange
       // y redirige a /portfolio. No se requiere navegación manual.
@@ -183,6 +189,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
               'No hay conexión a internet. Verifica tu red e intenta de nuevo.';
         } else if (e is AuthException) {
           message = e.message;
+        } else {
+          message = e.toString().replaceFirst('Exception: ', '');
         }
         AppToast.error(context, message: message);
       }
@@ -196,14 +204,12 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      // backgroundColor: Colors.white, // Using Theme Surface
       body: SafeArea(
         child: SingleChildScrollView(
           padding: const EdgeInsets.fromLTRB(16.0, 22.0, 16.0, 40.0),
           child: Form(
             key: _formKey,
             child: Column(
-              //mainAxisAlignment: MainAxisAlignment.center,
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 const SizedBox(height: 40),
@@ -211,7 +217,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                 Center(
                   child: Image.asset(
                     'assets/images/logo_d_una.png',
-                    height: 60, // Approximate height
+                    height: 60,
                   ),
                 ),
                 const SizedBox(height: 24),
@@ -231,6 +237,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                 CustomTextField(
                   label: 'Correo electrónico',
                   controller: _emailController,
+                  enabled: !_isAnyLoading,
                   keyboardType: TextInputType.emailAddress,
                   suffixIcon: const Icon(Icons.email_outlined),
                   validator: Validators.email,
@@ -241,6 +248,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                 CustomTextField(
                   label: 'Contraseña',
                   controller: _passwordController,
+                  enabled: !_isAnyLoading,
                   obscureText: !_isPasswordVisible,
                   suffixIcon: IconButton(
                     icon: Icon(
@@ -248,11 +256,13 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                           ? Icons.visibility
                           : Icons.visibility_off,
                     ),
-                    onPressed: () {
-                      setState(() {
-                        _isPasswordVisible = !_isPasswordVisible;
-                      });
-                    },
+                    onPressed: _isAnyLoading
+                        ? null
+                        : () {
+                            setState(() {
+                              _isPasswordVisible = !_isPasswordVisible;
+                            });
+                          },
                   ),
                   validator: (value) {
                     if (value == null || value.isEmpty) {
@@ -266,7 +276,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                 // Login Button
                 CustomButton(
                   text: 'Iniciar sesión',
-                  onPressed: _isLoading ? null : _onLogin,
+                  onPressed: _isAnyLoading ? null : _onLogin,
                   type: ButtonType.primary,
                   isLoading: _isLoading,
                 ),
@@ -275,13 +285,18 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                 // Forgot Password Link
                 Center(
                   child: GestureDetector(
-                    onTap: _showForgotPasswordDialog,
+                    onTap: _isAnyLoading ? null : _showForgotPasswordDialog,
                     child: Text(
                       '¿Olvidaste tu contraseña?',
                       style: TextStyle(
                         fontWeight: FontWeight.bold,
                         decoration: TextDecoration.underline,
-                        color: Theme.of(context).colorScheme.onSurface,
+                        color: _isAnyLoading
+                            ? Theme.of(context)
+                                .colorScheme
+                                .onSurface
+                                .withValues(alpha: 0.5)
+                            : Theme.of(context).colorScheme.onSurface,
                       ),
                     ),
                   ),
@@ -292,10 +307,12 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                 // Create Account Button
                 CustomButton(
                   text: 'Crear una cuenta nueva',
-                  onPressed: () {
-                    ref.read(registerProvider.notifier).reset();
-                    context.push('/register');
-                  },
+                  onPressed: _isAnyLoading
+                      ? null
+                      : () {
+                          ref.read(registerProvider.notifier).reset();
+                          context.push('/register');
+                        },
                   type: ButtonType.secondary,
                 ),
                 const SizedBox(height: 32),
@@ -318,35 +335,45 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 
                 // Google Button
                 Center(
-                  child: InkWell(
-                    onTap: (_isLoading || _isLoadingGoogle)
-                        ? null
-                        : _onGoogleLogin,
-                    borderRadius: BorderRadius.circular(30),
-                    child: Container(
-                      padding: const EdgeInsets.all(8),
-                      width: 64,
-                      height: 64,
-                      decoration: BoxDecoration(
-                        color: Colors.grey.shade100,
-                        shape: BoxShape.circle,
-                      ),
-                      child: _isLoadingGoogle
-                          ? const Padding(
-                              padding: EdgeInsets.all(8.0),
-                              child: CircularProgressIndicator(
-                                strokeWidth: 2.5,
-                              ),
-                            )
-                          : Image.asset(
-                              'assets/images/logo_google.png',
-                              height: 48,
-                              width: 48,
+                  child: Tooltip(
+                    message: 'Continuar con Google',
+                    child: Material(
+                      color: Colors.transparent,
+                      child: InkWell(
+                        onTap: _isAnyLoading ? null : _onGoogleLogin,
+                        borderRadius: BorderRadius.circular(32),
+                        child: Container(
+                          padding: const EdgeInsets.all(8),
+                          width: 64,
+                          height: 64,
+                          decoration: BoxDecoration(
+                            color: Colors.grey.shade100,
+                            shape: BoxShape.circle,
+                            border: Border.all(
+                              color: Colors.grey.shade300,
+                              width: 1,
                             ),
+                          ),
+                          child: _isLoadingGoogle
+                              ? const Center(
+                                  child: SizedBox(
+                                    width: 28,
+                                    height: 28,
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2.5,
+                                    ),
+                                  ),
+                                )
+                              : Image.asset(
+                                  'assets/images/logo_google.png',
+                                  height: 48,
+                                  width: 48,
+                                ),
+                        ),
+                      ),
                     ),
                   ),
                 ),
-                //const SizedBox(height: 24),
                 const SizedBox(height: 40),
               ],
             ),
