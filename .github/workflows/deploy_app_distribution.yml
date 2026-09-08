@@ -28,6 +28,7 @@ jobs:
       - name: Set up Flutter
         uses: subosito/flutter-action@v2
         with:
+          flutter-version: '3.41.9'
           channel: 'stable'
           cache: true
 
@@ -39,7 +40,7 @@ jobs:
           sed -i '/org.gradle.java.home/d' android/gradle.properties || true
 
       - name: Build Android APK
-        run: flutter build apk --release
+        run: flutter build apk --release --android-skip-build-dependency-validation
 
       - name: Upload to Firebase App Distribution
         uses: wzieba/Firebase-Distribution-Github-Action@v1
