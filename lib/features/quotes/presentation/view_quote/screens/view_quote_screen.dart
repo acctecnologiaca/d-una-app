@@ -480,7 +480,7 @@ class _ViewQuoteScreenState extends ConsumerState<ViewQuoteScreen>
                     },
                   ),
                   Builder(
-                    builder: (context) {
+                    builder: (sheetContext) {
                       final statusStr = state.quote?.status;
                       final isBlockedForOcNe =
                           statusStr == QuoteStatus.rejected.dbValue ||
@@ -498,68 +498,80 @@ class _ViewQuoteScreenState extends ConsumerState<ViewQuoteScreen>
                           final quote = state.quote;
                           if (quote == null) return;
 
-                          Navigator.of(context).pop(); // Close action sheet
+                          final router = GoRouter.of(sheetContext);
+                          final messenger = ScaffoldMessenger.of(sheetContext);
+                          Navigator.of(sheetContext).pop(); // Close action sheet
 
-                          // Supplier Monetization Guardrail:
-                          // Check if quote contains products from affiliated suppliers
-                          final hasAffiliatedProducts = state.products.any(
-                            (p) =>
-                                p.sourceType == QuoteItemSourceType.affiliated ||
-                                p.supplierBranchStockId != null,
-                          );
+                          try {
+                            // Supplier Monetization Guardrail:
+                            // Check if quote contains products from affiliated suppliers
+                            final hasAffiliatedProducts = state.products.any(
+                              (p) =>
+                                  p.sourceType == QuoteItemSourceType.affiliated ||
+                                  p.supplierBranchStockId != null,
+                            );
 
-                          if (hasAffiliatedProducts) {
-                            final ocRepo =
-                                ref.read(supplierOrdersRepositoryProvider);
-                            final supplierStatuses =
-                                await ocRepo.getQuoteSuppliersOcStatus(quote.id);
+                            if (hasAffiliatedProducts) {
+                              final ocRepo =
+                                  ref.read(supplierOrdersRepositoryProvider);
+                              final supplierStatuses =
+                                  await ocRepo.getQuoteSuppliersOcStatus(quote.id);
 
-                            if (supplierStatuses.isNotEmpty) {
-                              final orders =
-                                  await ocRepo.getSupplierOrdersByQuoteId(quote.id);
-                              final approvedSupplierIds = orders
-                                  .where((o) =>
-                                      o.status == SupplierOrderStatus.approved ||
-                                      o.status == SupplierOrderStatus.finalized)
-                                  .map((o) => o.supplierId)
-                                  .toSet();
+                              if (supplierStatuses.isNotEmpty) {
+                                final orders =
+                                    await ocRepo.getSupplierOrdersByQuoteId(quote.id);
+                                final approvedSupplierIds = orders
+                                    .where((o) =>
+                                        o.status == SupplierOrderStatus.approved ||
+                                        o.status == SupplierOrderStatus.finalized)
+                                    .map((o) => o.supplierId)
+                                    .toSet();
 
-                              final pendingSuppliers = supplierStatuses
-                                  .where(
-                                    (s) =>
-                                        !approvedSupplierIds.contains(s.supplierId),
-                                  )
-                                  .toList();
+                                final pendingSuppliers = supplierStatuses
+                                    .where(
+                                      (s) =>
+                                          !approvedSupplierIds.contains(s.supplierId),
+                                    )
+                                    .toList();
 
-                              if (pendingSuppliers.isNotEmpty &&
-                                  context.mounted) {
-                                await CustomDialog.show(
-                                  context: context,
-                                  dialog: CustomDialog.confirmation(
-                                    icon: Symbols.lock,
-                                    title: 'Orden de Compra Requerida',
-                                    contentText:
-                                        'Esta cotización contiene productos de proveedores afiliados (${pendingSuppliers.map((s) => s.supplierName).join(', ')}) que no cuentan con una Orden de Compra aprobada o finalizada en la plataforma.\n\nPara garantizar el despacho formal y la correcta trazabilidad, debe emitir y aprobar la Orden de Compra antes de generar la Nota de Entrega.',
-                                    actions: [
-                                      TextButton(
-                                        onPressed: () => Navigator.of(
-                                          context,
-                                          rootNavigator: true,
-                                        ).pop(),
-                                        child: const Text('Entendido'),
-                                      ),
-                                    ],
-                                  ),
-                                );
-                                return;
+                                if (pendingSuppliers.isNotEmpty && context.mounted) {
+                                  await CustomDialog.show(
+                                    context: context,
+                                    dialog: CustomDialog.confirmation(
+                                      icon: Symbols.lock,
+                                      title: 'Orden de Compra Requerida',
+                                      contentText:
+                                          'Esta cotización contiene productos de proveedores afiliados (${pendingSuppliers.map((s) => s.supplierName).join(', ')}) que no cuentan con una Orden de Compra aprobada o finalizada en la plataforma.\n\nPara garantizar el despacho formal y la correcta trazabilidad, debe emitir y aprobar la Orden de Compra antes de generar la Nota de Entrega.',
+                                      actions: [
+                                        TextButton(
+                                          onPressed: () => Navigator.of(
+                                            context,
+                                            rootNavigator: true,
+                                          ).pop(),
+                                          child: const Text('Entendido'),
+                                        ),
+                                      ],
+                                    ),
+                                  );
+                                  return;
+                                }
                               }
                             }
-                          }
 
-                          if (context.mounted) {
-                            context.push(
-                              '/delivery-notes/create?quoteId=${quote.id}',
-                            );
+                            if (mounted) {
+                              router.push(
+                                '/delivery-notes/create?quoteId=${quote.id}',
+                              );
+                            }
+                          } catch (e) {
+                            if (mounted) {
+                              messenger.showSnackBar(
+                                SnackBar(
+                                  content: Text('Error al preparar nota de entrega: $e'),
+                                  backgroundColor: Colors.red,
+                                ),
+                              );
+                            }
                           }
                         },
                       );

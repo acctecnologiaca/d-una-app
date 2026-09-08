@@ -62,3 +62,8 @@ Once the user approves the plan, follow these steps sequentially:
 - **Security:** During the analysis phase, briefly consider if there are
   security risks (such as injection, data exposure, etc.) and add them to the
   implementation plan if necessary.
+- **Zero-Assumptions Protocol (Mandatory):**
+  1. **Prior Citation Requirement:** Before writing or modifying any visual widget or field, the model must verify and cite the exact reference file or component (e.g., `lib/shared/widgets/...` or `view_quote_*.dart`). If a field or widget does not exist in the reference, the model is strictly forbidden from inventing it.
+  2. **Prohibition of Ad-Hoc Widgets:** Never write generic `Card()`, `Container()`, or hand-crafted UI structures for entities that already have dedicated components in the system (e.g., products, contacts, status badges, empty states). Always check `/lib/shared/widgets/` and the feature's existing widgets first.
+  3. **Mandatory Stop on Discrepancies:** If an element, logic, or field is not explicitly defined in the reference screen or user instructions, the model must stop, expose the gap, and ask the user how to proceed, rather than improvising or guessing.
+

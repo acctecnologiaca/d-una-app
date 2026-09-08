@@ -144,12 +144,11 @@ class PaginatedDeliveryNotesNotifier
       case SortOption.recent:
       case SortOption.oldest:
         return 'date';
-      case SortOption.nameAZ:
-      case SortOption.nameZA:
-        return 'client_name';
       case SortOption.orderNumberAsc:
       case SortOption.orderNumberDesc:
         return 'delivery_note_number';
+      case SortOption.nameAZ:
+      case SortOption.nameZA:
       default:
         return 'created_at';
     }
@@ -157,13 +156,12 @@ class PaginatedDeliveryNotesNotifier
 
   bool get _isAscending {
     return _sortOption == SortOption.oldest ||
-        _sortOption == SortOption.nameAZ ||
         _sortOption == SortOption.orderNumberAsc;
   }
 
   Future<PaginatedState<DeliveryNoteModel>> _fetchPage(int offset) async {
     final repo = _ref.read(deliveryNotesRepositoryProvider);
-    final notes = await repo.getDeliveryNotesPaginated(
+    var notes = await repo.getDeliveryNotesPaginated(
       offset: offset,
       limit: PaginatedState.pageSize,
       searchQuery: _searchQuery,
@@ -172,6 +170,12 @@ class PaginatedDeliveryNotesNotifier
       orderBy: _orderByColumn,
       ascending: _isAscending,
     );
+
+    if (_sortOption == SortOption.nameAZ) {
+      notes = [...notes]..sort((a, b) => a.clientName.toLowerCase().compareTo(b.clientName.toLowerCase()));
+    } else if (_sortOption == SortOption.nameZA) {
+      notes = [...notes]..sort((a, b) => b.clientName.toLowerCase().compareTo(a.clientName.toLowerCase()));
+    }
 
     return PaginatedState(
       items: notes,

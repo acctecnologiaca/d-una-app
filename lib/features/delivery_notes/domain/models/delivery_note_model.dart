@@ -1,6 +1,7 @@
 import 'delivery_note_status.dart';
 import 'delivery_note_item_model.dart';
 import 'delivery_note_observation_model.dart';
+import '../../../clients/data/models/client_model.dart';
 
 class DeliveryNoteModel {
   final String id;
@@ -46,9 +47,15 @@ class DeliveryNoteModel {
   // Joined fields for UI
   final String clientName;
   final String? clientTaxId;
+  final String? clientAddress;
+  final String? clientCity;
+  final String? clientState;
+  final String? clientCountry;
+  final String? clientType;
   final String? contactName;
   final String? contactPhone;
   final String? contactEmail;
+  final Contact? contact;
   final String? clientPhone;
   final String? clientEmail;
   final String? shippingCompanyName;
@@ -97,9 +104,15 @@ class DeliveryNoteModel {
     required this.updatedAt,
     this.clientName = 'Cliente',
     this.clientTaxId,
+    this.clientAddress,
+    this.clientCity,
+    this.clientState,
+    this.clientCountry,
+    this.clientType,
     this.contactName,
     this.contactPhone,
     this.contactEmail,
+    this.contact,
     this.clientPhone,
     this.clientEmail,
     this.shippingCompanyName,
@@ -195,13 +208,21 @@ class DeliveryNoteModel {
           ? DateTime.tryParse(json['updated_at'] as String) ?? DateTime.now()
           : DateTime.now(),
       clientName: clientData?['name'] as String? ?? 'Cliente',
-      clientTaxId: (clientData?['tax_id'] ?? clientData?['identification_id']) as String?,
+      clientTaxId: clientData?['tax_id'] as String?,
+      clientAddress: clientData?['address'] as String?,
+      clientCity: clientData?['city'] as String?,
+      clientState: clientData?['state'] as String?,
+      clientCountry: clientData?['country'] as String?,
+      clientType: clientData?['type'] as String?,
       contactName: contactData?['name'] as String?,
       contactPhone: contactData?['phone'] as String?,
       contactEmail: contactData?['email'] as String?,
+      contact: contactData != null ? Contact.fromJson(contactData) : null,
       clientPhone: clientData?['phone'] as String?,
       clientEmail: clientData?['email'] as String?,
-      shippingCompanyName: shippingData?['name'] as String?,
+      shippingCompanyName: ((shippingData?['name'] as String?)?.isNotEmpty == true
+          ? shippingData!['name']
+          : shippingData?['legal_name']) as String?,
       items: itemsList,
       observations: obsList,
     );
@@ -295,9 +316,15 @@ class DeliveryNoteModel {
     DateTime? updatedAt,
     String? clientName,
     String? clientTaxId,
+    String? clientAddress,
+    String? clientCity,
+    String? clientState,
+    String? clientCountry,
+    String? clientType,
     String? contactName,
     String? contactPhone,
     String? contactEmail,
+    Contact? contact,
     String? clientPhone,
     String? clientEmail,
     String? shippingCompanyName,
@@ -346,9 +373,15 @@ class DeliveryNoteModel {
       updatedAt: updatedAt ?? this.updatedAt,
       clientName: clientName ?? this.clientName,
       clientTaxId: clientTaxId ?? this.clientTaxId,
+      clientAddress: clientAddress ?? this.clientAddress,
+      clientCity: clientCity ?? this.clientCity,
+      clientState: clientState ?? this.clientState,
+      clientCountry: clientCountry ?? this.clientCountry,
+      clientType: clientType ?? this.clientType,
       contactName: contactName ?? this.contactName,
       contactPhone: contactPhone ?? this.contactPhone,
       contactEmail: contactEmail ?? this.contactEmail,
+      contact: contact ?? this.contact,
       clientPhone: clientPhone ?? this.clientPhone,
       clientEmail: clientEmail ?? this.clientEmail,
       shippingCompanyName: shippingCompanyName ?? this.shippingCompanyName,

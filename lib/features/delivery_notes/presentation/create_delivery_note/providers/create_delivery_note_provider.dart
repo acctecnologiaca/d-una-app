@@ -1,9 +1,13 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:equatable/equatable.dart';
 import 'package:d_una_app/core/constants/draft_constants.dart';
 import 'package:d_una_app/core/models/draft_data.dart';
 import 'package:d_una_app/core/services/draft_storage_service.dart';
 import 'package:d_una_app/core/providers/draft_providers.dart';
+import 'package:d_una_app/core/utils/country_iso_codes.dart';
+import 'package:d_una_app/features/profile/domain/models/user_profile.dart';
+import 'package:d_una_app/features/profile/presentation/providers/profile_provider.dart';
 import 'package:d_una_app/features/clients/data/models/client_model.dart';
 import 'package:d_una_app/features/portfolio/presentation/providers/lookup_providers.dart';
 import 'package:d_una_app/features/quotes/data/models/quote.dart';
@@ -15,6 +19,8 @@ import '../../../domain/models/delivery_note_status.dart';
 import '../../../domain/models/delivery_note_item_model.dart';
 import '../../../domain/models/delivery_note_serial_model.dart';
 import '../../../domain/models/delivery_note_observation_model.dart';
+import 'package:uuid/uuid.dart';
+import 'package:d_una_app/features/portfolio/data/models/product_model.dart';
 import '../../../data/repositories/supabase_delivery_notes_repository.dart';
 
 class DeliveryNoteCreateState extends Equatable {
@@ -339,31 +345,77 @@ class CreateDeliveryNoteNotifier
     return DraftConstants.deliveryNotesModule;
   }
 
+  String _getUserCode({UserProfile? profile}) {
+    final userProfile = profile ?? ref.read(userProfileProvider).value;
+    if (userProfile == null) return 'XX0000';
+
+    final countryCode = CountryIsoCodes.getCode(userProfile.mainCountry);
+    final userNum = userProfile.userNumber ?? 0;
+    final hexPart = userNum.toRadixString(16).toUpperCase().padLeft(4, '0');
+    return '$countryCode$hexPart';
+  }
+
+  String _generateNextDeliveryNoteNumber(String? lastNumber, {UserProfile? profile}) {
+    final userCode = _getUserCode(profile: profile);
+    final currentYear = DateTime.now().year % 100; // e.g. 26 for 2026
+    final yearPrefix = currentYear.toString().padLeft(2, '0');
+
+    int nextSeq = 1;
+
+    if (lastNumber != null && lastNumber.trim().isNotEmpty) {
+      // Format: NE-XXXXXX-YYSEQ
+      final parts = lastNumber.split('-');
+      if (parts.length >= 3) {
+        final nePart = parts.last; // e.g. "26001"
+        if (nePart.length >= 3) {
+          final yearInLast = nePart.length >= 5 ? nePart.substring(0, 2) : '';
+          final seqInLast = nePart.length >= 5 ? nePart.substring(2) : nePart;
+          if (yearInLast == yearPrefix || yearInLast.isEmpty) {
+            final parsed = int.tryParse(seqInLast);
+            if (parsed != null) {
+              nextSeq = parsed + 1;
+            }
+          }
+        }
+      }
+    }
+
+    final seqFormatted = nextSeq.toString().padLeft(3, '0');
+    return 'NE-$userCode-$yearPrefix$seqFormatted';
+  }
+
   Future<void> _initDefaults() async {
-    // Load default commercial conditions if available
+    // Load default observations if available
     try {
-      final conditions = await ref.read(commercialConditionsProvider.future);
-      final defaultConditions = conditions
-          .where((c) => c.isDefaultReport || c.isDefaultQuote)
-          .map((c) => DeliveryNoteObservationModel(
-                description: c.description,
-                observationId: c.id,
+      final observations = await ref.read(observationsProvider.future);
+      final defaultObservations = observations
+          .where((o) => o.isDefaultDeliveryNote && o.isActive)
+          .map((o) => DeliveryNoteObservationModel(
+                description: o.description,
+                observationId: o.id,
               ))
           .toList();
 
-      if (defaultConditions.isNotEmpty && state.observations.isEmpty) {
-        state = state.copyWith(observations: defaultConditions);
+      if (defaultObservations.isNotEmpty && state.observations.isEmpty) {
+        state = state.copyWith(observations: defaultObservations);
       }
     } catch (_) {}
 
     // Fetch next number preview
     try {
+      final profile = ref.read(userProfileProvider).value ??
+          await ref.read(userProfileProvider.future);
       final repo = ref.read(deliveryNotesRepositoryProvider);
       final lastNum = await repo.getLastDeliveryNoteNumber();
-      if (lastNum != null && state.deliveryNoteNumber == null) {
-        state = state.copyWith(deliveryNoteNumber: 'NE-... (Autogenerado)');
+      if (state.deliveryNoteNumber == null ||
+          state.deliveryNoteNumber!.startsWith('NE-...')) {
+        final nextNumber =
+            _generateNextDeliveryNoteNumber(lastNum, profile: profile);
+        state = state.copyWith(deliveryNoteNumber: nextNumber);
       }
-    } catch (_) {}
+    } catch (e) {
+      debugPrint('Error calculando número de nota de entrega: $e');
+    }
   }
 
   void autoSaveDraft({int tabIndex = 0, String? noteId}) {
@@ -378,7 +430,8 @@ class CreateDeliveryNoteNotifier
           state.items.isNotEmpty ||
           state.clientId != null ||
           state.recipientAddress != null ||
-          (state.notes != null && state.notes!.trim().isNotEmpty);
+          (state.deliveryInstructions != null &&
+              state.deliveryInstructions!.trim().isNotEmpty);
 
       if (!hasData) return;
     }
@@ -408,7 +461,8 @@ class CreateDeliveryNoteNotifier
           state.items.isNotEmpty ||
           state.clientId != null ||
           state.recipientAddress != null ||
-          (state.notes != null && state.notes!.trim().isNotEmpty);
+          (state.deliveryInstructions != null &&
+              state.deliveryInstructions!.trim().isNotEmpty);
 
       if (!hasData) return;
     }
@@ -561,9 +615,6 @@ class CreateDeliveryNoteNotifier
       clientTaxId: client.taxId,
       contactId: contactId,
       contactName: contactName,
-      recipientAddress: state.recipientAddress ?? client.address,
-      recipientCity: state.recipientCity ?? client.city,
-      recipientState: state.recipientState ?? client.state,
       isDirty: true,
     );
   }
@@ -572,6 +623,88 @@ class CreateDeliveryNoteNotifier
     state = state.copyWith(
       contactId: contactId,
       contactName: contactName,
+      isDirty: true,
+    );
+  }
+
+  void clearClient() {
+    state = DeliveryNoteCreateState(
+      id: state.id,
+      deliveryNoteNumber: state.deliveryNoteNumber,
+      clientId: null,
+      clientName: null,
+      clientTaxId: null,
+      contactId: null,
+      contactName: null,
+      quoteId: state.quoteId,
+      supplierOrderId: state.supplierOrderId,
+      clientPoNumber: state.clientPoNumber,
+      tag: state.tag,
+      notes: state.notes,
+      status: state.status,
+      date: state.date,
+      deliveryDate: state.deliveryDate,
+      deliveryType: state.deliveryType,
+      shippingCompanyId: state.shippingCompanyId,
+      shippingCompanyName: state.shippingCompanyName,
+      trackingNumber: state.trackingNumber,
+      recipientAddress: null,
+      recipientCity: null,
+      recipientState: null,
+      deliveryInstructions: state.deliveryInstructions,
+      receivedByName: state.receivedByName,
+      receivedById: state.receivedById,
+      receivedByPhone: state.receivedByPhone,
+      receiverRelationship: state.receiverRelationship,
+      receivedAt: state.receivedAt,
+      signatureData: state.signatureData,
+      taxRate: state.taxRate,
+      items: state.items,
+      observations: state.observations,
+      isDropshipping: state.isDropshipping,
+      isLoading: state.isLoading,
+      error: state.error,
+      isDirty: true,
+    );
+  }
+
+  void clearContact() {
+    state = DeliveryNoteCreateState(
+      id: state.id,
+      deliveryNoteNumber: state.deliveryNoteNumber,
+      clientId: state.clientId,
+      clientName: state.clientName,
+      clientTaxId: state.clientTaxId,
+      contactId: null,
+      contactName: null,
+      quoteId: state.quoteId,
+      supplierOrderId: state.supplierOrderId,
+      clientPoNumber: state.clientPoNumber,
+      tag: state.tag,
+      notes: state.notes,
+      status: state.status,
+      date: state.date,
+      deliveryDate: state.deliveryDate,
+      deliveryType: state.deliveryType,
+      shippingCompanyId: state.shippingCompanyId,
+      shippingCompanyName: state.shippingCompanyName,
+      trackingNumber: state.trackingNumber,
+      recipientAddress: state.recipientAddress,
+      recipientCity: state.recipientCity,
+      recipientState: state.recipientState,
+      deliveryInstructions: state.deliveryInstructions,
+      receivedByName: state.receivedByName,
+      receivedById: state.receivedById,
+      receivedByPhone: state.receivedByPhone,
+      receiverRelationship: state.receiverRelationship,
+      receivedAt: state.receivedAt,
+      signatureData: state.signatureData,
+      taxRate: state.taxRate,
+      items: state.items,
+      observations: state.observations,
+      isDropshipping: state.isDropshipping,
+      isLoading: state.isLoading,
+      error: state.error,
       isDirty: true,
     );
   }
@@ -606,13 +739,55 @@ class CreateDeliveryNoteNotifier
     String? city,
     String? stateName,
     String? instructions,
+    bool clearAddress = false,
+    bool clearCity = false,
+    bool clearState = false,
   }) {
-    state = state.copyWith(
-      recipientAddress: address ?? state.recipientAddress,
-      recipientCity: city ?? state.recipientCity,
-      recipientState: stateName ?? state.recipientState,
+    state = DeliveryNoteCreateState(
+      id: state.id,
+      deliveryNoteNumber: state.deliveryNoteNumber,
+      clientId: state.clientId,
+      clientName: state.clientName,
+      clientTaxId: state.clientTaxId,
+      contactId: state.contactId,
+      contactName: state.contactName,
+      quoteId: state.quoteId,
+      supplierOrderId: state.supplierOrderId,
+      clientPoNumber: state.clientPoNumber,
+      tag: state.tag,
+      notes: state.notes,
+      status: state.status,
+      date: state.date,
+      deliveryDate: state.deliveryDate,
+      deliveryType: state.deliveryType,
+      shippingCompanyId: state.shippingCompanyId,
+      shippingCompanyName: state.shippingCompanyName,
+      trackingNumber: state.trackingNumber,
+      recipientAddress: clearAddress ? null : (address ?? state.recipientAddress),
+      recipientCity: clearCity ? null : (city ?? state.recipientCity),
+      recipientState: clearState ? null : (stateName ?? state.recipientState),
       deliveryInstructions: instructions ?? state.deliveryInstructions,
+      receivedByName: state.receivedByName,
+      receivedById: state.receivedById,
+      receivedByPhone: state.receivedByPhone,
+      receiverRelationship: state.receiverRelationship,
+      receivedAt: state.receivedAt,
+      signatureData: state.signatureData,
+      taxRate: state.taxRate,
+      items: state.items,
+      observations: state.observations,
+      isDropshipping: state.isDropshipping,
+      isLoading: state.isLoading,
+      error: state.error,
       isDirty: true,
+    );
+  }
+
+  void clearRecipientAddress() {
+    setRecipientAddress(
+      clearAddress: true,
+      clearCity: true,
+      clearState: true,
     );
   }
 
@@ -636,6 +811,94 @@ class CreateDeliveryNoteNotifier
   void addItem(DeliveryNoteItemModel item) {
     final updated = List<DeliveryNoteItemModel>.from(state.items)..add(item);
     state = state.copyWith(items: updated, isDirty: true);
+  }
+
+  void addProductFromInventory(
+    Product product,
+    double quantity, {
+    double? unitPrice,
+  }) {
+    final effectivePrice = unitPrice ?? product.averageCost;
+    final total = effectivePrice * quantity;
+    final item = DeliveryNoteItemModel(
+      id: const Uuid().v4(),
+      deliveryNoteId: state.id ?? '',
+      productId: product.id,
+      name: product.name,
+      brand: product.brand?.name,
+      model: product.model,
+      uom: product.uom ?? product.uomModel?.symbol ?? 'Ud',
+      description: product.specs,
+      quantity: quantity,
+      unitPrice: effectivePrice,
+      totalPrice: total,
+      orderIndex: state.items.length,
+      sourceType: 'own',
+      requiresSerials: product.requiresSerials,
+      serials: const [],
+    );
+    addItem(item);
+  }
+
+  void updateItemQuantity(int index, double quantity) {
+    if (index < 0 || index >= state.items.length) return;
+    final item = state.items[index];
+    final updated = DeliveryNoteItemModel(
+      id: item.id,
+      deliveryNoteId: item.deliveryNoteId,
+      productId: item.productId,
+      name: item.name,
+      brand: item.brand,
+      model: item.model,
+      uom: item.uom,
+      description: item.description,
+      quantity: quantity,
+      unitPrice: item.unitPrice,
+      taxRate: item.taxRate,
+      taxAmount: item.taxRate > 0
+          ? (item.unitPrice * quantity) * (item.taxRate / 100)
+          : 0.0,
+      totalPrice: item.unitPrice * quantity,
+      orderIndex: item.orderIndex,
+      warrantyTime: item.warrantyTime,
+      warrantyUnit: item.warrantyUnit,
+      sourceType: item.sourceType,
+      requiresSerials: item.requiresSerials,
+      isDropshipping: item.isDropshipping,
+      serials: item.serials,
+    );
+    updateItem(index, updated);
+  }
+
+  void updateItemSerials(
+    int index,
+    List<DeliveryNoteSerialModel> serials,
+  ) {
+    if (index < 0 || index >= state.items.length) return;
+    final item = state.items[index];
+    final updated = DeliveryNoteItemModel(
+      id: item.id,
+      deliveryNoteId: item.deliveryNoteId,
+      productId: item.productId,
+      name: item.name,
+      brand: item.brand,
+      model: item.model,
+      uom: item.uom,
+      description: item.description,
+      quantity: item.quantity,
+      unitPrice: item.unitPrice,
+      taxRate: item.taxRate,
+      taxAmount: item.taxAmount,
+      totalPrice: item.totalPrice,
+      orderIndex: item.orderIndex,
+      warrantyTime: item.warrantyTime,
+      warrantyUnit: item.warrantyUnit,
+      sourceType: item.sourceType,
+      requiresSerials: item.requiresSerials,
+      isDropshipping: item.isDropshipping,
+      serials: serials,
+    );
+    updateItem(index, updated);
   }
 
   void updateItem(int index, DeliveryNoteItemModel item) {
@@ -715,6 +978,12 @@ class CreateDeliveryNoteNotifier
     state = state.copyWith(observations: updated, isDirty: true);
   }
 
+  void addObservations(List<DeliveryNoteObservationModel> newObservations) {
+    final updated = List<DeliveryNoteObservationModel>.from(state.observations)
+      ..addAll(newObservations);
+    state = state.copyWith(observations: updated, isDirty: true);
+  }
+
   void removeObservation(int index) {
     if (index < 0 || index >= state.observations.length) return;
     final updated = List<DeliveryNoteObservationModel>.from(state.observations)
@@ -746,10 +1015,20 @@ class CreateDeliveryNoteNotifier
     try {
       final repo = ref.read(deliveryNotesRepositoryProvider);
 
+      String finalNumber = state.deliveryNoteNumber ?? '';
+      if (state.id == null || state.id!.isEmpty) {
+        final profile = ref.read(userProfileProvider).value ??
+            await ref.read(userProfileProvider.future);
+        final lastNumber = await repo.getLastDeliveryNoteNumber();
+        finalNumber =
+            _generateNextDeliveryNoteNumber(lastNumber, profile: profile);
+        state = state.copyWith(deliveryNoteNumber: finalNumber);
+      }
+
       final noteModel = DeliveryNoteModel(
         id: state.id ?? '',
         userId: '',
-        deliveryNoteNumber: state.deliveryNoteNumber ?? 'NE-PENDIENTE',
+        deliveryNoteNumber: finalNumber,
         clientId: state.clientId!,
         contactId: state.contactId,
         quoteId: state.quoteId,

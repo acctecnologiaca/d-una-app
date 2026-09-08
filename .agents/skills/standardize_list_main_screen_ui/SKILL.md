@@ -1,137 +1,262 @@
 ---
 name: standardize_list_screen_ui
-description: Create a standardized List screen (e.g. Quotes List, Client List) featuring a CustomSearchBar, SortSelector, and FloatingActionButton (Optional).
+description: Estándar oficial y completo para pantallas de listado principal (Cotizaciones, Reportes, Clientes, Inventario). Incluye cabecera dual (normal vs selección múltiple), CustomSearchBar con navegación, SortSelector, PaginatedListView, anuncios reactivos, estados vacíos y FAB extendido.
 ---
 
-# Standardize List Screen UI
+# Standardize Main List Screen UI Skill (Arquetipo 1)
 
-This skill outlines the process for creating or refactoring a List screen to
-adhere to the application's standard UI/UX patterns.
+Esta guía define el estándar arquitectónico y visual mandatorio para construir o refactorizar pantallas de listado principal en D'Una App.
+Referencias canónicas en el proyecto:
+- [`quotes_list_screen.dart`](file:///c:/Users/aleja/flutter_apps/MVP/d_una_app/lib/features/quotes/presentation/quotes_list/screens/quotes_list_screen.dart)
+- [`client_list_screen.dart`](file:///c:/Users/aleja/flutter_apps/MVP/d_una_app/lib/features/clients/presentation/client_list_screen.dart)
 
-## 1. Structure Overview
+---
 
-A standard List Screen consists of:
+## 1. Anatomía Obligatoria de la Pantalla
 
-1. **AppBar / Header**: Title and optional user avatar or actions.
-2. **Search Bar**: `CustomSearchBar` with standardized padding.
-3. **Sort Selector**: `SortSelector` widget for filtering/sorting logic.
-4. **List View**: `ListView.separated` displaying the items.
-5. **Floating Action Button**: For creating new items (optional).
+Una pantalla de listado principal consta de los siguientes bloques ordenados verticalmente dentro de un `Scaffold` con `backgroundColor: colors.surface`:
 
-## 2. Implementation Steps
-
-### Step 0: Theme Access
-
-Ensure you access the `AppTheme` colors at the start of your `build` method to
-maintain consistency.
-
-```dart
-final colors = Theme.of(context).colorScheme;
+```text
+Scaffold (backgroundColor: colors.surface)
+  └── SafeArea
+        └── Column
+              ├── 1. Cabecera Adaptativa (Normal con UserProfileAvatar / Modo Selección)
+              ├── 2. Barra de Búsqueda (CustomSearchBar en modo navegación)
+              ├── 3. Barra de Ordenamiento (SortSelector en Row)
+              ├── 4. Lista Paginada (PaginatedListView dentro de Expanded)
+              │     ├── Items (Cards de la entidad)
+              │     ├── Banners publicitarios (si aplica)
+              │     ├── EmptyListState (si no hay resultados)
+              │     └── FriendlyErrorWidget (si hay fallo de red)
+              └── FloatingActionButton: CustomExtendedFab (oculto en selección)
 ```
 
-### Step 1: Scaffold & Header
+---
 
-Use a `Scaffold` with `backgroundColor: colors.surface`. If using a custom
-header (like in `QuotesListScreen` or `ClientListScreen`), ensure it includes
-the Menu icon, Title, and Profile avatar. If using a standard AppBar (like
-`OwnInventoryScreen`), use `AppBar` with standard styling
-(`backgroundColor: colors.surface`, `elevation: 0`).
+## 2. Implementación Paso a Paso
 
-### Step 2: Search Bar
+### Paso 1: Configurar el Estado Asíncrono, Selección y Ciclo de Vida
+La pantalla debe ser un `ConsumerStatefulWidget` e implementar `WidgetsBindingObserver` para refrescar los datos automáticamente cuando la app pase a primer plano (`resumed`):
 
-Implement the search bar using `CustomSearchBar`. **Standard Padding**:
-`symmetric(horizontal: 16.0, vertical: 8.0)`. `readOnly: true`.
+```dart
+class MyEntityListScreen extends ConsumerStatefulWidget {
+  const MyEntityListScreen({super.key});
+
+  @override
+  ConsumerState<MyEntityListScreen> createState() => _MyEntityListScreenState();
+}
+
+class _MyEntityListScreenState extends ConsumerState<MyEntityListScreen>
+    with WidgetsBindingObserver {
+  SortOption _currentSort = SortOption.recent;
+  final TextEditingController _searchController = TextEditingController();
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed && mounted) {
+      ref.read(paginatedMyEntityProvider.notifier).refresh();
+    }
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    _searchController.dispose();
+    super.dispose();
+  }
+```
+
+---
+
+### Paso 2: Cabecera Adaptativa (Normal vs Selección Múltiple)
+La cabecera debe alternar automáticamente según el estado reactivo `selection.isSelectionMode`:
+
+```dart
+Widget _buildNormalHeader(
+  BuildContext context,
+  WidgetRef ref,
+  AsyncValue<UserProfile?> userProfileAsync,
+) {
+  return Padding(
+    padding: const EdgeInsets.fromLTRB(4, 4, 16, 0),
+    child: Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        IconButton(
+          icon: const Icon(Icons.menu),
+          onPressed: () => Scaffold.of(context).openDrawer(),
+        ),
+        Text(
+          'Mis Cotizaciones',
+          style: Theme.of(context).textTheme.titleLarge?.copyWith(
+            fontSize: 22,
+            fontWeight: FontWeight.w500,
+          ),
+        ),
+        const UserProfileAvatar(),
+      ],
+    ),
+  );
+}
+
+Widget _buildSelectionHeader(
+  BuildContext context,
+  WidgetRef ref,
+  EntitySelectionState selection,
+  List<EntityModel> allItems,
+) {
+  return Padding(
+    padding: const EdgeInsets.fromLTRB(4, 4, 16, 0),
+    child: Row(
+      children: [
+        IconButton(
+          icon: const Icon(Icons.close),
+          onPressed: () => ref.read(entitySelectionProvider.notifier).clearSelection(),
+        ),
+        Text(
+          '${selection.count} Ítem${selection.count > 1 ? 's' : ''}',
+          style: Theme.of(context).textTheme.titleLarge?.copyWith(
+            fontSize: 22,
+            fontWeight: FontWeight.w500,
+          ),
+        ),
+        const Spacer(),
+        IconButton(
+          icon: const Icon(Icons.archive_outlined),
+          tooltip: 'Archivar seleccionados',
+          onPressed: () => EntitySelectionActions.handleBatchArchive(context, ref, selection),
+        ),
+        IconButton(
+          icon: const Icon(Icons.more_vert),
+          onPressed: () => EntitySelectionActions.showActionsSheet(context, ref, selection),
+        ),
+      ],
+    ),
+  );
+}
+```
+
+---
+
+### Paso 3: Barra de Búsqueda en Modo Navegación
+En las pantallas de lista principal, la barra de búsqueda debe tener `readOnly: true` para que al pulsarla navegue a la pantalla dedicada de búsqueda a pantalla completa:
 
 ```dart
 Padding(
   padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
   child: CustomSearchBar(
-    controller: _searchController,
     hintText: 'Buscar...',
-    readOnly: false, // or true if navigating to separate search screen
+    readOnly: true,
     showFilterIcon: true,
-    onFilterTap: () {},
+    onFilterTap: () => context.push('/my-entity/search'),
+    onTap: () => context.push('/my-entity/search'),
   ),
 ),
 const SizedBox(height: 16),
 ```
 
-### Step 3: Sort Selector
+---
 
-Use the standardized `SortSelector` widget. **Standard Padding**:
-`symmetric(horizontal: 16.0, vertical: 8.0)`.
+### Paso 4: Selector de Ordenamiento (`SortSelector`)
+Usa el widget [`SortSelector`](file:///c:/Users/aleja/flutter_apps/MVP/d_una_app/lib/shared/widgets/sort_selector.dart) dentro de una fila (`Row`) alineada a la izquierda con padding estándar:
 
 ```dart
-// Import
-import '../../../../shared/widgets/sort_selector.dart';
-
-// State
-SortOption _currentSort = SortOption.recent;
-
-// Widget
 Padding(
   padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
   child: Row(
     children: [
       SortSelector(
         currentSort: _currentSort,
-        onSortChanged: (val) => setState(() => _currentSort = val),
+        onSortChanged: (val) {
+          setState(() => _currentSort = val);
+          ref.read(paginatedMyEntityProvider.notifier).updateSort(val);
+        },
       ),
     ],
   ),
 ),
 ```
 
-### Step 4: Logic Implementation
+---
 
-Implement the sorting logic in your `build` method or a dedicated provider.
-
-```dart
-// Sort Logic Example
-filteredItems.sort((a, b) {
-  switch (_currentSort) {
-    case SortOption.recent:
-      return b.date.compareTo(a.date);
-    case SortOption.nameAZ:
-      return a.name.compareTo(b.name);
-    case SortOption.nameZA:
-      return b.name.compareTo(a.name);
-  }
-});
-```
-
-### Step 5: List View
-
-Use `ListView.separated` inside an `Expanded` widget. **Separator**:
-`Divider(height: 1, indent: 16, endIndent: 16, color: Colors.transparent)`.
+### Paso 5: Lista Paginada Infinita con `PaginatedListView`
+No uses `ListView.builder` crudo en listas que consulten backend. Utiliza [`PaginatedListView`](file:///c:/Users/aleja/flutter_apps/MVP/d_una_app/lib/shared/widgets/paginated_list_view.dart) dentro de un `Expanded`:
 
 ```dart
 Expanded(
-  child: ListView.separated(
-    itemCount: items.length,
-    separatorBuilder: (context, index) =>
-        const Divider(height: 1, indent: 16, endIndent: 16, color: Colors.transparent),
-    itemBuilder: (context, index) {
-      return _buildItemTile(context, items[index]);
+  child: PaginatedListView<EntityModel>(
+    state: paginatedStateAsync,
+    onLoadMore: () => ref.read(paginatedMyEntityProvider.notifier).loadMore(),
+    onRefresh: () async => ref.read(paginatedMyEntityProvider.notifier).refresh(),
+    itemBuilder: (context, index, item) {
+      // Inserción opcional de banner publicitario usando AdListPositionHelper
+      if (isAdsEnabled && AdListPositionHelper.shouldShowAd(index)) {
+        return Column(
+          children: [
+            EntityCard(
+              entity: item,
+              isSelectionMode: selection.isSelectionMode,
+              isSelected: selection.isSelected(item.id),
+              onTap: () { ... },
+              onLongPress: () => ref.read(entitySelectionProvider.notifier).toggle(item.id),
+            ),
+            const SizedBox(height: 16),
+            AdBannerWidget(...),
+          ],
+        );
+      }
+
+      return EntityCard(
+        entity: item,
+        isSelectionMode: selection.isSelectionMode,
+        isSelected: selection.isSelected(item.id),
+        onTap: selection.isSelectionMode
+            ? () => ref.read(entitySelectionProvider.notifier).toggle(item.id)
+            : () => context.push('/my-entity/view/${item.id}'),
+        onLongPress: () => ref.read(entitySelectionProvider.notifier).toggle(item.id),
+      );
     },
+    emptyState: const EmptyListState(
+      message: 'No hay elementos registrados',
+      icon: Symbols.folder_open,
+    ),
+    errorStateBuilder: (context, error) => FriendlyErrorWidget(
+      error: error,
+      onRetry: () => ref.read(paginatedMyEntityProvider.notifier).refresh(),
+    ),
   ),
-),
+)
 ```
 
-### Step 6: Floating Action Button
+---
 
-If the screen requires creation actions, use `FloatingActionButton.extended`.
+### Paso 6: Floating Action Button Extendido (`CustomExtendedFab`)
+El FAB debe ser del tipo [`CustomExtendedFab`](file:///c:/Users/aleja/flutter_apps/MVP/d_una_app/lib/shared/widgets/custom_extended_fab.dart) y **debe ocultarse dinámicamente (`null`) cuando el modo de selección esté activo**:
 
 ```dart
-floatingActionButton: FloatingActionButton.extended(
-  onPressed: () {},
-  label: const Text('Agregar'),
-  icon: const Icon(Icons.add),
-),
+floatingActionButton: selection.isSelectionMode
+    ? null
+    : CustomExtendedFab(
+        onPressed: () => context.push('/my-entity/create'),
+        icon: Icons.add,
+        label: 'Nuevo',
+      ),
 ```
 
-## 3. Example File Structure
+---
 
-Refer to `lib/features/quotes/presentation/screens/quotes_list_screen.dart` or
-`lib/features/clients/presentation/client_list_screen.dart` for complete
-reference implementations.
+## 3. Checklist de Verificación para Listas Principales
+
+- [ ] ¿El fondo del `Scaffold` es `colors.surface`?
+- [ ] ¿La cabecera cambia a modo selección con el número de elementos y botón de cerrar?
+- [ ] ¿La barra de búsqueda tiene `readOnly: true` y redirige a la ruta `/search`?
+- [ ] ¿El ordenamiento usa el modal `SortSelector`?
+- [ ] ¿La lista utiliza `PaginatedListView` con `emptyState` y `errorStateBuilder`?
+- [ ] ¿El FAB extendido desaparece en modo selección múltiple?
+- [ ] ¿Se implementa `WidgetsBindingObserver` para auto-refrescar en `resumed`?

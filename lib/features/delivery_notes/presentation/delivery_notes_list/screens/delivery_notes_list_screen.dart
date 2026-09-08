@@ -10,7 +10,6 @@ import 'package:d_una_app/shared/widgets/paginated_list_view.dart';
 import 'package:d_una_app/shared/widgets/friendly_error_widget.dart';
 import 'package:d_una_app/features/profile/presentation/providers/profile_provider.dart';
 import '../../../domain/models/delivery_note_model.dart';
-import '../../../domain/models/delivery_note_status.dart';
 import '../providers/delivery_notes_providers.dart';
 import '../widgets/delivery_note_card.dart';
 import '../delivery_note_selection_actions.dart';
@@ -27,7 +26,6 @@ class DeliveryNotesListScreen extends ConsumerStatefulWidget {
 class _DeliveryNotesListScreenState extends ConsumerState<DeliveryNotesListScreen>
     with WidgetsBindingObserver {
   SortOption _currentSort = SortOption.recent;
-  String? _selectedStatusFilter;
   final TextEditingController _searchController = TextEditingController();
 
   @override
@@ -72,16 +70,25 @@ class _DeliveryNotesListScreenState extends ConsumerState<DeliveryNotesListScree
           children: [
             // 1. Header (Normal o Selección)
             selection.isSelectionMode
-                ? _buildSelectionHeader(context, ref, selection, allNotes, isAllArchived)
+                ? _buildSelectionHeader(
+                    context,
+                    ref,
+                    selection,
+                    allNotes,
+                    isAllArchived,
+                  )
                 : _buildNormalHeader(context, ref, userProfileAsync),
-            const SizedBox(height: 12),
+            const SizedBox(height: 16),
 
-            // 2. Barra de Búsqueda
+            // 2. Search Bar
             Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16.0),
+              padding: const EdgeInsets.symmetric(
+                horizontal: 16.0,
+                vertical: 8.0,
+              ),
               child: CustomSearchBar(
                 controller: _searchController,
-                hintText: 'Buscar por cliente, número, producto...',
+                hintText: 'Buscar...',
                 readOnly: true,
                 showFilterIcon: true,
                 onTap: () {
@@ -89,27 +96,14 @@ class _DeliveryNotesListScreenState extends ConsumerState<DeliveryNotesListScree
                 },
               ),
             ),
-            const SizedBox(height: 10),
+            const SizedBox(height: 16),
 
-            // 3. Filtros rápidos de estado (Chips)
-            SizedBox(
-              height: 38,
-              child: ListView(
-                scrollDirection: Axis.horizontal,
-                padding: const EdgeInsets.symmetric(horizontal: 16.0),
-                children: [
-                  _buildStatusFilterChip(null, 'Todos'),
-                  ...DeliveryNoteStatus.values.map(
-                    (s) => _buildStatusFilterChip(s.dbValue, s.label),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 8),
-
-            // 4. Selector de ordenamiento
+            // 3. Sort Selector
             Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 4.0),
+              padding: const EdgeInsets.symmetric(
+                horizontal: 16.0,
+                vertical: 8.0,
+              ),
               child: Row(
                 children: [
                   SortSelector(
@@ -121,19 +115,18 @@ class _DeliveryNotesListScreenState extends ConsumerState<DeliveryNotesListScree
                           .setSortOption(val);
                     },
                     options: const [
-                      SortOption.recent,
-                      SortOption.oldest,
-                      SortOption.nameAZ,
-                      SortOption.nameZA,
                       SortOption.orderNumberDesc,
                       SortOption.orderNumberAsc,
+                      SortOption.recent,
+                      SortOption.nameAZ,
+                      SortOption.nameZA,
                     ],
                   ),
                 ],
               ),
             ),
 
-            // 5. Lista paginada de Notas de Entrega
+            // 4. Lista paginada de Notas de Entrega
             Expanded(
               child: RefreshIndicator(
                 onRefresh: () async {
@@ -146,11 +139,11 @@ class _DeliveryNotesListScreenState extends ConsumerState<DeliveryNotesListScree
                   builder: (context) {
                     final state = paginatedAsync.valueOrNull;
 
-                    if (state == null || state.isInitialLoading) {
+                    if (paginatedAsync.isLoading && state == null) {
                       return const Center(child: CircularProgressIndicator());
                     }
 
-                    if (paginatedAsync.hasError && state.items.isEmpty) {
+                    if (paginatedAsync.hasError && (state == null || state.items.isEmpty)) {
                       return FriendlyErrorWidget(
                         error: paginatedAsync.error!,
                         onRetry: () => ref
@@ -159,25 +152,22 @@ class _DeliveryNotesListScreenState extends ConsumerState<DeliveryNotesListScree
                       );
                     }
 
-                    var items = state.items;
-                    // Filtro en cliente adicional por seguridad
-                    if (_selectedStatusFilter != null) {
-                      items = items
-                          .where((n) => n.status.dbValue == _selectedStatusFilter)
-                          .toList();
+                    if (state == null || state.isInitialLoading) {
+                      return const Center(child: CircularProgressIndicator());
                     }
 
+                    final items = state.items;
+
                     if (items.isEmpty) {
-                      return ListView(
-                        children: [
-                          const SizedBox(height: 60),
-                          EmptyListState(
+                      return SingleChildScrollView(
+                        physics: const AlwaysScrollableScrollPhysics(),
+                        child: SizedBox(
+                          height: MediaQuery.of(context).size.height * 0.5,
+                          child: const EmptyListState(
                             icon: Symbols.list_alt,
-                            message: _selectedStatusFilter == null
-                                ? 'No hay notas de entrega registradas'
-                                : 'No hay notas con el estatus seleccionado',
+                            message: 'No hay notas de entrega registradas',
                           ),
-                        ],
+                        ),
                       );
                     }
 
@@ -188,6 +178,9 @@ class _DeliveryNotesListScreenState extends ConsumerState<DeliveryNotesListScree
                       onLoadMore: () => ref
                           .read(paginatedDeliveryNotesProvider.notifier)
                           .loadMore(),
+                      padding: const EdgeInsets.fromLTRB(0, 8, 0, 120),
+                      separatorBuilder: (context, index) =>
+                          const Divider(height: 0, color: Colors.transparent),
                       itemBuilder: (context, index, note) {
                         final isSelected = selection.isSelected(note.id);
                         return DeliveryNoteCard(
@@ -223,45 +216,16 @@ class _DeliveryNotesListScreenState extends ConsumerState<DeliveryNotesListScree
       floatingActionButton: selection.isSelectionMode
           ? null
           : Padding(
-              padding: const EdgeInsets.only(bottom: 24.0),
+              padding: const EdgeInsets.only(bottom: 40.0),
               child: CustomExtendedFab(
                 onPressed: () {
                   ref.read(createDeliveryNoteProvider.notifier).reset();
                   context.push('/delivery-notes/create');
                 },
-                label: 'Nueva Nota',
+                label: 'Nueva',
                 icon: Icons.add,
               ),
             ),
-    );
-  }
-
-  Widget _buildStatusFilterChip(String? statusDbValue, String label) {
-    final isSelected = _selectedStatusFilter == statusDbValue;
-    final colors = Theme.of(context).colorScheme;
-
-    return Padding(
-      padding: const EdgeInsets.only(right: 8.0),
-      child: FilterChip(
-        label: Text(label),
-        selected: isSelected,
-        showCheckmark: false,
-        backgroundColor: colors.surfaceContainerLowest,
-        selectedColor: colors.primaryContainer,
-        labelStyle: TextStyle(
-          fontSize: 12,
-          fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-          color: isSelected ? colors.onPrimaryContainer : colors.onSurface,
-        ),
-        onSelected: (_) {
-          setState(() {
-            _selectedStatusFilter = statusDbValue;
-          });
-          ref
-              .read(paginatedDeliveryNotesProvider.notifier)
-              .setStatusFilter(statusDbValue);
-        },
-      ),
     );
   }
 
@@ -276,10 +240,13 @@ class _DeliveryNotesListScreenState extends ConsumerState<DeliveryNotesListScree
         mainAxisAlignment: MainAxisAlignment.start,
         children: [
           IconButton(
-            icon: const Icon(Icons.menu),
-            tooltip: 'Menú principal',
+            icon: const Icon(Icons.arrow_back),
             onPressed: () {
-              Scaffold.of(context).openDrawer();
+              if (Navigator.of(context).canPop()) {
+                context.pop();
+              } else {
+                context.go('/quotes');
+              }
             },
           ),
           const SizedBox(width: 8),
@@ -313,7 +280,7 @@ class _DeliveryNotesListScreenState extends ConsumerState<DeliveryNotesListScree
                 .clearSelection(),
           ),
           Text(
-            '${selection.count} ${selection.count == 1 ? "Nota" : "Notas"}',
+            '${selection.count} Ítem${selection.count > 1 ? 's' : ''}',
             style: Theme.of(context).textTheme.titleLarge?.copyWith(
               fontSize: 22,
               fontWeight: FontWeight.w500,

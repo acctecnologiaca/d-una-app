@@ -19,6 +19,7 @@ class CustomLocationPicker extends StatefulWidget {
   final String stateLabel;
   final String cityLabel;
   final double spacing;
+  final bool showCountry;
 
   const CustomLocationPicker({
     super.key,
@@ -36,6 +37,7 @@ class CustomLocationPicker extends StatefulWidget {
     this.stateLabel = 'Estado',
     this.cityLabel = 'Ciudad',
     this.spacing = 16.0,
+    this.showCountry = true,
   });
 
   @override
@@ -223,23 +225,25 @@ class _CustomLocationPickerState extends State<CustomLocationPicker> {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       mainAxisSize: MainAxisSize.min,
       children: [
-        // Country Dropdown
-        CustomDropdown<String>(
-          searchable: true,
-          value: _currentCountry,
-          items: _countries.isNotEmpty
-              ? _countries
-              : [widget.selectedCountry ?? LocationService.defaultCountryName],
-          label: widget.countryLabel,
-          isRequired: widget.isRequired,
-          enabled: isCountryEditable,
-          itemLabelBuilder: (c) => c,
-          onChanged: isCountryEditable ? _onCountrySelected : null,
-          validator: widget.isRequired
-              ? (val) => val == null || val.isEmpty ? 'Requerido' : null
-              : null,
-        ),
-        SizedBox(height: widget.spacing),
+        if (widget.showCountry) ...[
+          // Country Dropdown
+          CustomDropdown<String>(
+            searchable: true,
+            value: _currentCountry,
+            items: _countries.isNotEmpty
+                ? _countries
+                : [widget.selectedCountry ?? LocationService.defaultCountryName],
+            label: widget.countryLabel,
+            isRequired: widget.isRequired,
+            enabled: isCountryEditable,
+            itemLabelBuilder: (c) => c,
+            onChanged: isCountryEditable ? _onCountrySelected : null,
+            validator: widget.isRequired
+                ? (val) => val == null || val.isEmpty ? 'Requerido' : null
+                : null,
+          ),
+          SizedBox(height: widget.spacing),
+        ],
 
         // State Dropdown
         CustomDropdown<String>(

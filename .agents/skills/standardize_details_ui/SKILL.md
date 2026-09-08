@@ -1,133 +1,187 @@
 ---
 name: standardize_details_ui
-description: Create a standardized Details screen (e.g. Product Details, Client Details) featuring a standard AppBar with Delete action, InfoBlock widgets for data display, and a FAB for editing.
+description: Estándar para pantallas de detalle de entidad simple (Arquetipo 4). Incluye AppBar con botón de eliminación preventiva protegida (con CustomDialog.destructive), visualización con InfoBlock.text, FAB de edición y padding dinámico (112px).
 ---
 
-# Standardize Details UI
+# Standardize Entity Details Screen Skill (Arquetipo 4)
 
-This skill guides you through creating a "Details" screen that adheres to D'Una App UI patterns. These screens typically display read-only information about an entity (Product, Client) with options to Edit or Delete.
+Esta guía establece el estándar para pantallas de visualización de solo lectura de una entidad individual (Producto, Servicio, Cliente, Colaborador) con opciones de Editar y Eliminar.
+Referencias canónicas en el proyecto:
+- [`product_details_screen.dart`](file:///c:/Users/aleja/flutter_apps/MVP/d_una_app/lib/features/portfolio/presentation/inventory/screens/product_details/product_details_screen.dart)
+- [`client_details_screen.dart`](file:///c:/Users/aleja/flutter_apps/MVP/d_una_app/lib/features/clients/presentation/client_details_screen.dart)
 
-## 1. Prerequisites
-- **Entity**: The model object to display (passed via constructor or Looked up via ID).
-- **Riverpod**: Usage of `ConsumerStatefulWidget` or `ConsumerWidget` to interact with providers (especially for deletion).
+---
 
-## 2. Screen Structure
-The screen must return a `Scaffold` with specific configurations for the AppBar, Body, and FloatingActionButton.
+## 1. Estructura General
+
+Una pantalla de detalle consta de:
+1. **AppBar:**
+   - Título: `'Detalles de [Entidad]'` (alineado a la izquierda, `titleSpacing: 0`).
+   - Botón de regreso (`Icons.arrow_back`).
+   - Botón de eliminación en `actions`: Protegido mediante comprobación de documentos vinculados (si tiene cotizaciones, reportes o compras asociadas, se deshabilita con un `Tooltip` explicativo).
+2. **Cuerpo Scrollable:**
+   - `SingleChildScrollView` con padding inferior dinámico:
+     - Si solo hay FAB de editar: **`bottomPadding: 112.0 px`**.
+     - Si hay 2 FABs (ej. WhatsApp + Editar): **`bottomPadding: 184.0 px`**.
+3. **Bloques de Datos:**
+   - Cabecera con imagen o avatar si aplica.
+   - Datos clave-valor organizados con [`InfoBlock.text(...)`](file:///c:/Users/aleja/flutter_apps/MVP/d_una_app/lib/shared/widgets/info_block.dart).
+   - Badges de estatus con [`UomStatusBadge`](file:///c:/Users/aleja/flutter_apps/MVP/d_una_app/lib/shared/widgets/uom_status_badge.dart) o [`StatusBadge`](file:///c:/Users/aleja/flutter_apps/MVP/d_una_app/lib/shared/widgets/status_badge.dart).
+4. **FAB de Edición:**
+   - Botón flotante con icono `Icons.edit` y fondo `colors.primaryContainer`.
+
+---
+
+## 2. Implementación Paso a Paso
 
 ```dart
-class MyEntityDetailsScreen extends ConsumerWidget {
+class MyEntityDetailsScreen extends ConsumerStatefulWidget {
   final MyEntity entity;
-  const MyEntityDetailsScreen({Key? key, required this.entity}) : super(key: key);
+  const MyEntityDetailsScreen({super.key, required this.entity});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<MyEntityDetailsScreen> createState() => _MyEntityDetailsScreenState();
+}
+
+class _MyEntityDetailsScreenState extends ConsumerState<MyEntityDetailsScreen> {
+  @override
+  Widget build(BuildContext context) {
     final colors = Theme.of(context).colorScheme;
     final textTheme = Theme.of(context).textTheme;
 
+    // 1. Sincronización reactiva: obtener la versión fresca de la entidad desde el provider
+    final listAsync = ref.watch(myEntityListProvider);
+    final entity = listAsync.valueOrNull?.firstWhere(
+          (e) => e.id == widget.entity.id,
+          orElse: () => widget.entity,
+        ) ?? widget.entity;
+
+    // 2. Comprobación preventiva de borrado (ejemplo: si tiene documentos asociados)
+    final hasLinkedDocsAsync = ref.watch(entityHasLinkedDocsProvider(entity.id));
+    final hasLinkedDocs = hasLinkedDocsAsync.value ?? true;
+    final canDelete = !hasLinkedDocs && !hasLinkedDocsAsync.isLoading;
+
     return Scaffold(
-      appBar: _buildAppBar(context, ref, colors),
-      body: _buildBody(context, colors),
-      floatingActionButton: _buildEditFab(context, colors),
+      appBar: AppBar(
+        title: Text('Detalles de ${entity.displayName}'),
+        centerTitle: false,
+        backgroundColor: colors.surface,
+        foregroundColor: colors.onSurface,
+        elevation: 0,
+        titleSpacing: 0,
+        titleTextStyle: textTheme.titleLarge?.copyWith(
+          fontWeight: FontWeight.w500,
+          fontSize: 20,
+          color: colors.onSurface,
+        ),
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back),
+          onPressed: () => context.pop(),
+        ),
+        actions: [
+          Tooltip(
+            message: canDelete
+                ? 'Eliminar registro'
+                : 'No se puede eliminar: tiene documentos asociados',
+            child: IconButton(
+              icon: Icon(
+                Icons.delete_outline,
+                color: canDelete
+                    ? colors.onSurface
+                    : colors.onSurface.withValues(alpha: 0.38),
+              ),
+              onPressed: canDelete
+                  ? () async {
+                      final confirm = await CustomDialog.show<bool>(
+                        context: context,
+                        dialog: CustomDialog.destructive(
+                          title: 'Eliminar Registro',
+                          contentText: '¿Estás seguro de que deseas eliminar este registro permanentemente?',
+                          actions: [
+                            TextButton(
+                              onPressed: () => Navigator.of(context, rootNavigator: true).pop(false),
+                              child: const Text('Cancelar'),
+                            ),
+                            FilledButton(
+                              style: FilledButton.styleFrom(backgroundColor: colors.error),
+                              onPressed: () => Navigator.of(context, rootNavigator: true).pop(true),
+                              child: const Text('Eliminar'),
+                            ),
+                          ],
+                        ),
+                      );
+
+                      if (confirm == true) {
+                        await ref.read(myEntityListProvider.notifier).delete(entity.id);
+                        if (context.mounted) {
+                          AppToast.showSuccess(context, 'Registro eliminado exitosamente');
+                          context.pop();
+                        }
+                      }
+                    }
+                  : null,
+            ),
+          ),
+        ],
+      ),
+      body: SingleChildScrollView(
+        // Padding dinámico para evitar que el FAB tape el contenido
+        padding: const EdgeInsets.only(
+          left: 16,
+          right: 16,
+          top: 24,
+          bottom: 112.0, // Regla matemática de 1 FAB
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Título de la entidad
+            Text(
+              entity.name,
+              style: textTheme.headlineSmall?.copyWith(
+                fontWeight: FontWeight.bold,
+                color: colors.onSurface,
+              ),
+            ),
+            const SizedBox(height: 16),
+
+            // Campos clave-valor organizados con InfoBlock
+            InfoBlock.text(
+              icon: Symbols.category,
+              label: 'Categoría',
+              value: entity.categoryName,
+            ),
+            const SizedBox(height: 16),
+            InfoBlock.text(
+              icon: Symbols.calendar_today,
+              label: 'Fecha de registro',
+              value: entity.formattedDate,
+            ),
+            const SizedBox(height: 16),
+            InfoBlock.text(
+              icon: Symbols.notes,
+              label: 'Observaciones',
+              value: entity.notes.isEmpty ? 'Sin observaciones' : entity.notes,
+            ),
+          ],
+        ),
+      ),
+      floatingActionButton: FloatingActionButton(
+        onPressed: () => context.push('/my-entity/edit/${entity.id}', extra: entity),
+        backgroundColor: colors.primaryContainer,
+        child: Icon(Icons.edit, color: colors.onPrimaryContainer),
+      ),
     );
   }
 }
 ```
 
-## 3. Standard Components
+---
 
-### A. AppBar & Delete Action
-The AppBar should have:
--   **Title**: "Detalles del [Entidad]" (e.g., "Detalles del cliente").
--   **Leading**: Standard Back button.
--   **Actions**: A `delete_outline` icon button that triggers a **Confirmation Dialog**.
+## 3. Checklist de Verificación para Detalles de Entidad
 
-**Delete Logic Pattern**:
-1.  Show `AlertDialog` confirming action ("¿Estás seguro...?").
-2.  If confirmed (`true`), call the provider's `delete` method.
-3.  On success, `context.pop()`.
-
-```dart
-IconButton(
-  icon: const Icon(Icons.delete_outline),
-  onPressed: () async {
-    final confirm = await showDialog<bool>(...); // Standard Delete Dialog
-    if (confirm == true) {
-      await ref.read(myEntityProvider.notifier).deleteEntity(entity.id);
-      if (context.mounted) context.pop();
-    }
-  },
-)
-```
-
-### B. Floating Action Buttons (FABs) & Dynamic Bottom Padding
-Used for primary actions (e.g., Edit, WhatsApp Contact, Finalize/Register Purchase).
--   **Icon**: `Icons.edit` (for Edit), WhatsApp icon, etc.
--   **Color**: `colors.primaryContainer` (background), `colors.onPrimaryContainer` (icon).
--   **Position**: Bottom right (default), with `bottom: 40.0` margin when embedded in a Scaffold with Bottom Navigation or tabs.
--   **Stacked FABs**: When showing 2 FABs (e.g., WhatsApp + Edit or WhatsApp + Finalize), arrange them in a `Column` with `MainAxisSize.min` and `const SizedBox(height: 16)` separation.
-
-#### 📐 Dynamic Bottom Padding Rule for Scroll Views
-To ensure that single or multiple stacked FABs never obscure content at the bottom of the scroll view (`SingleChildScrollView` or `ListView`), compute and apply dynamic bottom padding:
-
-- **2 FABs active** ➔ **`184.0 px`** ($40\text{px base} + 56\text{px FAB 1} + 16\text{px gap} + 56\text{px FAB 2} + 16\text{px respiro}$).
-- **1 FAB active** ➔ **`112.0 px`** ($40\text{px base} + 56\text{px FAB} + 16\text{px respiro}$).
-- **0 FABs active** ➔ **`24.0 px`** (Standard clean edge padding).
-
-```dart
-// Example dynamic calculation in Details Screen:
-final hasTwoFabs = hasAction1 && hasAction2;
-final hasOneFab = hasAction1 ^ hasAction2;
-final double bottomPadding = hasTwoFabs ? 184.0 : (hasOneFab ? 112.0 : 24.0);
-
-// In the Tab/Body scroll view:
-SingleChildScrollView(
-  padding: EdgeInsets.only(
-    left: 16,
-    right: 16,
-    top: 24,
-    bottom: bottomPadding,
-  ),
-  child: ...
-)
-```
-
-```dart
-FloatingActionButton(
-  onPressed: () => context.push('/path/to/edit', extra: entity),
-  backgroundColor: colors.primaryContainer,
-  child: Icon(Icons.edit, color: colors.onPrimaryContainer),
-)
-```
-
-### C. Body Content & InfoBlocks
-The body is typically a `SingleChildScrollView` containing a `Column`.
-
-1.  **Header/Image**:
-    -   If the entity has an image, display it in a Circular container (128x128) using `CachedNetworkImage`.
-    -   Display primary identifier (Name) in `headline` style.
-    -   Display secondary identifier (Brand/Category) in `bodyMedium`.
-
-2.  **Data Fields (InfoBlocks)**:
-    -   Use the `InfoBlock` widget (`shared/widgets/info_block.dart`) for all data fields.
-    -   **InfoBlock.text**: For simple key-value pairs.
-    -   **InfoBlock**: For complex content (custom rows, lists).
-    -   **Icons**: Use `material_symbols_icons` or standard `Icons` consistent with the field type (e.g., `Symbols.category` for Category, `Icons.email` for Email).
-
-```dart
-InfoBlock.text(
-  icon: Symbols.category,
-  label: 'Categoría',
-  value: entity.category,
-),
-```
-
-### D. Reactive Updates (Optional but Recommended)
-If the screen might be visible while the underlying data changes (e.g., returning from Edit screen):
--   Watch the list provider in `build`.
--   Look up the current entity by ID.
--   Fallback to `widget.entity` if not found (handling the "gap" before the list updates or if deleted).
-
-## 4. Colors & Theming
--   **Background**: `colors.surface`.
--   **Text**: `colors.onSurface` for values, `colors.onSurfaceVariant` for labels/icons.
--   **Dividers/Borders**: `colors.outlineVariant`.
+- [ ] ¿El AppBar tiene botón de eliminar protegido con validación preventiva de vínculos?
+- [ ] ¿La confirmación de borrado utiliza `CustomDialog.destructive` con botón rojo?
+- [ ] ¿Los campos de datos informativos utilizan `InfoBlock.text`?
+- [ ] ¿El padding inferior del scroll view aplica la fórmula dinámica (`112.0 px` con 1 FAB)?
+- [ ] ¿El FAB de editar utiliza `colors.primaryContainer` y `colors.onPrimaryContainer`?

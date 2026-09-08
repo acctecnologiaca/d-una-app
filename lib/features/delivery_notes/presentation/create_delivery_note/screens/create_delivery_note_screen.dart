@@ -5,16 +5,24 @@ import 'package:d_una_app/shared/widgets/standard_app_bar.dart';
 import 'package:d_una_app/shared/widgets/draft_toast.dart';
 import 'package:d_una_app/shared/widgets/app_toast.dart';
 import 'package:d_una_app/shared/widgets/custom_extended_fab.dart';
+import 'package:d_una_app/shared/widgets/custom_action_sheet.dart';
+import 'package:d_una_app/shared/widgets/bottom_sheet_action_item.dart';
 import 'package:d_una_app/features/quotes/presentation/quotes_list/providers/quotes_provider.dart';
 import 'package:d_una_app/features/supplier_orders/presentation/supplier_orders_list/providers/supplier_orders_providers.dart';
 import '../../../data/repositories/supabase_delivery_notes_repository.dart';
+import '../../../domain/models/delivery_note_model.dart';
+import '../../view_delivery_note/widgets/confirm_delivery_note_reception_dialog.dart';
+import '../../view_delivery_note/widgets/send_delivery_note_whatsapp_sheet.dart';
+import '../../view_delivery_note/widgets/send_delivery_note_email_sheet.dart';
 import '../providers/create_delivery_note_provider.dart';
 import '../tabs/delivery_note_details_tab.dart';
-import '../tabs/delivery_note_delivery_tab.dart';
+import '../tabs/delivery_note_client_tab.dart';
 import '../tabs/delivery_note_items_tab.dart';
-import '../tabs/delivery_note_serials_tab.dart';
-import '../tabs/delivery_note_conditions_tab.dart';
-import '../tabs/delivery_note_reception_tab.dart';
+import '../tabs/delivery_note_delivery_tab.dart';
+import '../tabs/delivery_note_observations_tab.dart';
+import '../tabs/delivery_note_summary_tab.dart';
+import 'select_delivery_note_product_screen.dart';
+import 'select_delivery_note_observation_screen.dart';
 
 class CreateDeliveryNoteScreen extends ConsumerStatefulWidget {
   final String? noteId;
@@ -33,7 +41,8 @@ class CreateDeliveryNoteScreen extends ConsumerStatefulWidget {
       _CreateDeliveryNoteScreenState();
 }
 
-class _CreateDeliveryNoteScreenState extends ConsumerState<CreateDeliveryNoteScreen>
+class _CreateDeliveryNoteScreenState
+    extends ConsumerState<CreateDeliveryNoteScreen>
     with SingleTickerProviderStateMixin {
   late final TabController _tabController;
   late final AppLifecycleListener _lifecycleListener;
@@ -49,7 +58,10 @@ class _CreateDeliveryNoteScreenState extends ConsumerState<CreateDeliveryNoteScr
         setState(() {});
         ref
             .read(createDeliveryNoteProvider.notifier)
-            .autoSaveDraft(tabIndex: _tabController.index, noteId: widget.noteId);
+            .autoSaveDraft(
+              tabIndex: _tabController.index,
+              noteId: widget.noteId,
+            );
       }
     });
 
@@ -57,12 +69,18 @@ class _CreateDeliveryNoteScreenState extends ConsumerState<CreateDeliveryNoteScr
       onPause: () {
         ref
             .read(createDeliveryNoteProvider.notifier)
-            .autoSaveDraft(tabIndex: _tabController.index, noteId: widget.noteId);
+            .autoSaveDraft(
+              tabIndex: _tabController.index,
+              noteId: widget.noteId,
+            );
       },
       onInactive: () {
         ref
             .read(createDeliveryNoteProvider.notifier)
-            .autoSaveDraft(tabIndex: _tabController.index, noteId: widget.noteId);
+            .autoSaveDraft(
+              tabIndex: _tabController.index,
+              noteId: widget.noteId,
+            );
       },
     );
 
@@ -126,7 +144,9 @@ class _CreateDeliveryNoteScreenState extends ConsumerState<CreateDeliveryNoteScr
     if (widget.supplierOrderId != null && widget.supplierOrderId!.isNotEmpty) {
       try {
         final ocRepo = ref.read(supplierOrdersRepositoryProvider);
-        final details = await ocRepo.getSupplierOrderDetails(widget.supplierOrderId!);
+        final details = await ocRepo.getSupplierOrderDetails(
+          widget.supplierOrderId!,
+        );
         if (mounted) {
           notifier.loadFromSupplierOrder(details.order, details.items);
           return;
@@ -187,7 +207,7 @@ class _CreateDeliveryNoteScreenState extends ConsumerState<CreateDeliveryNoteScr
 
     if (!state.isDetailsValid) {
       AppToast.error(context, message: 'Debe seleccionar un cliente.');
-      _tabController.animateTo(0);
+      _tabController.animateTo(1);
       return;
     }
 
@@ -197,17 +217,83 @@ class _CreateDeliveryNoteScreenState extends ConsumerState<CreateDeliveryNoteScr
       return;
     }
 
+    if (!state.isDeliveryValid) {
+      AppToast.error(
+        context,
+        message: 'Por favor complete la información de despacho.',
+      );
+      _tabController.animateTo(3);
+      return;
+    }
+
     try {
       final savedNote = await notifier.saveDeliveryNote();
       if (mounted) {
-        AppToast.success(context, message: 'Nota de entrega guardada exitosamente.');
-        context.pushReplacement('/delivery_notes/view/${savedNote.id}');
+        AppToast.success(
+          context,
+          message: 'Nota de entrega guardada exitosamente.',
+        );
+        _showPostSaveOptions(savedNote);
       }
     } catch (e) {
       if (mounted) {
         AppToast.error(context, message: 'Error: $e');
       }
     }
+  }
+
+  void _showPostSaveOptions(DeliveryNoteModel savedNote) {
+    CustomActionSheet.show(
+      context: context,
+      title: 'Nota ${savedNote.deliveryNoteNumber} guardada',
+      actions: [
+        BottomSheetActionItem(
+          icon: Icons.draw_outlined,
+          label: 'Registrar recepción / firma',
+          onTap: () async {
+            context.pop();
+            await ConfirmDeliveryNoteReceptionDialog.show(
+              context,
+              ref,
+              savedNote,
+            );
+            if (mounted) {
+              context.pushReplacement('/delivery_notes/view/${savedNote.id}');
+            }
+          },
+        ),
+        BottomSheetActionItem(
+          icon: Icons.chat_bubble_outline,
+          label: 'Enviar por WhatsApp',
+          onTap: () async {
+            context.pop();
+            await SendDeliveryNoteWhatsAppSheet.show(context, savedNote);
+            if (mounted) {
+              context.pushReplacement('/delivery_notes/view/${savedNote.id}');
+            }
+          },
+        ),
+        BottomSheetActionItem(
+          icon: Icons.email_outlined,
+          label: 'Enviar por correo',
+          onTap: () async {
+            context.pop();
+            await SendDeliveryNoteEmailSheet.show(context, savedNote);
+            if (mounted) {
+              context.pushReplacement('/delivery_notes/view/${savedNote.id}');
+            }
+          },
+        ),
+        BottomSheetActionItem(
+          icon: Icons.visibility_outlined,
+          label: 'Ver nota de entrega',
+          onTap: () {
+            context.pop();
+            context.pushReplacement('/delivery_notes/view/${savedNote.id}');
+          },
+        ),
+      ],
+    );
   }
 
   @override
@@ -262,33 +348,22 @@ class _CreateDeliveryNoteScreenState extends ConsumerState<CreateDeliveryNoteScr
             labelStyle: const TextStyle(fontWeight: FontWeight.bold),
             tabs: [
               const Tab(text: 'Detalles'),
-              const Tab(text: 'Despacho'),
-              Tab(
-                text: state.items.isNotEmpty
-                    ? 'Productos (${state.items.length})'
-                    : 'Productos',
-              ),
+              const Tab(text: 'Cliente'),
               Tab(
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    const Text('Seriales'),
+                    const Text('Productos'),
                     if (state.hasMissingSerials) ...[
-                      const SizedBox(width: 4),
-                      Container(
-                        width: 6,
-                        height: 6,
-                        decoration: BoxDecoration(
-                          color: Colors.amber.shade800,
-                          shape: BoxShape.circle,
-                        ),
-                      ),
+                      const SizedBox(width: 6),
+                      Badge(backgroundColor: colors.error, smallSize: 8),
                     ],
                   ],
                 ),
               ),
-              const Tab(text: 'Condiciones'),
-              const Tab(text: 'Recepción'),
+              const Tab(text: 'Despacho'),
+              const Tab(text: 'Observaciones'),
+              const Tab(text: 'Resumen'),
             ],
           ),
         ),
@@ -296,26 +371,67 @@ class _CreateDeliveryNoteScreenState extends ConsumerState<CreateDeliveryNoteScr
           controller: _tabController,
           children: [
             const DeliveryNoteDetailsTab(),
+            const DeliveryNoteClientTab(),
+            const DeliveryNoteItemsTab(),
             const DeliveryNoteDeliveryTab(),
-            DeliveryNoteItemsTab(
-              onManageSerialsPressed: () {
-                _tabController.animateTo(3); // Go to serials tab
-              },
+            const DeliveryNoteObservationsTab(),
+            DeliveryNoteSummaryTab(
+              onNavigateToTab: (index) => _tabController.animateTo(index),
             ),
-            const DeliveryNoteSerialsTab(),
-            const DeliveryNoteConditionsTab(),
-            const DeliveryNoteReceptionTab(),
           ],
         ),
-        floatingActionButton: _tabController.index == 5
-            ? CustomExtendedFab(
-                label: state.isLoading ? 'Guardando...' : 'Guardar Nota',
-                icon: state.isLoading ? Icons.hourglass_empty : Icons.check,
-                isEnabled: !state.isLoading,
-                onPressed: _saveDeliveryNote,
-              )
-            : null,
+        floatingActionButton: _buildFab(state),
       ),
     );
+  }
+
+  Widget? _buildFab(DeliveryNoteCreateState state) {
+    if (_tabController.index == 2) {
+      return Padding(
+        padding: const EdgeInsets.only(bottom: 40.0),
+        child: CustomExtendedFab(
+          label: 'Agregar',
+          icon: Icons.add,
+          onPressed: () {
+            Navigator.of(context).push(
+              MaterialPageRoute(
+                builder: (_) => const SelectDeliveryNoteProductScreen(),
+              ),
+            );
+          },
+        ),
+      );
+    }
+
+    if (_tabController.index == 4) {
+      return Padding(
+        padding: const EdgeInsets.only(bottom: 40.0),
+        child: CustomExtendedFab(
+          label: 'Agregar',
+          icon: Icons.add,
+          onPressed: () {
+            Navigator.of(context).push(
+              MaterialPageRoute(
+                builder: (_) => const SelectDeliveryNoteObservationScreen(),
+              ),
+            );
+          },
+        ),
+      );
+    }
+
+    if (_tabController.index == 5) {
+      return Padding(
+        padding: const EdgeInsets.only(bottom: 40.0),
+        child: CustomExtendedFab(
+          label: state.isLoading ? 'Guardando...' : 'Guardar',
+          icon: state.isLoading ? Icons.hourglass_empty : Icons.save,
+          isEnabled: !state.isLoading,
+          onPressed: _saveDeliveryNote,
+        ),
+      );
+    }
+
+    return null;
   }
 }

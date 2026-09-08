@@ -24,7 +24,7 @@ class CustomTextField extends StatefulWidget {
   final bool autofocus;
   final String? errorText;
   final int? maxLength;
-
+  final ValueChanged<String>? onSubmitted;
 
   const CustomTextField({
     super.key,
@@ -50,6 +50,7 @@ class CustomTextField extends StatefulWidget {
     this.autofocus = false,
     this.errorText,
     this.maxLength,
+    this.onSubmitted,
   });
 
   @override
@@ -98,16 +99,18 @@ class _CustomTextFieldState extends State<CustomTextField> {
       _updateClearButtonVisibility();
     }
     if (widget.focusNode != oldWidget.focusNode) {
-      (oldWidget.focusNode ?? _internalFocusNode)
-          ?.removeListener(_handleFocusChange);
+      (oldWidget.focusNode ?? _internalFocusNode)?.removeListener(
+        _handleFocusChange,
+      );
       _effectiveFocusNode.addListener(_handleFocusChange);
     }
   }
 
   @override
   void dispose() {
-    (widget.focusNode ?? _internalFocusNode)
-        ?.removeListener(_handleFocusChange);
+    (widget.focusNode ?? _internalFocusNode)?.removeListener(
+      _handleFocusChange,
+    );
     _internalFocusNode?.dispose();
     _controller.removeListener(_updateClearButtonVisibility);
     // If we created a local controller, we should dispose it.
@@ -163,6 +166,7 @@ class _CustomTextFieldState extends State<CustomTextField> {
           minLines: widget.minLines,
           validator: widget.validator,
           onChanged: widget.onChanged,
+          onFieldSubmitted: widget.onSubmitted,
           readOnly: widget.readOnly,
           enabled: widget.enabled,
           onTap: () {
@@ -172,8 +176,7 @@ class _CustomTextFieldState extends State<CustomTextField> {
                 final offset = _controller.selection.extentOffset >= 0
                     ? _controller.selection.extentOffset
                     : _controller.text.length;
-                _controller.selection =
-                    TextSelection.collapsed(offset: offset);
+                _controller.selection = TextSelection.collapsed(offset: offset);
               }
             });
           },

@@ -27,11 +27,15 @@ class DeliveryNoteCard extends StatelessWidget {
     final textTheme = Theme.of(context).textTheme;
     final dateFormat = DateFormat('dd/MM/yyyy');
 
+    final hasWarning = note.hasMissingSerials;
+
     return Container(
       decoration: BoxDecoration(
         color: isSelected
             ? colors.primaryContainer.withValues(alpha: 0.3)
-            : null,
+            : (hasWarning
+                ? colors.errorContainer.withValues(alpha: 0.8)
+                : null),
       ),
       child: StandardListItem(
         padding: const EdgeInsets.symmetric(vertical: 12.0, horizontal: 16.0),
@@ -100,42 +104,46 @@ class DeliveryNoteCard extends StatelessWidget {
                 color: colors.onSurface,
               ),
             ),
-            const SizedBox(height: 6),
-            if (isSelectionMode)
-              Checkbox(
-                value: isSelected,
-                onChanged: (_) => onTap?.call(),
-              )
-            else
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                decoration: BoxDecoration(
-                  color: note.status.statusColor(colors).withValues(alpha: 0.12),
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(
-                    color: note.status.statusColor(colors).withValues(alpha: 0.5),
-                  ),
-                ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(
-                      note.status.iconData,
-                      size: 13,
-                      color: note.status.statusColor(colors),
+            const SizedBox(height: 8),
+            isSelectionMode
+                ? Checkbox(
+                    value: isSelected,
+                    onChanged: (_) => onTap?.call(),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(4),
                     ),
-                    const SizedBox(width: 4),
-                    Text(
-                      note.status.label,
-                      style: TextStyle(
-                        fontSize: 11,
-                        fontWeight: FontWeight.bold,
-                        color: note.status.statusColor(colors),
+                  )
+                : Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      if (note.hasMissingSerials) ...[
+                        Tooltip(
+                          message: 'Seriales pendientes por asignar',
+                          child: Icon(
+                            Icons.warning_amber_rounded,
+                            size: 20,
+                            color: colors.error,
+                          ),
+                        ),
+                        const SizedBox(width: 4),
+                      ],
+                      Tooltip(
+                        message: note.status.label,
+                        child: Image.asset(
+                          note.status.iconPath,
+                          width: 24,
+                          height: 24,
+                          errorBuilder: (context, error, stackTrace) {
+                            return Icon(
+                              note.status.iconData,
+                              size: 24,
+                              color: note.status.statusColor(colors),
+                            );
+                          },
+                        ),
                       ),
-                    ),
-                  ],
-                ),
-              ),
+                    ],
+                  ),
           ],
         ),
       ),

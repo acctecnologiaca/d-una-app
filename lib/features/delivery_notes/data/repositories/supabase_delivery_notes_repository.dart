@@ -15,9 +15,9 @@ class SupabaseDeliveryNotesRepository implements DeliveryNotesRepository {
 
   static const _selectQuery = '''
     *,
-    clients(name, tax_id, identification_id),
-    contacts(name, phone, email),
-    shipping_companies(name),
+    clients(*),
+    contacts(*),
+    shipping_companies(name, legal_name),
     delivery_note_items(
       *,
       delivery_note_serials(*)
@@ -95,10 +95,11 @@ class SupabaseDeliveryNotesRepository implements DeliveryNotesRepository {
       query = query.or('delivery_note_number.ilike.%$q%,notes.ilike.%$q%,client_po_number.ilike.%$q%');
     }
 
-    final response = await query
-        .order(orderBy, ascending: ascending)
-        .order('created_at', ascending: false)
-        .range(offset, offset + limit - 1);
+    var orderedQuery = query.order(orderBy, ascending: ascending);
+    if (orderBy != 'created_at') {
+      orderedQuery = orderedQuery.order('created_at', ascending: false);
+    }
+    final response = await orderedQuery.range(offset, offset + limit - 1);
 
     return (response as List)
         .map((json) => DeliveryNoteModel.fromJson(json as Map<String, dynamic>))
