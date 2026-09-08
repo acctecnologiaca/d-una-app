@@ -40,7 +40,7 @@ jobs:
           sed -i '/org.gradle.java.home/d' android/gradle.properties || true
 
       - name: Build Android APK
-        run: flutter build apk --release --android-skip-build-dependency-validation
+        run: flutter build apk --release --android-skip-build-dependency-validation --build-number=${{ github.run_number }}
 
       - name: Upload to Firebase App Distribution
         uses: wzieba/Firebase-Distribution-Github-Action@v1
