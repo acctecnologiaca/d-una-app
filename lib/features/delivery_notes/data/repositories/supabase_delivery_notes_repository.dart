@@ -115,6 +115,19 @@ class SupabaseDeliveryNotesRepository implements DeliveryNotesRepository {
     headerData.remove('id');
     headerData['user_id'] = currentUserId;
 
+    // Sanitize UUID fields so empty strings are never sent to Supabase
+    for (final field in [
+      'client_id',
+      'contact_id',
+      'quote_id',
+      'supplier_order_id',
+      'shipping_company_id',
+    ]) {
+      if (headerData.containsKey(field)) {
+        headerData[field] = _cleanUuid(headerData[field] as String?);
+      }
+    }
+
     if (note.deliveryNoteNumber.isEmpty ||
         note.deliveryNoteNumber == 'NE-PENDIENTE') {
       headerData.remove('delivery_note_number'); // Let DB trigger generate it
@@ -137,6 +150,9 @@ class SupabaseDeliveryNotesRepository implements DeliveryNotesRepository {
       itemData.remove('id');
       itemData['delivery_note_id'] = newId;
       itemData['order_index'] = i;
+      if (itemData.containsKey('product_id')) {
+        itemData['product_id'] = _cleanUuid(itemData['product_id'] as String?);
+      }
 
       final itemRes = await _supabase
           .from('delivery_note_items')
@@ -148,8 +164,8 @@ class SupabaseDeliveryNotesRepository implements DeliveryNotesRepository {
       if (item.serials.isNotEmpty) {
         final serialsToInsert = item.serials.map((s) => {
           'delivery_note_item_id': newItemId,
-          'product_id': item.productId,
-          if (s.productSerialId != null) 'product_serial_id': s.productSerialId,
+          if (_cleanUuid(item.productId) != null) 'product_id': _cleanUuid(item.productId),
+          if (_cleanUuid(s.productSerialId) != null) 'product_serial_id': _cleanUuid(s.productSerialId),
           'serial_number': s.serialNumber,
         }).toList();
 
@@ -165,6 +181,9 @@ class SupabaseDeliveryNotesRepository implements DeliveryNotesRepository {
         oData.remove('id');
         oData['delivery_note_id'] = newId;
         oData['order_index'] = e.key;
+        if (oData.containsKey('observation_id')) {
+          oData['observation_id'] = _cleanUuid(oData['observation_id'] as String?);
+        }
         return oData;
       }).toList();
 
@@ -185,8 +204,23 @@ class SupabaseDeliveryNotesRepository implements DeliveryNotesRepository {
 
     final headerData = note.toJson();
     headerData.remove('id');
+    headerData.remove('user_id');
+    headerData.remove('created_at');
     headerData['has_missing_serials'] = note.items.any((i) => i.hasMissingSerials);
     headerData['updated_at'] = DateTime.now().toIso8601String();
+
+    // Sanitize UUID fields so empty strings are never sent to Supabase
+    for (final field in [
+      'client_id',
+      'contact_id',
+      'quote_id',
+      'supplier_order_id',
+      'shipping_company_id',
+    ]) {
+      if (headerData.containsKey(field)) {
+        headerData[field] = _cleanUuid(headerData[field] as String?);
+      }
+    }
 
     await _supabase
         .from('delivery_notes')
@@ -211,6 +245,9 @@ class SupabaseDeliveryNotesRepository implements DeliveryNotesRepository {
       itemData.remove('id');
       itemData['delivery_note_id'] = note.id;
       itemData['order_index'] = i;
+      if (itemData.containsKey('product_id')) {
+        itemData['product_id'] = _cleanUuid(itemData['product_id'] as String?);
+      }
 
       final itemRes = await _supabase
           .from('delivery_note_items')
@@ -222,8 +259,8 @@ class SupabaseDeliveryNotesRepository implements DeliveryNotesRepository {
       if (item.serials.isNotEmpty) {
         final serialsToInsert = item.serials.map((s) => {
           'delivery_note_item_id': newItemId,
-          'product_id': item.productId,
-          if (s.productSerialId != null) 'product_serial_id': s.productSerialId,
+          if (_cleanUuid(item.productId) != null) 'product_id': _cleanUuid(item.productId),
+          if (_cleanUuid(s.productSerialId) != null) 'product_serial_id': _cleanUuid(s.productSerialId),
           'serial_number': s.serialNumber,
         }).toList();
 
@@ -239,6 +276,9 @@ class SupabaseDeliveryNotesRepository implements DeliveryNotesRepository {
         oData.remove('id');
         oData['delivery_note_id'] = note.id;
         oData['order_index'] = e.key;
+        if (oData.containsKey('observation_id')) {
+          oData['observation_id'] = _cleanUuid(oData['observation_id'] as String?);
+        }
         return oData;
       }).toList();
 
@@ -271,6 +311,19 @@ class SupabaseDeliveryNotesRepository implements DeliveryNotesRepository {
 
   @override
   Future<void> updateStatus(String id, DeliveryNoteStatus status) async {
+    if (status == DeliveryNoteStatus.finalized) {
+      final noteData = await _supabase
+          .from('delivery_notes')
+          .select('has_missing_serials')
+          .eq('id', id)
+          .maybeSingle();
+      if (noteData != null && noteData['has_missing_serials'] == true) {
+        throw Exception(
+          'No se puede finalizar la nota de entrega porque faltan seriales por asignar.',
+        );
+      }
+    }
+
     await _supabase.from('delivery_notes').update({
       'status': status.dbValue,
       'updated_at': DateTime.now().toIso8601String(),
@@ -304,6 +357,21 @@ class SupabaseDeliveryNotesRepository implements DeliveryNotesRepository {
   @override
   Future<void> batchUpdateStatus(List<String> ids, DeliveryNoteStatus status) async {
     if (ids.isEmpty) return;
+    if (status == DeliveryNoteStatus.finalized) {
+      final res = await _supabase
+          .from('delivery_notes')
+          .select('id, has_missing_serials')
+          .inFilter('id', ids);
+      final hasMissing = (res as List<dynamic>).any(
+        (n) => n['has_missing_serials'] == true,
+      );
+      if (hasMissing) {
+        throw Exception(
+          'No se pueden finalizar las notas de entrega porque una o más notas tienen seriales pendientes por asignar.',
+        );
+      }
+    }
+
     await _supabase.from('delivery_notes').update({
       'status': status.dbValue,
       'updated_at': DateTime.now().toIso8601String(),
@@ -419,4 +487,10 @@ class SupabaseDeliveryNotesRepository implements DeliveryNotesRepository {
 
     return response?['delivery_note_number'] as String?;
   }
+}
+
+String? _cleanUuid(String? value) {
+  if (value == null) return null;
+  final trimmed = value.trim();
+  return trimmed.isEmpty ? null : trimmed;
 }

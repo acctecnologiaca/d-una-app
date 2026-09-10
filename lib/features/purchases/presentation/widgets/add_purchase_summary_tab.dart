@@ -3,12 +3,18 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:d_una_app/shared/utils/currency_formatter.dart';
 import 'package:d_una_app/shared/widgets/custom_extended_fab.dart';
+import 'package:d_una_app/shared/widgets/app_toast.dart';
 import 'package:d_una_app/features/purchases/presentation/providers/add_purchase_provider.dart';
 
 class AddPurchaseSummaryTab extends ConsumerWidget {
   final Function(int) onNavigateToTab;
+  final VoidCallback? onSaved;
 
-  const AddPurchaseSummaryTab({super.key, required this.onNavigateToTab});
+  const AddPurchaseSummaryTab({
+    super.key,
+    required this.onNavigateToTab,
+    this.onSaved,
+  });
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -110,8 +116,8 @@ class AddPurchaseSummaryTab extends ConsumerWidget {
           return Padding(
             padding: const EdgeInsets.only(bottom: 40.0),
             child: CustomExtendedFab(
-              label: 'Guardar',
-              icon: Icons.save_outlined,
+              label: state.isLoading ? 'Guardando...' : 'Guardar',
+              icon: state.isLoading ? Icons.hourglass_empty : Icons.save_outlined,
               isEnabled: isEnabled,
               onPressed: isEnabled
                   ? () async {
@@ -119,21 +125,21 @@ class AddPurchaseSummaryTab extends ConsumerWidget {
                           .read(addPurchaseProvider.notifier)
                           .createPurchase();
                       if (success && context.mounted) {
-                        if (state.purchaseId == null) {
+                        if (onSaved != null) {
+                          onSaved!();
+                        } else {
                           context.pop();
                         }
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(
-                            content: Text(
-                              state.purchaseId != null
-                                  ? 'Compra actualizada correctamente'
-                                  : 'Compra registrada exitosamente',
-                            ),
-                          ),
+                        AppToast.success(
+                          context,
+                          message: state.purchaseId != null
+                              ? 'Compra actualizada correctamente'
+                              : 'Compra registrada exitosamente',
                         );
                       } else if (state.error != null && context.mounted) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(content: Text('Error: ${state.error}')),
+                        AppToast.error(
+                          context,
+                          message: 'Error: ${state.error}',
                         );
                       }
                     }

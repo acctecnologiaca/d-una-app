@@ -74,6 +74,7 @@ class _StandardAppBarState extends State<StandardAppBar> {
           : (widget.backgroundColor ?? colors.surface),
       elevation: 0,
       centerTitle: widget.centerTitle,
+      actionsIconTheme: IconThemeData(color: colors.onSurfaceVariant),
       leading: IconButton(
         icon: Icon(Icons.arrow_back, color: colors.onSurface),
         onPressed: () async {
@@ -123,6 +124,8 @@ class _StandardAppBarState extends State<StandardAppBar> {
                 if (widget.subtitle != null)
                   Text(
                     widget.subtitle!,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                     style: TextStyle(
                       fontSize: 14,
                       fontWeight: FontWeight.w400,

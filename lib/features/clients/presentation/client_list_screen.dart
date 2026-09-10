@@ -141,19 +141,20 @@ class _ClientListScreenState extends ConsumerState<ClientListScreen> {
                 child: Builder(
                   builder: (context) {
                     final paginatedState = paginatedStateAsync.valueOrNull;
-                    if (paginatedState == null ||
-                        paginatedState.isInitialLoading) {
-                      return const Center(child: CircularProgressIndicator());
-                    }
-
                     if (paginatedStateAsync.hasError &&
-                        paginatedState.items.isEmpty) {
+                        (paginatedState == null ||
+                            paginatedState.items.isEmpty)) {
                       return FriendlyErrorWidget(
                         error: paginatedStateAsync.error!,
                         onRetry: () => ref
                             .read(paginatedClientsProvider.notifier)
                             .refresh(),
                       );
+                    }
+
+                    if (paginatedState == null ||
+                        paginatedState.isInitialLoading) {
+                      return const Center(child: CircularProgressIndicator());
                     }
 
                     if (paginatedState.items.isEmpty) {

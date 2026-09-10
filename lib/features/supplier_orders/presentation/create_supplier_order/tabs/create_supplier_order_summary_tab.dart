@@ -12,6 +12,7 @@ import '../../../../../shared/widgets/custom_action_sheet.dart';
 import '../../../../../shared/widgets/bottom_sheet_action_item.dart';
 import 'package:d_una_app/features/supplier_orders/domain/models/supplier_order_status.dart';
 import 'package:d_una_app/features/supplier_orders/presentation/widgets/supplier_order_credit_banner_card.dart';
+import 'package:d_una_app/shared/widgets/app_toast.dart';
 
 class CreateSupplierOrderSummaryTab extends ConsumerWidget {
   final Function(int) onNavigateToTab;
@@ -362,7 +363,7 @@ class CreateSupplierOrderSummaryTab extends ConsumerWidget {
       ),
       floatingActionButton: Builder(
         builder: (context) {
-          final branchesAsync = state.supplierId != null
+          final branchesAsync = state.supplierId != null && state.supplierId!.isNotEmpty
               ? ref.watch(supplierBranchesProvider(state.supplierId!))
               : null;
           final branches = branchesAsync?.valueOrNull ?? [];
@@ -370,8 +371,8 @@ class CreateSupplierOrderSummaryTab extends ConsumerWidget {
           final isDetailsValid = state.isDetailsValid(hasBranches: hasBranches);
           final canSave = !state.isLoading &&
               state.items.isNotEmpty &&
-              isDetailsValid &&
-              (!editMode || state.isDirty);
+              state.isDirty &&
+              (editMode || isDetailsValid);
 
           return Padding(
             padding: const EdgeInsets.only(bottom: 40.0),
@@ -381,13 +382,9 @@ class CreateSupplierOrderSummaryTab extends ConsumerWidget {
               isEnabled: canSave,
               onPressed: () async {
                 if (!isDetailsValid) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text(
-                        'Por favor complete todos los campos obligatorios.',
-                      ),
-                      backgroundColor: Colors.orange,
-                    ),
+                  AppToast.error(
+                    context,
+                    message: 'Por favor complete todos los campos obligatorios.',
                   );
                   return;
                 }
@@ -396,13 +393,24 @@ class CreateSupplierOrderSummaryTab extends ConsumerWidget {
                     .saveOrder();
                 if (!context.mounted) return;
                 if (createdOrderId != null) {
-                  _showPostSaveOptions(context, ref, createdOrderId);
+                  ref.invalidate(supplierOrderDetailProvider(createdOrderId));
+                  ref.invalidate(paginatedSupplierOrdersProvider);
+                  ref.invalidate(createSupplierOrderProvider);
+                  AppToast.success(
+                    context,
+                    message: editMode
+                        ? 'Orden de compra guardada exitosamente'
+                        : 'Orden de compra guardada exitosamente',
+                  );
+                  if (editMode) {
+                    context.pop();
+                  } else {
+                    _showPostSaveOptions(context, ref, createdOrderId);
+                  }
                 } else {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text(state.error ?? 'Error al guardar la orden'),
-                      backgroundColor: Colors.red,
-                    ),
+                  AppToast.error(
+                    context,
+                    message: state.error ?? 'Error al guardar la orden',
                   );
                 }
               },
@@ -426,7 +434,7 @@ class CreateSupplierOrderSummaryTab extends ConsumerWidget {
           icon: Icons.send_outlined,
           label: 'Enviar ahora',
           onTap: () {
-            Navigator.pop(context); // Close action sheet
+            context.pop(); // Close action sheet
             ref.invalidate(createSupplierOrderProvider);
             context.pushReplacement(
               '/supplier-orders/view/$createdOrderId?triggerSend=true',
@@ -437,12 +445,7 @@ class CreateSupplierOrderSummaryTab extends ConsumerWidget {
           icon: Icons.history_outlined,
           label: 'Enviar más tarde',
           onTap: () {
-            Navigator.pop(context); // Close action sheet
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                content: Text('Orden de compra guardada exitosamente'),
-              ),
-            );
+            context.pop(); // Close action sheet
             ref.invalidate(createSupplierOrderProvider);
             context.pop(); // Back to list
           },

@@ -72,6 +72,15 @@ class _DeliveryNotesSearchScreenState
       options: options,
       selectedValues: selectedLabels,
       sortOptions: false,
+      leadingBuilder: (value) {
+        final status = DeliveryNoteStatus.values
+            .where((s) => s.label == value)
+            .firstOrNull;
+        if (status != null) {
+          return Image.asset(status.iconPath, width: 24, height: 24);
+        }
+        return const SizedBox(width: 24, height: 24);
+      },
       onApply: (selected) {
         setState(() {
           _selectedStatuses.clear();

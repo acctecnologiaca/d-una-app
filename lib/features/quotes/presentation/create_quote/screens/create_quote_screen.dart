@@ -455,8 +455,9 @@ class _CreateQuoteScreenState extends ConsumerState<CreateQuoteScreen>
       title: 'Opciones de cotización',
       actions: [
         BottomSheetActionItem(
-          icon: Icons.save_outlined,
+          icon: Icons.bookmark_add_outlined,
           label: 'Guardar y continuar luego',
+          subtitle: 'Guarda un borrador local para continuar luego',
           enabled: state.isReadyToSaveDraft && state.hasChanges,
           onTap: () async {
             context.pop(); // Close sheet
@@ -467,11 +468,12 @@ class _CreateQuoteScreenState extends ConsumerState<CreateQuoteScreen>
               if (quote != null) {
                 ref.invalidate(viewQuoteProvider(quote.id));
               }
+              ref.invalidate(paginatedQuotesListProvider);
+              ref.invalidate(paginatedQuoteSearchProvider);
               context.pop(); // Go back to list
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text('Cotización guardada exitosamente'),
-                ),
+              AppToast.success(
+                context,
+                message: 'Cotización guardada exitosamente',
               );
             }
           },
@@ -481,6 +483,7 @@ class _CreateQuoteScreenState extends ConsumerState<CreateQuoteScreen>
           label: widget.quoteId != null
               ? 'Descartar cambios locales'
               : 'Descartar borrador',
+          subtitle: 'Elimina las modificaciones no guardadas',
           onTap: () async {
             context.pop(); // Close sheet
             final shouldDiscard = await _showDiscardDialog();

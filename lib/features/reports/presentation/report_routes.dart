@@ -96,7 +96,13 @@ List<RouteBase> serviceReportsRoutes(GlobalKey<NavigatorState> rootNavigatorKey)
           parentNavigatorKey: rootNavigatorKey,
           builder: (context, state) {
             final reportId = state.pathParameters['id']!;
-            return ViewReportScreen(reportId: reportId);
+            final extra = state.extra as Map<String, dynamic>?;
+            final triggerSend = (extra?['triggerSend'] as bool?) ??
+                (state.uri.queryParameters['triggerSend'] == 'true');
+            return ViewReportScreen(
+              reportId: reportId,
+              triggerSend: triggerSend,
+            );
           },
           routes: [
             GoRoute(
@@ -114,7 +120,13 @@ List<RouteBase> serviceReportsRoutes(GlobalKey<NavigatorState> rootNavigatorKey)
           parentNavigatorKey: rootNavigatorKey,
           builder: (context, state) {
             final reportId = state.pathParameters['id']!;
-            return ViewReportScreen(reportId: reportId);
+            final extra = state.extra as Map<String, dynamic>?;
+            final triggerSend = (extra?['triggerSend'] as bool?) ??
+                (state.uri.queryParameters['triggerSend'] == 'true');
+            return ViewReportScreen(
+              reportId: reportId,
+              triggerSend: triggerSend,
+            );
           },
         ),
       ],

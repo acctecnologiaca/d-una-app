@@ -88,7 +88,7 @@ class DeliveryNoteItemModel {
     return {
       'id': id,
       'delivery_note_id': deliveryNoteId,
-      if (productId != null) 'product_id': productId,
+      if (_cleanUuid(productId) != null) 'product_id': _cleanUuid(productId),
       'name': name,
       if (brand != null) 'brand': brand,
       if (model != null) 'model': model,
@@ -153,4 +153,10 @@ class DeliveryNoteItemModel {
       serials: serials ?? this.serials,
     );
   }
+}
+
+String? _cleanUuid(String? value) {
+  if (value == null) return null;
+  final trimmed = value.trim();
+  return trimmed.isEmpty ? null : trimmed;
 }

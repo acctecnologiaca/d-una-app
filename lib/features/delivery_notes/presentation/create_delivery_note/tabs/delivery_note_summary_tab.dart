@@ -188,7 +188,7 @@ class DeliveryNoteSummaryTab extends ConsumerWidget {
             _buildSummaryRow(
               context,
               Icons.calendar_today_outlined,
-              'Fecha de entrega',
+              'Fecha de Despacho',
               state.deliveryDate != null
                   ? dateFormat.format(state.deliveryDate!)
                   : 'No establecida',

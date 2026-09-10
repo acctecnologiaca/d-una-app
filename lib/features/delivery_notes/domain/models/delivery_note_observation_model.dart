@@ -30,7 +30,7 @@ class DeliveryNoteObservationModel {
     return {
       if (id != null) 'id': id,
       if (deliveryNoteId != null) 'delivery_note_id': deliveryNoteId,
-      if (observationId != null) 'observation_id': observationId,
+      if (_cleanUuid(observationId) != null) 'observation_id': _cleanUuid(observationId),
       'description': description,
       'order_index': orderIndex,
     };
@@ -51,4 +51,10 @@ class DeliveryNoteObservationModel {
       orderIndex: orderIndex ?? this.orderIndex,
     );
   }
+}
+
+String? _cleanUuid(String? value) {
+  if (value == null) return null;
+  final trimmed = value.trim();
+  return trimmed.isEmpty ? null : trimmed;
 }

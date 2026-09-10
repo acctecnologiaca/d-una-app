@@ -3,6 +3,7 @@ import 'package:go_router/go_router.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:material_symbols_icons/symbols.dart';
 import 'package:pdf/pdf.dart';
+import 'package:intl/intl.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../../../../shared/widgets/custom_action_sheet.dart';
@@ -13,6 +14,7 @@ import '../../../../../features/profile/presentation/providers/profile_provider.
 import '../../../../../core/pdf/templates/service_report_pdf_template.dart';
 
 import '../../domain/models/service_report_model.dart';
+import '../create_report/providers/create_report_provider.dart';
 import 'providers/reports_provider.dart';
 
 /// Shared action methods for report multi-selection, used in both
@@ -43,6 +45,9 @@ class ReportSelectionActions {
     ServiceReportSummary report,
   ) {
     final isFinalized = report.status == ServiceReportStatus.finalized;
+    final isSentOrResent = report.status == ServiceReportStatus.sent ||
+        report.status == ServiceReportStatus.resent ||
+        report.status == ServiceReportStatus.opened;
 
     CustomActionSheet.show(
       context: context,
@@ -59,6 +64,18 @@ class ReportSelectionActions {
             context.pop();
             ref.read(reportSelectionProvider.notifier).clear();
             context.push('/reports/${report.id}/edit');
+          },
+        ),
+        BottomSheetActionItem(
+          icon: isSentOrResent ? Symbols.forward : Icons.send,
+          label: isSentOrResent ? 'Reenviar' : 'Enviar',
+          enabled: !isFinalized,
+          subtitle: isFinalized
+              ? 'Reporte finalizado. No se puede enviar'
+              : null,
+          onTap: () {
+            context.pop();
+            _checkDateAndSendFromSelection(context, ref, report);
           },
         ),
         BottomSheetActionItem(
@@ -140,6 +157,20 @@ class ReportSelectionActions {
           },
         ),
         const Divider(height: 1, indent: 16, endIndent: 16),
+        BottomSheetActionItem(
+          icon: Icons.content_copy_outlined,
+          label: 'Crear una copia',
+          onTap: () async {
+            context.pop();
+            await ref
+                .read(createReportProvider.notifier)
+                .loadReportAsCopy(report.id);
+            if (context.mounted) {
+              ref.read(reportSelectionProvider.notifier).clear();
+              context.push('/reports/create');
+            }
+          },
+        ),
         BottomSheetActionItem(
           icon: report.isArchived
               ? Icons.unarchive_outlined
@@ -306,6 +337,97 @@ class ReportSelectionActions {
           ),
         ),
       );
+    }
+  }
+
+  static Future<void> _checkDateAndSendFromSelection(
+    BuildContext context,
+    WidgetRef ref,
+    ServiceReportSummary report,
+  ) async {
+    if (report.status == ServiceReportStatus.finalized) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('El reporte está finalizado y no se puede enviar.'),
+        ),
+      );
+      return;
+    }
+
+    final now = DateTime.now();
+    final serviceDate = report.date;
+    final isSameDate =
+        serviceDate.year == now.year &&
+        serviceDate.month == now.month &&
+        serviceDate.day == now.day;
+
+    void onProceedSend(ServiceReportSummary targetReport) {
+      ref.read(reportSelectionProvider.notifier).clear();
+      context.push(
+        '/reports/${targetReport.id}',
+        extra: {'triggerSend': true},
+      );
+    }
+
+    if (isSameDate) {
+      onProceedSend(report);
+      return;
+    }
+
+    final formattedReportDate = DateFormat('dd/MM/yyyy').format(serviceDate);
+    final formattedToday = DateFormat('dd/MM/yyyy').format(now);
+
+    final action = await CustomDialog.show<String>(
+      context: context,
+      dialog: CustomDialog.confirmation(
+        icon: Icons.date_range_outlined,
+        title: 'Fecha de servicio diferente',
+        contentText:
+            'La fecha de este reporte ($formattedReportDate) es distinta a la fecha de hoy ($formattedToday). ¿Cómo deseas proceder?',
+        actions: [
+          TextButton(
+            onPressed: () =>
+                Navigator.of(context, rootNavigator: true).pop('send_as_is'),
+            child: const Text('Enviar así'),
+          ),
+          FilledButton(
+            onPressed: () =>
+                Navigator.of(context, rootNavigator: true).pop('update_date'),
+            child: const Text('Actualizar fecha y enviar'),
+          ),
+          OutlinedButton(
+            onPressed: () =>
+                Navigator.of(context, rootNavigator: true).pop('modify'),
+            child: const Text('Modificar'),
+          ),
+        ],
+      ),
+    );
+
+    if (action == 'send_as_is') {
+      onProceedSend(report);
+    } else if (action == 'update_date') {
+      try {
+        await ref
+            .read(reportsListProvider.notifier)
+            .updateReportDate(report.id, DateTime.now());
+        ref.invalidate(reportsListProvider);
+        refreshAllReportProviders(ref);
+        onProceedSend(report);
+      } catch (e) {
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Error al actualizar fecha: $e')),
+          );
+        }
+      }
+    } else if (action == 'modify') {
+      if (context.mounted) {
+        ref.read(reportSelectionProvider.notifier).clear();
+        await context.push('/reports/${report.id}/edit?tab=0');
+        ref.invalidate(reportsListProvider);
+        refreshAllReportProviders(ref);
+      }
     }
   }
 }

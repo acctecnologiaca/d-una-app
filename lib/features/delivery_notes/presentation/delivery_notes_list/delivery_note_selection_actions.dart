@@ -44,8 +44,14 @@ class DeliveryNoteSelectionActions {
     DeliveryNoteModel note,
   ) {
     final isFinalized =
-        note.status == DeliveryNoteStatus.delivered ||
+        note.status == DeliveryNoteStatus.finalized ||
         note.status == DeliveryNoteStatus.cancelled;
+    final isSentOrResent =
+        note.status == DeliveryNoteStatus.sent ||
+        note.status == DeliveryNoteStatus.resent ||
+        note.status == DeliveryNoteStatus.opened;
+    final isSendDisabled = isFinalized;
+    final isMissingSerials = note.hasMissingSerialsEffective;
 
     CustomActionSheet.show(
       context: context,
@@ -68,15 +74,45 @@ class DeliveryNoteSelectionActions {
               ref
                   .read(createDeliveryNoteProvider.notifier)
                   .loadExistingDeliveryNote(detailedNote);
-              ref.read(deliveryNotesSelectionProvider.notifier).clearSelection();
+              ref
+                  .read(deliveryNotesSelectionProvider.notifier)
+                  .clearSelection();
               context.push('/delivery-notes/edit/${note.id}');
+            }
+          },
+        ),
+        BottomSheetActionItem(
+          icon: isSentOrResent ? Symbols.forward : Icons.send,
+          label: isSentOrResent ? 'Reenviar' : 'Enviar',
+          enabled: !isSendDisabled && !isMissingSerials,
+          subtitle: isMissingSerials
+              ? 'Faltan seriales por asignar. No se puede enviar'
+              : (isSendDisabled
+                  ? 'Nota de entrega ${note.status.label.toLowerCase()}. No se puede enviar'
+                  : null),
+          onTap: () async {
+            if (isMissingSerials) return;
+            context.pop();
+            final detailedNote = await ref
+                .read(deliveryNotesRepositoryProvider)
+                .getDeliveryNoteWithDetails(note.id);
+            if (detailedNote != null && context.mounted) {
+              ref
+                  .read(deliveryNotesSelectionProvider.notifier)
+                  .clearSelection();
+              _showSendOptions(context, detailedNote);
             }
           },
         ),
         BottomSheetActionItem(
           icon: Icons.picture_as_pdf_outlined,
           label: 'Descargar PDF',
+          enabled: !isMissingSerials,
+          subtitle: isMissingSerials
+              ? 'Faltan seriales por asignar. No se puede descargar'
+              : null,
           onTap: () async {
+            if (isMissingSerials) return;
             final userProfile = ref.read(userProfileProvider).value;
             final userEmail = Supabase.instance.client.auth.currentUser?.email;
 
@@ -96,7 +132,9 @@ class DeliveryNoteSelectionActions {
                 .getDeliveryNoteWithDetails(note.id);
 
             if (detailedNote != null && context.mounted) {
-              ref.read(deliveryNotesSelectionProvider.notifier).clearSelection();
+              ref
+                  .read(deliveryNotesSelectionProvider.notifier)
+                  .clearSelection();
               context.push(
                 '/pdf-preview',
                 extra: {
@@ -106,59 +144,13 @@ class DeliveryNoteSelectionActions {
                   'fileName': StringUtils.sanitizeForFileName(
                     '${detailedNote.date.toIso8601String().substring(0, 10)}_${detailedNote.clientName}_${detailedNote.deliveryNoteNumber}.pdf',
                   ),
-                  'buildPdf': (PdfPageFormat format) =>
-                      DeliveryNotePdfTemplate(
-                        note: detailedNote,
-                        userProfile: userProfile,
-                        userEmail: userEmail,
-                      ).generate(format),
+                  'buildPdf': (PdfPageFormat format) => DeliveryNotePdfTemplate(
+                    note: detailedNote,
+                    userProfile: userProfile,
+                    userEmail: userEmail,
+                  ).generate(format),
                 },
               );
-            }
-          },
-        ),
-        if (note.status != DeliveryNoteStatus.delivered)
-          BottomSheetActionItem(
-            icon: Symbols.signature,
-            label: 'Confirmar recepción y firma',
-            subtitle: 'Registrar la firma del cliente al momento de la entrega',
-            onTap: () async {
-              context.pop();
-              final detailedNote = await ref
-                  .read(deliveryNotesRepositoryProvider)
-                  .getDeliveryNoteWithDetails(note.id);
-              if (detailedNote != null && context.mounted) {
-                ref.read(deliveryNotesSelectionProvider.notifier).clearSelection();
-                ConfirmDeliveryNoteReceptionDialog.show(context, ref, detailedNote);
-              }
-            },
-          ),
-        const Divider(height: 1, indent: 16, endIndent: 16),
-        BottomSheetActionItem(
-          icon: Symbols.chat,
-          label: 'Enviar por WhatsApp',
-          onTap: () async {
-            context.pop();
-            final detailedNote = await ref
-                .read(deliveryNotesRepositoryProvider)
-                .getDeliveryNoteWithDetails(note.id);
-            if (detailedNote != null && context.mounted) {
-              ref.read(deliveryNotesSelectionProvider.notifier).clearSelection();
-              SendDeliveryNoteWhatsAppSheet.show(context, detailedNote);
-            }
-          },
-        ),
-        BottomSheetActionItem(
-          icon: Symbols.mail,
-          label: 'Enviar por Correo',
-          onTap: () async {
-            context.pop();
-            final detailedNote = await ref
-                .read(deliveryNotesRepositoryProvider)
-                .getDeliveryNoteWithDetails(note.id);
-            if (detailedNote != null && context.mounted) {
-              ref.read(deliveryNotesSelectionProvider.notifier).clearSelection();
-              SendDeliveryNoteEmailSheet.show(context, detailedNote);
             }
           },
         ),
@@ -172,22 +164,59 @@ class DeliveryNoteSelectionActions {
               : null,
           onTap: () async {
             context.pop();
-            final selected = await _showStatusDialog(context, note.status);
+            final selected = await showStatusDialog(
+              context,
+              note.status,
+              hasMissingSerials: isMissingSerials,
+            );
             if (selected != null && selected != note.status) {
               await ref
                   .read(paginatedDeliveryNotesProvider.notifier)
                   .updateDeliveryNoteStatus(note.id, selected);
-              ref.read(deliveryNotesSelectionProvider.notifier).clearSelection();
+              ref
+                  .read(deliveryNotesSelectionProvider.notifier)
+                  .clearSelection();
               if (context.mounted) {
                 ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(content: Text('Estatus cambiado a "${selected.label}"')),
+                  SnackBar(
+                    content: Text('Estatus cambiado a "${selected.label}"'),
+                  ),
                 );
               }
             }
           },
         ),
+        if (note.status != DeliveryNoteStatus.delivered)
+          BottomSheetActionItem(
+            icon: Symbols.signature,
+            label: 'Confirmar recepción',
+            enabled: !isMissingSerials,
+            subtitle: isMissingSerials
+                ? 'Faltan seriales por asignar. No se puede confirmar recepción'
+                : null,
+            onTap: () async {
+              if (isMissingSerials) return;
+              context.pop();
+              final detailedNote = await ref
+                  .read(deliveryNotesRepositoryProvider)
+                  .getDeliveryNoteWithDetails(note.id);
+              if (detailedNote != null && context.mounted) {
+                ref
+                    .read(deliveryNotesSelectionProvider.notifier)
+                    .clearSelection();
+                ConfirmDeliveryNoteReceptionDialog.show(
+                  context,
+                  ref,
+                  detailedNote,
+                );
+              }
+            },
+          ),
+        const Divider(height: 1, indent: 16, endIndent: 16),
         BottomSheetActionItem(
-          icon: note.isArchived ? Symbols.unarchive : Symbols.archive,
+          icon: note.isArchived
+              ? Icons.unarchive_outlined
+              : Icons.archive_outlined,
           label: note.isArchived ? 'Desarchivar' : 'Archivar',
           onTap: () async {
             context.pop();
@@ -195,43 +224,6 @@ class DeliveryNoteSelectionActions {
                 .read(paginatedDeliveryNotesProvider.notifier)
                 .archiveDeliveryNote(note.id, !note.isArchived);
             ref.read(deliveryNotesSelectionProvider.notifier).clearSelection();
-          },
-        ),
-        BottomSheetActionItem(
-          icon: Icons.delete_outline,
-          label: 'Eliminar',
-          enabled: note.status == DeliveryNoteStatus.draft,
-          subtitle: note.status != DeliveryNoteStatus.draft
-              ? 'Solo se pueden eliminar notas en borrador'
-              : null,
-          onTap: () async {
-            context.pop();
-            final confirm = await CustomDialog.show<bool>(
-              context: context,
-              dialog: CustomDialog.destructive(
-                title: '¿Eliminar nota de entrega?',
-                contentText:
-                    'Se eliminará la nota de entrega "${note.deliveryNoteNumber}". Esta acción no se puede deshacer.',
-                actions: [
-                  TextButton(
-                    onPressed: () => Navigator.pop(context, false),
-                    child: const Text('Cancelar'),
-                  ),
-                  FilledButton(
-                    onPressed: () => Navigator.pop(context, true),
-                    style: FilledButton.styleFrom(backgroundColor: Colors.red),
-                    child: const Text('Eliminar'),
-                  ),
-                ],
-              ),
-            );
-
-            if (confirm == true) {
-              await ref
-                  .read(paginatedDeliveryNotesProvider.notifier)
-                  .deleteDeliveryNote(note.id);
-              ref.read(deliveryNotesSelectionProvider.notifier).clearSelection();
-            }
           },
         ),
       ],
@@ -245,25 +237,68 @@ class DeliveryNoteSelectionActions {
     List<DeliveryNoteModel> allNotes,
   ) {
     final selectedIds = selection.selectedIds.toList();
+    final selectedNotes = allNotes
+        .where((n) => selection.selectedIds.contains(n.id))
+        .toList();
+    final isAllArchived =
+        selectedNotes.isNotEmpty && selectedNotes.every((n) => n.isArchived);
+    final anyHasMissing =
+        selectedNotes.any((n) => n.hasMissingSerialsEffective);
 
     CustomActionSheet.show(
       context: context,
-      title: '${selection.count} notas seleccionadas',
+      title: '${selection.count} seleccionados',
       actions: [
         BottomSheetActionItem(
           icon: Symbols.conversion_path,
-          label: 'Cambiar estatus en lote',
+          label: 'Cambiar estatus',
           onTap: () async {
             context.pop();
-            final selectedStatus = await _showStatusDialog(
+            final initialStatus = selectedNotes.isNotEmpty &&
+                    selectedNotes
+                        .every((n) => n.status == selectedNotes.first.status)
+                ? selectedNotes.first.status
+                : null;
+            final selectedStatus = await showStatusDialog(
               context,
-              DeliveryNoteStatus.draft,
+              initialStatus,
+              hasMissingSerials: anyHasMissing,
             );
             if (selectedStatus != null) {
+              if (selectedStatus == DeliveryNoteStatus.finalized) {
+                final notesWithMissing = selectedNotes
+                    .where((n) => n.hasMissingSerialsEffective)
+                    .toList();
+                if (notesWithMissing.isNotEmpty) {
+                  if (context.mounted) {
+                    CustomDialog.show(
+                      context: context,
+                      dialog: CustomDialog.confirmation(
+                        icon: Symbols.warning,
+                        iconColor: Colors.amber.shade800,
+                        title: 'Seriales pendientes',
+                        contentText:
+                            'No se pueden finalizar las notas seleccionadas porque ${notesWithMissing.length} nota(s) tienen seriales pendientes por asignar.',
+                        actions: [
+                          TextButton(
+                            onPressed: () =>
+                                Navigator.of(context, rootNavigator: true).pop(),
+                            child: const Text('Entendido'),
+                          ),
+                        ],
+                      ),
+                    );
+                  }
+                  return;
+                }
+              }
+
               await ref
                   .read(paginatedDeliveryNotesProvider.notifier)
                   .batchUpdateStatus(selectedIds, selectedStatus);
-              ref.read(deliveryNotesSelectionProvider.notifier).clearSelection();
+              ref
+                  .read(deliveryNotesSelectionProvider.notifier)
+                  .clearSelection();
               if (context.mounted) {
                 ScaffoldMessenger.of(context).showSnackBar(
                   SnackBar(
@@ -276,54 +311,27 @@ class DeliveryNoteSelectionActions {
             }
           },
         ),
+        const Divider(height: 1, indent: 16, endIndent: 16),
         BottomSheetActionItem(
-          icon: Symbols.archive,
-          label: 'Archivar seleccionadas',
+          icon: isAllArchived
+              ? Icons.unarchive_outlined
+              : Icons.archive_outlined,
+          label: isAllArchived ? 'Desarchivar' : 'Archivar',
           onTap: () async {
             context.pop();
             await ref
                 .read(paginatedDeliveryNotesProvider.notifier)
-                .batchArchive(selectedIds, true);
+                .batchArchive(selectedIds, !isAllArchived);
             ref.read(deliveryNotesSelectionProvider.notifier).clearSelection();
             if (context.mounted) {
+              final actionWord = !isAllArchived
+                  ? 'archivaron'
+                  : 'desarchivaron';
               ScaffoldMessenger.of(context).showSnackBar(
                 SnackBar(
-                  content: Text('Se archivaron ${selectedIds.length} notas'),
+                  content: Text('Se $actionWord ${selectedIds.length} notas'),
                 ),
               );
-            }
-          },
-        ),
-        BottomSheetActionItem(
-          icon: Icons.delete_outline,
-          label: 'Eliminar seleccionadas (solo borradores)',
-          onTap: () async {
-            context.pop();
-            final confirm = await CustomDialog.show<bool>(
-              context: context,
-              dialog: CustomDialog.destructive(
-                title: '¿Eliminar notas seleccionadas?',
-                contentText:
-                    'Se eliminarán las notas de entrega en borrador seleccionadas. Las notas emitidas o entregadas no se eliminarán.',
-                actions: [
-                  TextButton(
-                    onPressed: () => Navigator.pop(context, false),
-                    child: const Text('Cancelar'),
-                  ),
-                  FilledButton(
-                    onPressed: () => Navigator.pop(context, true),
-                    style: FilledButton.styleFrom(backgroundColor: Colors.red),
-                    child: const Text('Eliminar'),
-                  ),
-                ],
-              ),
-            );
-
-            if (confirm == true) {
-              await ref
-                  .read(paginatedDeliveryNotesProvider.notifier)
-                  .batchDelete(selectedIds);
-              ref.read(deliveryNotesSelectionProvider.notifier).clearSelection();
             }
           },
         ),
@@ -331,37 +339,115 @@ class DeliveryNoteSelectionActions {
     );
   }
 
-  static Future<DeliveryNoteStatus?> _showStatusDialog(
+  static Future<DeliveryNoteStatus?> showStatusDialog(
     BuildContext context,
-    DeliveryNoteStatus currentStatus,
-  ) {
-    return showDialog<DeliveryNoteStatus>(
+    DeliveryNoteStatus? currentStatus, {
+    bool hasMissingSerials = false,
+  }) async {
+    final colors = Theme.of(context).colorScheme;
+
+    return await CustomDialog.show<DeliveryNoteStatus>(
       context: context,
-      builder: (ctx) {
-        return AlertDialog(
-          title: const Text('Cambiar Estatus'),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: DeliveryNoteStatus.values.map((status) {
-              return ListTile(
-                leading: Icon(
-                  status.iconData,
-                  color: status.statusColor(Theme.of(context).colorScheme),
+      dialog: CustomDialog.vertical(
+        icon: Symbols.conversion_path,
+        title: 'Cambiar estatus',
+        contentWidget: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: DeliveryNoteStatus.values.map((status) {
+            final isSelected = currentStatus != null && status == currentStatus;
+            final isFinalizedDisabled =
+                status == DeliveryNoteStatus.finalized && hasMissingSerials;
+
+            final textColor = isFinalizedDisabled
+                ? colors.onSurfaceVariant.withValues(alpha: 0.4)
+                : (isSelected ? colors.primary : colors.onSurface);
+
+            return ListTile(
+              leading: Opacity(
+                opacity: isFinalizedDisabled ? 0.4 : 1.0,
+                child: Image.asset(status.iconPath, width: 24, height: 24),
+              ),
+              title: Text(
+                status.label,
+                style: TextStyle(
+                  fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                  color: textColor,
                 ),
-                title: Text(status.label),
-                selected: status == currentStatus,
-                onTap: () => Navigator.pop(ctx, status),
-              );
-            }).toList(),
+              ),
+              subtitle: isFinalizedDisabled
+                  ? Text(
+                      'Faltan seriales por asignar',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: colors.error.withValues(alpha: 0.8),
+                      ),
+                    )
+                  : null,
+              trailing: isSelected
+                  ? Icon(Icons.check, color: colors.primary, size: 20)
+                  : null,
+              enabled: !isFinalizedDisabled,
+              onTap: isFinalizedDisabled
+                  ? null
+                  : () =>
+                      Navigator.of(context, rootNavigator: true).pop(status),
+            );
+          }).toList(),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context, rootNavigator: true).pop(),
+            child: const Text('Cancelar'),
           ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(ctx),
-              child: const Text('Cancelar'),
-            ),
-          ],
-        );
-      },
+        ],
+      ),
+    );
+  }
+
+  static void _showSendOptions(BuildContext context, DeliveryNoteModel note) {
+    if (note.hasMissingSerialsEffective) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'No se puede enviar la nota de entrega porque faltan seriales por asignar.',
+          ),
+        ),
+      );
+      return;
+    }
+
+    final isSentOrResent =
+        note.status == DeliveryNoteStatus.sent ||
+        note.status == DeliveryNoteStatus.resent ||
+        note.status == DeliveryNoteStatus.opened;
+
+    CustomActionSheet.show(
+      context: context,
+      title: isSentOrResent
+          ? 'Reenviar Nota de Entrega'
+          : 'Enviar Nota de Entrega',
+      actions: [
+        BottomSheetActionItem(
+          icon: Icons.email_outlined,
+          label: isSentOrResent
+              ? 'Reenviar por correo electrónico'
+              : 'Enviar por correo electrónico',
+          onTap: () {
+            context.pop();
+            SendDeliveryNoteEmailSheet.show(context, note);
+          },
+        ),
+        BottomSheetActionItem(
+          icon: 'assets/icons/whatsapp_icon.png',
+          label: isSentOrResent
+              ? 'Reenviar por WhatsApp'
+              : 'Enviar por WhatsApp',
+          onTap: () {
+            context.pop();
+            SendDeliveryNoteWhatsAppSheet.show(context, note);
+          },
+        ),
+      ],
     );
   }
 }

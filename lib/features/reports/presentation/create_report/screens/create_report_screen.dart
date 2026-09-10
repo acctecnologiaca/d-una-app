@@ -65,39 +65,58 @@ class _CreateReportScreenState extends ConsumerState<CreateReportScreen>
 
       if (widget.reportId != null) {
         // Modo EDICIÓN:
-        // 1. Buscar si existen cambios locales no guardados para este reporte
-        final draft = await ref
-            .read(createReportProvider.notifier)
-            .checkAndRestoreDraft(reportId: widget.reportId);
-
-        if (draft != null && mounted) {
-          setState(() {
-            if (draft.tabIndex >= 0 && draft.tabIndex < 6) {
-              _tabController.index = draft.tabIndex;
-            }
-          });
-
-          DraftToast.show(
-            context,
-            message: 'Cambios restaurados automáticamente',
-            onDiscard: () async {
-              final shouldDiscard = await _showDiscardDialog();
-              if (shouldDiscard && mounted) {
-                await ref
-                    .read(createReportProvider.notifier)
-                    .clearDraft(reportId: widget.reportId);
-                await ref
-                    .read(createReportProvider.notifier)
-                    .loadReport(widget.reportId!);
-                setState(() {
-                  _tabController.index = 0;
-                });
+        if (currentState.report?.id == widget.reportId) {
+          final draft = await ref
+              .read(createReportProvider.notifier)
+              .checkAndRestoreDraft(reportId: widget.reportId);
+          if (draft != null && mounted) {
+            setState(() {
+              if (draft.tabIndex >= 0 && draft.tabIndex < 6) {
+                _tabController.index = draft.tabIndex;
               }
-            },
-          );
+            });
+          }
         } else {
-          // No hay borrador local, cargar datos frescos desde DB
-          ref.read(createReportProvider.notifier).loadReport(widget.reportId!);
+          if (currentState.report != null &&
+              currentState.report!.id.isNotEmpty) {
+            ref
+                .read(createReportProvider.notifier)
+                .reset(clearPersistedDraft: false);
+          }
+
+          final draft = await ref
+              .read(createReportProvider.notifier)
+              .checkAndRestoreDraft(reportId: widget.reportId);
+
+          if (draft != null && mounted) {
+            setState(() {
+              if (draft.tabIndex >= 0 && draft.tabIndex < 6) {
+                _tabController.index = draft.tabIndex;
+              }
+            });
+
+            DraftToast.show(
+              context,
+              message: 'Cambios restaurados automáticamente',
+              onDiscard: () async {
+                final shouldDiscard = await _showDiscardDialog();
+                if (shouldDiscard && mounted) {
+                  await ref
+                      .read(createReportProvider.notifier)
+                      .clearDraft(reportId: widget.reportId);
+                  await ref
+                      .read(createReportProvider.notifier)
+                      .loadReport(widget.reportId!);
+                  setState(() {
+                    _tabController.index = 0;
+                  });
+                }
+              },
+            );
+          } else {
+            // No hay borrador local, cargar datos frescos desde DB
+            ref.read(createReportProvider.notifier).loadReport(widget.reportId!);
+          }
         }
       } else {
         // Modo CREACIÓN (nuevo reporte):
@@ -226,16 +245,16 @@ class _CreateReportScreenState extends ConsumerState<CreateReportScreen>
             if (widget.reportId != null)
               IconButton(
                 icon: Icon(
-                  Icons.save_outlined,
-                  color: state.hasChanges
+                  state.isLoading ? Icons.hourglass_empty : Icons.save_outlined,
+                  color: (state.hasChanges && !state.isLoading)
                       ? colors.onSurfaceVariant
                       : colors.onSurfaceVariant.withValues(alpha: 0.38),
                 ),
                 tooltip: state.hasChanges
                     ? 'Guardar cambios'
                     : 'Sin modificaciones',
-                onPressed: state.hasChanges
-                    ? () => _handleSaveDraft(ref)
+                onPressed: (state.hasChanges && !state.isLoading)
+                    ? () => _handleSaveInEditMode(ref)
                     : null,
               ),
             IconButton(
@@ -298,7 +317,8 @@ class _CreateReportScreenState extends ConsumerState<CreateReportScreen>
         child: CustomExtendedFab(
           label: state.isLoading ? 'Guardando...' : 'Guardar',
           icon: state.isLoading ? Icons.hourglass_empty : Icons.save_outlined,
-          isEnabled: state.isReadyToFinalize && !state.isLoading,
+          isEnabled:
+              state.isReadyToFinalize && state.hasChanges && !state.isLoading,
           onPressed: () async {
             final success = await ref
                 .read(createReportProvider.notifier)
@@ -316,13 +336,10 @@ class _CreateReportScreenState extends ConsumerState<CreateReportScreen>
                   ref.read(createReportProvider).report?.reportNumber ?? '';
               _showPostSaveOptions(ref, savedReportNumber);
             } else {
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text(
+              AppToast.error(
+                context,
+                message:
                     ref.read(createReportProvider).error ?? 'Error al guardar',
-                  ),
-                  backgroundColor: Colors.red,
-                ),
               );
             }
           },
@@ -384,11 +401,65 @@ class _CreateReportScreenState extends ConsumerState<CreateReportScreen>
     );
   }
 
-  Future<void> _handleSaveDraft(WidgetRef ref) async {
+  Future<void> _handleSaveInEditMode(WidgetRef ref) async {
+    final state = ref.read(createReportProvider);
+    final currentStatus = state.report?.status;
+
+    if (currentStatus != null &&
+        currentStatus != ServiceReportStatus.draft.dbValue) {
+      final confirm =
+          await CustomDialog.show<bool>(
+            context: context,
+            dialog: CustomDialog.confirmation(
+              icon: Icons.warning_amber_rounded,
+              title: 'Cambio a estatus Borrador',
+              contentText:
+                  'El reporte se encuentra en estatus "${ServiceReportStatus.fromDbValue(currentStatus).label}". Al guardar las modificaciones, pasará automáticamente a estatus Borrador. ¿Deseas continuar?',
+              actions: [
+                TextButton(
+                  onPressed: () =>
+                      Navigator.of(context, rootNavigator: true).pop(false),
+                  child: const Text('Cancelar'),
+                ),
+                FilledButton(
+                  onPressed: () =>
+                      Navigator.of(context, rootNavigator: true).pop(true),
+                  child: const Text('Guardar'),
+                ),
+              ],
+            ),
+          ) ??
+          false;
+
+      if (!confirm) return;
+    }
+
     final success = await ref.read(createReportProvider.notifier).saveAsDraft();
+
     if (success && mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Borrador guardado exitosamente')),
+      final savedReport = ref.read(createReportProvider).report;
+      final reportId = savedReport?.id ?? widget.reportId;
+      refreshAllReportProviders(ref);
+
+      if (reportId != null) {
+        ref.invalidate(viewReportProvider(reportId));
+      }
+
+      AppToast.success(
+        context,
+        message: 'Reporte guardado como Borrador',
+      );
+
+      if (reportId != null) {
+        context.pushReplacement('/reports/$reportId');
+      } else {
+        context.pop();
+      }
+    } else if (mounted) {
+      final error = ref.read(createReportProvider).error;
+      AppToast.error(
+        context,
+        message: error ?? 'Error al actualizar el reporte',
       );
     }
   }
@@ -402,40 +473,48 @@ class _CreateReportScreenState extends ConsumerState<CreateReportScreen>
       title: 'Opciones de reporte',
       actions: [
         BottomSheetActionItem(
-          icon: Icons.save_outlined,
-          label: 'Guardar como borrador',
+          icon: Icons.bookmark_add_outlined,
+          label: 'Guardar y continuar luego',
+          subtitle: 'Guarda un borrador local para continuar luego',
           onTap: () async {
             context.pop();
             final success = await notifier.saveAsDraft();
             if (success && mounted) {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Borrador guardado')),
+              refreshAllReportProviders(ref);
+              final reportId = state.report?.id ?? widget.reportId;
+              if (reportId != null) {
+                ref.invalidate(viewReportProvider(reportId));
+              }
+              AppToast.info(
+                context,
+                message: 'Cambios guardados temporalmente',
+                icon: Icons.bookmark_added_outlined,
               );
               context.pop();
             }
           },
         ),
-        if (state.hasChanges)
-          BottomSheetActionItem(
-            icon: Icons.delete_outline,
-            label: widget.reportId != null
-                ? 'Descartar cambios locales'
-                : 'Descartar borrador',
-            onTap: () async {
-              context.pop();
-              final shouldDiscard = await _showDiscardDialog();
-              if (!shouldDiscard) return;
-              await ref
-                  .read(createReportProvider.notifier)
-                  .clearDraft(reportId: widget.reportId);
-              ref.read(createReportProvider.notifier).reset(
-                    clearPersistedDraft: true,
-                    reportId: widget.reportId,
-                  );
-              if (!mounted) return;
-              context.pop();
-            },
-          ),
+        BottomSheetActionItem(
+          icon: Icons.delete_outline,
+          label: widget.reportId != null
+              ? 'Descartar cambios locales'
+              : 'Descartar borrador',
+          subtitle: 'Elimina las modificaciones no guardadas',
+          onTap: () async {
+            context.pop();
+            final shouldDiscard = await _showDiscardDialog();
+            if (!shouldDiscard) return;
+            await ref
+                .read(createReportProvider.notifier)
+                .clearDraft(reportId: widget.reportId);
+            ref.read(createReportProvider.notifier).reset(
+                  clearPersistedDraft: true,
+                  reportId: widget.reportId,
+                );
+            if (!mounted) return;
+            context.pop();
+          },
+        ),
       ],
     );
   }

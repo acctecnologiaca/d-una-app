@@ -2,8 +2,10 @@ import 'dart:convert';
 import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:material_symbols_icons/symbols.dart';
 import 'package:d_una_app/shared/widgets/custom_text_field.dart';
 import 'package:d_una_app/shared/widgets/custom_button.dart';
+import 'package:d_una_app/shared/widgets/custom_dialog.dart';
 import '../../../domain/models/delivery_note_model.dart';
 import '../../../domain/models/delivery_note_status.dart';
 import '../../delivery_notes_list/providers/delivery_notes_providers.dart';
@@ -18,6 +20,26 @@ class ConfirmDeliveryNoteReceptionDialog extends ConsumerStatefulWidget {
     WidgetRef ref,
     DeliveryNoteModel note,
   ) {
+    if (note.hasMissingSerialsEffective) {
+      return CustomDialog.show(
+        context: context,
+        dialog: CustomDialog.confirmation(
+          icon: Symbols.warning,
+          iconColor: Colors.amber.shade800,
+          title: 'Seriales pendientes',
+          contentText:
+              'No se puede confirmar la recepción porque faltan seriales por asignar a uno o más productos.',
+          actions: [
+            TextButton(
+              onPressed: () =>
+                  Navigator.of(context, rootNavigator: true).pop(),
+              child: const Text('Entendido'),
+            ),
+          ],
+        ),
+      );
+    }
+
     return showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -101,6 +123,18 @@ class _ConfirmDeliveryNoteReceptionDialogState
   }
 
   Future<void> _handleConfirm() async {
+    if (widget.note.hasMissingSerialsEffective) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'No se puede confirmar la recepción porque faltan seriales por asignar.',
+          ),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
+
     if (!_formKey.currentState!.validate()) return;
 
     if (_nameController.text.trim().isEmpty || _idController.text.trim().isEmpty) {

@@ -18,7 +18,7 @@ class SupabaseClientsRepository {
         .eq('user_id', userId); // Fetch clients only for current user
 
     if (!includeArchived) {
-      query = query.or('is_archived.eq.false,is_archived.is.null');
+      query = query.eq('is_archived', false);
     }
 
     final response = await query;
@@ -48,7 +48,7 @@ class SupabaseClientsRepository {
     if (onlyArchived) {
       query = query.eq('is_archived', true);
     } else {
-      query = query.or('is_archived.eq.false,is_archived.is.null');
+      query = query.eq('is_archived', false);
     }
 
     if (searchQuery != null && searchQuery.trim().isNotEmpty) {

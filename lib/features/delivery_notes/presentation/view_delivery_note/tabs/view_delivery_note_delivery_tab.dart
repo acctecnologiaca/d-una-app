@@ -40,11 +40,15 @@ class ViewDeliveryNoteDeliveryTab extends ConsumerWidget {
           _ => 'Despacho propio',
         };
 
-        final String locationLabel = [
-          if (note.recipientCity != null && note.recipientCity!.isNotEmpty)
-            note.recipientCity!,
-          if (note.recipientState != null && note.recipientState!.isNotEmpty)
-            note.recipientState!,
+        final String fullAddress = [
+          if (note.recipientAddress != null &&
+              note.recipientAddress!.trim().isNotEmpty)
+            note.recipientAddress!.trim(),
+          if (note.recipientCity != null && note.recipientCity!.trim().isNotEmpty)
+            note.recipientCity!.trim(),
+          if (note.recipientState != null &&
+              note.recipientState!.trim().isNotEmpty)
+            note.recipientState!.trim(),
         ].join(', ');
 
         return SingleChildScrollView(
@@ -64,7 +68,7 @@ class ViewDeliveryNoteDeliveryTab extends ConsumerWidget {
 
               InfoBlock.text(
                 icon: Icons.calendar_today_outlined,
-                label: 'Fecha Estimada de Entrega',
+                label: 'Fecha de Despacho',
                 value: note.deliveryDate != null
                     ? dateFormat.format(note.deliveryDate!)
                     : 'No especificada',
@@ -126,17 +130,8 @@ class ViewDeliveryNoteDeliveryTab extends ConsumerWidget {
               InfoBlock.text(
                 icon: Icons.location_on_outlined,
                 label: 'Dirección de Entrega',
-                value: note.recipientAddress ?? 'No especificada',
+                value: fullAddress.isNotEmpty ? fullAddress : 'No especificada',
               ),
-
-              if (locationLabel.isNotEmpty) ...[
-                const SizedBox(height: 24),
-                InfoBlock.text(
-                  icon: Icons.map_outlined,
-                  label: 'Ciudad / Estado',
-                  value: locationLabel,
-                ),
-              ],
 
               // 4. Instrucciones Especiales
               if (note.deliveryInstructions != null &&

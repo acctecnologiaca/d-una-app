@@ -192,7 +192,7 @@ class AddPurchaseNotifier extends StateNotifier<AddPurchaseState> {
     } else {
       final hasData =
           state.products.isNotEmpty ||
-          state.supplierId != null ||
+          (state.supplierId != null && state.supplierId!.isNotEmpty) ||
           (state.documentNumber != null &&
               state.documentNumber!.trim().isNotEmpty);
 
@@ -223,7 +223,7 @@ class AddPurchaseNotifier extends StateNotifier<AddPurchaseState> {
     } else {
       final hasData =
           state.products.isNotEmpty ||
-          state.supplierId != null ||
+          (state.supplierId != null && state.supplierId!.isNotEmpty) ||
           (state.documentNumber != null &&
               state.documentNumber!.trim().isNotEmpty);
 
@@ -327,8 +327,8 @@ class AddPurchaseNotifier extends StateNotifier<AddPurchaseState> {
       documentNumber: purchase.documentNumber,
       invoicePhotoUrl: purchase.invoicePhotoUrl,
       date: purchase.date,
-      products: items,
-      serials: serials,
+      products: List<PurchaseItemProduct>.from(items),
+      serials: List<ProductSerial>.from(serials),
     );
     updateBaseline();
   }

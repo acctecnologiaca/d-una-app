@@ -54,12 +54,13 @@ class DeliveryNoteCreateState extends Equatable {
   final DateTime? receivedAt;
   final String? signatureData;
   final double taxRate;
+  final bool useClientAddress;
   final List<DeliveryNoteItemModel> items;
   final List<DeliveryNoteObservationModel> observations;
   final bool isDropshipping;
   final bool isLoading;
   final String? error;
-  final bool isDirty;
+  final DeliveryNoteModel? initialNote;
 
   DeliveryNoteCreateState({
     this.id,
@@ -92,12 +93,14 @@ class DeliveryNoteCreateState extends Equatable {
     this.receivedAt,
     this.signatureData,
     this.taxRate = 0.0,
+    this.useClientAddress = false,
     this.items = const [],
     this.observations = const [],
     this.isDropshipping = false,
     this.isLoading = false,
     this.error,
-    this.isDirty = false,
+    this.initialNote,
+    bool? isDirty,
   }) : date = date ?? DateTime.now();
 
   double get subtotal => items.fold(0.0, (sum, i) => sum + i.totalPrice);
@@ -122,6 +125,87 @@ class DeliveryNoteCreateState extends Equatable {
     }
     return true; // 'pickup' is always valid
   }
+
+  bool get hasChanges {
+    if (initialNote == null || initialNote!.id.isEmpty) {
+      return (clientId != null && clientId!.isNotEmpty) ||
+          items.isNotEmpty ||
+          (recipientAddress != null && recipientAddress!.trim().isNotEmpty) ||
+          (shippingCompanyId != null && shippingCompanyId!.isNotEmpty) ||
+          (trackingNumber != null && trackingNumber!.trim().isNotEmpty) ||
+          (deliveryInstructions != null && deliveryInstructions!.trim().isNotEmpty) ||
+          (notes != null && notes!.trim().isNotEmpty) ||
+          (tag != null && tag!.trim().isNotEmpty) ||
+          (clientPoNumber != null && clientPoNumber!.trim().isNotEmpty);
+    }
+
+    if (clientId != initialNote!.clientId) return true;
+    if (contactId != initialNote!.contactId) return true;
+    if ((tag ?? '').trim() != (initialNote!.tag ?? '').trim()) return true;
+    if ((notes ?? '').trim() != (initialNote!.notes ?? '').trim()) return true;
+    if ((clientPoNumber ?? '').trim() != (initialNote!.clientPoNumber ?? '').trim()) return true;
+    if (status != initialNote!.status) return true;
+
+    if (date.year != initialNote!.date.year ||
+        date.month != initialNote!.date.month ||
+        date.day != initialNote!.date.day) {
+      return true;
+    }
+
+    if ((deliveryDate == null) != (initialNote!.deliveryDate == null)) return true;
+    if (deliveryDate != null && initialNote!.deliveryDate != null) {
+      if (deliveryDate!.year != initialNote!.deliveryDate!.year ||
+          deliveryDate!.month != initialNote!.deliveryDate!.month ||
+          deliveryDate!.day != initialNote!.deliveryDate!.day) {
+        return true;
+      }
+    }
+
+    if (deliveryType != initialNote!.deliveryType) return true;
+    if ((shippingCompanyId ?? '') != (initialNote!.shippingCompanyId ?? '')) return true;
+    if ((trackingNumber ?? '').trim() != (initialNote!.trackingNumber ?? '').trim()) return true;
+    if ((recipientAddress ?? '').trim() != (initialNote!.recipientAddress ?? '').trim()) return true;
+    if ((recipientCity ?? '').trim() != (initialNote!.recipientCity ?? '').trim()) return true;
+    if ((recipientState ?? '').trim() != (initialNote!.recipientState ?? '').trim()) return true;
+    if ((deliveryInstructions ?? '').trim() != (initialNote!.deliveryInstructions ?? '').trim()) return true;
+    if (useClientAddress != initialNote!.useClientAddress) return true;
+    if (isDropshipping != initialNote!.isDropshipping) return true;
+    if (taxRate != initialNote!.taxRate) return true;
+
+    if (items.length != initialNote!.items.length) return true;
+    for (int i = 0; i < items.length; i++) {
+      final p = items[i];
+      final op = initialNote!.items[i];
+      if (p.productId != op.productId ||
+          p.quantity != op.quantity ||
+          p.unitPrice != op.unitPrice ||
+          p.name != op.name ||
+          p.brand != op.brand ||
+          p.model != op.model ||
+          p.uom != op.uom ||
+          p.sourceType != op.sourceType ||
+          p.requiresSerials != op.requiresSerials) {
+        return true;
+      }
+      if (p.serials.length != op.serials.length) return true;
+      for (int j = 0; j < p.serials.length; j++) {
+        if (p.serials[j].serialNumber.trim() != op.serials[j].serialNumber.trim()) {
+          return true;
+        }
+      }
+    }
+
+    if (observations.length != initialNote!.observations.length) return true;
+    for (int i = 0; i < observations.length; i++) {
+      if (observations[i].description.trim() != initialNote!.observations[i].description.trim()) {
+        return true;
+      }
+    }
+
+    return false;
+  }
+
+  bool get isDirty => hasChanges;
 
   DeliveryNoteCreateState copyWith({
     String? id,
@@ -154,11 +238,13 @@ class DeliveryNoteCreateState extends Equatable {
     DateTime? receivedAt,
     String? signatureData,
     double? taxRate,
+    bool? useClientAddress,
     List<DeliveryNoteItemModel>? items,
     List<DeliveryNoteObservationModel>? observations,
     bool? isDropshipping,
     bool? isLoading,
     String? error,
+    DeliveryNoteModel? initialNote,
     bool? isDirty,
   }) {
     return DeliveryNoteCreateState(
@@ -192,17 +278,19 @@ class DeliveryNoteCreateState extends Equatable {
       receivedAt: receivedAt ?? this.receivedAt,
       signatureData: signatureData ?? this.signatureData,
       taxRate: taxRate ?? this.taxRate,
+      useClientAddress: useClientAddress ?? this.useClientAddress,
       items: items ?? this.items,
       observations: observations ?? this.observations,
       isDropshipping: isDropshipping ?? this.isDropshipping,
       isLoading: isLoading ?? this.isLoading,
       error: error,
-      isDirty: isDirty ?? this.isDirty,
+      initialNote: initialNote ?? this.initialNote,
     );
   }
 
   Map<String, dynamic> toDraftJson() {
     return {
+      'initial_note': initialNote?.toJson(),
       'id': id,
       'delivery_note_number': deliveryNoteNumber,
       'client_id': clientId,
@@ -227,6 +315,7 @@ class DeliveryNoteCreateState extends Equatable {
       'recipient_state': recipientState,
       'delivery_instructions': deliveryInstructions,
       'tax_rate': taxRate,
+      'use_client_address': useClientAddress,
       'is_dropshipping': isDropshipping,
       'items': items.map((i) => i.toJson()).toList(),
       'observations': observations.map((o) => o.toJson()).toList(),
@@ -271,10 +360,13 @@ class DeliveryNoteCreateState extends Equatable {
       recipientState: json['recipient_state'] as String?,
       deliveryInstructions: json['delivery_instructions'] as String?,
       taxRate: (json['tax_rate'] as num?)?.toDouble() ?? 0.0,
+      useClientAddress: json['use_client_address'] == true,
       isDropshipping: json['is_dropshipping'] == true,
       items: itemsList,
       observations: obsList,
-      isDirty: true,
+      initialNote: json['initial_note'] != null
+          ? DeliveryNoteModel.fromJson(json['initial_note'] as Map<String, dynamic>)
+          : null,
     );
   }
 
@@ -308,11 +400,13 @@ class DeliveryNoteCreateState extends Equatable {
     receivedById,
     signatureData,
     taxRate,
+    useClientAddress,
     items,
     observations,
     isDropshipping,
     isLoading,
     error,
+    initialNote,
     isDirty,
   ];
 }
@@ -480,8 +574,11 @@ class CreateDeliveryNoteNotifier
     await _draftStorage.saveDraftNow(draft);
   }
 
-  void restoreDraft(DraftData draft) {
-    state = DeliveryNoteCreateState.fromDraftJson(draft.data);
+  void restoreDraft(DraftData draft, {DeliveryNoteModel? originalNote}) {
+    final restored = DeliveryNoteCreateState.fromDraftJson(draft.data);
+    state = restored.copyWith(
+      initialNote: originalNote ?? restored.initialNote ?? state.initialNote,
+    );
   }
 
   Future<void> discardDraft({String? noteId}) async {
@@ -600,10 +697,18 @@ class CreateDeliveryNoteNotifier
       receivedAt: note.receivedAt,
       signatureData: note.signatureData,
       taxRate: note.taxRate,
+      useClientAddress: note.useClientAddress,
       items: note.items,
       observations: note.observations,
       isDropshipping: note.isDropshipping,
-      isDirty: false,
+      initialNote: note,
+    );
+  }
+
+  void setUseClientAddress(bool value) {
+    state = state.copyWith(
+      useClientAddress: value,
+      isDirty: true,
     );
   }
 
@@ -774,6 +879,7 @@ class CreateDeliveryNoteNotifier
       receivedAt: state.receivedAt,
       signatureData: state.signatureData,
       taxRate: state.taxRate,
+      useClientAddress: state.useClientAddress,
       items: state.items,
       observations: state.observations,
       isDropshipping: state.isDropshipping,
@@ -789,6 +895,7 @@ class CreateDeliveryNoteNotifier
       clearCity: true,
       clearState: true,
     );
+    state = state.copyWith(useClientAddress: false, isDirty: true);
   }
 
   void setClientPoNumber(String? poNumber) {
@@ -1058,6 +1165,7 @@ class CreateDeliveryNoteNotifier
         total: state.total,
         isDropshipping: state.isDropshipping,
         hasMissingSerials: state.hasMissingSerials,
+        useClientAddress: state.useClientAddress,
         createdAt: DateTime.now(),
         updatedAt: DateTime.now(),
         items: state.items,
@@ -1072,7 +1180,7 @@ class CreateDeliveryNoteNotifier
       }
 
       await discardDraft(noteId: state.id);
-      state = state.copyWith(isLoading: false, isDirty: false);
+      state = state.copyWith(isLoading: false, initialNote: savedNote);
       return savedNote;
     } catch (e) {
       state = state.copyWith(isLoading: false, error: e.toString());

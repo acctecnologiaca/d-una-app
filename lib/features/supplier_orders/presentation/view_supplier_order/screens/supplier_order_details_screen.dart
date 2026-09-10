@@ -26,6 +26,9 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:d_una_app/core/utils/contact_utils.dart';
 import 'package:d_una_app/core/utils/phone_utils.dart';
 import 'package:d_una_app/core/services/whatsapp_repository.dart';
+import 'package:pdf/pdf.dart';
+import 'package:d_una_app/core/pdf/templates/supplier_order_pdf_template.dart';
+import 'package:d_una_app/shared/utils/string_utils.dart';
 import 'package:d_una_app/features/quotes/domain/models/quote_model.dart'
     show StockStatus;
 import '../../create_supplier_order/providers/supplier_order_validation_provider.dart';
@@ -178,34 +181,65 @@ class _SupplierOrderDetailsScreenState
                 icon: const Icon(Icons.more_vert),
                 color: colors.onSurfaceVariant,
                 onPressed: () {
+                  final isFinalized =
+                      order.status == SupplierOrderStatus.finalized;
+
                   CustomActionSheet.show(
                     context: context,
                     title: 'Opciones',
                     actions: [
-                      if (canEdit)
-                        BottomSheetActionItem(
-                          icon: Icons.edit_outlined,
-                          label: 'Modificar',
-                          onTap: () {
-                            context.pop();
-                            ref
-                                .read(createSupplierOrderProvider.notifier)
-                                .loadFromExisting(order, items);
-                            context.push(
-                              '/supplier-orders/edit/${order.id}?tab=${_tabController.index}',
-                            );
-                          },
-                        ),
+                      // Bloque 1: Documento y Exportación
+                      BottomSheetActionItem(
+                        icon: Icons.picture_as_pdf_outlined,
+                        label: 'Descargar PDF',
+                        enabled: isFinalized,
+                        subtitle: isFinalized
+                            ? null
+                            : 'Disponible únicamente cuando la orden esté finalizada',
+                        onTap: () async {
+                          if (!isFinalized) return;
+                          final userProfile = ref.read(userProfileProvider).value;
+                          final userEmail =
+                              Supabase.instance.client.auth.currentUser?.email;
 
-                      if (isSentOrResent)
-                        BottomSheetActionItem(
-                          icon: Symbols.forward,
-                          label: 'Reenviar',
-                          onTap: () {
-                            context.pop();
-                            _checkAndSendOrder(context, order, items);
-                          },
-                        ),
+                          if (userProfile == null) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text(
+                                  'Cargando perfil de usuario... Por favor espere.',
+                                ),
+                              ),
+                            );
+                            return;
+                          }
+
+                          context.pop();
+
+                          context.push(
+                            '/pdf-preview',
+                            extra: {
+                              'title': 'Previsualizar Orden de Compra',
+                              'subtitle':
+                                  '${order.orderNumber} ($supplierDisplayName)',
+                              'fileName': StringUtils.sanitizeForFileName(
+                                '${order.date.toIso8601String().substring(0, 10)}_${order.supplierName}_${order.orderNumber}.pdf',
+                              ),
+                              'buildPdf': (PdfPageFormat format) =>
+                                  SupplierOrderPdfTemplate(
+                                order: order,
+                                items: items,
+                                userProfile: userProfile,
+                                userEmail: userEmail,
+                                shippingMethod: null,
+                                receiverCollaborator: null,
+                              ).generate(format),
+                            },
+                          );
+                        },
+                      ),
+                      const Divider(height: 1, indent: 16, endIndent: 16),
+
+                      // Bloque 2: Ciclo de Vida y Flujo Operativo
                       if (order.status == SupplierOrderStatus.approved)
                         BottomSheetActionItem(
                           icon: Icons.receipt_long_outlined,
@@ -227,6 +261,69 @@ class _SupplierOrderDetailsScreenState
                             context.push(
                               '/delivery-notes/create?supplierOrderId=${order.id}',
                             );
+                          },
+                        ),
+                      if (order.status == SupplierOrderStatus.merged)
+                        BottomSheetActionItem(
+                          icon: Icons.call_split_rounded,
+                          label: 'Deshacer Consolidación',
+                          onTap: () async {
+                            context.pop();
+                            final confirm = await CustomDialog.show<bool>(
+                              context: context,
+                              dialog: CustomDialog.confirmation(
+                                title: '¿Deshacer consolidación?',
+                                contentText:
+                                    'La orden seleccionada se desvinculará de la OC Principal y volverá al estado Borrador.',
+                                actions: [
+                                  TextButton(
+                                    onPressed: () =>
+                                        Navigator.pop(context, false),
+                                    child: const Text('Volver'),
+                                  ),
+                                  FilledButton(
+                                    onPressed: () =>
+                                        Navigator.pop(context, true),
+                                    child: const Text('Confirmar'),
+                                  ),
+                                ],
+                              ),
+                            );
+
+                            if (confirm == true) {
+                              try {
+                                await ref
+                                    .read(supplierOrdersRepositoryProvider)
+                                    .batchUnmergeSupplierOrders([order.id]);
+
+                                ref
+                                    .read(
+                                      paginatedSupplierOrdersProvider.notifier,
+                                    )
+                                    .refresh();
+                                ref.invalidate(
+                                  supplierOrderDetailProvider(order.id),
+                                );
+
+                                if (context.mounted) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    const SnackBar(
+                                      content: Text(
+                                        'Consolidación deshecha exitosamente',
+                                      ),
+                                    ),
+                                  );
+                                }
+                              } catch (e) {
+                                if (context.mounted) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(
+                                      content: Text('Error al deshacer: $e'),
+                                    ),
+                                  );
+                                }
+                              }
+                            }
                           },
                         ),
                       if (canEdit)
@@ -291,6 +388,8 @@ class _SupplierOrderDetailsScreenState
                         ),
 
                       const Divider(height: 1, indent: 16, endIndent: 16),
+
+                      // Bloque 3: Utilidades y Gestión Documental
                       BottomSheetActionItem(
                         icon: Icons.content_copy_outlined,
                         label: 'Crear una copia',

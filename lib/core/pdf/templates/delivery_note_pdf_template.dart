@@ -21,12 +21,17 @@ class DeliveryNotePdfTemplate {
 
   Future<Uint8List> generate(PdfPageFormat format) async {
     try {
+      if (note.id.isEmpty) {
+        return _buildErrorDocument('Datos de la nota de entrega incompletos.');
+      }
+
       final pdf = pw.Document(theme: PdfThemeConfig.buildTheme());
 
       // Resolver info del emisor
-      final senderInfo = PdfHelpers.resolvePdfSenderInfo(userProfile, userEmail);
+      final senderInfo =
+          PdfHelpers.resolvePdfSenderInfo(userProfile, userEmail);
 
-      // Cargar logo si existe
+      // Cargar logo si existe (con timeout de seguridad)
       final logoImage = await PdfHelpers.loadNetworkImage(senderInfo.logoUrl);
 
       // Cargar imagen de marca para el footer
@@ -61,20 +66,20 @@ class DeliveryNotePdfTemplate {
             logoImage: logoImage,
             badgeText: note.isDropshipping ? 'DROPSHIPPING' : null,
           ),
-          footer: (context) =>
-              PdfCommonSections.buildFooter(context, footerLogoImage: footerImage),
+          footer: (context) => PdfCommonSections.buildFooter(
+            context,
+            footerLogoImage: footerImage,
+          ),
           build: (context) => [
             _buildInfoGrid(),
             pw.SizedBox(height: 14),
             _buildItemsTable(),
-            pw.SizedBox(height: 12),
-            _buildTotalsBlock(),
             if (note.observations.isNotEmpty ||
                 (note.notes != null && note.notes!.trim().isNotEmpty)) ...[
               pw.SizedBox(height: 14),
               _buildObservationsBlock(),
             ],
-            pw.SizedBox(height: 20),
+            pw.SizedBox(height: 16),
             _buildSignaturesBlock(signatureImage),
           ],
         ),
@@ -87,256 +92,535 @@ class DeliveryNotePdfTemplate {
     }
   }
 
-  pw.Widget _buildInfoGrid() {
-    final deliveryTypeLabel = note.deliveryType == 'store_pickup'
-        ? 'Retiro en tienda / almacén'
-        : (note.deliveryType == 'carrier'
-            ? 'Envío por encomienda / transportista'
-            : 'Despacho propio');
-
-    return pw.Row(
-      crossAxisAlignment: pw.CrossAxisAlignment.start,
-      children: [
-        // Columna Izquierda: Datos del Cliente y Destino
-        pw.Expanded(
-          child: pw.Column(
-            crossAxisAlignment: pw.CrossAxisAlignment.start,
-            children: [
-              pw.Text(
-                'DESTINATARIO / CLIENTE',
-                style: pw.TextStyle(
-                  fontSize: 8,
-                  fontWeight: pw.FontWeight.bold,
-                  color: PdfThemeConfig.slate900,
-                ),
-              ),
-              pw.SizedBox(height: 4),
-              pw.Text(
-                note.clientName,
-                style: pw.TextStyle(fontSize: 10, fontWeight: pw.FontWeight.bold),
-              ),
-              if (note.clientTaxId != null && note.clientTaxId!.isNotEmpty)
-                pw.Text('RIF/ID: ${note.clientTaxId}', style: const pw.TextStyle(fontSize: 8)),
-              if (note.contactName != null && note.contactName!.isNotEmpty)
-                pw.Text('Contacto: ${note.contactName}', style: const pw.TextStyle(fontSize: 8)),
-              if (note.recipientAddress != null && note.recipientAddress!.isNotEmpty)
-                pw.Text(
-                  'Dirección: ${note.recipientAddress}${note.recipientCity != null ? ", ${note.recipientCity}" : ""}',
-                  style: const pw.TextStyle(fontSize: 8),
-                ),
-            ],
-          ),
-        ),
-        pw.SizedBox(width: 20),
-
-        // Columna Derecha: Datos de Envío y Despacho
-        pw.Expanded(
-          child: pw.Column(
-            crossAxisAlignment: pw.CrossAxisAlignment.start,
-            children: [
-              pw.Text(
-                'DETALLES DEL DESPACHO',
-                style: pw.TextStyle(
-                  fontSize: 8,
-                  fontWeight: pw.FontWeight.bold,
-                  color: PdfThemeConfig.slate900,
-                ),
-              ),
-              pw.SizedBox(height: 4),
-              pw.Text('Modalidad: $deliveryTypeLabel', style: const pw.TextStyle(fontSize: 8)),
-              if (note.shippingCompanyName != null && note.shippingCompanyName!.isNotEmpty)
-                pw.Text('Transporte: ${note.shippingCompanyName}', style: const pw.TextStyle(fontSize: 8)),
-              if (note.trackingNumber != null && note.trackingNumber!.isNotEmpty)
-                pw.Text('Guía / Tracking: ${note.trackingNumber}', style: const pw.TextStyle(fontSize: 8)),
-              if (note.deliveryDate != null)
-                pw.Text('Fecha de Entrega: ${PdfHelpers.formatDate(note.deliveryDate!)}', style: const pw.TextStyle(fontSize: 8)),
-              if (note.clientPoNumber != null && note.clientPoNumber!.isNotEmpty)
-                pw.Text('O/C Cliente: ${note.clientPoNumber}', style: const pw.TextStyle(fontSize: 8)),
-            ],
-          ),
-        ),
-      ],
-    );
-  }
-
-  pw.Widget _buildItemsTable() {
-    return pw.TableHelper.fromTextArray(
-      border: null,
-      headerStyle: pw.TextStyle(
-        fontSize: 8,
-        fontWeight: pw.FontWeight.bold,
-        color: PdfColors.white,
-      ),
-      headerDecoration: const pw.BoxDecoration(color: PdfThemeConfig.slate900),
-      headerHeight: 22,
-      cellHeight: 22,
-      cellPadding: const pw.EdgeInsets.symmetric(horizontal: 6, vertical: 4),
-      headers: ['Ítem / Descripción', 'Garantía', 'Cant.', 'P. Unit.', 'Total'],
-      columnWidths: {
-        0: const pw.FlexColumnWidth(4),
-        1: const pw.FlexColumnWidth(1.5),
-        2: const pw.FlexColumnWidth(1),
-        3: const pw.FlexColumnWidth(1.5),
-        4: const pw.FlexColumnWidth(1.5),
-      },
-      data: note.items.map((item) {
-        final serialsText = item.serials.isNotEmpty
-            ? '\nSeriales: ${item.serials.map((s) => s.serialNumber).join(", ")}'
-            : '';
-        final desc = '${item.name}${item.brand != null ? " - ${item.brand}" : ""}$serialsText';
-
-        final warranty = item.warrantyTime != null
-            ? '${item.warrantyTime} ${item.warrantyUnit == "years" ? "años" : (item.warrantyUnit == "months" ? "meses" : "días")}'
-            : '-';
-
-        return [
-          desc,
-          warranty,
-          '${item.quantity % 1 == 0 ? item.quantity.toInt() : item.quantity} ${item.uom}',
-          PdfHelpers.formatCurrency(item.unitPrice),
-          PdfHelpers.formatCurrency(item.totalPrice),
-        ];
-      }).toList(),
-    );
-  }
-
-  pw.Widget _buildTotalsBlock() {
-    return pw.Row(
-      mainAxisAlignment: pw.MainAxisAlignment.end,
-      children: [
-        pw.Container(
-          width: 200,
-          child: pw.Column(
-            children: [
-              pw.Row(
-                mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
-                children: [
-                  pw.Text('Subtotal:', style: const pw.TextStyle(fontSize: 8)),
-                  pw.Text(PdfHelpers.formatCurrency(note.subtotalAmount), style: const pw.TextStyle(fontSize: 8)),
-                ],
-              ),
-              if (note.taxAmount > 0) ...[
-                pw.SizedBox(height: 2),
-                pw.Row(
-                  mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
-                  children: [
-                    pw.Text('IVA (${(note.taxRate * 100).toStringAsFixed(0)}%):', style: const pw.TextStyle(fontSize: 8)),
-                    pw.Text(PdfHelpers.formatCurrency(note.taxAmount), style: const pw.TextStyle(fontSize: 8)),
-                  ],
-                ),
-              ],
-              pw.Divider(height: 8),
-              pw.Row(
-                mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
-                children: [
-                  pw.Text('Total:', style: pw.TextStyle(fontSize: 10, fontWeight: pw.FontWeight.bold)),
-                  pw.Text(PdfHelpers.formatCurrency(note.totalAmount), style: pw.TextStyle(fontSize: 10, fontWeight: pw.FontWeight.bold)),
-                ],
-              ),
-            ],
-          ),
-        ),
-      ],
-    );
-  }
-
-  pw.Widget _buildObservationsBlock() {
-    return pw.Column(
-      crossAxisAlignment: pw.CrossAxisAlignment.start,
-      children: [
-        pw.Text(
-          'CONDICIONES Y OBSERVACIONES',
-          style: pw.TextStyle(
-            fontSize: 8,
-            fontWeight: pw.FontWeight.bold,
-            color: PdfThemeConfig.slate900,
-          ),
-        ),
-        pw.SizedBox(height: 4),
-        ...note.observations.map(
-          (obs) => pw.Padding(
-            padding: const pw.EdgeInsets.only(bottom: 2),
-            child: pw.Text(
-              '• ${obs.title}: ${obs.description}',
-              style: const pw.TextStyle(fontSize: 7),
-            ),
-          ),
-        ),
-        if (note.notes != null && note.notes!.trim().isNotEmpty) ...[
-          pw.SizedBox(height: 4),
-          pw.Text('Notas adicionales: ${note.notes}', style: pw.TextStyle(fontSize: 7, fontStyle: pw.FontStyle.italic)),
-        ],
-      ],
-    );
-  }
-
-  pw.Widget _buildSignaturesBlock(pw.MemoryImage? signatureImage) {
-    return pw.Row(
-      mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
-      children: [
-        // Emisor / Despachador
-        pw.Expanded(
-          child: pw.Column(
-            children: [
-              pw.Container(height: 40),
-              pw.Container(width: 150, height: 1, color: PdfColors.black),
-              pw.SizedBox(height: 4),
-              pw.Text('Entregado conforme / Despacho', style: const pw.TextStyle(fontSize: 8, color: PdfColors.grey700)),
-              pw.Text(
-                ('${userProfile.firstName ?? ""} ${userProfile.lastName ?? ""}'.trim().isNotEmpty
-                    ? '${userProfile.firstName ?? ""} ${userProfile.lastName ?? ""}'.trim()
-                    : 'Emisor'),
-                style: pw.TextStyle(fontSize: 8, fontWeight: pw.FontWeight.bold),
-              ),
-            ],
-          ),
-        ),
-        pw.SizedBox(width: 40),
-
-        // Receptor
-        pw.Expanded(
-          child: pw.Column(
-            children: [
-              if (signatureImage != null)
-                pw.Container(
-                  height: 40,
-                  alignment: pw.Alignment.center,
-                  child: pw.Image(signatureImage, height: 38),
-                )
-              else
-                pw.Container(height: 40),
-              pw.Container(width: 150, height: 1, color: PdfColors.black),
-              pw.SizedBox(height: 4),
-              pw.Text('Recibido conforme / Cliente', style: const pw.TextStyle(fontSize: 8, color: PdfColors.grey700)),
-              if (note.receivedByName != null) ...[
-                pw.Text(note.receivedByName!, style: pw.TextStyle(fontSize: 8, fontWeight: pw.FontWeight.bold)),
-                if (note.receivedById != null)
-                  pw.Text('C.I. / DNI: ${note.receivedById}', style: const pw.TextStyle(fontSize: 7)),
-                if (note.receivedAt != null)
-                  pw.Text('Fecha: ${PdfHelpers.formatDate(note.receivedAt!)}', style: const pw.TextStyle(fontSize: 7)),
-              ],
-            ],
-          ),
-        ),
-      ],
-    );
-  }
-
   Future<Uint8List> _buildErrorDocument(String message) async {
     final errorPdf = pw.Document(theme: PdfThemeConfig.buildTheme());
     errorPdf.addPage(
       pw.Page(
         build: (context) => pw.Center(
           child: pw.Padding(
-            padding: const pw.EdgeInsets.all(20),
-            child: pw.Text(
-              message,
-              style: const pw.TextStyle(fontSize: 12, color: PdfColors.red),
+            padding: const pw.EdgeInsets.all(24),
+            child: pw.Column(
+              mainAxisSize: pw.MainAxisSize.min,
+              children: [
+                pw.Text(
+                  'No se pudo generar el documento PDF',
+                  style: pw.TextStyle(
+                    fontSize: 14,
+                    fontWeight: pw.FontWeight.bold,
+                    color: PdfThemeConfig.slate900,
+                  ),
+                ),
+                pw.SizedBox(height: 8),
+                pw.Text(
+                  message,
+                  textAlign: pw.TextAlign.center,
+                  style: const pw.TextStyle(
+                    fontSize: 10,
+                    color: PdfThemeConfig.slate500,
+                  ),
+                ),
+              ],
             ),
           ),
         ),
       ),
     );
-    return await errorPdf.save();
+    return errorPdf.save();
+  }
+
+  /// Grilla de 2 columnas: Datos del Cliente y Detalles del Despacho
+  pw.Widget _buildInfoGrid() {
+    final rawTaxId = (note.clientTaxId ?? '').trim();
+    final isCompany = note.clientType == 'company' ||
+        (rawTaxId.isNotEmpty && rawTaxId.toUpperCase().startsWith('J'));
+    final clientNameLabel = isCompany ? 'Razón Social:' : 'Nombre:';
+    final clientTaxLabel = isCompany ? 'RIF:' : 'Cédula:';
+
+    final contactName = (note.contactName != null &&
+            note.contactName!.trim() != '-' &&
+            note.contactName!.trim().isNotEmpty)
+        ? note.contactName!.trim()
+        : null;
+    final showAttention = isCompany && contactName != null;
+
+    final phone = (note.clientPhone != null &&
+            note.clientPhone!.trim().isNotEmpty &&
+            note.clientPhone!.trim() != '-')
+        ? note.clientPhone!.trim()
+        : ((note.contactPhone != null &&
+                note.contactPhone!.trim().isNotEmpty &&
+                note.contactPhone!.trim() != '-')
+            ? note.contactPhone!.trim()
+            : null);
+
+    final email = (note.clientEmail != null &&
+            note.clientEmail!.trim().isNotEmpty &&
+            note.clientEmail!.trim() != '-')
+        ? note.clientEmail!.trim()
+        : ((note.contactEmail != null &&
+                note.contactEmail!.trim().isNotEmpty &&
+                note.contactEmail!.trim() != '-')
+            ? note.contactEmail!.trim()
+            : null);
+
+    // Dirección fiscal del cliente
+    final clientAddressParts = <String>[
+      if (note.clientAddress != null &&
+          note.clientAddress!.trim().isNotEmpty &&
+          note.clientAddress!.trim() != '-')
+        note.clientAddress!.trim(),
+      if (note.clientCity != null &&
+          note.clientCity!.trim().isNotEmpty &&
+          note.clientCity!.trim() != '-')
+        note.clientCity!.trim(),
+      if (note.clientState != null &&
+          note.clientState!.trim().isNotEmpty &&
+          note.clientState!.trim() != '-')
+        note.clientState!.trim(),
+    ];
+    final fullClientAddress =
+        clientAddressParts.isNotEmpty ? clientAddressParts.join(', ') : null;
+
+    // Dirección de destino / despacho
+    final deliveryAddressParts = <String>[
+      if (note.recipientAddress != null &&
+          note.recipientAddress!.trim().isNotEmpty &&
+          note.recipientAddress!.trim() != '-')
+        note.recipientAddress!.trim(),
+      if (note.recipientCity != null &&
+          note.recipientCity!.trim().isNotEmpty &&
+          note.recipientCity!.trim() != '-')
+        note.recipientCity!.trim(),
+      if (note.recipientState != null &&
+          note.recipientState!.trim().isNotEmpty &&
+          note.recipientState!.trim() != '-')
+        note.recipientState!.trim(),
+    ];
+    final fullDeliveryAddress = deliveryAddressParts.isNotEmpty
+        ? deliveryAddressParts.join(', ')
+        : null;
+
+    final deliveryTypeLabel = note.deliveryType == 'store_pickup' ||
+            note.deliveryType == 'pickup'
+        ? 'Retiro en tienda / almacén'
+        : (note.deliveryType == 'carrier' || note.deliveryType == 'courier'
+            ? 'Envío por encomienda / transportista'
+            : 'Despacho propio');
+
+    final dispatchDate = note.deliveryDate ?? note.date;
+
+    return pw.Row(
+      crossAxisAlignment: pw.CrossAxisAlignment.start,
+      children: [
+        // Tarjeta 1: Datos del Cliente
+        pw.Expanded(
+          child: PdfCommonSections.buildInfoCard(
+            title: 'DATOS DEL CLIENTE',
+            children: [
+              PdfCommonSections.buildInfoRow(
+                clientNameLabel,
+                note.clientName.isNotEmpty
+                    ? note.clientName
+                    : 'Cliente Particular',
+              ),
+              if (rawTaxId.isNotEmpty && rawTaxId != '-')
+                PdfCommonSections.buildInfoRow(clientTaxLabel, rawTaxId),
+              if (showAttention)
+                PdfCommonSections.buildInfoRow('Atención:', contactName),
+              if (phone != null)
+                PdfCommonSections.buildInfoRow('Teléfono:', phone),
+              if (email != null)
+                PdfCommonSections.buildInfoRow('Email:', email),
+              if (fullClientAddress != null)
+                PdfCommonSections.buildInfoRow(
+                  'Dirección:',
+                  fullClientAddress,
+                ),
+            ],
+          ),
+        ),
+        pw.SizedBox(width: 12),
+        // Tarjeta 2: Detalles del Despacho
+        pw.Expanded(
+          child: PdfCommonSections.buildInfoCard(
+            title: 'DETALLES DEL DESPACHO',
+            children: [
+              PdfCommonSections.buildInfoRow(
+                'Modalidad:',
+                deliveryTypeLabel,
+              ),
+              if (note.shippingCompanyName != null &&
+                  note.shippingCompanyName!.trim().isNotEmpty &&
+                  note.shippingCompanyName!.trim() != '-')
+                PdfCommonSections.buildInfoRow(
+                  'Transporte:',
+                  note.shippingCompanyName!.trim(),
+                ),
+              if (note.trackingNumber != null &&
+                  note.trackingNumber!.trim().isNotEmpty &&
+                  note.trackingNumber!.trim() != '-')
+                PdfCommonSections.buildInfoRow(
+                  'Guía / Tracking:',
+                  note.trackingNumber!.trim(),
+                ),
+              PdfCommonSections.buildInfoRow(
+                'Fecha de Despacho:',
+                PdfHelpers.formatDate(dispatchDate),
+              ),
+              if (note.clientPoNumber != null &&
+                  note.clientPoNumber!.trim().isNotEmpty &&
+                  note.clientPoNumber!.trim() != '-')
+                PdfCommonSections.buildInfoRow(
+                  'O/C Cliente:',
+                  note.clientPoNumber!.trim(),
+                ),
+              if (fullDeliveryAddress != null)
+                PdfCommonSections.buildInfoRow(
+                  'Dirección de despacho:',
+                  fullDeliveryAddress,
+                ),
+              if (note.deliveryInstructions != null &&
+                  note.deliveryInstructions!.trim().isNotEmpty &&
+                  note.deliveryInstructions!.trim() != '-')
+                PdfCommonSections.buildInfoRow(
+                  'Instrucciones:',
+                  note.deliveryInstructions!.trim(),
+                ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  /// Tabla homologada de productos (sin montos, solo cantidades y garantías)
+  pw.Widget _buildItemsTable() {
+    final rows = <pw.TableRow>[
+      // Cabecera de la tabla
+      pw.TableRow(
+        decoration: const pw.BoxDecoration(
+          color: PdfThemeConfig.slate100,
+          border: pw.Border(
+            bottom: pw.BorderSide(color: PdfThemeConfig.slate300, width: 1.5),
+          ),
+        ),
+        children: [
+          PdfCommonSections.buildTableHeaderCell(
+            'PRODUCTO',
+            pw.Alignment.centerLeft,
+          ),
+          PdfCommonSections.buildTableHeaderCell(
+            'GARANTÍA',
+            pw.Alignment.center,
+          ),
+          PdfCommonSections.buildTableHeaderCell(
+            'CANT.',
+            pw.Alignment.centerRight,
+          ),
+        ],
+      ),
+    ];
+
+    int rowIndex = 0;
+    for (var item in note.items) {
+      final isEven = rowIndex % 2 == 1;
+      rowIndex++;
+
+      // Subtítulo con marca/modelo o descripción (homologado a Cotizaciones)
+      String? subtitle;
+      final modelParts = [
+        if (item.brand != null &&
+            item.brand != 'Sin marca' &&
+            item.brand!.trim().isNotEmpty)
+          item.brand!.trim(),
+        if (item.model != null &&
+            item.model != 'NO APLICA' &&
+            item.model!.trim().isNotEmpty)
+          item.model!.trim(),
+      ];
+      if (modelParts.isNotEmpty) {
+        subtitle = modelParts.join(' - ');
+      } else if (item.description != null &&
+          item.description!.trim().isNotEmpty) {
+        subtitle = item.description!.trim();
+      }
+
+      final hasSerials = item.serials.isNotEmpty;
+      final warrantyStr = _formatWarranty(item.warrantyTime, item.warrantyUnit);
+      final qtyStr = item.quantity % 1 == 0
+          ? '${item.quantity.toInt()} ${item.uom}'
+          : '${item.quantity.toStringAsFixed(2)} ${item.uom}';
+
+      rows.add(
+        _buildItemTableRow(
+          name: item.name,
+          subtitle: subtitle,
+          serials: hasSerials
+              ? item.serials.map((s) => s.serialNumber).toList()
+              : null,
+          warranty: warrantyStr,
+          quantity: qtyStr,
+          isEven: isEven,
+        ),
+      );
+    }
+
+    return pw.Table(
+      columnWidths: const {
+        0: pw.FlexColumnWidth(1),
+        1: pw.FixedColumnWidth(90),
+        2: pw.FixedColumnWidth(70),
+      },
+      children: rows,
+    );
+  }
+
+  pw.TableRow _buildItemTableRow({
+    required String name,
+    String? subtitle,
+    List<String>? serials,
+    required String warranty,
+    required String quantity,
+    required bool isEven,
+  }) {
+    return pw.TableRow(
+      decoration: pw.BoxDecoration(
+        color: isEven ? PdfThemeConfig.slate50 : PdfThemeConfig.white,
+        border: const pw.Border(
+          bottom: pw.BorderSide(color: PdfThemeConfig.slate200, width: 0.5),
+        ),
+      ),
+      children: [
+        // Producto + Marca/Modelo + Seriales
+        pw.Padding(
+          padding: const pw.EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+          child: pw.Column(
+            crossAxisAlignment: pw.CrossAxisAlignment.start,
+            children: [
+              pw.Text(
+                name,
+                style: pw.TextStyle(
+                  fontSize: 7.5,
+                  fontWeight: pw.FontWeight.bold,
+                  color: PdfThemeConfig.slate900,
+                ),
+              ),
+              if (subtitle != null && subtitle.isNotEmpty) ...[
+                pw.SizedBox(height: 1.5),
+                pw.Text(
+                  subtitle,
+                  style: const pw.TextStyle(
+                    fontSize: 6.5,
+                    color: PdfThemeConfig.slate500,
+                  ),
+                ),
+              ],
+              if (serials != null && serials.isNotEmpty) ...[
+                pw.SizedBox(height: 2),
+                pw.Text(
+                  'Seriales: ${serials.join(", ")}',
+                  style: pw.TextStyle(
+                    fontSize: 6.8,
+                    color: PdfThemeConfig.slate500,
+                    fontStyle: pw.FontStyle.italic,
+                  ),
+                ),
+              ],
+            ],
+          ),
+        ),
+        // Garantía
+        pw.Container(
+          alignment: pw.Alignment.center,
+          padding: const pw.EdgeInsets.symmetric(horizontal: 4, vertical: 6),
+          child: pw.Text(
+            warranty,
+            style: const pw.TextStyle(
+              fontSize: 7,
+              color: PdfThemeConfig.slate700,
+            ),
+          ),
+        ),
+        // Cantidad
+        pw.Container(
+          alignment: pw.Alignment.centerRight,
+          padding: const pw.EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+          child: pw.Text(
+            quantity,
+            style: pw.TextStyle(
+              fontSize: 7.5,
+              fontWeight: pw.FontWeight.bold,
+              color: PdfThemeConfig.slate900,
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  /// Tarjeta de Observaciones
+  pw.Widget _buildObservationsBlock() {
+    return pw.Container(
+      width: double.infinity,
+      padding: const pw.EdgeInsets.all(10),
+      decoration: pw.BoxDecoration(
+        color: PdfThemeConfig.slate50,
+        border: pw.Border.all(color: PdfThemeConfig.slate200, width: 1),
+        borderRadius: const pw.BorderRadius.all(pw.Radius.circular(8)),
+      ),
+      child: pw.Column(
+        crossAxisAlignment: pw.CrossAxisAlignment.start,
+        children: [
+          pw.Container(
+            width: double.infinity,
+            padding: const pw.EdgeInsets.only(bottom: 4),
+            margin: const pw.EdgeInsets.only(bottom: 6),
+            decoration: const pw.BoxDecoration(
+              border: pw.Border(
+                bottom:
+                    pw.BorderSide(color: PdfThemeConfig.slate300, width: 1.5),
+              ),
+            ),
+            child: pw.Text(
+              'OBSERVACIONES',
+              style: PdfThemeConfig.cardHeaderStyle,
+            ),
+          ),
+          ...note.observations.map(
+            (obs) => PdfCommonSections.buildBulletPoint(
+              obs.description,
+              PdfThemeConfig.slate700,
+            ),
+          ),
+          if (note.notes != null && note.notes!.trim().isNotEmpty) ...[
+            pw.SizedBox(height: 6),
+            pw.RichText(
+              text: pw.TextSpan(
+                children: [
+                  pw.TextSpan(
+                    text: 'Notas adicionales: ',
+                    style: pw.TextStyle(
+                      fontSize: 7.5,
+                      fontWeight: pw.FontWeight.bold,
+                      color: PdfThemeConfig.slate900,
+                    ),
+                  ),
+                  pw.TextSpan(
+                    text: note.notes!.trim(),
+                    style: const pw.TextStyle(
+                      fontSize: 7.5,
+                      color: PdfThemeConfig.slate700,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  /// Tarjeta de Firma de Recepción del Cliente
+  pw.Widget _buildSignaturesBlock(pw.MemoryImage? signatureImage) {
+    return pw.Container(
+      width: double.infinity,
+      padding: const pw.EdgeInsets.all(12),
+      decoration: pw.BoxDecoration(
+        color: PdfThemeConfig.slate50,
+        border: pw.Border.all(color: PdfThemeConfig.slate200, width: 1),
+        borderRadius: const pw.BorderRadius.all(pw.Radius.circular(8)),
+      ),
+      child: pw.Row(
+        mainAxisAlignment: pw.MainAxisAlignment.end,
+        children: [
+          pw.Container(
+            width: 220,
+            child: pw.Column(
+              crossAxisAlignment: pw.CrossAxisAlignment.center,
+              children: [
+                if (signatureImage != null)
+                  pw.Container(
+                    height: 40,
+                    alignment: pw.Alignment.center,
+                    child: pw.Image(signatureImage, height: 38),
+                  )
+                else
+                  pw.Container(height: 40),
+                pw.Container(
+                  width: 180,
+                  height: 1,
+                  color: PdfThemeConfig.slate300,
+                ),
+                pw.SizedBox(height: 4),
+                pw.Text(
+                  'Recibido Conforme / Cliente',
+                  style: const pw.TextStyle(
+                    fontSize: 7.5,
+                    color: PdfThemeConfig.slate500,
+                  ),
+                ),
+                if (note.receivedByName != null &&
+                    note.receivedByName!.trim().isNotEmpty) ...[
+                  pw.SizedBox(height: 2),
+                  pw.Text(
+                    note.receivedByName!.trim(),
+                    style: pw.TextStyle(
+                      fontSize: 8,
+                      fontWeight: pw.FontWeight.bold,
+                      color: PdfThemeConfig.slate900,
+                    ),
+                  ),
+                  if (note.receivedById != null &&
+                      note.receivedById!.trim().isNotEmpty)
+                    pw.Text(
+                      'C.I. / DNI: ${note.receivedById!.trim()}',
+                      style: const pw.TextStyle(
+                        fontSize: 7,
+                        color: PdfThemeConfig.slate500,
+                      ),
+                    ),
+                  if (note.receivedAt != null)
+                    pw.Text(
+                      'Fecha: ${PdfHelpers.formatDate(note.receivedAt!)}',
+                      style: const pw.TextStyle(
+                        fontSize: 7,
+                        color: PdfThemeConfig.slate500,
+                      ),
+                    ),
+                ] else ...[
+                  pw.SizedBox(height: 2),
+                  pw.Text(
+                    'Firma y Cédula',
+                    style: const pw.TextStyle(
+                      fontSize: 7.5,
+                      color: PdfThemeConfig.slate500,
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  String _formatWarranty(dynamic time, String? unit) {
+    final numTime = num.tryParse(time.toString()) ?? 0;
+    if (numTime <= 0) return '---';
+
+    final normalizedUnit = (unit ?? '').toLowerCase().trim();
+    String unitStr = 'Días';
+    if (normalizedUnit.contains('year') || normalizedUnit.contains('año')) {
+      unitStr = numTime == 1 ? 'Año' : 'Años';
+    } else if (normalizedUnit.contains('month') ||
+        normalizedUnit.contains('mes')) {
+      unitStr = numTime == 1 ? 'Mes' : 'Meses';
+    } else if (normalizedUnit.contains('day') ||
+        normalizedUnit.contains('dia')) {
+      unitStr = numTime == 1 ? 'Día' : 'Días';
+    }
+    return '$numTime $unitStr';
   }
 }

@@ -56,7 +56,7 @@ class ViewDeliveryNoteDetailsTab extends ConsumerWidget {
               const SizedBox(height: 24),
 
               InfoBlock.text(
-                icon: Icons.receipt_long_outlined,
+                icon: Icons.shopping_cart_outlined,
                 label: 'Orden de Compra del Cliente (O/C)',
                 value: note.clientPoNumber ?? 'No especificada',
               ),

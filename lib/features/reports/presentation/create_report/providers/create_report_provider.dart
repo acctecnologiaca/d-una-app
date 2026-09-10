@@ -344,16 +344,50 @@ class ServiceReportCreateState {
     if (advisorId != report!.advisorId) return true;
     if (categoryId != report!.categoryId) return true;
     if (interventionType.dbValue != report!.interventionType) return true;
-    if (requestDescription != (report!.requestDescription ?? '')) return true;
-    if (workDescription != (report!.workDescription ?? '')) return true;
-    if (recommendations != (report!.recommendations ?? '')) return true;
-    if (notes != (report!.notes ?? '')) return true;
-    if (reportTag != (report!.reportTag ?? '')) return true;
+    if (requestDescription.trim() != (report!.requestDescription ?? '').trim()) return true;
+    if (workDescription.trim() != (report!.workDescription ?? '').trim()) return true;
+    if (recommendations.trim() != (report!.recommendations ?? '').trim()) return true;
+    if ((notes ?? '').trim() != (report!.notes ?? '').trim()) return true;
+    if ((reportTag ?? '').trim() != (report!.reportTag ?? '').trim()) return true;
 
-    // Check items length
+    // Check items length and contents
     if (products.length != (report!.products?.length ?? 0)) return true;
+    for (int i = 0; i < products.length; i++) {
+      final p = products[i];
+      final op = report!.products![i];
+      if (p.productId != op.productId ||
+          p.quantity != op.quantity ||
+          p.unitPrice != op.unitPrice ||
+          p.costPrice != op.costPrice ||
+          p.profitMargin != op.profitMargin ||
+          p.sourceType != op.sourceType ||
+          p.name != op.name) {
+        return true;
+      }
+    }
+
     if (services.length != (report!.services?.length ?? 0)) return true;
+    for (int i = 0; i < services.length; i++) {
+      final s = services[i];
+      final os = report!.services![i];
+      if (s.serviceId != os.serviceId ||
+          s.quantity != os.quantity ||
+          s.unitPrice != os.unitPrice ||
+          s.costPrice != os.costPrice ||
+          s.profitMargin != os.profitMargin ||
+          s.name != os.name) {
+        return true;
+      }
+    }
+
     if (conditions.length != (report!.conditions?.length ?? 0)) return true;
+    for (int i = 0; i < conditions.length; i++) {
+      final c = conditions[i];
+      final oc = report!.conditions![i];
+      if (c.description.trim() != oc.description.trim()) {
+        return true;
+      }
+    }
 
     return false;
   }
@@ -622,7 +656,7 @@ class CreateServiceReportNotifier
           ? techs.map((t) => t.fullName).join(', ')
           : report.advisorName;
 
-      state = state.copyWith(
+      state = ServiceReportCreateState(
         report: report,
         currentReportNumber: report.reportNumber,
         clientId: report.clientId,
@@ -654,6 +688,77 @@ class CreateServiceReportNotifier
         isLoading: false,
         isReadOnly: report.status == ServiceReportStatus.finalized.dbValue,
       );
+    } catch (e) {
+      state = state.copyWith(isLoading: false, error: e.toString());
+    }
+  }
+
+  Future<void> loadReportAsCopy(String sourceReportId) async {
+    state = state.copyWith(isLoading: true, error: null);
+    try {
+      final repo = ref.read(serviceReportsRepositoryProvider);
+      final financialParams = await repo.getFinancialParameters();
+      final source = await repo.getReportWithDetails(sourceReportId);
+      final lastNumber = await repo.getLastReportNumber();
+      final newNumber = _generateNextReportNumber(lastNumber);
+
+      TimeOfDay? start;
+      if (source.startTime != null && source.startTime!.contains(':')) {
+        final parts = source.startTime!.split(':');
+        start = TimeOfDay(
+          hour: int.tryParse(parts[0]) ?? 0,
+          minute: int.tryParse(parts[1]) ?? 0,
+        );
+      }
+
+      TimeOfDay? end;
+      if (source.endTime != null && source.endTime!.contains(':')) {
+        final parts = source.endTime!.split(':');
+        end = TimeOfDay(
+          hour: int.tryParse(parts[0]) ?? 0,
+          minute: int.tryParse(parts[1]) ?? 0,
+        );
+      }
+
+      final techs = source.technicians ?? [];
+      final advisorNames = techs.isNotEmpty
+          ? techs.map((t) => t.fullName).join(', ')
+          : source.advisorName;
+
+      state = ServiceReportCreateState(
+        report: null,
+        currentReportNumber: newNumber,
+        clientId: source.clientId,
+        clientName: source.clientName,
+        clientType: source.clientType,
+        contactId: source.contactId,
+        contactName: source.contactName,
+        categoryId: source.categoryId,
+        categoryName: source.categoryName,
+        advisorId: source.advisorId,
+        advisorName: advisorNames,
+        selectedAdvisors: techs,
+        interventionType: InterventionType.fromDbValue(source.interventionType),
+        requestDescription: source.requestDescription ?? '',
+        workDescription: source.workDescription ?? '',
+        recommendations: source.recommendations ?? '',
+        serviceDate: DateTime.now(),
+        startTime: start,
+        endTime: end,
+        durationMinutes: source.durationMinutes,
+        notes: source.notes,
+        reportTag: source.reportTag,
+        products: source.products ?? [],
+        services: source.services ?? [],
+        conditions: source.conditions ?? [],
+        globalMargin: financialParams.profitMargin,
+        globalTaxRate: financialParams.taxRate,
+        pricingMethod: financialParams.pricingMethod,
+        isLoading: false,
+        isReadOnly: false,
+      );
+      await clearDraft(reportId: null);
+      autoSaveDraft();
     } catch (e) {
       state = state.copyWith(isLoading: false, error: e.toString());
     }

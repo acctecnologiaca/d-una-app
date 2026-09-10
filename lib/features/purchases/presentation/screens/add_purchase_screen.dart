@@ -10,7 +10,10 @@ import 'package:d_una_app/features/purchases/presentation/widgets/add_purchase_p
 import 'package:d_una_app/features/purchases/presentation/widgets/add_purchase_summary_tab.dart';
 import 'package:d_una_app/features/purchases/presentation/providers/add_purchase_provider.dart';
 import 'package:d_una_app/features/purchases/presentation/providers/purchases_providers.dart';
+import 'package:d_una_app/features/purchases/presentation/providers/purchase_details_provider.dart';
 import 'package:d_una_app/shared/widgets/custom_dialog.dart';
+import 'package:d_una_app/shared/widgets/custom_action_sheet.dart';
+import 'package:d_una_app/shared/widgets/bottom_sheet_action_item.dart';
 
 class AddPurchaseScreen extends ConsumerStatefulWidget {
   final String? purchaseId;
@@ -196,19 +199,23 @@ class _AddPurchaseScreenState extends ConsumerState<AddPurchaseScreen>
 
   Future<void> _handlePop() async {
     final state = ref.read(addPurchaseProvider);
-    final hasDataOrChanges =
-        state.products.isNotEmpty ||
-        state.supplierId != null ||
-        (state.documentNumber != null &&
-            state.documentNumber!.trim().isNotEmpty);
+    final notifier = ref.read(addPurchaseProvider.notifier);
+    final isEditing = widget.purchaseId != null || state.purchaseId != null;
+    final hasDataOrChanges = isEditing
+        ? notifier.hasChanges
+        : (state.products.isNotEmpty ||
+            (state.supplierId != null && state.supplierId!.isNotEmpty) ||
+            (state.documentNumber != null &&
+                state.documentNumber!.trim().isNotEmpty));
     final currentId = widget.purchaseId ?? state.purchaseId;
 
-    await ref
-        .read(addPurchaseProvider.notifier)
-        .saveDraftNow(tabIndex: _tabController.index, purchaseId: currentId);
-    ref
-        .read(addPurchaseProvider.notifier)
-        .reset(clearPersistedDraft: false, purchaseId: currentId);
+    if (hasDataOrChanges) {
+      await notifier.saveDraftNow(
+        tabIndex: _tabController.index,
+        purchaseId: currentId,
+      );
+    }
+    notifier.reset(clearPersistedDraft: false, purchaseId: currentId);
     if (!mounted) return;
 
     if (hasDataOrChanges) {
@@ -253,6 +260,56 @@ class _AddPurchaseScreenState extends ConsumerState<AddPurchaseScreen>
         false;
   }
 
+  void _showActionsMenu(WidgetRef ref) {
+    final state = ref.read(addPurchaseProvider);
+    final notifier = ref.read(addPurchaseProvider.notifier);
+    final isEditing = widget.purchaseId != null || state.purchaseId != null;
+    final currentId = widget.purchaseId ?? state.purchaseId;
+
+    CustomActionSheet.show(
+      context: context,
+      title: 'Opciones de compra',
+      actions: [
+        BottomSheetActionItem(
+          icon: Icons.bookmark_add_outlined,
+          label: 'Guardar y continuar luego',
+          subtitle: 'Guarda un borrador local para continuar luego',
+          onTap: () async {
+            context.pop();
+            await notifier.saveDraftNow(
+              tabIndex: _tabController.index,
+              purchaseId: currentId,
+            );
+            notifier.reset(clearPersistedDraft: false, purchaseId: currentId);
+            if (!mounted) return;
+            AppToast.info(
+              context,
+              message: 'Cambios guardados temporalmente',
+              icon: Icons.bookmark_added_outlined,
+            );
+            context.pop();
+          },
+        ),
+        BottomSheetActionItem(
+          icon: Icons.delete_outline,
+          label: isEditing
+              ? 'Descartar cambios locales'
+              : 'Descartar borrador',
+          subtitle: 'Elimina las modificaciones no guardadas',
+          onTap: () async {
+            context.pop();
+            final shouldDiscard = await _showDiscardDialog();
+            if (!shouldDiscard) return;
+            await notifier.clearDraft(purchaseId: currentId);
+            notifier.reset(clearPersistedDraft: true, purchaseId: currentId);
+            if (!mounted) return;
+            context.pop();
+          },
+        ),
+      ],
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final state = ref.watch(addPurchaseProvider);
@@ -275,6 +332,51 @@ class _AddPurchaseScreenState extends ConsumerState<AddPurchaseScreen>
               : (state.documentNumber != null
                     ? '${state.documentNumber}'
                     : null),
+          actions: [
+            if (isEditing)
+              IconButton(
+                icon: Icon(
+                  state.isLoading ? Icons.hourglass_empty : Icons.save_outlined,
+                  color: (ref.watch(addPurchaseProvider.notifier).hasChanges &&
+                          !state.isLoading)
+                      ? colors.onSurfaceVariant
+                      : colors.onSurfaceVariant.withValues(alpha: 0.38),
+                ),
+                tooltip: ref.watch(addPurchaseProvider.notifier).hasChanges
+                    ? 'Guardar cambios'
+                    : 'Sin modificaciones',
+                onPressed: (ref.watch(addPurchaseProvider.notifier).hasChanges &&
+                        !state.isLoading)
+                    ? () async {
+                        final currentId = widget.purchaseId ?? state.purchaseId;
+                        final success = await ref
+                            .read(addPurchaseProvider.notifier)
+                            .createPurchase();
+                        if (!context.mounted) return;
+                        if (success) {
+                          ref.invalidate(paginatedPurchasesListProvider);
+                          if (currentId != null) {
+                            ref.invalidate(purchaseDetailsProvider(currentId));
+                          }
+                          AppToast.success(
+                            context,
+                            message: 'Compra actualizada correctamente',
+                          );
+                          context.pop();
+                        } else {
+                          AppToast.error(
+                            context,
+                            message: state.error ?? 'Error al guardar la compra',
+                          );
+                        }
+                      }
+                    : null,
+              ),
+            IconButton(
+              icon: Icon(Icons.more_vert, color: colors.onSurfaceVariant),
+              onPressed: () => _showActionsMenu(ref),
+            ),
+          ],
           bottom: TabBar(
             controller: _tabController,
             labelColor: colors.primary,
@@ -295,7 +397,7 @@ class _AddPurchaseScreenState extends ConsumerState<AddPurchaseScreen>
                   ],
                 ),
               ),
-              const Tab(text: 'Resúmen'),
+              const Tab(text: 'Resumen'),
             ],
           ),
         ),

@@ -1,11 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:material_symbols_icons/symbols.dart';
 
 enum DeliveryNoteStatus {
   draft('draft', 'Borrador', 'assets/icons/status_draft.png'),
   sent('sent', 'Enviada', 'assets/icons/status_sent.png'),
   resent('resent', 'Reenviada', 'assets/icons/status_resent.png'),
   opened('opened', 'Abierta', 'assets/icons/status_opened.png'),
-  finalized('finalized', 'Entregada', 'assets/icons/status_finalized.png'),
+  finalized('finalized', 'Finalizada', 'assets/icons/status_finalized.png'),
   cancelled('cancelled', 'Cancelada', 'assets/icons/status_cancelled.png');
 
   final String dbValue;
@@ -19,21 +20,22 @@ enum DeliveryNoteStatus {
   IconData get iconData {
     switch (this) {
       case DeliveryNoteStatus.draft:
-        return Icons.edit_document;
+        return Symbols.edit;
       case DeliveryNoteStatus.sent:
-        return Icons.send;
+        return Symbols.send;
       case DeliveryNoteStatus.resent:
-        return Icons.forward_to_inbox;
+        return Symbols.double_arrow;
       case DeliveryNoteStatus.opened:
-        return Icons.mark_email_read;
+        return Symbols.visibility;
       case DeliveryNoteStatus.finalized:
-        return Icons.check_circle;
+        return Symbols.check_circle;
       case DeliveryNoteStatus.cancelled:
-        return Icons.cancel;
+        return Symbols.cancel;
     }
   }
 
   static DeliveryNoteStatus fromDbValue(String value) {
+    if (value == 'delivered') return DeliveryNoteStatus.finalized;
     return values.firstWhere(
       (e) => e.dbValue == value,
       orElse: () => DeliveryNoteStatus.draft,
@@ -61,7 +63,7 @@ enum DeliveryNoteStatus {
       case DeliveryNoteStatus.opened:
         return const Color(0xFF5C6BC0);
       case DeliveryNoteStatus.finalized:
-        return const Color(0xFF2E7D32); // Verde esmeralda para Entregada
+        return const Color(0xFF6A53AD);
       case DeliveryNoteStatus.cancelled:
         return colors.error;
     }

@@ -19,14 +19,17 @@ class DeliveryNoteDeliveryTab extends ConsumerStatefulWidget {
 }
 
 class _DeliveryNoteDeliveryTabState
-    extends ConsumerState<DeliveryNoteDeliveryTab> {
+    extends ConsumerState<DeliveryNoteDeliveryTab>
+    with AutomaticKeepAliveClientMixin {
   late final TextEditingController _deliveryDateController;
   late final TextEditingController _trackingController;
   late final TextEditingController _addressController;
   late final TextEditingController _instructionsController;
 
-  bool _useClientRegisteredAddress = false;
   final _dateFormat = DateFormat('dd/MM/yyyy');
+
+  @override
+  bool get wantKeepAlive => true;
 
   @override
   void initState() {
@@ -75,6 +78,7 @@ class _DeliveryNoteDeliveryTabState
 
   @override
   Widget build(BuildContext context) {
+    super.build(context);
     final colors = Theme.of(context).colorScheme;
     final state = ref.watch(createDeliveryNoteProvider);
     final shippingCompaniesAsync = ref.watch(shippingCompaniesProvider);
@@ -124,10 +128,10 @@ class _DeliveryNoteDeliveryTabState
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          // 1. Fecha de entrega
+          // 1. Fecha de despacho
           CustomTextField(
             controller: _deliveryDateController,
-            label: 'Fecha de entrega',
+            label: 'Fecha de Despacho',
             hintText: 'Seleccionar fecha...',
             readOnly: true,
             suffixIcon: const Icon(Icons.calendar_today_outlined),
@@ -295,28 +299,28 @@ class _DeliveryNoteDeliveryTabState
                     ),
                   ),
                   Switch(
-                    value: _useClientRegisteredAddress && clientHasAddress,
+                    value: state.useClientAddress,
                     onChanged: clientHasAddress
                         ? (val) {
-                            setState(() {
-                              _useClientRegisteredAddress = val;
-                              if (val) {
-                                _addressController.text =
-                                    selectedClient.address ?? '';
-                                ref
-                                    .read(createDeliveryNoteProvider.notifier)
-                                    .setRecipientAddress(
-                                      address: selectedClient.address,
-                                      stateName: selectedClient.state,
-                                      city: selectedClient.city,
-                                    );
-                              } else {
-                                _addressController.clear();
-                                ref
-                                    .read(createDeliveryNoteProvider.notifier)
-                                    .clearRecipientAddress();
-                              }
-                            });
+                            ref
+                                .read(createDeliveryNoteProvider.notifier)
+                                .setUseClientAddress(val);
+                            if (val) {
+                              _addressController.text =
+                                  selectedClient.address ?? '';
+                              ref
+                                  .read(createDeliveryNoteProvider.notifier)
+                                  .setRecipientAddress(
+                                    address: selectedClient.address,
+                                    stateName: selectedClient.state,
+                                    city: selectedClient.city,
+                                  );
+                            } else {
+                              _addressController.clear();
+                              ref
+                                  .read(createDeliveryNoteProvider.notifier)
+                                  .clearRecipientAddress();
+                            }
                           }
                         : null,
                   ),
@@ -332,8 +336,8 @@ class _DeliveryNoteDeliveryTabState
               helperText: 'Dirección detallada con punto de referencia.',
               maxLines: 2,
               maxLength: 250,
-              enabled: !_useClientRegisteredAddress,
-              suffixIcon: _useClientRegisteredAddress
+              enabled: !state.useClientAddress,
+              suffixIcon: state.useClientAddress
                   ? Icon(
                       Icons.lock_outline,
                       size: 18,
@@ -354,7 +358,7 @@ class _DeliveryNoteDeliveryTabState
             CustomLocationPicker(
               showCountry: false,
               isRequired: true,
-              enabled: !_useClientRegisteredAddress,
+              enabled: !state.useClientAddress,
               selectedState: state.recipientState,
               selectedCity: state.recipientCity,
               spacing: 16,

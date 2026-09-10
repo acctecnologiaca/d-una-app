@@ -59,6 +59,7 @@ class DeliveryNoteModel {
   final String? clientPhone;
   final String? clientEmail;
   final String? shippingCompanyName;
+  final bool useClientAddress;
   final List<DeliveryNoteItemModel> items;
   final List<DeliveryNoteObservationModel> observations;
 
@@ -116,6 +117,7 @@ class DeliveryNoteModel {
     this.clientPhone,
     this.clientEmail,
     this.shippingCompanyName,
+    this.useClientAddress = false,
     this.items = const [],
     this.observations = const [],
   });
@@ -137,6 +139,9 @@ class DeliveryNoteModel {
   bool get checkHasMissingSerials {
     return items.any((i) => i.hasMissingSerials);
   }
+
+  bool get hasMissingSerialsEffective =>
+      items.isNotEmpty ? checkHasMissingSerials : hasMissingSerials;
 
   factory DeliveryNoteModel.fromJson(Map<String, dynamic> json) {
     final clientData = json['clients'] as Map<String, dynamic>?;
@@ -223,6 +228,7 @@ class DeliveryNoteModel {
       shippingCompanyName: ((shippingData?['name'] as String?)?.isNotEmpty == true
           ? shippingData!['name']
           : shippingData?['legal_name']) as String?,
+      useClientAddress: json['use_client_address'] == true,
       items: itemsList,
       observations: obsList,
     );
@@ -231,12 +237,12 @@ class DeliveryNoteModel {
   Map<String, dynamic> toJson() {
     return {
       'id': id,
-      'user_id': userId,
+      if (_cleanUuid(userId) != null) 'user_id': _cleanUuid(userId),
       'delivery_note_number': deliveryNoteNumber,
-      'client_id': clientId,
-      if (contactId != null) 'contact_id': contactId,
-      if (quoteId != null) 'quote_id': quoteId,
-      if (supplierOrderId != null) 'supplier_order_id': supplierOrderId,
+      'client_id': _cleanUuid(clientId) ?? clientId,
+      'contact_id': _cleanUuid(contactId),
+      'quote_id': _cleanUuid(quoteId),
+      'supplier_order_id': _cleanUuid(supplierOrderId),
       if (clientPoNumber != null) 'client_po_number': clientPoNumber,
       if (tag != null) 'tag': tag,
       if (notes != null) 'notes': notes,
@@ -245,7 +251,7 @@ class DeliveryNoteModel {
       if (deliveryDate != null)
         'delivery_date': deliveryDate!.toIso8601String().split('T')[0],
       'delivery_type': deliveryType,
-      if (shippingCompanyId != null) 'shipping_company_id': shippingCompanyId,
+      'shipping_company_id': _cleanUuid(shippingCompanyId),
       if (trackingNumber != null) 'tracking_number': trackingNumber,
       if (recipientAddress != null) 'recipient_address': recipientAddress,
       if (recipientCity != null) 'recipient_city': recipientCity,
@@ -265,6 +271,7 @@ class DeliveryNoteModel {
       'total': total,
       'is_dropshipping': isDropshipping,
       'has_missing_serials': hasMissingSerials,
+      'use_client_address': useClientAddress,
       if (actionToken != null) 'action_token': actionToken,
       if (actionTokenExpiresAt != null)
         'action_token_expires_at': actionTokenExpiresAt!.toIso8601String(),
@@ -328,6 +335,7 @@ class DeliveryNoteModel {
     String? clientPhone,
     String? clientEmail,
     String? shippingCompanyName,
+    bool? useClientAddress,
     List<DeliveryNoteItemModel>? items,
     List<DeliveryNoteObservationModel>? observations,
   }) {
@@ -385,8 +393,15 @@ class DeliveryNoteModel {
       clientPhone: clientPhone ?? this.clientPhone,
       clientEmail: clientEmail ?? this.clientEmail,
       shippingCompanyName: shippingCompanyName ?? this.shippingCompanyName,
+      useClientAddress: useClientAddress ?? this.useClientAddress,
       items: items ?? this.items,
       observations: observations ?? this.observations,
     );
   }
+}
+
+String? _cleanUuid(String? value) {
+  if (value == null) return null;
+  final trimmed = value.trim();
+  return trimmed.isEmpty ? null : trimmed;
 }

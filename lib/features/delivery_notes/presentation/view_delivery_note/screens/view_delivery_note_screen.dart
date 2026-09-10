@@ -7,13 +7,16 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:d_una_app/shared/widgets/standard_app_bar.dart';
 import 'package:d_una_app/shared/widgets/custom_action_sheet.dart';
 import 'package:d_una_app/shared/widgets/bottom_sheet_action_item.dart';
+import 'package:d_una_app/shared/widgets/custom_dialog.dart';
 import 'package:d_una_app/shared/utils/string_utils.dart';
 import 'package:d_una_app/core/utils/contact_utils.dart';
 import 'package:d_una_app/features/profile/presentation/providers/profile_provider.dart';
+import 'package:d_una_app/core/theme/app_theme.dart';
 import 'package:d_una_app/core/pdf/templates/delivery_note_pdf_template.dart';
 import '../../../domain/models/delivery_note_model.dart';
 import '../../../domain/models/delivery_note_status.dart';
 import '../../delivery_notes_list/providers/delivery_notes_providers.dart';
+import '../../delivery_notes_list/delivery_note_selection_actions.dart';
 import '../../create_delivery_note/providers/create_delivery_note_provider.dart';
 import '../tabs/view_delivery_note_details_tab.dart';
 import '../tabs/view_delivery_note_client_tab.dart';
@@ -64,28 +67,61 @@ class _ViewDeliveryNoteScreenState extends ConsumerState<ViewDeliveryNoteScreen>
     super.dispose();
   }
 
-  void _showSendOptions(BuildContext context, DeliveryNoteModel note) {
+  void _showSendOptions(
+    BuildContext context,
+    DeliveryNoteModel note,
+    bool isSentOrResent,
+  ) {
+    if (note.hasMissingSerialsEffective) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'No se puede enviar la nota de entrega porque faltan seriales por asignar.',
+          ),
+        ),
+      );
+      return;
+    }
+
+    final isSendDisabled =
+        note.status == DeliveryNoteStatus.finalized ||
+        note.status == DeliveryNoteStatus.cancelled;
+
+    if (isSendDisabled) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            'La nota de entrega está ${note.status.label.toLowerCase()} y no se puede enviar.',
+          ),
+        ),
+      );
+      return;
+    }
+
     CustomActionSheet.show(
       context: context,
-      title: 'Enviar Nota de Entrega',
+      title: isSentOrResent
+          ? 'Reenviar Nota de Entrega'
+          : 'Enviar Nota de Entrega',
       actions: [
         BottomSheetActionItem(
-          icon: Symbols.chat,
-          label: 'Enviar por WhatsApp',
-          subtitle:
-              'Envía un enlace con token seguro para visualización y firma',
-          onTap: () {
-            context.pop();
-            SendDeliveryNoteWhatsAppSheet.show(context, note);
-          },
-        ),
-        BottomSheetActionItem(
-          icon: Symbols.mail,
-          label: 'Enviar por Correo Electrónico',
-          subtitle: 'Envía la plantilla oficial con enlace directo a la nota',
+          icon: Icons.email_outlined,
+          label: isSentOrResent
+              ? 'Reenviar por correo electrónico'
+              : 'Enviar por correo electrónico',
           onTap: () {
             context.pop();
             SendDeliveryNoteEmailSheet.show(context, note);
+          },
+        ),
+        BottomSheetActionItem(
+          icon: 'assets/icons/whatsapp_icon.png',
+          label: isSentOrResent
+              ? 'Reenviar por WhatsApp'
+              : 'Enviar por WhatsApp',
+          onTap: () {
+            context.pop();
+            SendDeliveryNoteWhatsAppSheet.show(context, note);
           },
         ),
       ],
@@ -97,18 +133,22 @@ class _ViewDeliveryNoteScreenState extends ConsumerState<ViewDeliveryNoteScreen>
     WidgetRef ref,
     DeliveryNoteModel note,
   ) {
-    final isDelivered = note.status == DeliveryNoteStatus.delivered;
-    final canEdit = note.status != DeliveryNoteStatus.delivered &&
-        note.status != DeliveryNoteStatus.cancelled;
+    final isFinalized = note.status == DeliveryNoteStatus.finalized;
 
     CustomActionSheet.show(
       context: context,
       title: 'Opciones',
       actions: [
+        // Bloque 1: Documento y Exportación
         BottomSheetActionItem(
           icon: Icons.picture_as_pdf_outlined,
-          label: 'Descargar / Ver PDF',
+          label: 'Descargar PDF',
+          enabled: !note.hasMissingSerialsEffective,
+          subtitle: note.hasMissingSerialsEffective
+              ? 'Faltan seriales por asignar. No se puede descargar'
+              : null,
           onTap: () async {
+            if (note.hasMissingSerialsEffective) return;
             final userProfile = ref.read(userProfileProvider).value;
             final userEmail = Supabase.instance.client.auth.currentUser?.email;
 
@@ -133,47 +173,83 @@ class _ViewDeliveryNoteScreenState extends ConsumerState<ViewDeliveryNoteScreen>
             );
           },
         ),
-        if (!isDelivered)
-          BottomSheetActionItem(
-            icon: Symbols.signature,
-            label: 'Confirmar recepción y firma',
-            onTap: () {
-              context.pop();
-              ConfirmDeliveryNoteReceptionDialog.show(context, ref, note);
-            },
-          ),
-        if (canEdit)
-          BottomSheetActionItem(
-            icon: Icons.edit_outlined,
-            label: 'Modificar nota',
-            onTap: () async {
-              context.pop();
-              ref
-                  .read(createDeliveryNoteProvider.notifier)
-                  .loadExistingDeliveryNote(note);
-              await context.push(
-                '/delivery-notes/edit/${note.id}',
-              );
-              if (context.mounted) {
-                ref.invalidate(deliveryNoteDetailProvider(widget.noteId));
-              }
-            },
-          ),
         const Divider(height: 1, indent: 16, endIndent: 16),
+
+        // Bloque 2: Ciclo de Vida y Flujo Operativo
         BottomSheetActionItem(
-          icon: Symbols.chat,
-          label: 'Enviar por WhatsApp',
-          onTap: () {
+          icon: Symbols.conversion_path,
+          label: 'Cambiar estatus',
+          enabled: !isFinalized,
+          subtitle: isFinalized
+              ? 'Nota de entrega finalizada. No se puede cambiar de estado'
+              : null,
+          onTap: () async {
+            final messenger = ScaffoldMessenger.of(context);
             context.pop();
-            SendDeliveryNoteWhatsAppSheet.show(context, note);
+
+            final selected = await DeliveryNoteSelectionActions.showStatusDialog(
+              context,
+              note.status,
+              hasMissingSerials: note.hasMissingSerialsEffective,
+            );
+            if (selected != null && selected != note.status) {
+              try {
+                await ref
+                    .read(deliveryNotesRepositoryProvider)
+                    .updateDeliveryNoteStatus(note.id, selected);
+
+                ref.invalidate(deliveryNoteDetailProvider(widget.noteId));
+                ref.read(paginatedDeliveryNotesProvider.notifier).refresh();
+
+                messenger.showSnackBar(
+                  SnackBar(
+                    content: Text(
+                      'Estatus cambiado a "${selected.label}"',
+                    ),
+                  ),
+                );
+              } catch (e) {
+                messenger.showSnackBar(
+                  SnackBar(
+                    content: Text('Error al cambiar estatus: $e'),
+                  ),
+                );
+              }
+            }
           },
         ),
+        const Divider(height: 1, indent: 16, endIndent: 16),
+
+        // Bloque 3: Utilidades y Gestión Documental
         BottomSheetActionItem(
-          icon: Symbols.mail,
-          label: 'Enviar por Correo',
-          onTap: () {
+          icon: note.isArchived
+              ? Icons.unarchive_outlined
+              : Icons.archive_outlined,
+          label: note.isArchived ? 'Desarchivar' : 'Archivar',
+          onTap: () async {
+            final messenger = ScaffoldMessenger.of(context);
+            final router = GoRouter.of(context);
+
             context.pop();
-            SendDeliveryNoteEmailSheet.show(context, note);
+            await ref
+                .read(deliveryNotesRepositoryProvider)
+                .archiveDeliveryNote(note.id, !note.isArchived);
+
+            ref.invalidate(deliveryNoteDetailProvider(widget.noteId));
+            ref.read(paginatedDeliveryNotesProvider.notifier).refresh();
+
+            messenger.showSnackBar(
+              SnackBar(
+                content: Text(
+                  note.isArchived
+                      ? 'Nota de entrega desarchivada exitosamente'
+                      : 'Nota de entrega archivada exitosamente',
+                ),
+              ),
+            );
+            if (!note.isArchived) {
+              router.pop();
+            }
           },
         ),
       ],
@@ -213,19 +289,50 @@ class _ViewDeliveryNoteScreenState extends ConsumerState<ViewDeliveryNoteScreen>
           );
         }
 
-        final canEdit = note.status != DeliveryNoteStatus.delivered &&
+        final canEdit = note.status != DeliveryNoteStatus.finalized &&
+            note.status != DeliveryNoteStatus.cancelled;
+        final canSign = note.status != DeliveryNoteStatus.finalized &&
             note.status != DeliveryNoteStatus.cancelled;
         final hasPhone = (note.contactPhone != null &&
                 note.contactPhone!.trim().isNotEmpty) ||
             (note.clientPhone != null && note.clientPhone!.trim().isNotEmpty);
 
-        final showWhatsAppFab = hasPhone;
+        final showWhatsAppFab = hasPhone &&
+            note.status != DeliveryNoteStatus.draft &&
+            note.status != DeliveryNoteStatus.finalized &&
+            note.status != DeliveryNoteStatus.cancelled;
+        final showSignFab = canSign;
         final showEditFab = canEdit;
 
-        final hasTwoFabs = showWhatsAppFab && showEditFab;
-        final hasOneFab = showWhatsAppFab ^ showEditFab;
-        final double bottomPadding =
-            hasTwoFabs ? 184.0 : (hasOneFab ? 112.0 : 24.0);
+        int activeFabsCount = 0;
+        if (showWhatsAppFab) activeFabsCount++;
+        if (showSignFab) activeFabsCount++;
+        if (showEditFab) activeFabsCount++;
+
+        final double bottomPadding;
+        switch (activeFabsCount) {
+          case 3:
+            bottomPadding = 256.0;
+            break;
+          case 2:
+            bottomPadding = 184.0;
+            break;
+          case 1:
+            bottomPadding = 112.0;
+            break;
+          default:
+            bottomPadding = 24.0;
+        }
+
+        final isSentOrResent =
+            note.status == DeliveryNoteStatus.sent ||
+            note.status == DeliveryNoteStatus.resent ||
+            note.status == DeliveryNoteStatus.opened;
+        final isMissingSerials = note.hasMissingSerialsEffective;
+        final isSendDisabled =
+            note.status == DeliveryNoteStatus.finalized ||
+            note.status == DeliveryNoteStatus.cancelled ||
+            isMissingSerials;
 
         return Scaffold(
           appBar: StandardAppBar(
@@ -233,12 +340,23 @@ class _ViewDeliveryNoteScreenState extends ConsumerState<ViewDeliveryNoteScreen>
             subtitle: '${note.deliveryNoteNumber} (${note.clientName})',
             actions: [
               IconButton(
-                icon: const Icon(Icons.send_outlined),
-                tooltip: 'Enviar',
-                onPressed: () => _showSendOptions(context, note),
+                onPressed: isSendDisabled
+                    ? null
+                    : () => _showSendOptions(context, note, isSentOrResent),
+                icon: Icon(
+                  isSentOrResent ? Symbols.forward : Icons.send,
+                  color: isSendDisabled
+                      ? colors.outline
+                      : colors.onSurfaceVariant,
+                ),
+                tooltip: isMissingSerials
+                    ? 'Faltan seriales por asignar. No se puede enviar'
+                    : (isSendDisabled
+                        ? 'Nota de entrega ${note.status.label.toLowerCase()}. No se puede enviar'
+                        : (isSentOrResent ? 'Reenviar' : 'Enviar')),
               ),
               IconButton(
-                icon: const Icon(Icons.more_vert),
+                icon: Icon(Icons.more_vert, color: colors.onSurfaceVariant),
                 tooltip: 'Opciones',
                 onPressed: () => _showActionsSheet(context, ref, note),
               ),
@@ -301,7 +419,7 @@ class _ViewDeliveryNoteScreenState extends ConsumerState<ViewDeliveryNoteScreen>
               ),
             ],
           ),
-          floatingActionButton: (!showWhatsAppFab && !showEditFab)
+          floatingActionButton: activeFabsCount == 0
               ? null
               : Padding(
                   padding: const EdgeInsets.only(bottom: 40.0),
@@ -310,21 +428,64 @@ class _ViewDeliveryNoteScreenState extends ConsumerState<ViewDeliveryNoteScreen>
                     crossAxisAlignment: CrossAxisAlignment.end,
                     children: [
                       if (showWhatsAppFab) ...[
-                        FloatingActionButton.small(
+                        FloatingActionButton(
                           heroTag: 'fab_delivery_note_whatsapp',
                           tooltip: 'Contactar por WhatsApp',
                           onPressed: () {
-                            final phone = note.contactPhone ?? note.clientPhone!;
+                            final phone =
+                                note.contactPhone ?? note.clientPhone!;
                             ContactUtils.launchWhatsApp(phone);
                           },
-                          backgroundColor: colors.surfaceContainerHigh,
-                          child: Icon(
-                            Symbols.chat,
-                            color: colors.primary,
-                            size: 20,
+                          backgroundColor: colors.greenBase,
+                          child: Image.asset(
+                            'assets/icons/whatsapp_icon.png',
+                            width: 28,
+                            height: 28,
+                            color: colors.greenBaseOn,
                           ),
                         ),
-                        const SizedBox(height: 12),
+                        if (showSignFab || showEditFab)
+                          const SizedBox(height: 16),
+                      ],
+                      if (showSignFab) ...[
+                        FloatingActionButton(
+                          heroTag: 'fab_delivery_note_sign',
+                          tooltip: 'Firmar como recibido',
+                          backgroundColor: colors.secondaryContainer,
+                          onPressed: () {
+                            if (note.hasMissingSerialsEffective) {
+                              CustomDialog.show(
+                                context: context,
+                                dialog: CustomDialog.confirmation(
+                                  icon: Symbols.warning,
+                                  iconColor: Colors.amber.shade800,
+                                  title: 'Seriales pendientes',
+                                  contentText:
+                                      'No se puede confirmar la recepción porque faltan seriales por asignar a uno o más productos.',
+                                  actions: [
+                                    TextButton(
+                                      onPressed: () =>
+                                          Navigator.of(context, rootNavigator: true)
+                                              .pop(),
+                                      child: const Text('Entendido'),
+                                    ),
+                                  ],
+                                ),
+                              );
+                              return;
+                            }
+                            ConfirmDeliveryNoteReceptionDialog.show(
+                              context,
+                              ref,
+                              note,
+                            );
+                          },
+                          child: Icon(
+                            Symbols.signature,
+                            color: colors.onSecondaryContainer,
+                          ),
+                        ),
+                        if (showEditFab) const SizedBox(height: 16),
                       ],
                       if (showEditFab) ...[
                         FloatingActionButton(
@@ -335,7 +496,7 @@ class _ViewDeliveryNoteScreenState extends ConsumerState<ViewDeliveryNoteScreen>
                                 .read(createDeliveryNoteProvider.notifier)
                                 .loadExistingDeliveryNote(note);
                             await context.push(
-                              '/delivery-notes/edit/${note.id}',
+                              '/delivery-notes/edit/${note.id}?tab=${_tabController.index}',
                             );
                             if (context.mounted) {
                               ref.invalidate(

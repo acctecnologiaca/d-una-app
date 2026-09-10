@@ -32,8 +32,8 @@ class DeliveryNoteSerialModel {
     return {
       'id': id,
       'delivery_note_item_id': deliveryNoteItemId,
-      if (productId != null) 'product_id': productId,
-      if (productSerialId != null) 'product_serial_id': productSerialId,
+      if (_cleanUuid(productId) != null) 'product_id': _cleanUuid(productId),
+      if (_cleanUuid(productSerialId) != null) 'product_serial_id': _cleanUuid(productSerialId),
       'serial_number': serialNumber,
     };
   }
@@ -55,4 +55,10 @@ class DeliveryNoteSerialModel {
       createdAt: createdAt ?? this.createdAt,
     );
   }
+}
+
+String? _cleanUuid(String? value) {
+  if (value == null) return null;
+  final trimmed = value.trim();
+  return trimmed.isEmpty ? null : trimmed;
 }

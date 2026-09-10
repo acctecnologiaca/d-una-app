@@ -27,7 +27,8 @@ class CreateSupplierOrderState extends Equatable {
   final List<SupplierOrderItem> items;
   final bool isLoading;
   final String? error;
-  final bool isDirty;
+  final SupplierOrder? initialOrder;
+  final List<SupplierOrderItem>? initialItems;
 
   // For UI display
   final String? supplierName;
@@ -48,12 +49,14 @@ class CreateSupplierOrderState extends Equatable {
     this.items = const [],
     this.isLoading = false,
     this.error,
-    this.isDirty = false,
     this.supplierName,
     this.branchName,
     this.shippingMethodLabel,
     this.receiverName,
     this.currentOrderNumber,
+    this.initialOrder,
+    this.initialItems,
+    bool? isDirty,
   }) : date = date ?? DateTime.now();
 
   double get subtotal => items.fold(0.0, (sum, item) => sum + item.total);
@@ -68,14 +71,71 @@ class CreateSupplierOrderState extends Equatable {
         shippingMethodId != null && shippingMethodId!.isNotEmpty;
     final hasReceiver =
         receiverCollaboratorId != null && receiverCollaboratorId!.isNotEmpty;
-    final hasPayment = paymentMethod != null && paymentMethod!.isNotEmpty;
 
     return hasSupplier &&
         hasBranch &&
         hasShipping &&
-        hasReceiver &&
-        hasPayment;
+        hasReceiver;
   }
+
+  bool get hasChanges {
+    if (initialOrder == null || initialOrder!.id.isEmpty) {
+      return items.isNotEmpty ||
+          (supplierId != null && supplierId!.isNotEmpty);
+    }
+
+    if (supplierId != initialOrder!.supplierId) return true;
+    if (supplierBranchId != initialOrder!.supplierBranchId) return true;
+    if (shippingMethodId != initialOrder!.shippingMethodId) return true;
+    if (receiverCollaboratorId != initialOrder!.receiverCollaboratorId) return true;
+    if (paymentMethod != initialOrder!.paymentMethod) return true;
+
+    if (date.year != initialOrder!.date.year ||
+        date.month != initialOrder!.date.month ||
+        date.day != initialOrder!.date.day) {
+      return true;
+    }
+
+    final origTaxRate = initialOrder!.tax == 0.0
+        ? 0.0
+        : (initialOrder!.subtotal > 0
+            ? (initialOrder!.tax / initialOrder!.subtotal) * 100
+            : 0.0);
+    if ((taxRate - origTaxRate).abs() > 0.001) return true;
+
+    final origItems = initialItems ?? initialOrder!.items ?? [];
+    if (items.length != origItems.length) return true;
+
+    final origMap = <String, SupplierOrderItem>{};
+    for (final op in origItems) {
+      final key = op.id.isNotEmpty
+          ? op.id
+          : '${op.productId}_${op.supplierBranchStockId}_${op.name}';
+      origMap[key] = op;
+    }
+
+    for (final p in items) {
+      final key = p.id.isNotEmpty
+          ? p.id
+          : '${p.productId}_${p.supplierBranchStockId}_${p.name}';
+      final op = origMap[key];
+      if (op == null) return true;
+      if (p.productId != op.productId ||
+          p.quantity != op.quantity ||
+          p.unitPrice != op.unitPrice ||
+          p.name != op.name ||
+          p.brand != op.brand ||
+          p.model != op.model ||
+          p.uom != op.uom ||
+          p.supplierBranchStockId != op.supplierBranchStockId) {
+        return true;
+      }
+    }
+
+    return false;
+  }
+
+  bool get isDirty => hasChanges;
 
   CreateSupplierOrderState copyWith({
     String? id,
@@ -89,6 +149,8 @@ class CreateSupplierOrderState extends Equatable {
     List<SupplierOrderItem>? items,
     bool? isLoading,
     String? error,
+    SupplierOrder? initialOrder,
+    List<SupplierOrderItem>? initialItems,
     bool? isDirty,
     String? supplierName,
     String? branchName,
@@ -109,7 +171,8 @@ class CreateSupplierOrderState extends Equatable {
       items: items ?? this.items,
       isLoading: isLoading ?? this.isLoading,
       error: error,
-      isDirty: isDirty ?? this.isDirty,
+      initialOrder: initialOrder ?? this.initialOrder,
+      initialItems: initialItems ?? this.initialItems,
       supplierName: supplierName ?? this.supplierName,
       branchName: branchName ?? this.branchName,
       shippingMethodLabel: shippingMethodLabel ?? this.shippingMethodLabel,
@@ -155,7 +218,6 @@ class CreateSupplierOrderState extends Equatable {
       shippingMethodLabel: json['shipping_method_label'] as String?,
       receiverName: json['receiver_name'] as String?,
       currentOrderNumber: json['current_order_number'] as String?,
-      isDirty: true,
     );
   }
 
@@ -174,6 +236,8 @@ class CreateSupplierOrderState extends Equatable {
     items,
     isLoading,
     error,
+    initialOrder,
+    initialItems,
     isDirty,
     supplierName,
     branchName,
@@ -211,11 +275,8 @@ class CreateSupplierOrder extends _$CreateSupplierOrder {
     if (isEditing) {
       if (!state.isDirty) return;
     } else {
-      final hasData =
-          state.items.isNotEmpty ||
-          state.supplierId != null ||
-          state.shippingMethodId != null ||
-          state.receiverCollaboratorId != null;
+      final hasData = state.items.isNotEmpty ||
+          (state.supplierId != null && state.supplierId!.isNotEmpty);
 
       if (!hasData) return;
     }
@@ -226,7 +287,7 @@ class CreateSupplierOrder extends _$CreateSupplierOrder {
       savedAt: DateTime.now(),
       tabIndex: tabIndex,
       summaryTitle:
-          state.supplierName != null
+          state.supplierName != null && state.supplierName!.isNotEmpty
               ? '${isEditing ? "Modificación Orden" : "Orden de Compra"} - ${state.supplierName}'
               : 'Orden de Compra',
       data: state.toDraftJson(),
@@ -242,11 +303,8 @@ class CreateSupplierOrder extends _$CreateSupplierOrder {
     if (isEditing) {
       if (!state.isDirty) return;
     } else {
-      final hasData =
-          state.items.isNotEmpty ||
-          state.supplierId != null ||
-          state.shippingMethodId != null ||
-          state.receiverCollaboratorId != null;
+      final hasData = state.items.isNotEmpty ||
+          (state.supplierId != null && state.supplierId!.isNotEmpty);
 
       if (!hasData) return;
     }
@@ -265,11 +323,19 @@ class CreateSupplierOrder extends _$CreateSupplierOrder {
     await _draftStorage.saveDraftNow(draft);
   }
 
-  Future<DraftData?> checkAndRestoreDraft({String? orderId}) async {
+  Future<DraftData?> checkAndRestoreDraft({
+    String? orderId,
+    SupplierOrder? originalOrder,
+    List<SupplierOrderItem>? originalItems,
+  }) async {
     final key = _getDraftKey(orderId: orderId);
     final draft = await _draftStorage.getDraft(key);
     if (draft != null && draft.data.isNotEmpty) {
-      state = CreateSupplierOrderState.fromDraftJson(draft.data);
+      final restored = CreateSupplierOrderState.fromDraftJson(draft.data);
+      state = restored.copyWith(
+        initialOrder: originalOrder ?? state.initialOrder,
+        initialItems: originalItems ?? state.initialItems,
+      );
       return draft;
     }
     return null;
@@ -383,13 +449,17 @@ class CreateSupplierOrder extends _$CreateSupplierOrder {
       receiverCollaboratorId: order.receiverCollaboratorId,
       date: order.date,
       paymentMethod: order.paymentMethod,
-      taxRate: order.tax == 0.0 ? 0.0 : (order.tax / order.subtotal) * 100,
-      items: items,
+      taxRate: order.tax == 0.0
+          ? 0.0
+          : (order.subtotal > 0 ? (order.tax / order.subtotal) * 100 : 0.0),
+      items: List<SupplierOrderItem>.from(items),
       supplierName: order.supplierName,
       branchName: order.branchName,
       shippingMethodLabel: order.shippingMethodLabel,
       receiverName: order.receiverName,
       currentOrderNumber: order.orderNumber,
+      initialOrder: order,
+      initialItems: List<SupplierOrderItem>.from(items),
     );
   }
 
@@ -720,7 +790,11 @@ class CreateSupplierOrder extends _$CreateSupplierOrder {
       if (state.id != null) {
         ref.invalidate(supplierOrderDetailProvider(state.id!));
       }
-      state = state.copyWith(isLoading: false);
+      state = state.copyWith(
+        isLoading: false,
+        initialOrder: order,
+        initialItems: List<SupplierOrderItem>.from(state.items),
+      );
       return orderId;
     } catch (e) {
       state = state.copyWith(isLoading: false, error: e.toString());

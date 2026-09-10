@@ -6,7 +6,6 @@ import 'package:material_symbols_icons/symbols.dart';
 import '../../../domain/models/delivery_note_model.dart';
 import '../../../domain/models/delivery_note_status.dart';
 import '../../delivery_notes_list/providers/delivery_notes_providers.dart';
-import '../widgets/confirm_delivery_note_reception_dialog.dart';
 
 class ViewDeliveryNoteSummaryTab extends ConsumerWidget {
   final String noteId;
@@ -26,9 +25,7 @@ class ViewDeliveryNoteSummaryTab extends ConsumerWidget {
 
     return noteAsync.when(
       loading: () => const Center(child: CircularProgressIndicator()),
-      error: (e, _) => Center(
-        child: Text('Error al cargar resumen: $e'),
-      ),
+      error: (e, _) => Center(child: Text('Error al cargar resumen: $e')),
       data: (note) {
         if (note == null) {
           return const Center(
@@ -37,7 +34,7 @@ class ViewDeliveryNoteSummaryTab extends ConsumerWidget {
         }
 
         final status = note.status;
-        final isDelivered = status == DeliveryNoteStatus.delivered;
+        final isDelivered = status == DeliveryNoteStatus.finalized;
 
         final String deliveryTypeLabel = switch (note.deliveryType) {
           'pickup' => 'Retiro en tienda / almacén',
@@ -78,23 +75,24 @@ class ViewDeliveryNoteSummaryTab extends ConsumerWidget {
 
               // 4. Documento Vinculado Section (si aplica)
               if (note.quoteId != null || note.supplierOrderId != null) ...[
-                _buildSectionHeader(
-                  context,
-                  Icons.link,
-                  'Documento vinculado',
-                ),
+                _buildSectionHeader(context, Icons.link, 'Documento vinculado'),
                 _buildLinkedDocumentCard(context, note),
                 const SizedBox(height: 16),
               ],
 
-              // 5. Recepción y Firma Section
-              _buildSectionHeader(
-                context,
-                Symbols.signature,
-                'Recepción y Firma',
-              ),
-              _buildReceptionCard(context, ref, note, isDelivered),
-              const SizedBox(height: 40),
+              // 5. Recepción y Firma Section (solo si ya fue entregada / firmada)
+              if (isDelivered ||
+                  (note.receivedByName != null &&
+                      note.receivedByName!.isNotEmpty)) ...[
+                _buildSectionHeader(
+                  context,
+                  Symbols.signature,
+                  'Recepción y Firma',
+                ),
+                _buildReceptionCard(context, ref, note),
+                const SizedBox(height: 16),
+              ],
+              const SizedBox(height: 24),
             ],
           ),
         );
@@ -216,12 +214,7 @@ class ViewDeliveryNoteSummaryTab extends ConsumerWidget {
       padding: const EdgeInsets.only(bottom: 8.0),
       child: Row(
         children: [
-          Icon(
-            icon,
-            size: 20,
-            color: colors.onSurfaceVariant,
-            fill: fill,
-          ),
+          Icon(icon, size: 20, color: colors.onSurfaceVariant, fill: fill),
           const SizedBox(width: 8),
           Text(
             title,
@@ -295,7 +288,7 @@ class ViewDeliveryNoteSummaryTab extends ConsumerWidget {
             _buildSummaryRow(
               context,
               Icons.calendar_today_outlined,
-              'Fecha de entrega',
+              'Fecha de Despacho',
               note.deliveryDate != null
                   ? dateFormat.format(note.deliveryDate!)
                   : 'No establecida',
@@ -414,8 +407,10 @@ class ViewDeliveryNoteSummaryTab extends ConsumerWidget {
             if (note.hasMissingSerials) ...[
               const SizedBox(height: 8),
               Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 10,
+                  vertical: 6,
+                ),
                 decoration: BoxDecoration(
                   color: colors.errorContainer.withValues(alpha: 0.6),
                   borderRadius: BorderRadius.circular(6),
@@ -486,10 +481,7 @@ class ViewDeliveryNoteSummaryTab extends ConsumerWidget {
               note.quoteId != null
                   ? 'Generada a partir de Cotización'
                   : 'Generada a partir de Orden de Compra',
-              style: const TextStyle(
-                fontSize: 13,
-                fontWeight: FontWeight.w500,
-              ),
+              style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500),
             ),
           ],
         ),
@@ -502,140 +494,102 @@ class ViewDeliveryNoteSummaryTab extends ConsumerWidget {
     BuildContext context,
     WidgetRef ref,
     DeliveryNoteModel note,
-    bool isDelivered,
   ) {
     final colors = Theme.of(context).colorScheme;
     final textTheme = Theme.of(context).textTheme;
 
-    if (isDelivered ||
-        (note.receivedByName != null && note.receivedByName!.isNotEmpty)) {
-      return Card(
-        elevation: 0,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(8),
-          side: BorderSide(color: colors.outlineVariant),
-        ),
-        color: colors.surface,
-        child: Padding(
-          padding: const EdgeInsets.all(16.0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
+    return Card(
+      elevation: 0,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(8),
+        side: BorderSide(color: colors.outlineVariant),
+      ),
+      color: colors.surface,
+      child: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            _buildSummaryRow(
+              context,
+              Icons.person_pin_outlined,
+              'Receptor',
+              note.receivedByName ?? 'No registrado',
+              isTextValue: true,
+            ),
+            if (note.receivedById != null && note.receivedById!.isNotEmpty) ...[
+              const SizedBox(height: 12),
               _buildSummaryRow(
                 context,
-                Icons.person_pin_outlined,
-                'Receptor',
-                note.receivedByName ?? 'No registrado',
+                Icons.badge_outlined,
+                'Cédula / ID',
+                note.receivedById!,
                 isTextValue: true,
               ),
-              if (note.receivedById != null &&
-                  note.receivedById!.isNotEmpty) ...[
-                const SizedBox(height: 12),
-                _buildSummaryRow(
-                  context,
-                  Icons.badge_outlined,
-                  'Cédula / ID',
-                  note.receivedById!,
-                  isTextValue: true,
-                ),
-              ],
-              if (note.receivedByPhone != null &&
-                  note.receivedByPhone!.isNotEmpty) ...[
-                const SizedBox(height: 12),
-                _buildSummaryRow(
-                  context,
-                  Icons.phone_outlined,
-                  'Teléfono',
-                  note.receivedByPhone!,
-                  isTextValue: true,
-                ),
-              ],
-              if (note.receiverRelationship != null &&
-                  note.receiverRelationship!.isNotEmpty) ...[
-                const SizedBox(height: 12),
-                _buildSummaryRow(
-                  context,
-                  Icons.work_outline,
-                  'Relación / Cargo',
-                  note.receiverRelationship!,
-                  isTextValue: true,
-                ),
-              ],
-              if (note.receivedAt != null) ...[
-                const SizedBox(height: 12),
-                _buildSummaryRow(
-                  context,
-                  Icons.access_time,
-                  'Fecha de recepción',
-                  DateFormat('dd/MM/yyyy HH:mm').format(note.receivedAt!),
-                  isTextValue: true,
-                ),
-              ],
-              if (note.signatureData != null &&
-                  note.signatureData!.isNotEmpty) ...[
-                const SizedBox(height: 16),
-                Text(
-                  'Firma Digital Registrada:',
-                  style: textTheme.labelMedium?.copyWith(
-                    fontWeight: FontWeight.bold,
-                    color: colors.onSurfaceVariant,
-                  ),
-                ),
-                const SizedBox(height: 8),
-                Container(
-                  height: 130,
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(8),
-                    border: Border.all(color: colors.outlineVariant),
-                  ),
-                  padding: const EdgeInsets.all(8),
-                  child: Center(
-                    child: note.signatureData!.startsWith('data:image')
-                        ? Image.memory(
-                            base64Decode(note.signatureData!.split(',').last),
-                            fit: BoxFit.contain,
-                          )
-                        : const Text('Firma en formato digital registrada'),
-                  ),
-                ),
-              ],
             ],
-          ),
+            if (note.receivedByPhone != null &&
+                note.receivedByPhone!.isNotEmpty) ...[
+              const SizedBox(height: 12),
+              _buildSummaryRow(
+                context,
+                Icons.phone_outlined,
+                'Teléfono',
+                note.receivedByPhone!,
+                isTextValue: true,
+              ),
+            ],
+            if (note.receiverRelationship != null &&
+                note.receiverRelationship!.isNotEmpty) ...[
+              const SizedBox(height: 12),
+              _buildSummaryRow(
+                context,
+                Icons.work_outline,
+                'Relación / Cargo',
+                note.receiverRelationship!,
+                isTextValue: true,
+              ),
+            ],
+            if (note.receivedAt != null) ...[
+              const SizedBox(height: 12),
+              _buildSummaryRow(
+                context,
+                Icons.access_time,
+                'Fecha de recepción',
+                DateFormat('dd/MM/yyyy HH:mm').format(note.receivedAt!),
+                isTextValue: true,
+              ),
+            ],
+            if (note.signatureData != null &&
+                note.signatureData!.isNotEmpty) ...[
+              const SizedBox(height: 16),
+              Text(
+                'Firma Digital Registrada:',
+                style: textTheme.labelMedium?.copyWith(
+                  fontWeight: FontWeight.bold,
+                  color: colors.onSurfaceVariant,
+                ),
+              ),
+              const SizedBox(height: 8),
+              Container(
+                height: 130,
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: colors.outlineVariant),
+                ),
+                padding: const EdgeInsets.all(8),
+                child: Center(
+                  child: note.signatureData!.startsWith('data:image')
+                      ? Image.memory(
+                          base64Decode(note.signatureData!.split(',').last),
+                          fit: BoxFit.contain,
+                        )
+                      : const Text('Firma en formato digital registrada'),
+                ),
+              ),
+            ],
+          ],
         ),
-      );
-    }
-
-    return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: colors.surfaceContainerLowest,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: colors.outlineVariant.withValues(alpha: 0.6)),
-      ),
-      child: Column(
-        children: [
-          Icon(Symbols.draw, size: 44, color: colors.onSurfaceVariant),
-          const SizedBox(height: 12),
-          const Text(
-            'Entrega pendiente de confirmación',
-            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
-          ),
-          const SizedBox(height: 6),
-          Text(
-            'El receptor puede registrar su firma digitalmente o de forma presencial al recibir la mercancía.',
-            textAlign: TextAlign.center,
-            style: TextStyle(fontSize: 12, color: colors.onSurfaceVariant),
-          ),
-          const SizedBox(height: 16),
-          FilledButton.icon(
-            onPressed: () {
-              ConfirmDeliveryNoteReceptionDialog.show(context, ref, note);
-            },
-            icon: const Icon(Symbols.signature, size: 18),
-            label: const Text('Registrar firma presencial ahora'),
-          ),
-        ],
       ),
     );
   }
@@ -668,11 +622,13 @@ class ViewDeliveryNoteSummaryTab extends ConsumerWidget {
           child: Text(
             value,
             textAlign: TextAlign.right,
-            style: valueStyle ??
+            style:
+                valueStyle ??
                 TextStyle(
                   fontWeight: isTextValue ? FontWeight.normal : FontWeight.w600,
-                  color:
-                      isTextValue ? colors.onSurfaceVariant : colors.onSurface,
+                  color: isTextValue
+                      ? colors.onSurfaceVariant
+                      : colors.onSurface,
                   fontSize: isTextValue ? 14 : 15,
                 ),
           ),

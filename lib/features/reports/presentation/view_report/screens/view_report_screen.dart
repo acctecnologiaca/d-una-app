@@ -13,6 +13,7 @@ import '../../../../../shared/utils/string_utils.dart';
 import '../../../../profile/presentation/providers/profile_provider.dart';
 import '../../../../../core/pdf/templates/service_report_pdf_template.dart';
 import '../../reports_list/providers/reports_provider.dart';
+import '../../create_report/providers/create_report_provider.dart';
 import '../providers/view_report_provider.dart';
 import '../../../data/models/models.dart';
 import '../tabs/view_report_details_tab.dart';
@@ -307,6 +308,20 @@ class _ViewReportScreenState extends ConsumerState<ViewReportScreen>
           },
         ),
         const Divider(height: 1, indent: 16, endIndent: 16),
+        BottomSheetActionItem(
+          icon: Icons.content_copy_outlined,
+          label: 'Crear una copia',
+          onTap: () async {
+            final router = GoRouter.of(context);
+            context.pop();
+            await ref
+                .read(createReportProvider.notifier)
+                .loadReportAsCopy(report.id);
+            if (context.mounted) {
+              router.push('/reports/create');
+            }
+          },
+        ),
         BottomSheetActionItem(
           icon: report.isArchived
               ? Icons.unarchive_outlined

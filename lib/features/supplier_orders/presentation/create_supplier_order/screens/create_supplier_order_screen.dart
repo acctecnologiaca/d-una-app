@@ -5,6 +5,8 @@ import 'package:go_router/go_router.dart';
 import '../../../../../shared/widgets/draft_toast.dart';
 import '../../../../../shared/widgets/standard_app_bar.dart';
 import '../../../../../shared/widgets/custom_dialog.dart';
+import '../../../../../shared/widgets/custom_action_sheet.dart';
+import '../../../../../shared/widgets/bottom_sheet_action_item.dart';
 import '../providers/create_supplier_order_provider.dart';
 import '../../supplier_orders_list/providers/supplier_orders_providers.dart';
 import '../tabs/create_supplier_order_details_tab.dart';
@@ -76,65 +78,50 @@ class _CreateSupplierOrderScreenState
       if (widget.editMode) {
         final currentId = widget.orderId ?? currentState.id;
         if (currentId != null) {
-          final draft = await ref
-              .read(createSupplierOrderProvider.notifier)
-              .checkAndRestoreDraft(orderId: currentId);
+          final repo = ref.read(supplierOrdersRepositoryProvider);
+          try {
+            final details = await repo.getSupplierOrderDetails(currentId);
+            if (mounted) {
+              ref
+                  .read(createSupplierOrderProvider.notifier)
+                  .loadFromExisting(details.order, details.items);
 
-          if (draft != null && mounted) {
-            setState(() {
-              if (draft.tabIndex >= 0 && draft.tabIndex < 3) {
-                _tabController.index = draft.tabIndex;
-              }
-            });
+              final draft = await ref
+                  .read(createSupplierOrderProvider.notifier)
+                  .checkAndRestoreDraft(
+                    orderId: currentId,
+                    originalOrder: details.order,
+                    originalItems: details.items,
+                  );
 
-            DraftToast.show(
-              context,
-              message: 'Cambios restaurados automáticamente',
-              onDiscard: () async {
-                final colors = Theme.of(context).colorScheme;
-                final shouldDiscard = await CustomDialog.show<bool>(
-                  context: context,
-                  dialog: CustomDialog.destructive(
-                    title: '¿Descartar cambios locales?',
-                    contentText:
-                        'Se eliminarán las modificaciones sin guardar y se recargarán los datos del servidor.',
-                    actions: [
-                      TextButton(
-                        onPressed: () => Navigator.pop(context, false),
-                        child: const Text('Cancelar'),
-                      ),
-                      FilledButton(
-                        onPressed: () => Navigator.pop(context, true),
-                        style: FilledButton.styleFrom(
-                          backgroundColor: colors.error,
-                          foregroundColor: colors.onError,
-                        ),
-                        child: const Text('Descartar'),
-                      ),
-                    ],
-                  ),
+              if (draft != null && mounted) {
+                setState(() {
+                  if (draft.tabIndex >= 0 && draft.tabIndex < 3) {
+                    _tabController.index = draft.tabIndex;
+                  }
+                });
+
+                DraftToast.show(
+                  context,
+                  message: 'Cambios restaurados automáticamente',
+                  onDiscard: () async {
+                    final shouldDiscard = await _showDiscardDialog();
+                    if (shouldDiscard == true && mounted) {
+                      await ref
+                          .read(createSupplierOrderProvider.notifier)
+                          .clearDraft(orderId: currentId);
+                      ref
+                          .read(createSupplierOrderProvider.notifier)
+                          .loadFromExisting(details.order, details.items);
+                      setState(() {
+                        _tabController.index = 0;
+                      });
+                    }
+                  },
                 );
-
-                if (shouldDiscard == true && mounted) {
-                  await ref
-                      .read(createSupplierOrderProvider.notifier)
-                      .clearDraft(orderId: currentId);
-                  final repo = ref.read(supplierOrdersRepositoryProvider);
-                  try {
-                    final details = await repo.getSupplierOrderDetails(
-                      currentId,
-                    );
-                    ref
-                        .read(createSupplierOrderProvider.notifier)
-                        .loadFromExisting(details.order, details.items);
-                  } catch (_) {}
-                  setState(() {
-                    _tabController.index = 0;
-                  });
-                }
-              },
-            );
-          }
+              }
+            }
+          } catch (_) {}
         }
       } else {
         // Modo creación:
@@ -196,13 +183,17 @@ class _CreateSupplierOrderScreenState
 
   Future<void> _handlePop() async {
     final state = ref.read(createSupplierOrderProvider);
-    final hasDataOrChanges =
-        state.isDirty || state.items.isNotEmpty || state.supplierId != null;
+    final hasDataOrChanges = widget.editMode
+        ? state.isDirty
+        : (state.items.isNotEmpty ||
+            (state.supplierId != null && state.supplierId!.isNotEmpty));
     final currentId = widget.orderId ?? state.id;
 
-    await ref
-        .read(createSupplierOrderProvider.notifier)
-        .saveDraftNow(tabIndex: _tabController.index, orderId: currentId);
+    if (hasDataOrChanges) {
+      await ref
+          .read(createSupplierOrderProvider.notifier)
+          .saveDraftNow(tabIndex: _tabController.index, orderId: currentId);
+    }
     ref
         .read(createSupplierOrderProvider.notifier)
         .reset(clearPersistedDraft: false, orderId: currentId);
@@ -250,23 +241,70 @@ class _CreateSupplierOrderScreenState
         false;
   }
 
+  void _showActionsMenu(WidgetRef ref) {
+    final state = ref.read(createSupplierOrderProvider);
+    final notifier = ref.read(createSupplierOrderProvider.notifier);
+    final currentId = widget.orderId ?? state.id;
+
+    CustomActionSheet.show(
+      context: context,
+      title: 'Opciones de orden de compra',
+      actions: [
+        BottomSheetActionItem(
+          icon: Icons.bookmark_add_outlined,
+          label: 'Guardar y continuar luego',
+          subtitle: 'Guarda un borrador local para continuar luego',
+          onTap: () async {
+            context.pop();
+            await notifier.saveDraftNow(
+              tabIndex: _tabController.index,
+              orderId: currentId,
+            );
+            notifier.reset(clearPersistedDraft: false, orderId: currentId);
+            if (!mounted) return;
+            AppToast.info(
+              context,
+              message: 'Cambios guardados temporalmente',
+              icon: Icons.bookmark_added_outlined,
+            );
+            context.pop();
+          },
+        ),
+        BottomSheetActionItem(
+          icon: Icons.delete_outline,
+          label: widget.editMode
+              ? 'Descartar cambios locales'
+              : 'Descartar borrador',
+          subtitle: 'Elimina las modificaciones no guardadas',
+          onTap: () async {
+            context.pop();
+            final shouldDiscard = await _showDiscardDialog();
+            if (!shouldDiscard) return;
+            await notifier.clearDraft(orderId: currentId);
+            notifier.reset(clearPersistedDraft: true, orderId: currentId);
+            if (!mounted) return;
+            context.pop();
+          },
+        ),
+      ],
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final colors = Theme.of(context).colorScheme;
     final state = ref.watch(createSupplierOrderProvider);
 
-    final branchesAsync = state.supplierId != null
+    final branchesAsync = state.supplierId != null && state.supplierId!.isNotEmpty
         ? ref.watch(supplierBranchesProvider(state.supplierId!))
         : null;
     final branches = branchesAsync?.valueOrNull ?? [];
     final hasBranches = branches.isNotEmpty;
     final isDetailsValid = state.isDetailsValid(hasBranches: hasBranches);
-    final canSave =
-        !state.isLoading &&
+    final canSave = !state.isLoading &&
         widget.editMode &&
         state.isDirty &&
-        state.items.isNotEmpty &&
-        isDetailsValid;
+        state.items.isNotEmpty;
 
     return PopScope(
       canPop: false,
@@ -284,7 +322,7 @@ class _CreateSupplierOrderScreenState
                     ? '#${state.currentOrderNumber}'
                     : 'Cargando...'),
           actions: [
-            if (widget.editMode) ...[
+            if (widget.editMode)
               IconButton(
                 icon: Icon(
                   state.isLoading ? Icons.hourglass_empty : Icons.save_outlined,
@@ -292,38 +330,43 @@ class _CreateSupplierOrderScreenState
                       ? colors.onSurfaceVariant
                       : colors.onSurfaceVariant.withValues(alpha: 0.38),
                 ),
-                tooltip: canSave ? 'Guardar cambios' : null,
+                tooltip: canSave ? 'Guardar cambios' : 'Sin modificaciones',
                 onPressed: canSave
                     ? () async {
+                        if (!isDetailsValid) {
+                          AppToast.error(
+                            context,
+                            message:
+                                'Por favor complete todos los campos obligatorios.',
+                          );
+                          return;
+                        }
                         final updatedOrderId = await ref
                             .read(createSupplierOrderProvider.notifier)
                             .saveOrder();
                         if (!context.mounted) return;
                         if (updatedOrderId != null) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                              content: Text(
-                                'Orden de compra guardada exitosamente',
-                              ),
-                            ),
-                          );
+                          ref.invalidate(supplierOrderDetailProvider(updatedOrderId));
+                          ref.invalidate(paginatedSupplierOrdersProvider);
                           ref.invalidate(createSupplierOrderProvider);
+                          AppToast.success(
+                            context,
+                            message: 'Orden de compra guardada exitosamente',
+                          );
                           context.pop();
                         } else {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(
-                              content: Text(
-                                state.error ?? 'Error al guardar la orden',
-                              ),
-                              backgroundColor: Colors.red,
-                            ),
+                          AppToast.error(
+                            context,
+                            message: state.error ?? 'Error al guardar la orden',
                           );
                         }
                       }
                     : null,
               ),
-              const SizedBox(width: 48),
-            ],
+            IconButton(
+              icon: Icon(Icons.more_vert, color: colors.onSurfaceVariant),
+              onPressed: () => _showActionsMenu(ref),
+            ),
           ],
           bottom: TabBar(
             controller: _tabController,

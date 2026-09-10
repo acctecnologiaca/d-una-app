@@ -3,10 +3,13 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:material_symbols_icons/symbols.dart';
 import 'package:go_router/go_router.dart';
+import 'package:pdf/pdf.dart';
 
 import 'package:d_una_app/shared/widgets/custom_action_sheet.dart';
 import 'package:d_una_app/shared/widgets/bottom_sheet_action_item.dart';
 import 'package:d_una_app/shared/widgets/custom_dialog.dart';
+import 'package:d_una_app/shared/utils/string_utils.dart';
+import 'package:d_una_app/core/pdf/templates/supplier_order_pdf_template.dart';
 import 'package:d_una_app/features/profile/presentation/providers/profile_provider.dart';
 import 'package:d_una_app/features/supplier_orders/domain/models/supplier_order.dart';
 import 'package:d_una_app/features/supplier_orders/domain/models/supplier_order_status.dart';
@@ -61,92 +64,146 @@ class SupplierOrderSelectionActions {
   ) {
     final isDraft = order.status == SupplierOrderStatus.draft;
     final canEdit = order.status.canEdit;
+    final isFinalized = order.status == SupplierOrderStatus.finalized;
+    final isFinalizedOrCancelled =
+        isFinalized || order.status == SupplierOrderStatus.cancelled;
 
     CustomActionSheet.show(
       context: context,
       title: '${order.orderNumber} (${order.supplierName})',
       actions: [
-        if (canEdit) ...[
+        // Bloque 1: Edición y Comunicación Directa
+        BottomSheetActionItem(
+          icon: Icons.edit_outlined,
+          label: 'Modificar',
+          enabled: canEdit,
+          subtitle: isFinalizedOrCancelled
+              ? 'Orden finalizada o cancelada. No se puede modificar'
+              : (!canEdit ? 'No se puede modificar en el estado actual' : null),
+          onTap: () {
+            Navigator.pop(context);
+            ref.read(supplierOrderSelectionProvider.notifier).clearSelection();
+            ref
+                .read(createSupplierOrderProvider.notifier)
+                .loadFromExisting(order, []);
+            context.push('/supplier-orders/edit/${order.id}');
+          },
+        ),
+        BottomSheetActionItem(
+          icon: isDraft ? Icons.send : Symbols.forward,
+          label: isDraft ? 'Enviar' : 'Reenviar',
+          enabled: canEdit,
+          subtitle: isFinalizedOrCancelled
+              ? 'Orden finalizada o cancelada. No se puede enviar'
+              : (!canEdit ? 'No se puede enviar en el estado actual' : null),
+          onTap: () {
+            Navigator.pop(context);
+            ref.read(supplierOrderSelectionProvider.notifier).clearSelection();
+            context.push('/supplier-orders/view/${order.id}?triggerSend=true');
+          },
+        ),
+        BottomSheetActionItem(
+          icon: Icons.picture_as_pdf_outlined,
+          label: 'Descargar PDF',
+          enabled: isFinalized,
+          subtitle: isFinalized
+              ? null
+              : 'Disponible únicamente cuando la orden esté finalizada',
+          onTap: () async {
+            if (!isFinalized) return;
+            Navigator.pop(context);
+
+            final userProfile = ref.read(userProfileProvider).value;
+            final userEmail = Supabase.instance.client.auth.currentUser?.email;
+
+            if (userProfile == null) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text(
+                    'Cargando perfil de usuario... Por favor espere.',
+                  ),
+                ),
+              );
+              return;
+            }
+
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('Preparando documento...'),
+                duration: Duration(seconds: 1),
+              ),
+            );
+
+            try {
+              final repo = ref.read(supplierOrdersRepositoryProvider);
+              final orderDetails = await repo.getSupplierOrderDetails(order.id);
+
+              if (context.mounted) {
+                ref
+                    .read(supplierOrderSelectionProvider.notifier)
+                    .clearSelection();
+                context.push(
+                  '/pdf-preview',
+                  extra: {
+                    'title': 'Previsualizar Orden de Compra',
+                    'subtitle': '${order.orderNumber} (${order.supplierName})',
+                    'fileName': StringUtils.sanitizeForFileName(
+                      '${order.date.toIso8601String().substring(0, 10)}_${order.supplierName}_${order.orderNumber}.pdf',
+                    ),
+                    'buildPdf': (PdfPageFormat format) =>
+                        SupplierOrderPdfTemplate(
+                          order: order,
+                          items: orderDetails.items,
+                          userProfile: userProfile,
+                          userEmail: userEmail,
+                          shippingMethod: null,
+                          receiverCollaborator: null,
+                        ).generate(format),
+                  },
+                );
+              }
+            } catch (e) {
+              if (context.mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text('Error al generar PDF de la orden: $e'),
+                  ),
+                );
+              }
+            }
+          },
+        ),
+        const Divider(height: 1, indent: 16, endIndent: 16),
+
+        // Bloque 2: Flujo Operativo y Ciclo de Vida
+        if (order.status == SupplierOrderStatus.approved)
           BottomSheetActionItem(
-            icon: Icons.edit_outlined,
-            label: 'Modificar',
-            onTap: () {
+            icon: Icons.receipt_long_outlined,
+            label: 'Registrar compra',
+            onTap: () async {
+              final parentContext = context;
               Navigator.pop(context);
               ref
                   .read(supplierOrderSelectionProvider.notifier)
                   .clearSelection();
-              ref
-                  .read(createSupplierOrderProvider.notifier)
-                  .loadFromExisting(order, []);
-              context.push('/supplier-orders/edit/${order.id}');
+              _finalizeOrderFlow(parentContext, ref, order);
             },
           ),
+        if (order.status == SupplierOrderStatus.approved ||
+            order.status == SupplierOrderStatus.finalized)
           BottomSheetActionItem(
-            icon: isDraft ? Icons.send : Symbols.forward,
-            label: isDraft ? 'Enviar' : 'Reenviar',
+            icon: Symbols.list_alt,
+            label: 'Generar nota de entrega',
             onTap: () {
               Navigator.pop(context);
               ref
                   .read(supplierOrderSelectionProvider.notifier)
                   .clearSelection();
               context.push(
-                '/supplier-orders/view/${order.id}?triggerSend=true',
+                '/delivery-notes/create?supplierOrderId=${order.id}',
               );
             },
           ),
-          if (order.status == SupplierOrderStatus.approved)
-            BottomSheetActionItem(
-              icon: Icons.receipt_long_outlined,
-              label: 'Registrar compra',
-              onTap: () async {
-                final parentContext = context;
-                Navigator.pop(context);
-                ref
-                    .read(supplierOrderSelectionProvider.notifier)
-                    .clearSelection();
-                _finalizeOrderFlow(parentContext, ref, order);
-              },
-            ),
-
-          BottomSheetActionItem(
-            icon: Icons.cancel_outlined,
-            label: 'Cancelar',
-            onTap: () async {
-              Navigator.pop(context);
-              final confirm = await CustomDialog.show<bool>(
-                context: context,
-                dialog: CustomDialog.destructive(
-                  title: '¿Cancelar orden de compra?',
-                  contentText:
-                      'La orden pasará a estatus Cancelada y no podrá modificarse.',
-                  actions: [
-                    TextButton(
-                      onPressed: () => Navigator.pop(context, false),
-                      child: const Text('Volver'),
-                    ),
-                    FilledButton(
-                      onPressed: () => Navigator.pop(context, true),
-                      child: const Text('Confirmar'),
-                    ),
-                  ],
-                ),
-              );
-
-              if (confirm == true) {
-                await ref
-                    .read(paginatedSupplierOrdersProvider.notifier)
-                    .updateSupplierOrderStatus(
-                      order.id,
-                      SupplierOrderStatus.cancelled.dbValue,
-                    );
-                ref
-                    .read(supplierOrderSelectionProvider.notifier)
-                    .clearSelection();
-              }
-            },
-          ),
-        ],
-
         if (order.status == SupplierOrderStatus.merged)
           BottomSheetActionItem(
             icon: Icons.call_split_rounded,
@@ -156,7 +213,48 @@ class SupplierOrderSelectionActions {
               _handleUnmergeOrder(context, ref, [order.id]);
             },
           ),
+        BottomSheetActionItem(
+          icon: Icons.cancel_outlined,
+          label: 'Cancelar',
+          enabled: canEdit,
+          subtitle: !canEdit ? 'Solo disponible para órdenes editables' : null,
+          onTap: () async {
+            Navigator.pop(context);
+            final confirm = await CustomDialog.show<bool>(
+              context: context,
+              dialog: CustomDialog.destructive(
+                title: '¿Cancelar orden de compra?',
+                contentText:
+                    'La orden pasará a estatus Cancelada y no podrá modificarse.',
+                actions: [
+                  TextButton(
+                    onPressed: () => Navigator.pop(context, false),
+                    child: const Text('Volver'),
+                  ),
+                  FilledButton(
+                    onPressed: () => Navigator.pop(context, true),
+                    child: const Text('Confirmar'),
+                  ),
+                ],
+              ),
+            );
+
+            if (confirm == true) {
+              await ref
+                  .read(paginatedSupplierOrdersProvider.notifier)
+                  .updateSupplierOrderStatus(
+                    order.id,
+                    SupplierOrderStatus.cancelled.dbValue,
+                  );
+              ref
+                  .read(supplierOrderSelectionProvider.notifier)
+                  .clearSelection();
+            }
+          },
+        ),
         const Divider(height: 1, indent: 16, endIndent: 16),
+
+        // Bloque 3: Utilidades y Gestión Documental
         BottomSheetActionItem(
           icon: Icons.content_copy_outlined,
           label: 'Crear una copia',
