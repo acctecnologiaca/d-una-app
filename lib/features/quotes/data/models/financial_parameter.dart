@@ -5,6 +5,7 @@ class FinancialParameter {
   final double taxRate;
   final String currencyCode;
   final String pricingMethod; // 'markup' or 'margin'
+  final String defaultPaymentMethod;
   final DateTime updatedAt;
 
   FinancialParameter({
@@ -14,6 +15,7 @@ class FinancialParameter {
     required this.taxRate,
     required this.currencyCode,
     this.pricingMethod = 'margin',
+    this.defaultPaymentMethod = 'Transferencia bancaria en bolívares',
     required this.updatedAt,
   });
 
@@ -25,6 +27,8 @@ class FinancialParameter {
       taxRate: (json['tax_rate'] as num).toDouble(),
       currencyCode: json['currency_code'] as String,
       pricingMethod: json['pricing_method'] as String? ?? 'margin',
+      defaultPaymentMethod: json['default_payment_method'] as String? ??
+          'Transferencia bancaria en bolívares',
       updatedAt: DateTime.parse(json['updated_at'] as String),
     );
   }
@@ -37,6 +41,7 @@ class FinancialParameter {
       'tax_rate': taxRate,
       'currency_code': currencyCode,
       'pricing_method': pricingMethod,
+      'default_payment_method': defaultPaymentMethod,
       'updated_at': updatedAt.toIso8601String(),
     };
   }

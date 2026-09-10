@@ -748,16 +748,21 @@ class SupabaseSupplierOrdersRepository implements SupplierOrdersRepository {
     final currentUserId = _supabase.auth.currentUser?.id;
     if (currentUserId == null) throw Exception('Usuario no autenticado');
 
-    // Get user's configured tax rate (VAT/IVA) from financial_parameters
+    // Get user's configured tax rate (VAT/IVA) and default payment method from financial_parameters
     double taxRate = 0.0;
+    String defaultPaymentMethod = 'Transferencia bancaria en bolívares';
     try {
       final paramsRes = await _supabase
           .from('financial_parameters')
-          .select('tax_rate')
+          .select('tax_rate, default_payment_method')
           .eq('user_id', currentUserId)
           .maybeSingle();
       if (paramsRes != null) {
         taxRate = (paramsRes['tax_rate'] as num).toDouble();
+        final configuredMethod = paramsRes['default_payment_method'] as String?;
+        if (configuredMethod != null && configuredMethod.trim().isNotEmpty) {
+          defaultPaymentMethod = configuredMethod.trim();
+        }
       }
     } catch (_) {}
 
@@ -934,7 +939,9 @@ class SupabaseSupplierOrdersRepository implements SupplierOrdersRepository {
             'supplier_id': sId,
             'supplier_branch_id': bId,
             'shipping_method_id': primaryShippingId,
-            'receiver_collaborator_id': receiverCollaboratorId,
+            'receiver_collaborator_id':
+                isDropshipping ? null : receiverCollaboratorId,
+            'payment_method': defaultPaymentMethod,
             'date': DateTime.now().toIso8601String().split('T')[0],
             'status': SupplierOrderStatus.draft.dbValue,
             'subtotal': subtotal,

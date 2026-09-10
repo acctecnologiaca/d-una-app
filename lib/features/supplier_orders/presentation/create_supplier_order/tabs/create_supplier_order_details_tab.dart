@@ -304,6 +304,24 @@ class _CreateSupplierOrderDetailsTabState
           // Receiver Collaborator dropdown
           collaboratorsAsync.when(
             data: (collaborators) {
+              // Auto-select user collaborator (self) if none selected yet
+              if (state.receiverCollaboratorId == null &&
+                  collaborators.isNotEmpty) {
+                final selfCollaborator = collaborators
+                    .where((c) => c.isUserRecord)
+                    .firstOrNull;
+                if (selfCollaborator != null) {
+                  WidgetsBinding.instance.addPostFrameCallback((_) {
+                    ref
+                        .read(createSupplierOrderProvider.notifier)
+                        .setReceiver(
+                          selfCollaborator.id,
+                          selfCollaborator.fullName,
+                        );
+                  });
+                }
+              }
+
               final selectedCollaborator = state.receiverCollaboratorId != null
                   ? collaborators
                         .where((c) => c.id == state.receiverCollaboratorId)
@@ -343,6 +361,19 @@ class _CreateSupplierOrderDetailsTabState
           // Payment method dropdown
           paymentMethodsAsync.when(
             data: (methods) {
+              // Auto-select default payment method if none selected yet
+              if (state.paymentMethod == null && methods.isNotEmpty) {
+                final defaultMethod =
+                    methods.contains('Transferencia bancaria en bolívares')
+                        ? 'Transferencia bancaria en bolívares'
+                        : methods.first;
+                WidgetsBinding.instance.addPostFrameCallback((_) {
+                  ref
+                      .read(createSupplierOrderProvider.notifier)
+                      .setPaymentMethod(defaultMethod);
+                });
+              }
+
               final selectedMethod =
                   state.paymentMethod != null &&
                       methods.contains(state.paymentMethod)

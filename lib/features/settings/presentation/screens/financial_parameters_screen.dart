@@ -9,6 +9,7 @@ import 'package:d_una_app/shared/data/currencies.dart';
 import 'package:d_una_app/features/quotes/data/models/financial_parameter.dart';
 import 'package:d_una_app/features/quotes/presentation/quotes_list/providers/quotes_provider.dart';
 import 'package:d_una_app/features/quotes/presentation/create_quote/providers/create_quote_provider.dart';
+import 'package:d_una_app/features/portfolio/presentation/providers/lookup_providers.dart';
 import 'package:d_una_app/core/utils/error_handler.dart';
 
 class FinancialParametersScreen extends ConsumerStatefulWidget {
@@ -28,6 +29,7 @@ class _FinancialParametersScreenState
   double _taxRate = 16.0;
   String _currencyCode = 'USD';
   String _pricingMethod = 'margin';
+  String _defaultPaymentMethod = 'Transferencia bancaria en bolívares';
   String? _parameterId;
 
   bool _isLoading = true;
@@ -39,6 +41,7 @@ class _FinancialParametersScreenState
   double _origTax = 16.0;
   String _origCurrency = 'USD';
   String _origMethod = 'margin';
+  String _origPaymentMethod = 'Transferencia bancaria en bolívares';
 
   @override
   void initState() {
@@ -64,11 +67,13 @@ class _FinancialParametersScreenState
           _taxRate = params.taxRate;
           _currencyCode = params.currencyCode;
           _pricingMethod = params.pricingMethod;
+          _defaultPaymentMethod = params.defaultPaymentMethod;
 
           _origMargin = _profitMargin;
           _origTax = _taxRate;
           _origCurrency = _currencyCode;
           _origMethod = _pricingMethod;
+          _origPaymentMethod = _defaultPaymentMethod;
 
           _marginController.text = _formatNumber(_profitMargin);
           _taxController.text = _formatNumber(_taxRate);
@@ -95,7 +100,8 @@ class _FinancialParametersScreenState
         _profitMargin != _origMargin ||
         _taxRate != _origTax ||
         _currencyCode != _origCurrency ||
-        _pricingMethod != _origMethod;
+        _pricingMethod != _origMethod ||
+        _defaultPaymentMethod != _origPaymentMethod;
     if (_hasChanged != changed) {
       setState(() => _hasChanged = changed);
     }
@@ -115,6 +121,7 @@ class _FinancialParametersScreenState
         taxRate: _taxRate,
         currencyCode: _currencyCode,
         pricingMethod: _pricingMethod,
+        defaultPaymentMethod: _defaultPaymentMethod,
         updatedAt: DateTime.now(),
       );
       await repo.updateFinancialParameters(params);
@@ -143,6 +150,7 @@ class _FinancialParametersScreenState
   Widget build(BuildContext context) {
     final colors = Theme.of(context).colorScheme;
     final textTheme = Theme.of(context).textTheme;
+    final paymentMethodsAsync = ref.watch(paymentMethodsProvider);
 
     if (_isLoading) {
       return Scaffold(
@@ -351,6 +359,38 @@ class _FinancialParametersScreenState
                 _checkChanged();
               }
             },
+          ),
+          const SizedBox(height: 32),
+
+          // ── Compras y Pagos ───────────────────────────────────────
+          _buildSectionTitle('Compras y Pagos', textTheme, colors),
+          const SizedBox(height: 16),
+
+          paymentMethodsAsync.when(
+            data: (methods) {
+              final selected = methods.contains(_defaultPaymentMethod)
+                  ? _defaultPaymentMethod
+                  : methods.firstOrNull;
+              return CustomDropdown<String>(
+                value: selected,
+                items: methods,
+                label: 'Método de pago predeterminado (Compras)',
+                itemLabelBuilder: (m) => m,
+                onChanged: (val) {
+                  if (val != null) {
+                    setState(() {
+                      _defaultPaymentMethod = val;
+                      _checkChanged();
+                    });
+                  }
+                },
+              );
+            },
+            loading: () => const LinearProgressIndicator(),
+            error: (e, _) => Text(
+              'Error al cargar métodos de pago: $e',
+              style: textTheme.bodySmall?.copyWith(color: colors.error),
+            ),
           ),
           const SizedBox(height: 48),
 

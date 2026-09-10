@@ -418,7 +418,10 @@ class CreateSupplierOrder extends _$CreateSupplierOrder {
     try {
       final quotesRepo = ref.read(quotesRepositoryProvider);
       final params = await quotesRepo.getFinancialParameters();
-      state = state.copyWith(taxRate: params.taxRate);
+      state = state.copyWith(
+        taxRate: params.taxRate,
+        paymentMethod: state.paymentMethod ?? params.defaultPaymentMethod,
+      );
     } catch (e) {
       state = state.copyWith(taxRate: 0.0);
     }
