@@ -117,12 +117,9 @@ class _AddProductStep1State extends State<AddProductStep1> {
             ),
           ),
         ),
-        Padding(
-          padding: const EdgeInsets.only(bottom: 40),
-          child: WizardButtonBar(
-            onCancel: widget.onCancel,
-            onNext: widget.selectedBrand != null ? widget.onNext : null,
-          ),
+        WizardButtonBar(
+          onCancel: widget.onCancel,
+          onNext: widget.selectedBrand != null ? widget.onNext : null,
         ),
       ],
     );

@@ -244,7 +244,6 @@ class _AddEditBrandSheetState extends ConsumerState<AddEditBrandSheet> {
           ],
         ),
       ),
-      const SizedBox(height: 16),
     ];
 
     return CustomActionSheet(

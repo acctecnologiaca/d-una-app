@@ -50,14 +50,16 @@ class _AddOrderProductSheetState extends ConsumerState<AddOrderProductSheet> {
   Widget build(BuildContext context) {
     final productsAsync = ref.watch(productsProvider);
 
-    return Padding(
-      padding: EdgeInsets.only(
-        bottom: MediaQuery.of(context).viewInsets.bottom + 16,
-        left: 16,
-        right: 16,
-        top: 16,
-      ),
-      child: Form(
+    return SafeArea(
+      top: false,
+      child: Padding(
+        padding: EdgeInsets.only(
+          bottom: MediaQuery.of(context).viewInsets.bottom + 16,
+          left: 16,
+          right: 16,
+          top: 16,
+        ),
+        child: Form(
         key: _formKey,
         child: SingleChildScrollView(
           child: Column(
@@ -189,6 +191,7 @@ class _AddOrderProductSheetState extends ConsumerState<AddOrderProductSheet> {
           ),
         ),
       ),
-    );
+    ),
+  );
   }
 }

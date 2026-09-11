@@ -47,7 +47,7 @@ class AddPurchaseProductDetailsSheet extends ConsumerStatefulWidget {
       ),
       actions: [
         Padding(
-          padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+          padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
           child: Row(
             mainAxisAlignment: MainAxisAlignment.end,
             children: [

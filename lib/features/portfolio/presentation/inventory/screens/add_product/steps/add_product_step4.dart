@@ -200,14 +200,11 @@ class AddProductStep4 extends StatelessWidget {
             ),
           ),
         ),
-        Padding(
-          padding: const EdgeInsets.only(bottom: 40),
-          child: WizardButtonBar(
-            onCancel: onCancel,
-            onBack: onBack,
-            onNext: onSave,
-            labelNext: 'Finalizar',
-          ),
+        WizardButtonBar(
+          onCancel: onCancel,
+          onBack: onBack,
+          onNext: onSave,
+          labelNext: 'Finalizar',
         ),
       ],
     );

@@ -152,18 +152,15 @@ class _AddProductStep2State extends State<AddProductStep2> {
             ),
           ),
         ),
-        Padding(
-          padding: const EdgeInsets.only(bottom: 40),
-          child: WizardButtonBar(
-            onCancel: widget.onCancel,
-            onBack: widget.onBack,
-            isNextEnabled: widget.nameController.text.trim().isNotEmpty,
-            onNext: () {
-              if (_formKey.currentState!.validate()) {
-                widget.onNext();
-              }
-            },
-          ),
+        WizardButtonBar(
+          onCancel: widget.onCancel,
+          onBack: widget.onBack,
+          isNextEnabled: widget.nameController.text.trim().isNotEmpty,
+          onNext: () {
+            if (_formKey.currentState!.validate()) {
+              widget.onNext();
+            }
+          },
         ),
       ],
     );

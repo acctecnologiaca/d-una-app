@@ -174,7 +174,6 @@ class _AddEditObservationSheetState
           ],
         ),
       ),
-      const SizedBox(height: 16),
     ];
 
     return CustomActionSheet(

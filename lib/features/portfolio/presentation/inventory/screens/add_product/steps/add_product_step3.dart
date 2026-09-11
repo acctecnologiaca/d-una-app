@@ -177,18 +177,15 @@ class _AddProductStep3State extends State<AddProductStep3> {
             ),
           ),
         ),
-        Padding(
-          padding: const EdgeInsets.only(bottom: 40),
-          child: WizardButtonBar(
-            onCancel: widget.onCancel,
-            onBack: widget.onBack,
-            onNext:
-                widget.selectedCategory != null &&
-                    widget.selectedCategory!.id != 'ADD_NEW' &&
-                    widget.selectedUom != null
-                ? widget.onNext
-                : null,
-          ),
+        WizardButtonBar(
+          onCancel: widget.onCancel,
+          onBack: widget.onBack,
+          onNext:
+              widget.selectedCategory != null &&
+                  widget.selectedCategory!.id != 'ADD_NEW' &&
+                  widget.selectedUom != null
+              ? widget.onNext
+              : null,
         ),
       ],
     );

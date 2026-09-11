@@ -222,7 +222,6 @@ class _AddEditQuickPhraseSheetState
           ],
         ),
       ),
-      const SizedBox(height: 16),
     ];
 
     return CustomActionSheet(

@@ -192,13 +192,10 @@ class _AddClientCompanyInfoScreenState
             ),
 
             // Footer
-            Padding(
-              padding: const EdgeInsets.only(bottom: 40),
-              child: WizardButtonBar(
-                onCancel: _onCancelWizard,
-                onBack: () => context.pop(),
-                onNext: _onNext,
-              ),
+            WizardButtonBar(
+              onCancel: _onCancelWizard,
+              onBack: () => context.pop(),
+              onNext: _onNext,
             ),
           ],
         ),

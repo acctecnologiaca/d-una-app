@@ -142,10 +142,7 @@ class _PriceFilterSheetState extends State<PriceFilterSheet> {
 
               // Apply Button
               Padding(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 24.0,
-                  vertical: 24.0,
-                ),
+                padding: const EdgeInsets.fromLTRB(16.0, 8.0, 16.0, 16.0),
                 child: Align(
                   alignment: Alignment.centerRight,
                   child: SizedBox(

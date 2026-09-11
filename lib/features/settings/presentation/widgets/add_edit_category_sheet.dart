@@ -246,7 +246,6 @@ class _AddEditCategorySheetState extends ConsumerState<AddEditCategorySheet> {
           ],
         ),
       ),
-      const SizedBox(height: 16),
     ];
 
     return CustomActionSheet(

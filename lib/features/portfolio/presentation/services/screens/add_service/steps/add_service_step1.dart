@@ -89,25 +89,15 @@ class _AddServiceStep1State extends State<AddServiceStep1> {
             ),
           ),
         ),
-        Padding(
-          padding: const EdgeInsets.only(bottom: 40),
-          child: WizardButtonBar(
-            onCancel: widget.onCancel,
-            // Hidden Back button for Step 1 as per design (Usually "Cancel" is enough, or Back closes)
-            // The design shows "Atrás" so we should include it if needed, but for Step 1 "Back" usually means Cancel or Exit.
-            // Design image shows "Cancel", "Atrás", "Siguiente".
-            // Since it's step 1, "Atrás" might go back to the list. "Cancel" also goes back.
-            // Let's implement onBack as onCancel for Step 1 or hide it if logic dictates.
-            // In the image, "Atrás" is visible. I will map it to onCancel for now or leave it empty if the widget supports hiding it.
-            // WizardButtonBar usually has optional onBack.
-            onBack: widget.onCancel,
-            onNext: () {
-              if (_formKey.currentState!.validate()) {
-                widget.onNext();
-              }
-            },
-            labelNext: 'Siguiente',
-          ),
+        WizardButtonBar(
+          onCancel: widget.onCancel,
+          onBack: widget.onCancel,
+          onNext: () {
+            if (_formKey.currentState!.validate()) {
+              widget.onNext();
+            }
+          },
+          labelNext: 'Siguiente',
         ),
       ],
     );

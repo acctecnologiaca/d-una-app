@@ -246,7 +246,6 @@ class _AddEditSupplierSheetState extends ConsumerState<AddEditSupplierSheet> {
           ],
         ),
       ),
-      const SizedBox(height: 16),
     ];
 
     return CustomActionSheet(

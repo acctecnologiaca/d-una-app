@@ -134,14 +134,11 @@ class AddServiceStep5 extends StatelessWidget {
             ),
           ),
         ),
-        Padding(
-          padding: const EdgeInsets.only(bottom: 40),
-          child: WizardButtonBar(
-            onCancel: onCancel,
-            onBack: onBack,
-            onNext: onSubmit,
-            labelNext: 'Finalizar',
-          ),
+        WizardButtonBar(
+          onCancel: onCancel,
+          onBack: onBack,
+          onNext: onSubmit,
+          labelNext: 'Finalizar',
         ),
       ],
     );

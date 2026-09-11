@@ -182,7 +182,6 @@ class _AddEditCommercialConditionSheetState
           ],
         ),
       ),
-      const SizedBox(height: 16),
     ];
 
     return CustomActionSheet(

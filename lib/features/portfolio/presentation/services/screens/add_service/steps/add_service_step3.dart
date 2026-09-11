@@ -88,18 +88,15 @@ class _AddServiceStep3State extends State<AddServiceStep3> {
             ),
           ),
         ),
-        Padding(
-          padding: const EdgeInsets.only(bottom: 40),
-          child: WizardButtonBar(
-            onCancel: widget.onCancel,
-            onBack: widget.onBack,
-            onNext: () {
-              if (_formKey.currentState!.validate()) {
-                widget.onNext();
-              }
-            },
-            labelNext: 'Siguiente',
-          ),
+        WizardButtonBar(
+          onCancel: widget.onCancel,
+          onBack: widget.onBack,
+          onNext: () {
+            if (_formKey.currentState!.validate()) {
+              widget.onNext();
+            }
+          },
+          labelNext: 'Siguiente',
         ),
       ],
     );

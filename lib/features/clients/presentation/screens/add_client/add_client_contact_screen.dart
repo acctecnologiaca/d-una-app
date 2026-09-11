@@ -291,15 +291,12 @@ class _AddClientContactScreenState
             ),
 
             // Footer
-            Padding(
-              padding: const EdgeInsets.only(bottom: 40),
-              child: WizardButtonBar(
-                onCancel: _onCancelWizard,
-                onBack: () => context.pop(),
-                onNext: _onFinish,
-                isLastStep: true,
-                isLoading: _isLoading,
-              ),
+            WizardButtonBar(
+              onCancel: _onCancelWizard,
+              onBack: () => context.pop(),
+              onNext: _onFinish,
+              isLastStep: true,
+              isLoading: _isLoading,
             ),
           ],
         ),

@@ -176,7 +176,6 @@ class _AddEditServiceRateSheetState
           ],
         ),
       ),
-      const SizedBox(height: 16),
     ];
 
     return CustomActionSheet(

@@ -208,7 +208,6 @@ class _AddEditShippingCompanySheetState
           ],
         ),
       ),
-      const SizedBox(height: 16),
     ];
 
     return CustomActionSheet(

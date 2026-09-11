@@ -278,8 +278,8 @@ class MergeSupplierOrdersSheet extends StatelessWidget {
                       ),
                     ),
 
-                    // 40px padding from the bottom of the screen
-                    const SizedBox(height: 40),
+                    // 16px padding from the bottom of the screen
+                    const SizedBox(height: 16),
                   ],
                 ),
               ),

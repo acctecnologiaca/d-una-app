@@ -131,22 +131,19 @@ class _AddServiceStep4State extends State<AddServiceStep4> {
             ),
           ),
         ),
-        Padding(
-          padding: const EdgeInsets.only(bottom: 40),
-          child: WizardButtonBar(
-            onCancel: widget.onCancel,
-            onBack: widget.onBack,
-            onNext: () {
-              if (widget.hasWarranty) {
-                if (_formKey.currentState!.validate()) {
-                  widget.onNext();
-                }
-              } else {
+        WizardButtonBar(
+          onCancel: widget.onCancel,
+          onBack: widget.onBack,
+          onNext: () {
+            if (widget.hasWarranty) {
+              if (_formKey.currentState!.validate()) {
                 widget.onNext();
               }
-            },
-            labelNext: 'Siguiente',
-          ),
+            } else {
+              widget.onNext();
+            }
+          },
+          labelNext: 'Siguiente',
         ),
       ],
     );

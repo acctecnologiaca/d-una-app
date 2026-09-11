@@ -68,61 +68,56 @@ class _AddClientTypeScreenState extends ConsumerState<AddClientTypeScreen> {
         centerTitle: false,
         bottom: const WizardProgressBar(totalSteps: 4, currentStep: 1),
       ),
-      body: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(0, 24, 0, 40),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
+      body: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          const SizedBox(height: 56),
+          Text(
+            'Tipo de cliente',
+            textAlign: TextAlign.center,
+            style: textTheme.headlineSmall?.copyWith(
+              fontWeight: FontWeight.normal,
+              color: colors.onSurface,
+            ),
+          ),
+          const SizedBox(height: 32),
+
+          // Custom Type Selector
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              const SizedBox(height: 32),
-              Text(
-                'Tipo de cliente',
-                textAlign: TextAlign.center,
-                style: textTheme.headlineSmall?.copyWith(
-                  fontWeight: FontWeight.normal,
-                  color: colors.onSurface,
-                ),
+              _buildTypeOption(
+                label: 'Empresa',
+                value: 'company',
+                isSelected: _selectedType == 'company',
+                colors: colors,
               ),
-              const SizedBox(height: 32),
-
-              // Custom Type Selector
-              Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  _buildTypeOption(
-                    label: 'Empresa',
-                    value: 'company',
-                    isSelected: _selectedType == 'company',
-                    colors: colors,
-                  ),
-                  _buildTypeOption(
-                    label: 'Persona',
-                    value: 'person',
-                    isSelected: _selectedType == 'person',
-                    colors: colors,
-                    showLeftBorder: false, // Avoid double border
-                  ),
-                ],
-              ),
-
-              const Spacer(),
-
-              // Footer Buttons
-              WizardButtonBar(
-                onCancel: () {
-                  if (_returnTo != null) {
-                    context.go(_returnTo!);
-                  } else if (context.canPop()) {
-                    context.pop();
-                  } else {
-                    context.go('/clients');
-                  }
-                },
-                onNext: _onNext,
+              _buildTypeOption(
+                label: 'Persona',
+                value: 'person',
+                isSelected: _selectedType == 'person',
+                colors: colors,
+                showLeftBorder: false, // Avoid double border
               ),
             ],
           ),
-        ),
+
+          const Spacer(),
+
+          // Footer Buttons
+          WizardButtonBar(
+            onCancel: () {
+              if (_returnTo != null) {
+                context.go(_returnTo!);
+              } else if (context.canPop()) {
+                context.pop();
+              } else {
+                context.go('/clients');
+              }
+            },
+            onNext: _onNext,
+          ),
+        ],
       ),
     );
   }

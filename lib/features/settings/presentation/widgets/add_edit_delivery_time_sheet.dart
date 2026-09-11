@@ -287,7 +287,6 @@ class _AddEditDeliveryTimeSheetState
           ],
         ),
       ),
-      const SizedBox(height: 16),
     ];
 
     return CustomActionSheet(

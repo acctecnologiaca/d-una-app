@@ -178,7 +178,6 @@ class _AddEditUomSheetState extends ConsumerState<AddEditUomSheet> {
           ],
         ),
       ),
-      const SizedBox(height: 16),
     ];
 
     return CustomActionSheet(
