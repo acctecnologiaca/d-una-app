@@ -17,9 +17,9 @@ Referencias canónicas en el proyecto:
 Un formulario estándar consta de:
 1. **AppBar:** [`StandardAppBar`](file:///c:/Users/aleja/flutter_apps/MVP/d_una_app/lib/shared/widgets/standard_app_bar.dart) o `AppBar` estándar con título descriptivo y botón de regreso.
 2. **Control de Abandono (`PopScope`):** Si el usuario ha modificado campos (`_hasChanges`), advertir con un diálogo de confirmación antes de permitir salir.
-3. **Cuerpo Scrollable:** `SingleChildScrollView` dentro de `Expanded`, con padding estándar `const EdgeInsets.all(16.0)` o `EdgeInsets.fromLTRB(16, 24, 16, 40)`.
+3. **Cuerpo Scrollable:** `SingleChildScrollView` dentro de `Expanded`, con padding estándar `const EdgeInsets.fromLTRB(16, 16, 16, 24)`.
 4. **Campos Estandarizados:** Usar exclusivamente los componentes de `lib/shared/widgets/`.
-5. **Barra de Acciones Inferior:** [`FormBottomBar`](file:///c:/Users/aleja/flutter_apps/MVP/d_una_app/lib/shared/widgets/form_bottom_bar.dart) fija al fondo de la pantalla.
+5. **Barra de Acciones Inferior:** [`FormBottomBar`](file:///c:/Users/aleja/flutter_apps/MVP/d_una_app/lib/shared/widgets/form_bottom_bar.dart) colocada directamente al pie de la columna (autocontenida con fondo `colors.surface`, borde superior tenue, `SafeArea` y padding simétrico de 12px vertical; no requiere ningún wrapper externo).
 
 ---
 
@@ -181,24 +181,14 @@ class _MyFormScreenState extends ConsumerState<MyFormScreen> {
               ),
             ),
 
-            // Barra fija al pie
-            Padding(
-              padding: EdgeInsets.only(
-                left: 16.0,
-                right: 16.0,
-                top: 8.0,
-                bottom: MediaQuery.of(context).padding.bottom > 0
-                    ? MediaQuery.of(context).padding.bottom
-                    : 24.0,
-              ),
-              child: FormBottomBar(
-                onCancel: () async {
-                  final canLeave = await _onWillPop();
-                  if (canLeave && context.mounted) context.pop();
-                },
-                onSave: _isSubmitting ? null : _submitForm,
-                saveLabel: _isSubmitting ? 'Guardando...' : 'Guardar',
-              ),
+            // Barra fija al pie (Autocontenida con fondo, borde superior tenue, SafeArea y 12px simétricos)
+            FormBottomBar(
+              onCancel: () async {
+                final canLeave = await _onWillPop();
+                if (canLeave && context.mounted) context.pop();
+              },
+              onSave: _isSubmitting ? null : _submitForm,
+              saveLabel: _isSubmitting ? 'Guardando...' : 'Guardar',
             ),
           ],
         ),
@@ -214,6 +204,6 @@ class _MyFormScreenState extends ConsumerState<MyFormScreen> {
 
 - [ ] ¿El formulario cuenta con `GlobalKey<FormState>` y validadores en cada campo requerido?
 - [ ] ¿Se utiliza `PopScope` con diálogo de confirmación para no perder datos si `_hasChanges == true`?
-- [ ] ¿La barra de botones inferior usa `FormBottomBar` protegida con el padding inferior del dispositivo?
+- [ ] ¿La barra de botones inferior usa `FormBottomBar` colocada directamente al pie del `Column` (sin wrappers externos de `Padding` o `SafeArea`)?
 - [ ] ¿Las notificaciones de éxito o fallo usan `AppToast.showSuccess` y `AppToast.showError`?
 - [ ] ¿Se usan `CustomTextField`, `CustomDropdown`, `CustomLocationPicker` y `CustomMultiDropdown` en vez de widgets crudos?

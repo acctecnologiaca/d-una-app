@@ -227,30 +227,32 @@ class _SelectReportProductScreenState
       ),
       ),
       floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
-      floatingActionButton: hasSelection
-          ? CustomExtendedFab(
-              icon: Icons.check,
-              label: 'Confirmar ($formattedQty $uom - $formattedTotal)',
-                isEnabled: true,
-                onPressed: () async {
-                  if (_selectedProduct == null || _selectedQuantity <= 0) {
-                    return;
-                  }
+      floatingActionButton: CustomExtendedFab(
+        icon: Icons.check,
+        label: hasSelection
+            ? 'Confirmar ($formattedQty $uom - $formattedTotal)'
+            : 'Confirmar',
+        isEnabled: hasSelection,
+        onPressed: hasSelection
+            ? () async {
+                if (_selectedProduct == null || _selectedQuantity <= 0) {
+                  return;
+                }
 
-                  final item = await ReportProductSaleDetailsSheet.show(
-                    context,
-                    product: _selectedProduct!,
-                    reportState: reportState,
-                    selectedQuantity: _selectedQuantity,
-                  );
+                final item = await ReportProductSaleDetailsSheet.show(
+                  context,
+                  product: _selectedProduct!,
+                  reportState: reportState,
+                  selectedQuantity: _selectedQuantity,
+                );
 
-                  if (item != null && context.mounted) {
-                    ref.read(createReportProvider.notifier).addProduct(item);
-                    context.pop(true);
-                  }
-                },
-              )
-          : null,
+                if (item != null && context.mounted) {
+                  ref.read(createReportProvider.notifier).addProduct(item);
+                  context.pop(true);
+                }
+              }
+            : null,
+      ),
     );
   }
 }

@@ -102,6 +102,41 @@ PaginatedListView<Entity>(
      ```
    - **Prohibición Estricta:** Queda **estrictamente prohibido** hardcodear valores como `bottom: 40`, `bottom: 24` o espaciadores fijos insuficientes como `SizedBox(height: 80)` en modales.
 
+### E. 📐 Regla Canónica para Barras de Botones Fijas Inferiores y Hojas Modales
+
+Para formularios de pantalla completa (Arquetipo 5) y pasos de wizard (Arquetipo 3), las barras de botones fijas inferiores ([`FormBottomBar`](file:///c:/Users/aleja/flutter_apps/MVP/d_una_app/lib/shared/widgets/form_bottom_bar.dart) y [`WizardButtonBar`](file:///c:/Users/aleja/flutter_apps/MVP/d_una_app/lib/shared/widgets/wizard_bottom_bar.dart)) implementan una arquitectura autocontenida para garantizar simetría visual y protección de área segura:
+
+1. **Estructura Interna Encapsulada:**
+   - **Contenedor con fondo sólido:** `colors.surface` para evitar que el contenido en scroll se transparente de forma desprolija detrás de los botones.
+   - **Línea divisoria superior tenue:** `Border(top: BorderSide(color: colors.outlineVariant.withValues(alpha: 0.5), width: 1.0))` que delimita sutilmente la barra fija del área scrollable.
+   - **Área segura integrada:** `SafeArea(top: false)` para absorber el inset inferior del sistema (gestos o botones de navegación de Android/iOS) manteniendo el fondo de superficie hasta el borde físico del dispositivo.
+   - **Padding simétrico:** `EdgeInsets.symmetric(horizontal: 16.0, vertical: 12.0)`. Tanto la distancia superior como la inferior respecto al borde del contenedor son exactamente de 12.0 px, garantizando centrado vertical perfecto.
+
+2. **Invocación Limpia en Pantallas (Cero Wrappers Externos):**
+   - Queda **estrictamente prohibido** envolver `FormBottomBar` o `WizardButtonBar` en `SafeArea`, `Padding(bottom: 40)`, o cálculos manuales de `MediaQuery.of(context).padding.bottom`.
+   - Se colocan como hijo directo final del `Column` del Scaffold:
+     ```dart
+     Column(
+       children: [
+         Expanded(
+           child: SingleChildScrollView(
+             padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
+             child: ...,
+           ),
+         ),
+         FormBottomBar(
+           onCancel: () => context.pop(),
+           onSave: _onSave,
+         ),
+       ],
+     )
+     ```
+
+3. **Hojas Modales y Bottom Sheets (`CustomActionSheet` y Sheets de Ajustes):**
+   - [`CustomActionSheet`](file:///c:/Users/aleja/flutter_apps/MVP/d_una_app/lib/shared/widgets/custom_action_sheet.dart) ya implementa internamente `SafeArea(top: false)` y un padding inferior canónico de 16px.
+   - **Prohibición de Spacers Redundantes:** Al definir listas de acciones en modales, **NO** se debe agregar `SizedBox(height: 16)` ni paddings inferiores adicionales al final del array `actions`, pues provocaría una doble separación artificial ($16 + 16 = 32\text{px}$).
+   - En modales ad-hoc con botones fijos al pie, siempre proteger con `SafeArea(top: false)` y aplicar un padding horizontal/vertical de 16px.
+
 ---
 
 ## 2. Catálogo Exhaustivo Clasificado de Componentes Compartidos (`/lib/shared/widgets/`)
@@ -121,7 +156,7 @@ PaginatedListView<Entity>(
 8. **[`custom_stepper.dart`](file:///c:/Users/aleja/flutter_apps/MVP/d_una_app/lib/shared/widgets/custom_stepper.dart)**: Control numérico con botones decrementar/incrementar (`-` / `+`) para valores enteros o porcentajes.
 9. **[`editable_quantity_stepper.dart`](file:///c:/Users/aleja/flutter_apps/MVP/d_una_app/lib/shared/widgets/editable_quantity_stepper.dart)**: Stepper interactivo de cantidad donde el usuario puede pulsar sobre el número para escribirlo directamente mediante el teclado numérico.
 10. **[`custom_location_picker.dart`](file:///c:/Users/aleja/flutter_apps/MVP/d_una_app/lib/shared/widgets/custom_location_picker.dart)**: Selector estandarizado y reactivo de País, Estado/Provincia y Ciudad.
-11. **[`form_bottom_bar.dart`](file:///c:/Users/aleja/flutter_apps/MVP/d_una_app/lib/shared/widgets/form_bottom_bar.dart)**: Barra inferior fija para formularios con botones de Cancelar (`TextButton`) y Guardar (`FilledButton`), con indicador de carga integrado.
+11. **[`form_bottom_bar.dart`](file:///c:/Users/aleja/flutter_apps/MVP/d_una_app/lib/shared/widgets/form_bottom_bar.dart)**: Barra inferior fija para formularios con botones de Cancelar (`TextButton`) y Guardar (`FilledButton`), con indicador de carga integrado. Está autocontenida con fondo de superficie (`colors.surface`), borde superior tenue (`colors.outlineVariant`), `SafeArea(top: false)` y padding simétrico de 12px vertical. Se invoca directamente sin wrappers externos.
 
 ---
 
@@ -150,7 +185,7 @@ PaginatedListView<Entity>(
 
 ### 📌 E. Procesos y Wizards
 27. **[`wizard_progress_bar.dart`](file:///c:/Users/aleja/flutter_apps/MVP/d_una_app/lib/shared/widgets/wizard_progress_bar.dart)**: Barra segmentada de progreso para indicar visualmente el avance en flujos por pasos (`currentStep` / `totalSteps`).
-28. **[`wizard_bottom_bar.dart`](file:///c:/Users/aleja/flutter_apps/MVP/d_una_app/lib/shared/widgets/wizard_bottom_bar.dart)**: Barra inferior de navegación para wizards con botón de Cancelar a la izquierda y Atrás/Siguiente/Finalizar a la derecha.
+28. **[`wizard_bottom_bar.dart`](file:///c:/Users/aleja/flutter_apps/MVP/d_una_app/lib/shared/widgets/wizard_bottom_bar.dart)**: Barra inferior de navegación para wizards con botón de Cancelar a la izquierda y Atrás/Siguiente/Finalizar a la derecha. Comparte la misma arquitectura autocontenida de `FormBottomBar` (fondo `colors.surface`, borde superior tenue, `SafeArea` y 12px simétricos), colocándose directamente como último hijo de la columna sin padding inferior externo.
 
 ---
 

@@ -225,12 +225,14 @@ class _ReportProductSearchScreenState
         );
       },
       floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
-      floatingActionButton: hasSelection
-          ? CustomExtendedFab(
-              icon: Icons.check,
-              label: 'Confirmar ($formattedQty $uom - $formattedTotal)',
-              isEnabled: true,
-              onPressed: () async {
+      floatingActionButton: CustomExtendedFab(
+        icon: Icons.check,
+        label: hasSelection
+            ? 'Confirmar ($formattedQty $uom - $formattedTotal)'
+            : 'Confirmar',
+        isEnabled: hasSelection,
+        onPressed: hasSelection
+            ? () async {
                 if (_selectedProduct == null || _selectedQuantity <= 0) {
                   return;
                 }
@@ -246,9 +248,9 @@ class _ReportProductSearchScreenState
                   ref.read(createReportProvider.notifier).addProduct(item);
                   Navigator.pop(context, true);
                 }
-              },
-            )
-          : null,
+              }
+            : null,
+      ),
     );
   }
 }

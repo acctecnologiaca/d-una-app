@@ -291,13 +291,14 @@ class _ReportServiceSearchScreenState
         );
       },
       floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
-      floatingActionButton: hasSelection
-          ? CustomExtendedFab(
-              icon: Icons.check,
-              label:
-                  'Confirmar ($formattedQty $rateSymbol - $formattedTotal)',
-              isEnabled: true,
-              onPressed: () async {
+      floatingActionButton: CustomExtendedFab(
+        icon: Icons.check,
+        label: hasSelection
+            ? 'Confirmar ($formattedQty $rateSymbol - $formattedTotal)'
+            : 'Confirmar',
+        isEnabled: hasSelection,
+        onPressed: hasSelection
+            ? () async {
                 if (_selectedService == null || _selectedQuantity <= 0) {
                   return;
                 }
@@ -312,9 +313,9 @@ class _ReportServiceSearchScreenState
                   ref.read(createReportProvider.notifier).addService(item);
                   Navigator.pop(context, true);
                 }
-              },
-            )
-          : null,
+              }
+            : null,
+      ),
     );
   }
 }

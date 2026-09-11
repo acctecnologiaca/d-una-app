@@ -202,7 +202,7 @@ Referencias canónicas:
 ### 1. Estructura y Navegación
 Los flujos lineales guían al usuario paso a paso (ej. Paso 1 de 4).
 - **Indicador de Progreso:** [`WizardProgressBar`](file:///c:/Users/aleja/flutter_apps/MVP/d_una_app/lib/shared/widgets/wizard_progress_bar.dart) colocado en `appBar.bottom` o como primer hijo del body.
-- **Barra de Botones:** [`WizardButtonBar`](file:///c:/Users/aleja/flutter_apps/MVP/d_una_app/lib/shared/widgets/wizard_bottom_bar.dart) colocada al pie de pantalla con `padding: EdgeInsets.only(bottom: 40)`.
+- **Barra de Botones:** [`WizardButtonBar`](file:///c:/Users/aleja/flutter_apps/MVP/d_una_app/lib/shared/widgets/wizard_bottom_bar.dart) colocada directamente al pie de la columna (autocontenida con fondo `colors.surface`, borde superior tenue, `SafeArea` y padding simétrico de 12px vertical; no requiere ningún wrapper externo ni padding artificial).
 
 ```dart
 class MyLinearWizardScreen extends StatefulWidget {
@@ -255,14 +255,12 @@ class _MyLinearWizardScreenState extends State<MyLinearWizardScreen> {
               ),
             ),
           ),
-          Padding(
-            padding: const EdgeInsets.only(bottom: 40),
-            child: WizardButtonBar(
-              onCancel: () => context.pop(),
-              onBack: _currentStep > 0 ? _onBack : null,
-              onNext: _onNext,
-              labelNext: _currentStep == _totalSteps - 1 ? 'Finalizar' : 'Siguiente',
-            ),
+          // Barra fija al pie (Autocontenida con fondo, borde superior tenue, SafeArea y 12px simétricos)
+          WizardButtonBar(
+            onCancel: () => context.pop(),
+            onBack: _currentStep > 0 ? _onBack : null,
+            onNext: _onNext,
+            labelNext: _currentStep == _totalSteps - 1 ? 'Finalizar' : 'Siguiente',
           ),
         ],
       ),
@@ -278,5 +276,5 @@ class _MyLinearWizardScreenState extends State<MyLinearWizardScreen> {
 - [ ] Si es creador de documentos: ¿se implementó auto-guardado en cambio de tabs y ciclo de vida de la app?
 - [ ] ¿Se utiliza `DraftToast` con diálogo destructivo para descartar borradores?
 - [ ] ¿Se limpia el borrador (`clearDraft`) tras guardar exitosamente en base de datos?
-- [ ] Si es wizard lineal: ¿se utiliza `WizardProgressBar` y `WizardButtonBar` con padding inferior de 40px?
+- [ ] Si es wizard lineal: ¿se utiliza `WizardProgressBar` y `WizardButtonBar` colocada directamente al pie del `Column` (sin wrappers externos ni padding inferior artificial)?
 - [ ] ¿Cada paso valida su formulario antes de avanzar al siguiente?

@@ -234,30 +234,31 @@ class _SelectReportServiceScreenState
       ),
       ),
       floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
-      floatingActionButton: hasSelection
-          ? CustomExtendedFab(
-              icon: Icons.check,
-              label:
-                  'Confirmar ($formattedQty $rateSymbol - $formattedTotal)',
-                isEnabled: true,
-                onPressed: () async {
-                  if (_selectedService == null || _selectedQuantity <= 0) {
-                    return;
-                  }
+      floatingActionButton: CustomExtendedFab(
+        icon: Icons.check,
+        label: hasSelection
+            ? 'Confirmar ($formattedQty $rateSymbol - $formattedTotal)'
+            : 'Confirmar',
+        isEnabled: hasSelection,
+        onPressed: hasSelection
+            ? () async {
+                if (_selectedService == null || _selectedQuantity <= 0) {
+                  return;
+                }
 
-                  final item = await ReportServiceSaleDetailsSheet.show(
-                    context,
-                    service: _selectedService!,
-                    selectedQuantity: _selectedQuantity,
-                  );
+                final item = await ReportServiceSaleDetailsSheet.show(
+                  context,
+                  service: _selectedService!,
+                  selectedQuantity: _selectedQuantity,
+                );
 
-                  if (item != null && context.mounted) {
-                    ref.read(createReportProvider.notifier).addService(item);
-                    context.pop(true);
-                  }
-                },
-              )
-          : null,
+                if (item != null && context.mounted) {
+                  ref.read(createReportProvider.notifier).addService(item);
+                  context.pop(true);
+                }
+              }
+            : null,
+      ),
     );
   }
 }
