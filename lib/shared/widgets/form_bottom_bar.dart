@@ -23,28 +23,48 @@ class FormBottomBar extends StatelessWidget {
   Widget build(BuildContext context) {
     final colors = Theme.of(context).colorScheme;
 
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: [
-        TextButton(
-          onPressed: onCancel,
-          child: Text(
-            cancelLabel,
-            style: TextStyle(
-              color: colors.primary,
-              fontWeight: FontWeight.w600,
-              fontSize: 16,
-            ),
+    return Container(
+      decoration: BoxDecoration(
+        color: colors.surface,
+        border: Border(
+          top: BorderSide(
+            color: colors.outlineVariant.withValues(alpha: 0.5),
+            width: 1.0,
           ),
         ),
-        CustomButton(
-          text: saveLabel,
-          type: ButtonType.primary,
-          onPressed: isSaveEnabled ? onSave : null,
-          isLoading: isLoading,
-          isFullWidth: false,
+      ),
+      child: SafeArea(
+        top: false,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(
+            horizontal: 16.0,
+            vertical: 12.0,
+          ),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              TextButton(
+                onPressed: onCancel,
+                child: Text(
+                  cancelLabel,
+                  style: TextStyle(
+                    color: colors.primary,
+                    fontWeight: FontWeight.w600,
+                    fontSize: 16,
+                  ),
+                ),
+              ),
+              CustomButton(
+                text: saveLabel,
+                type: ButtonType.primary,
+                onPressed: isSaveEnabled ? onSave : null,
+                isLoading: isLoading,
+                isFullWidth: false,
+              ),
+            ],
+          ),
         ),
-      ],
+      ),
     );
   }
 }

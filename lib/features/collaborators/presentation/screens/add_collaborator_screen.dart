@@ -439,22 +439,16 @@ class _AddCollaboratorScreenState extends ConsumerState<AddCollaboratorScreen> {
               ),
             ),
           ),
-          SafeArea(
-            top: false,
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(16.0, 8.0, 16.0, 16.0),
-              child: FormBottomBar(
-                onCancel: () => context.pop(),
-                onSave:
-                    (_isLoading ||
-                        _isDeleting ||
-                        (widget.collaborator != null && !_hasChanges))
-                    ? null
-                    : _saveForm,
-                saveLabel: 'Guardar',
-                isLoading: _isLoading,
-              ),
-            ),
+          FormBottomBar(
+            onCancel: () => context.pop(),
+            onSave:
+                (_isLoading ||
+                    _isDeleting ||
+                    (widget.collaborator != null && !_hasChanges))
+                ? null
+                : _saveForm,
+            saveLabel: 'Guardar',
+            isLoading: _isLoading,
           ),
         ],
       ),

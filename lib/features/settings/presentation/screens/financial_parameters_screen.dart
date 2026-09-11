@@ -398,17 +398,11 @@ class _FinancialParametersScreenState
         ],
       ),
     ),
-    SafeArea(
-      top: false,
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(16.0, 8.0, 16.0, 16.0),
-        child: FormBottomBar(
-          onCancel: () => context.pop(),
-          onSave: _hasChanged ? _save : null,
-          isSaveEnabled: _hasChanged,
-          isLoading: _isSaving,
-        ),
-      ),
+    FormBottomBar(
+      onCancel: () => context.pop(),
+      onSave: _hasChanged ? _save : null,
+      isSaveEnabled: _hasChanged,
+      isLoading: _isSaving,
     ),
   ],
 ),

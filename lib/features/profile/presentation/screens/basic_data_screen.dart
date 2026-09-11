@@ -480,19 +480,13 @@ class _BasicDataScreenState extends ConsumerState<BasicDataScreen> {
                         ),
                       ),
                     ),
-                    SafeArea(
-                      top: false,
-                      child: Padding(
-                        padding: const EdgeInsets.fromLTRB(16.0, 8.0, 16.0, 16.0),
-                        child: FormBottomBar(
-                          onCancel: () => context.pop(),
-                          onSave: _hasChanges && profile != null
-                              ? () => _save(profile.id, profile)
-                              : null,
-                          isSaveEnabled: _hasChanges && profile != null,
-                          isLoading: _isLoading,
-                        ),
-                      ),
+                    FormBottomBar(
+                      onCancel: () => context.pop(),
+                      onSave: _hasChanges && profile != null
+                          ? () => _save(profile.id, profile)
+                          : null,
+                      isSaveEnabled: _hasChanges && profile != null,
+                      isLoading: _isLoading,
                     ),
                   ],
                 );

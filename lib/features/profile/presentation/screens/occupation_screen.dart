@@ -271,17 +271,11 @@ class _OccupationScreenState extends ConsumerState<OccupationScreen> {
                       ),
                     ),
                   ),
-                  SafeArea(
-                    top: false,
-                    child: Padding(
-                      padding: const EdgeInsets.fromLTRB(16.0, 8.0, 16.0, 16.0),
-                      child: FormBottomBar(
-                        onCancel: () => context.pop(),
-                        onSave: _hasChanges ? () => _save(profile) : null,
-                        isSaveEnabled: _hasChanges,
-                        isLoading: _isLoading,
-                      ),
-                    ),
+                  FormBottomBar(
+                    onCancel: () => context.pop(),
+                    onSave: _hasChanges ? () => _save(profile) : null,
+                    isSaveEnabled: _hasChanges,
+                    isLoading: _isLoading,
                   ),
                 ],
               );

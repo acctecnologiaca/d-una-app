@@ -210,17 +210,11 @@ class _EditEmailTemplateScreenState
                 ),
               ),
             ),
-            SafeArea(
-              top: false,
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(16.0, 8.0, 16.0, 16.0),
-                child: FormBottomBar(
-                  onCancel: () => Navigator.of(context).maybePop(),
-                  onSave: _save,
-                  isLoading: _isLoading,
-                  isSaveEnabled: _hasChanges && !_isLoading,
-                ),
-              ),
+            FormBottomBar(
+              onCancel: () => Navigator.of(context).maybePop(),
+              onSave: _save,
+              isLoading: _isLoading,
+              isSaveEnabled: _hasChanges && !_isLoading,
             ),
           ],
         ),

@@ -431,19 +431,13 @@ class _EditServiceScreenState extends ConsumerState<EditServiceScreen> {
                 ),
               ),
             ),
-            SafeArea(
-              top: false,
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(16.0, 8.0, 16.0, 16.0),
-                child: FormBottomBar(
-                  onCancel: _onCancelWithConfirmation,
-                  onSave: _submitUpdates,
-                  isSaveEnabled:
-                      _isDirty &&
-                      _nameController.text.isNotEmpty,
-                  saveLabel: 'Guardar',
-                ),
-              ),
+            FormBottomBar(
+              onCancel: _onCancelWithConfirmation,
+              onSave: _submitUpdates,
+              isSaveEnabled:
+                  _isDirty &&
+                  _nameController.text.isNotEmpty,
+              saveLabel: 'Guardar',
             ),
           ],
         ),

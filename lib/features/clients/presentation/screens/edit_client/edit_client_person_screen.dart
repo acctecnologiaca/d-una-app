@@ -419,17 +419,11 @@ class _EditClientPersonScreenState
                 ),
               ),
             ),
-            SafeArea(
-              top: false,
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(16.0, 8.0, 16.0, 16.0),
-                child: FormBottomBar(
-                  onCancel: _onCancelWithConfirmation,
-                  onSave: _onSave,
-                  isSaveEnabled: !_isSubmitting && _hasChanges,
-                  isLoading: _isSubmitting,
-                ),
-              ),
+            FormBottomBar(
+              onCancel: _onCancelWithConfirmation,
+              onSave: _onSave,
+              isSaveEnabled: !_isSubmitting && _hasChanges,
+              isLoading: _isSubmitting,
             ),
           ],
         ),

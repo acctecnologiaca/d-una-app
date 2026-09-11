@@ -218,25 +218,19 @@ class _SecurityScreenState extends ConsumerState<SecurityScreen> {
                     ),
                   ),
                 ),
-                SafeArea(
-                  top: false,
-                  child: Padding(
-                    padding: const EdgeInsets.fromLTRB(16.0, 8.0, 16.0, 16.0),
-                    child: FormBottomBar(
-                      onCancel: () => context.pop(),
-                      onSave:
-                          (_currentPasswordController.text.isNotEmpty &&
-                              _newPasswordController.text.isNotEmpty &&
-                              _confirmPasswordController.text.isNotEmpty)
-                          ? _save
-                          : null,
-                      isSaveEnabled:
-                          _currentPasswordController.text.isNotEmpty &&
+                FormBottomBar(
+                  onCancel: () => context.pop(),
+                  onSave:
+                      (_currentPasswordController.text.isNotEmpty &&
                           _newPasswordController.text.isNotEmpty &&
-                          _confirmPasswordController.text.isNotEmpty,
-                      isLoading: _isLoading,
-                    ),
-                  ),
+                          _confirmPasswordController.text.isNotEmpty)
+                      ? _save
+                      : null,
+                  isSaveEnabled:
+                      _currentPasswordController.text.isNotEmpty &&
+                      _newPasswordController.text.isNotEmpty &&
+                      _confirmPasswordController.text.isNotEmpty,
+                  isLoading: _isLoading,
                 ),
               ],
             ),

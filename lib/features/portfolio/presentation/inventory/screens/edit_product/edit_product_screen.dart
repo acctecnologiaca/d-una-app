@@ -590,16 +590,10 @@ class _EditProductScreenState extends ConsumerState<EditProductScreen> {
                 ),
               ),
             ),
-            SafeArea(
-              top: false,
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(16.0, 8.0, 16.0, 16.0),
-                child: FormBottomBar(
-                  onCancel: _onCancelWithConfirmation,
-                  onSave: _validateAndSave,
-                  isSaveEnabled: _isDirty,
-                ),
-              ),
+            FormBottomBar(
+              onCancel: _onCancelWithConfirmation,
+              onSave: _validateAndSave,
+              isSaveEnabled: _isDirty,
             ),
           ],
         ),

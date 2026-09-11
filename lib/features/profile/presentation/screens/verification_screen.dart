@@ -1247,19 +1247,13 @@ class _VerificationScreenState extends ConsumerState<VerificationScreen> {
               ),
             ),
             if (!isAccountVerified)
-              SafeArea(
-                top: false,
-                child: Padding(
-                  padding: const EdgeInsets.fromLTRB(16.0, 8.0, 16.0, 16.0),
-                  child: FormBottomBar(
-                    onCancel: () => context.pop(),
-                    onSave: (_isLoading || !_hasChanges)
-                        ? null
-                        : () => _save(profile, company, uploadedDocs),
-                    isSaveEnabled: !_isLoading && _hasChanges,
-                    isLoading: _isLoading,
-                  ),
-                ),
+              FormBottomBar(
+                onCancel: () => context.pop(),
+                onSave: (_isLoading || !_hasChanges)
+                    ? null
+                    : () => _save(profile, company, uploadedDocs),
+                isSaveEnabled: !_isLoading && _hasChanges,
+                isLoading: _isLoading,
               ),
           ],
         );

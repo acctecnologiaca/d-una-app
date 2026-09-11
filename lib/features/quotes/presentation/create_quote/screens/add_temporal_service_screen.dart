@@ -1134,20 +1134,14 @@ class _AddTemporalServiceScreenState
             ],
           ),
         ),
-        SafeArea(
-          top: false,
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(16.0, 8.0, 16.0, 16.0),
-            child: FormBottomBar(
-              onCancel: () => Navigator.maybePop(context),
-              onSave: (_hasChanges() &&
-                      _nameController.text.trim().isNotEmpty)
-                  ? _saveService
-                  : null,
-              saveLabel:
-                  'Confirmar (${_quantityController.text} $selectedRateSymbol)',
-            ),
-          ),
+        FormBottomBar(
+          onCancel: () => Navigator.maybePop(context),
+          onSave: (_hasChanges() &&
+                  _nameController.text.trim().isNotEmpty)
+              ? _saveService
+              : null,
+          saveLabel:
+              'Confirmar (${_quantityController.text} $selectedRateSymbol)',
         ),
       ],
     ),
