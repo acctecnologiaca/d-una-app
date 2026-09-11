@@ -6,6 +6,7 @@ import 'package:d_una_app/shared/widgets/custom_dialog.dart';
 import '../../../../../../shared/widgets/info_block.dart';
 import '../../../../data/models/service_model.dart';
 import '../../../providers/services_provider.dart';
+import '../../../../../../shared/utils/fab_scroll_padding.dart';
 
 class ServiceDetailsScreen extends ConsumerWidget {
   final ServiceModel service;
@@ -101,7 +102,7 @@ class ServiceDetailsScreen extends ConsumerWidget {
         ],
       ),
       body: SingleChildScrollView(
-        padding: const EdgeInsets.symmetric(horizontal: 16),
+        padding: const EdgeInsets.fromLTRB(16, 0, 16, FabScrollPadding.single),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.center,
           children: [
@@ -215,19 +216,16 @@ class ServiceDetailsScreen extends ConsumerWidget {
           ],
         ),
       ),
-      floatingActionButton: Padding(
-        padding: const EdgeInsets.only(bottom: 40.0),
-        child: FloatingActionButton(
-          onPressed: () {
-            context.push(
-              '/portfolio/own-services/edit/${latestService.id}',
-              extra: latestService,
-            );
-          },
-          backgroundColor: colors.primaryContainer,
-          foregroundColor: colors.onPrimaryContainer,
-          child: const Icon(Icons.edit_outlined),
-        ),
+      floatingActionButton: FloatingActionButton(
+        onPressed: () {
+          context.push(
+            '/portfolio/own-services/edit/${latestService.id}',
+            extra: latestService,
+          );
+        },
+        backgroundColor: colors.primaryContainer,
+        foregroundColor: colors.onPrimaryContainer,
+        child: const Icon(Icons.edit_outlined),
       ),
     );
   }

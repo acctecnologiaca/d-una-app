@@ -7,6 +7,7 @@ import 'package:go_router/go_router.dart';
 import '../../../../../shared/widgets/custom_search_bar.dart';
 import '../../../../../shared/widgets/sort_selector.dart';
 import '../../../../../shared/widgets/custom_extended_fab.dart';
+import '../../../../../shared/utils/fab_scroll_padding.dart';
 import '../../../data/models/service_model.dart';
 import '../../providers/services_provider.dart';
 import '../../../../../shared/widgets/service_list_item.dart';
@@ -45,7 +46,8 @@ class _OwnServicesScreenState extends ConsumerState<OwnServicesScreen> {
           onPressed: () => context.pop(),
         ),
       ),
-      body: Column(
+      body: SafeArea(
+        child: Column(
         children: [
           // Search Bar
           Padding(
@@ -151,7 +153,12 @@ class _OwnServicesScreenState extends ConsumerState<OwnServicesScreen> {
                     hasReachedEnd: state.hasReachedEnd,
                     onLoadMore: () =>
                         ref.read(paginatedServicesProvider.notifier).loadMore(),
-                    padding: const EdgeInsets.fromLTRB(16, 16, 16, 132),
+                    padding: const EdgeInsets.fromLTRB(
+                      16,
+                      16,
+                      16,
+                      FabScrollPadding.list,
+                    ),
                     separatorBuilder: (context, index) =>
                         const Divider(height: 1, color: Colors.transparent),
                     itemBuilder: (context, index, service) {
@@ -169,16 +176,14 @@ class _OwnServicesScreenState extends ConsumerState<OwnServicesScreen> {
           ),
         ],
       ),
-      floatingActionButton: Padding(
-        padding: const EdgeInsets.only(bottom: 40.0),
-        child: CustomExtendedFab(
-          onPressed: () {
-            // Navigate to Add Service Wizard
-            context.push('/portfolio/own-services/add');
-          },
-          label: 'Agregar',
-          icon: Icons.add,
-        ),
+      ),
+      floatingActionButton: CustomExtendedFab(
+        onPressed: () {
+          // Navigate to Add Service Wizard
+          context.push('/portfolio/own-services/add');
+        },
+        label: 'Agregar',
+        icon: Icons.add,
       ),
     );
   }

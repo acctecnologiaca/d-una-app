@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:material_symbols_icons/symbols.dart';
+import 'package:d_una_app/shared/utils/fab_scroll_padding.dart';
 import '../providers/create_quote_provider.dart';
 import '../../../domain/models/quote_aggregated_product.dart';
 import '../../../data/models/quote_item_product.dart';
@@ -158,7 +159,7 @@ class _QuoteProductsTabState extends ConsumerState<QuoteProductsTab>
                 ref.read(quoteValidationProvider(null).notifier).validate(),
             child: ListView.builder(
               physics: const AlwaysScrollableScrollPhysics(),
-              padding: const EdgeInsets.only(bottom: 120),
+              padding: const EdgeInsets.only(bottom: FabScrollPadding.single),
               itemCount: sortedIndices.length,
               itemBuilder: (context, index) {
                 final groupIndex = sortedIndices[index];

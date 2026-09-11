@@ -10,6 +10,7 @@ import 'package:d_una_app/shared/utils/currency_formatter.dart';
 import 'package:d_una_app/shared/widgets/uom_status_badge.dart';
 import '../../../providers/products_provider.dart';
 import '../../../../data/models/product_model.dart';
+import '../../../../../../shared/utils/fab_scroll_padding.dart';
 
 class ProductDetailsScreen extends ConsumerStatefulWidget {
   final Product product;
@@ -124,22 +125,19 @@ class _ProductDetailsScreenState extends ConsumerState<ProductDetailsScreen> {
           const SizedBox(width: 8),
         ],
       ),
-      floatingActionButton: Padding(
-        padding: const EdgeInsets.only(bottom: 40.0),
-        child: FloatingActionButton(
-          onPressed: () {
-            context.push(
-              '/portfolio/own-inventory/details/${currentProduct.id}/edit',
-              extra: currentProduct,
-            );
-          },
-          backgroundColor: colors.primaryContainer,
-          // Icon color fix based on ClientDetailsScreen which uses onPrimaryContainer
-          child: Icon(Icons.edit, color: colors.onPrimaryContainer),
-        ),
+      floatingActionButton: FloatingActionButton(
+        onPressed: () {
+          context.push(
+            '/portfolio/own-inventory/details/${currentProduct.id}/edit',
+            extra: currentProduct,
+          );
+        },
+        backgroundColor: colors.primaryContainer,
+        // Icon color fix based on ClientDetailsScreen which uses onPrimaryContainer
+        child: Icon(Icons.edit, color: colors.onPrimaryContainer),
       ),
       body: SingleChildScrollView(
-        padding: const EdgeInsets.only(bottom: 112.0),
+        padding: const EdgeInsets.only(bottom: FabScrollPadding.single),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [

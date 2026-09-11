@@ -7,6 +7,7 @@ import 'package:d_una_app/shared/widgets/sort_selector.dart';
 import 'package:d_una_app/shared/widgets/paginated_list_view.dart';
 import 'package:d_una_app/shared/widgets/friendly_error_widget.dart';
 import 'package:d_una_app/shared/widgets/custom_extended_fab.dart';
+import 'package:d_una_app/shared/utils/fab_scroll_padding.dart';
 import 'package:d_una_app/features/portfolio/data/models/product_model.dart';
 import 'package:d_una_app/features/portfolio/presentation/providers/products_provider.dart';
 import 'package:d_una_app/features/delivery_notes/domain/models/delivery_note_item_model.dart';
@@ -46,7 +47,8 @@ class _SelectDeliveryNoteProductScreenState
 
     return Scaffold(
       appBar: const StandardAppBar(title: 'Agregar producto'),
-      body: Column(
+      body: SafeArea(
+        child: Column(
         children: [
           // 1. Buscador (Read-Only que navega a búsqueda avanzada)
           Padding(
@@ -146,7 +148,7 @@ class _SelectDeliveryNoteProductScreenState
                     hasReachedEnd: state.hasReachedEnd,
                     onLoadMore: () =>
                         ref.read(paginatedProductsProvider.notifier).loadMore(),
-                    padding: const EdgeInsets.only(bottom: 100),
+                    padding: const EdgeInsets.only(bottom: FabScrollPadding.list),
                     separatorBuilder: (context, index) =>
                         const Divider(height: 1, color: Colors.transparent),
                     itemBuilder: (context, index, product) {
@@ -188,13 +190,12 @@ class _SelectDeliveryNoteProductScreenState
           ),
         ],
       ),
+      ),
       floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
       floatingActionButton: hasSelection
-          ? Padding(
-              padding: const EdgeInsets.only(bottom: 40.0),
-              child: CustomExtendedFab(
-                icon: Icons.check,
-                label: 'Confirmar ($formattedQty $uom)',
+          ? CustomExtendedFab(
+              icon: Icons.check,
+              label: 'Confirmar ($formattedQty $uom)',
                 isEnabled: true,
                 onPressed: () async {
                   if (_selectedProduct == null || _selectedQuantity <= 0) {
@@ -327,8 +328,7 @@ class _SelectDeliveryNoteProductScreenState
                     }
                   }
                 },
-              ),
-            )
+              )
           : null,
     );
   }

@@ -11,6 +11,7 @@ import '../../features/ads/domain/models/ad_banner_model.dart';
 import '../../features/ads/presentation/providers/ads_provider.dart';
 import '../../features/ads/presentation/widgets/ad_banner_card.dart';
 import '../utils/ad_list_position_helper.dart';
+import '../utils/fab_scroll_padding.dart';
 
 class GenericSearchScreen<T> extends StatefulWidget {
   final String title;
@@ -360,8 +361,12 @@ class _GenericSearchScreenState<T> extends State<GenericSearchScreen<T>> {
           dismissedIds: dismissedIds,
         );
 
+        final double bottomPadding = widget.floatingActionButton != null
+            ? FabScrollPadding.single
+            : FabScrollPadding.none;
+
         return ListView.builder(
-          padding: const EdgeInsets.only(bottom: 80),
+          padding: EdgeInsets.only(bottom: bottomPadding),
           itemCount: totalCount,
           itemBuilder: (context, index) {
             final banner = AdListPositionHelper.getBannerAtVisualIndex(
@@ -511,6 +516,10 @@ class _GenericSearchScreenState<T> extends State<GenericSearchScreen<T>> {
           );
     }
 
+    final double bottomPadding = widget.floatingActionButton != null
+        ? FabScrollPadding.single
+        : FabScrollPadding.none;
+
     return PaginatedListView<T>(
       items: filteredItems,
       isLoadingMore: state.isLoadingMore,
@@ -521,7 +530,7 @@ class _GenericSearchScreenState<T> extends State<GenericSearchScreen<T>> {
       banners: widget.banners,
       screenContext: widget.screenContext,
       searchQuery: _searchQuery,
-      padding: const EdgeInsets.only(bottom: 80),
+      padding: EdgeInsets.only(bottom: bottomPadding),
       itemBuilder: (context, index, item) => widget.itemBuilder(context, item),
     );
   }

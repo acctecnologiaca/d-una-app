@@ -269,7 +269,7 @@ class _EditServiceScreenState extends ConsumerState<EditServiceScreen> {
           children: [
             Expanded(
               child: SingleChildScrollView(
-                padding: const EdgeInsets.all(16.0),
+                padding: const EdgeInsets.fromLTRB(16.0, 16.0, 16.0, 24.0),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
@@ -427,35 +427,24 @@ class _EditServiceScreenState extends ConsumerState<EditServiceScreen> {
                       ),
                     ],
 
-                    const SizedBox(height: 48),
-                    FormBottomBar(
-                      onCancel: _onCancelWithConfirmation,
-                      onSave: _submitUpdates,
-                      isSaveEnabled:
-                          _isDirty &&
-                          _nameController
-                              .text
-                              .isNotEmpty, // simplified validation
-                      saveLabel: 'Guardar',
-                    ),
-                    const SizedBox(height: 24),
                   ],
                 ),
               ),
             ),
-            /*
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 0, 16, 40),
-            child: FormBottomBar(
-              onCancel: () => context.pop(),
-              onSave: _submitUpdates,
-              isSaveEnabled:
-                  _isDirty &&
-                  _nameController.text.isNotEmpty, // simplified validation
-              saveLabel: 'Guardar',
+            SafeArea(
+              top: false,
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(16.0, 8.0, 16.0, 16.0),
+                child: FormBottomBar(
+                  onCancel: _onCancelWithConfirmation,
+                  onSave: _submitUpdates,
+                  isSaveEnabled:
+                      _isDirty &&
+                      _nameController.text.isNotEmpty,
+                  saveLabel: 'Guardar',
+                ),
+              ),
             ),
-          ),
-          const SizedBox(height: 12),*/
           ],
         ),
       ),

@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../providers/view_report_provider.dart';
 import '../../create_report/widgets/report_added_product_card.dart';
+import '../../../domain/models/service_report_model.dart';
+import '../../../../../shared/utils/fab_scroll_padding.dart';
 
 class ViewReportProductsTab extends ConsumerWidget {
   final String reportId;
@@ -16,6 +18,10 @@ class ViewReportProductsTab extends ConsumerWidget {
       error: (err, _) => Center(child: Text('Error: $err')),
       data: (report) {
         final products = report.products ?? [];
+        final isFinalized =
+            report.status == ServiceReportStatus.finalized.dbValue;
+        final bottomPadding =
+            isFinalized ? FabScrollPadding.none : FabScrollPadding.single;
 
         if (products.isEmpty) {
           return Center(
@@ -44,7 +50,7 @@ class ViewReportProductsTab extends ConsumerWidget {
 
         return ListView.builder(
           itemCount: products.length,
-          padding: const EdgeInsets.only(top: 8, bottom: 120),
+          padding: EdgeInsets.only(top: 8, bottom: bottomPadding),
           itemBuilder: (context, index) {
             final p = products[index];
             return ReportAddedProductCard(

@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../../../shared/utils/currency_formatter.dart';
 import '../../../../../shared/widgets/custom_extended_fab.dart';
+import 'package:d_una_app/shared/utils/fab_scroll_padding.dart';
 import '../../../domain/models/supplier_order_item.dart';
 import '../providers/create_supplier_order_provider.dart';
 import 'package:d_una_app/features/portfolio/presentation/providers/suppliers_provider.dart';
@@ -86,11 +87,11 @@ class CreateSupplierOrderSummaryTab extends ConsumerWidget {
     return Scaffold(
       backgroundColor: colors.surface,
       body: SingleChildScrollView(
-        padding: const EdgeInsets.only(
-          left: 16,
-          right: 16,
-          top: 16,
-          bottom: 120,
+        padding: const EdgeInsets.fromLTRB(
+          16,
+          16,
+          16,
+          FabScrollPadding.none,
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,

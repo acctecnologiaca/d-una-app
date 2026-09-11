@@ -9,6 +9,7 @@ import '../../../data/models/quote_item_product.dart';
 import '../widgets/view_product_details_sheet.dart';
 import '../../../domain/models/product_origin.dart';
 import '../../create_quote/providers/quote_source_alert.dart';
+import '../../../../../shared/utils/fab_scroll_padding.dart';
 
 class ViewQuoteProductsTab extends ConsumerStatefulWidget {
   final String quoteId;
@@ -39,6 +40,8 @@ class _ViewQuoteProductsTabState extends ConsumerState<ViewQuoteProductsTab> {
   Widget build(BuildContext context) {
     final state = ref.watch(viewQuoteProvider(widget.quoteId));
     final validationState = ref.watch(quoteValidationProvider(widget.quoteId));
+    final activeFabs = ref.watch(quoteActiveFabsCountProvider(widget.quoteId));
+    final bottomPadding = FabScrollPadding.calculate(activeFabs);
 
     final hasMissingValidation = state.products.any(
       (p) =>
@@ -161,7 +164,7 @@ class _ViewQuoteProductsTabState extends ConsumerState<ViewQuoteProductsTab> {
             child: ListView.builder(
               physics: const AlwaysScrollableScrollPhysics(),
               itemCount: sortedIndices.length,
-              padding: const EdgeInsets.only(bottom: 120),
+              padding: EdgeInsets.only(bottom: bottomPadding),
               itemBuilder: (context, index) {
                 final groupIndex = sortedIndices[index];
                 final items = groupedProducts[groupIndex]!;

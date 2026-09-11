@@ -7,6 +7,7 @@ import 'package:d_una_app/shared/widgets/standard_app_bar.dart';
 import 'package:d_una_app/shared/widgets/custom_search_bar.dart';
 import 'package:d_una_app/shared/widgets/sort_selector.dart';
 import 'package:d_una_app/shared/widgets/custom_extended_fab.dart';
+import 'package:d_una_app/shared/utils/fab_scroll_padding.dart';
 
 import 'package:d_una_app/features/purchases/presentation/providers/purchases_providers.dart';
 import '../widgets/purchase_list_item.dart';
@@ -42,7 +43,8 @@ class _PurchasesListScreenState extends ConsumerState<PurchasesListScreen> {
             ? 'Compras del producto'
             : 'Registros de compra',
       ),
-      body: Column(
+      body: SafeArea(
+        child: Column(
         children: [
           const SizedBox(height: 12),
           // Search & Filter Bar
@@ -142,7 +144,12 @@ class _PurchasesListScreenState extends ConsumerState<PurchasesListScreen> {
                     onLoadMore: () => ref
                         .read(paginatedPurchasesListProvider.notifier)
                         .loadMore(),
-                    padding: const EdgeInsets.fromLTRB(0, 8, 0, 132),
+                    padding: const EdgeInsets.fromLTRB(
+                      0,
+                      8,
+                      0,
+                      FabScrollPadding.list,
+                    ),
                     separatorBuilder: (context, index) =>
                         const Divider(height: 0, color: Colors.transparent),
                     itemBuilder: (context, index, purchase) {
@@ -160,16 +167,14 @@ class _PurchasesListScreenState extends ConsumerState<PurchasesListScreen> {
           ),
         ],
       ),
-      floatingActionButton: Padding(
-        padding: const EdgeInsets.only(bottom: 40.0),
-        child: CustomExtendedFab(
-          onPressed: () {
-            ref.read(addPurchaseProvider.notifier).reset();
-            context.push('/my-purchases/add');
-          },
-          label: 'Nuevo',
-          icon: Icons.add,
-        ),
+      ),
+      floatingActionButton: CustomExtendedFab(
+        onPressed: () {
+          ref.read(addPurchaseProvider.notifier).reset();
+          context.push('/my-purchases/add');
+        },
+        label: 'Nuevo',
+        icon: Icons.add,
       ),
     );
   }

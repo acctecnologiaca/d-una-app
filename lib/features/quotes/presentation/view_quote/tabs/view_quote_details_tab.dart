@@ -5,6 +5,7 @@ import 'package:material_symbols_icons/symbols.dart';
 import '../../../../../shared/widgets/info_block.dart';
 import '../providers/view_quote_provider.dart';
 import '../../../domain/models/quote_model.dart';
+import '../../../../../shared/utils/fab_scroll_padding.dart';
 
 class ViewQuoteDetailsTab extends ConsumerWidget {
   final String quoteId;
@@ -15,6 +16,8 @@ class ViewQuoteDetailsTab extends ConsumerWidget {
     final colors = Theme.of(context).colorScheme;
     final textTheme = Theme.of(context).textTheme;
     final state = ref.watch(viewQuoteProvider(quoteId));
+    final activeFabs = ref.watch(quoteActiveFabsCountProvider(quoteId));
+    final bottomPadding = FabScrollPadding.calculate(activeFabs);
 
     if (state.isLoading && state.quote == null) {
       return const Center(child: CircularProgressIndicator());
@@ -41,7 +44,7 @@ class ViewQuoteDetailsTab extends ConsumerWidget {
     final isExpired = isPending && expirationDate.isBefore(DateTime.now());
 
     return SingleChildScrollView(
-      padding: const EdgeInsets.all(16.0),
+      padding: EdgeInsets.fromLTRB(16.0, 16.0, 16.0, bottomPadding),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [

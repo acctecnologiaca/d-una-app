@@ -434,23 +434,25 @@ class _AddCollaboratorScreenState extends ConsumerState<AddCollaboratorScreen> {
                       helperText: 'Ej: Asesor comercial',
                     ),
 
-                    const SizedBox(height: 48),
-
-                    // Actions
-                    FormBottomBar(
-                      onCancel: () => context.pop(),
-                      onSave:
-                          (_isLoading ||
-                              _isDeleting ||
-                              (widget.collaborator != null && !_hasChanges))
-                          ? null
-                          : _saveForm,
-                      saveLabel: 'Guardar',
-                      isLoading: _isLoading,
-                    ),
-                    const SizedBox(height: 16),
                   ],
                 ),
+              ),
+            ),
+          ),
+          SafeArea(
+            top: false,
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(16.0, 8.0, 16.0, 16.0),
+              child: FormBottomBar(
+                onCancel: () => context.pop(),
+                onSave:
+                    (_isLoading ||
+                        _isDeleting ||
+                        (widget.collaborator != null && !_hasChanges))
+                    ? null
+                    : _saveForm,
+                saveLabel: 'Guardar',
+                isLoading: _isLoading,
               ),
             ),
           ),

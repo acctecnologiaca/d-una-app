@@ -196,17 +196,14 @@ class _ViewReportScreenState extends ConsumerState<ViewReportScreen>
           ),
           floatingActionButton: status == ServiceReportStatus.finalized
               ? null
-              : Padding(
-                  padding: const EdgeInsets.only(bottom: 40.0),
-                  child: FloatingActionButton(
-                    onPressed: () async {
-                      await context.push(
-                        '/reports/${widget.reportId}/edit?tab=${_tabController.index}',
-                      );
-                      ref.invalidate(viewReportProvider(widget.reportId));
-                    },
-                    child: const Icon(Icons.edit_outlined),
-                  ),
+              : FloatingActionButton(
+                  onPressed: () async {
+                    await context.push(
+                      '/reports/${widget.reportId}/edit?tab=${_tabController.index}',
+                    );
+                    ref.invalidate(viewReportProvider(widget.reportId));
+                  },
+                  child: const Icon(Icons.edit_outlined),
                 ),
         );
       },

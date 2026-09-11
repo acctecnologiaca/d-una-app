@@ -9,6 +9,7 @@ import '../../../../shared/widgets/friendly_error_widget.dart';
 import '../../../../shared/widgets/custom_search_bar.dart';
 import '../../../../shared/widgets/sort_selector.dart';
 import '../../../shared/widgets/custom_extended_fab.dart';
+import '../../../shared/utils/fab_scroll_padding.dart';
 import '../../../shared/widgets/standard_list_item.dart';
 import '../../../shared/widgets/user_profile_avatar.dart';
 import '../../../../shared/widgets/empty_list_state.dart';
@@ -177,7 +178,12 @@ class _ClientListScreenState extends ConsumerState<ClientListScreen> {
                       onLoadMore: () => ref
                           .read(paginatedClientsProvider.notifier)
                           .loadMore(),
-                      padding: const EdgeInsets.fromLTRB(0, 8, 0, 64),
+                      padding: const EdgeInsets.fromLTRB(
+                        0,
+                        8,
+                        0,
+                        FabScrollPadding.list,
+                      ),
                       separatorBuilder: (context, index) => const Divider(
                         height: 1,
                         indent: 16,
@@ -214,17 +220,14 @@ class _ClientListScreenState extends ConsumerState<ClientListScreen> {
           ],
         ),
       ),
-      floatingActionButton: Padding(
-        padding: const EdgeInsets.only(bottom: 0.0),
-        child: CustomExtendedFab(
-          onPressed: () {
-            // Reset provider state before starting new wizard
-            ref.read(addClientProvider.notifier).reset();
-            context.push('/clients/add?returnTo=/clients');
-          },
-          label: 'Agregar',
-          icon: Icons.add,
-        ),
+      floatingActionButton: CustomExtendedFab(
+        onPressed: () {
+          // Reset provider state before starting new wizard
+          ref.read(addClientProvider.notifier).reset();
+          context.push('/clients/add?returnTo=/clients');
+        },
+        label: 'Agregar',
+        icon: Icons.add,
       ),
     );
   }

@@ -45,20 +45,24 @@ Referencias canónicas en el proyecto:
 ---
 
 ### B. Floating Action Buttons (FABs) & Padding Dinámico
-La pantalla presenta acciones flotantes para editar el documento o contactar al cliente:
+La pantalla presenta acciones flotantes para editar el documento, contactar al cliente o firmar:
 1. **Botón Principal:** Editar (`Icons.edit_outlined`), visible solo si el estado del documento permite modificaciones.
 2. **Botón Secundario:** WhatsApp / Contacto (`Symbols.chat` o icono de WhatsApp).
-3. **Cálculo Matemático de Padding Inferior:** En cada una de las pestañas que contenga un scroll (`SingleChildScrollView` o `ListView`), se debe aplicar:
+3. **Botón Terciario (si aplica):** Firmar documento (`Icons.draw_outlined` o acción auxiliar).
+4. **Cálculo Matemático de Padding Inferior:** En cada una de las pestañas que contenga un scroll (`SingleChildScrollView` o `ListView`), se debe aplicar la utilidad estándar [`FabScrollPadding`](file:///c:/Users/aleja/flutter_apps/MVP/d_una_app/lib/shared/utils/fab_scroll_padding.dart):
    ```dart
-   final bool hasTwoFabs = showWhatsAppFab && showEditFab;
-   final bool hasOneFab = showWhatsAppFab ^ showEditFab;
-   final double bottomPadding = hasTwoFabs ? 184.0 : (hasOneFab ? 112.0 : 24.0);
+   final int activeFabs = (showWhatsAppFab ? 1 : 0) + (showEditFab ? 1 : 0);
+   final double bottomPadding = FabScrollPadding.calculate(activeFabs); 
+   // 256.0 si 3 FABs, 184.0 si 2 FABs, 112.0 si 1 FAB, 24.0 si 0 FABs
 
    SingleChildScrollView(
      padding: EdgeInsets.only(left: 16, right: 16, top: 24, bottom: bottomPadding),
      child: ...
    )
    ```
+
+> [!IMPORTANT]
+> **Prohibición de Padding Artificial:** La columna de FABs (`Column(mainAxisSize: MainAxisSize.min, children: [...])`) reposa directamente sobre la propiedad `floatingActionButton` del `Scaffold`. Queda **estrictamente prohibido** envolverla en `Padding(bottom: 40.0)`.
 
 ---
 
@@ -196,4 +200,5 @@ void _showSendOptions(BuildContext context, DocumentModel document) {
 - [ ] ¿La pestaña Resumen incluye la tarjeta de auditoría con fecha formateada (`_buildInfoCard`)?
 - [ ] ¿Las tarjetas de resumen tienen el botón "Ir a [Pestaña]" alineado a la derecha?
 - [ ] ¿El contacto de empresa utiliza `ContactListTile`?
-- [ ] ¿El padding inferior del scroll view respeta la fórmula dinámica de FABs (`184px` / `112px` / `24px`)?
+- [ ] ¿El padding inferior del scroll view respeta la fórmula dinámica `FabScrollPadding.calculate` (`256px` / `184px` / `112px` / `24px`)?
+- [ ] ¿Los FABs reposan directamente sobre el `Scaffold` sin envoltorios `Padding(bottom: 40.0)`?

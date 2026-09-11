@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:d_una_app/shared/widgets/custom_search_bar.dart';
 import 'package:d_una_app/shared/widgets/sort_selector.dart';
 import 'package:d_una_app/shared/widgets/custom_extended_fab.dart';
+import 'package:d_una_app/shared/utils/fab_scroll_padding.dart';
 import 'package:d_una_app/shared/widgets/empty_list_state.dart';
 import 'package:d_una_app/shared/widgets/paginated_list_view.dart';
 import 'package:d_una_app/shared/widgets/friendly_error_widget.dart';
@@ -218,7 +219,12 @@ class _SupplierOrdersListScreenState
                       onLoadMore: () => ref
                           .read(paginatedSupplierOrdersProvider.notifier)
                           .loadMore(),
-                      padding: const EdgeInsets.fromLTRB(0, 8, 0, 120),
+                      padding: const EdgeInsets.fromLTRB(
+                        0,
+                        8,
+                        0,
+                        FabScrollPadding.list,
+                      ),
                       separatorBuilder: (context, index) =>
                           const Divider(height: 0, color: Colors.transparent),
                       itemBuilder: (context, index, order) {
@@ -252,18 +258,15 @@ class _SupplierOrdersListScreenState
       ),
       floatingActionButton: selection.isSelectionMode
           ? null
-          : Padding(
-              padding: const EdgeInsets.only(bottom: 40.0),
-              child: CustomExtendedFab(
-                onPressed: () {
-                  ref
-                      .read(createSupplierOrderProvider.notifier)
-                      .initializeNew(supplierId: '');
-                  context.push('/supplier-orders/create');
-                },
-                label: 'Nueva',
-                icon: Icons.add,
-              ),
+          : CustomExtendedFab(
+              onPressed: () {
+                ref
+                    .read(createSupplierOrderProvider.notifier)
+                    .initializeNew(supplierId: '');
+                context.push('/supplier-orders/create');
+              },
+              label: 'Nueva',
+              icon: Icons.add,
             ),
     );
   }

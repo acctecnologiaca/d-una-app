@@ -16,6 +16,7 @@ import '../../../../../shared/widgets/sort_selector.dart';
 import '../../../../../shared/widgets/info_disclaimer_card.dart';
 import '../../../../../shared/widgets/custom_extended_fab.dart';
 import '../../../../../shared/utils/currency_formatter.dart';
+import '../../../../../shared/utils/fab_scroll_padding.dart';
 import '../widgets/quote_product_sale_details_sheet.dart';
 import '../widgets/quote_product_source_card.dart';
 import '../../../data/repositories/warranty_repository.dart';
@@ -158,8 +159,9 @@ class _QuoteProductSourcesScreenState
           ),
         ],
       ),
-      body: Column(
-        children: [
+      body: SafeArea(
+        child: Column(
+          children: [
           // Filter Bar (Conditional Visibility)
           if (_isFiltersVisible)
             Align(
@@ -350,7 +352,10 @@ class _QuoteProductSourcesScreenState
                   );
                 }
                 return ListView.builder(
-                  padding: const EdgeInsets.only(top: 8, bottom: 120),
+                  padding: const EdgeInsets.only(
+                    top: 8,
+                    bottom: FabScrollPadding.single,
+                  ),
                   itemCount: filteredSources.length,
                   itemBuilder: (context, index) {
                     final item = filteredSources[index];
@@ -437,11 +442,10 @@ class _QuoteProductSourcesScreenState
           ),
         ],
       ),
-      floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
-      floatingActionButton: Padding(
-        padding: const EdgeInsets.only(bottom: 40.0),
-        child: CustomExtendedFab(
-          onPressed: () async {
+    ),
+    floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
+    floatingActionButton: CustomExtendedFab(
+        onPressed: () async {
             final createQuoteNotifier = ref.read(createQuoteProvider.notifier);
             final quoteState = ref.read(createQuoteProvider);
             final uuid = const Uuid();
@@ -658,7 +662,6 @@ class _QuoteProductSourcesScreenState
           }(),
           isEnabled: totalQuantity > 0 && !hasConflicts,
         ),
-      ),
     );
   }
 

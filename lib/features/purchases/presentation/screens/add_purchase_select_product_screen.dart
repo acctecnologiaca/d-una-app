@@ -8,6 +8,7 @@ import 'package:d_una_app/shared/widgets/paginated_list_view.dart';
 import 'package:d_una_app/shared/widgets/custom_search_bar.dart';
 import 'package:d_una_app/shared/widgets/sort_selector.dart';
 import 'package:d_una_app/shared/widgets/custom_extended_fab.dart';
+import 'package:d_una_app/shared/utils/fab_scroll_padding.dart';
 import 'package:d_una_app/shared/widgets/standard_app_bar.dart';
 import 'package:d_una_app/shared/utils/currency_formatter.dart';
 import 'package:d_una_app/features/purchases/data/models/purchase_item_product.dart';
@@ -49,7 +50,8 @@ class _AddPurchaseSelectProductScreenState
 
     return Scaffold(
       appBar: const StandardAppBar(title: 'Agregar producto'),
-      body: Column(
+      body: SafeArea(
+        child: Column(
         children: [
           // Search Bar (Read Only)
           Padding(
@@ -145,7 +147,7 @@ class _AddPurchaseSelectProductScreenState
                     hasReachedEnd: state.hasReachedEnd,
                     onLoadMore: () =>
                         ref.read(paginatedProductsProvider.notifier).loadMore(),
-                    padding: const EdgeInsets.only(bottom: 100),
+                    padding: const EdgeInsets.only(bottom: FabScrollPadding.list),
                     separatorBuilder: (context, index) =>
                         const Divider(height: 1, color: Colors.transparent),
                     itemBuilder: (context, index, product) {
@@ -189,12 +191,11 @@ class _AddPurchaseSelectProductScreenState
           ),
         ],
       ),
+      ),
       floatingActionButton: hasSelection
-          ? Padding(
-              padding: const EdgeInsets.only(bottom: 40.0),
-              child: CustomExtendedFab(
-                icon: Icons.check,
-                label: 'Confirmar ($formattedQty $uom - $formattedTotal)',
+          ? CustomExtendedFab(
+              icon: Icons.check,
+              label: 'Confirmar ($formattedQty $uom - $formattedTotal)',
                 isEnabled: true,
                 onPressed: () async {
                   if (_selectedProduct == null || _selectedQuantity <= 0) {
@@ -303,17 +304,13 @@ class _AddPurchaseSelectProductScreenState
                     }
                   }
                 },
-              ),
-            )
-          : Padding(
-              padding: const EdgeInsets.only(bottom: 40.0),
-              child: CustomExtendedFab(
-                onPressed: () {
-                  context.push('/portfolio/own-inventory/add');
-                },
-                label: 'Nuevo',
-                icon: Icons.add,
-              ),
+              )
+          : CustomExtendedFab(
+              onPressed: () {
+                context.push('/portfolio/own-inventory/add');
+              },
+              label: 'Nuevo',
+              icon: Icons.add,
             ),
     );
   }

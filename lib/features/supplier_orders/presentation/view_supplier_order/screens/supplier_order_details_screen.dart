@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../../../shared/widgets/standard_app_bar.dart';
+import '../../../../../shared/utils/fab_scroll_padding.dart';
 import '../../../../../shared/utils/currency_formatter.dart';
 import '../../supplier_orders_list/providers/supplier_orders_providers.dart';
 import '../../create_supplier_order/providers/create_supplier_order_provider.dart';
@@ -133,9 +134,9 @@ class _SupplierOrderDetailsScreenState
             (order.status == SupplierOrderStatus.approved) ||
             (canEdit && isSentOrResent);
         final hasOneFab = canEdit && isDraft;
-        final double tabBottomPadding = hasTwoFabs
-            ? 184.0
-            : (hasOneFab ? 112.0 : 24.0);
+        final int activeFabsCount = hasTwoFabs ? 2 : (hasOneFab ? 1 : 0);
+        final double tabBottomPadding =
+            FabScrollPadding.calculate(activeFabsCount);
 
         if (widget.triggerSend && !_hasTriggeredSend) {
           _hasTriggeredSend = true;
@@ -495,99 +496,93 @@ class _SupplierOrderDetailsScreenState
               ),
             ],
           ),
-          floatingActionButton:
-              (canEdit ||
-                  order.status == SupplierOrderStatus.approved ||
-                  isSentOrResent)
-              ? Padding(
-                  padding: const EdgeInsets.only(bottom: 40.0),
-                  child: Builder(
-                    builder: (context) {
-                      final showFinalizeFab =
-                          order.status == SupplierOrderStatus.approved;
-                      final showWhatsAppFab =
-                          isSentOrResent ||
-                          order.status == SupplierOrderStatus.approved;
+          floatingActionButton: activeFabsCount == 0
+              ? null
+              : Builder(
+                  builder: (context) {
+                    final showFinalizeFab =
+                        order.status == SupplierOrderStatus.approved;
+                    final showWhatsAppFab =
+                        isSentOrResent ||
+                        order.status == SupplierOrderStatus.approved;
 
-                      if (showFinalizeFab) {
-                        return Column(
-                          mainAxisSize: MainAxisSize.min,
-                          crossAxisAlignment: CrossAxisAlignment.end,
-                          children: [
-                            if (showWhatsAppFab) ...[
-                              FloatingActionButton(
-                                heroTag: 'whatsapp_contact_fab',
-                                onPressed: () {
-                                  _contactSupplierWhatsApp(context, order);
-                                },
-                                backgroundColor: colors.greenBase,
-                                tooltip: 'Contactar proveedor por WhatsApp',
-                                child: Image.asset(
-                                  'assets/icons/whatsapp_icon.png',
-                                  width: 28,
-                                  height: 28,
-                                  color: colors.greenBaseOn,
-                                ),
-                              ),
-                              const SizedBox(height: 16),
-                            ],
+                    if (showFinalizeFab) {
+                      return Column(
+                        mainAxisSize: MainAxisSize.min,
+                        crossAxisAlignment: CrossAxisAlignment.end,
+                        children: [
+                          if (showWhatsAppFab) ...[
                             FloatingActionButton(
-                              heroTag: 'finalize_order_fab',
+                              heroTag: 'whatsapp_contact_fab',
                               onPressed: () {
-                                _finalizeOrderFlow(order, items);
+                                _contactSupplierWhatsApp(context, order);
                               },
-                              backgroundColor: colors.secondaryContainer,
-                              foregroundColor: colors.onSecondaryContainer,
-                              tooltip: 'Registrar compra',
-                              child: const Icon(Icons.receipt_long_outlined),
-                            ),
-                          ],
-                        );
-                      }
-
-                      if (canEdit) {
-                        return Column(
-                          mainAxisSize: MainAxisSize.min,
-                          crossAxisAlignment: CrossAxisAlignment.end,
-                          children: [
-                            if (showWhatsAppFab) ...[
-                              FloatingActionButton(
-                                heroTag: 'whatsapp_contact_fab',
-                                onPressed: () {
-                                  _contactSupplierWhatsApp(context, order);
-                                },
-                                backgroundColor: colors.greenBase,
-                                tooltip: 'Contactar proveedor por WhatsApp',
-                                child: Image.asset(
-                                  'assets/icons/whatsapp_icon.png',
-                                  width: 28,
-                                  height: 28,
-                                  color: colors.greenBaseOn,
-                                ),
+                              backgroundColor: colors.greenBase,
+                              tooltip: 'Contactar proveedor por WhatsApp',
+                              child: Image.asset(
+                                'assets/icons/whatsapp_icon.png',
+                                width: 28,
+                                height: 28,
+                                color: colors.greenBaseOn,
                               ),
-                              const SizedBox(height: 16),
-                            ],
-                            FloatingActionButton(
-                              heroTag: 'edit_order_fab',
-                              onPressed: () {
-                                ref
-                                    .read(createSupplierOrderProvider.notifier)
-                                    .loadFromExisting(order, items);
-                                context.push(
-                                  '/supplier-orders/edit/${order.id}?tab=${_tabController.index}',
-                                );
-                              },
-                              child: const Icon(Icons.edit_outlined),
                             ),
+                            const SizedBox(height: 16),
                           ],
-                        );
-                      }
+                          FloatingActionButton(
+                            heroTag: 'finalize_order_fab',
+                            onPressed: () {
+                              _finalizeOrderFlow(order, items);
+                            },
+                            backgroundColor: colors.secondaryContainer,
+                            foregroundColor: colors.onSecondaryContainer,
+                            tooltip: 'Registrar compra',
+                            child: const Icon(Icons.receipt_long_outlined),
+                          ),
+                        ],
+                      );
+                    }
 
-                      return const SizedBox.shrink();
-                    },
-                  ),
-                )
-              : null,
+                    if (canEdit) {
+                      return Column(
+                        mainAxisSize: MainAxisSize.min,
+                        crossAxisAlignment: CrossAxisAlignment.end,
+                        children: [
+                          if (showWhatsAppFab) ...[
+                            FloatingActionButton(
+                              heroTag: 'whatsapp_contact_fab',
+                              onPressed: () {
+                                _contactSupplierWhatsApp(context, order);
+                              },
+                              backgroundColor: colors.greenBase,
+                              tooltip: 'Contactar proveedor por WhatsApp',
+                              child: Image.asset(
+                                'assets/icons/whatsapp_icon.png',
+                                width: 28,
+                                height: 28,
+                                color: colors.greenBaseOn,
+                              ),
+                            ),
+                            const SizedBox(height: 16),
+                          ],
+                          FloatingActionButton(
+                            heroTag: 'edit_order_fab',
+                            onPressed: () {
+                              ref
+                                  .read(createSupplierOrderProvider.notifier)
+                                  .loadFromExisting(order, items);
+                              context.push(
+                                '/supplier-orders/edit/${order.id}?tab=${_tabController.index}',
+                              );
+                            },
+                            child: const Icon(Icons.edit_outlined),
+                          ),
+                        ],
+                      );
+                    }
+
+                    return const SizedBox.shrink();
+                  },
+                ),
         );
       },
       loading: () => const Scaffold(

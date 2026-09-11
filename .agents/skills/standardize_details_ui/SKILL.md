@@ -1,6 +1,6 @@
 ---
 name: standardize_details_ui
-description: Estándar para pantallas de detalle de entidad simple (Arquetipo 4). Incluye AppBar con botón de eliminación preventiva protegida (con CustomDialog.destructive), visualización con InfoBlock.text, FAB de edición y padding dinámico (112px).
+description: Estándar para pantallas de detalle de entidad simple (Arquetipo 4). Incluye AppBar con botón de eliminación preventiva protegida (con CustomDialog.destructive), visualización con InfoBlock.text, FAB de edición y padding dinámico estándar (FabScrollPadding.single = 112.0px).
 ---
 
 # Standardize Entity Details Screen Skill (Arquetipo 4)
@@ -20,9 +20,9 @@ Una pantalla de detalle consta de:
    - Botón de regreso (`Icons.arrow_back`).
    - Botón de eliminación en `actions`: Protegido mediante comprobación de documentos vinculados (si tiene cotizaciones, reportes o compras asociadas, se deshabilita con un `Tooltip` explicativo).
 2. **Cuerpo Scrollable:**
-   - `SingleChildScrollView` con padding inferior dinámico:
-     - Si solo hay FAB de editar: **`bottomPadding: 112.0 px`**.
-     - Si hay 2 FABs (ej. WhatsApp + Editar): **`bottomPadding: 184.0 px`**.
+   - `SingleChildScrollView` con padding inferior dinámico usando [`FabScrollPadding`](file:///c:/Users/aleja/flutter_apps/MVP/d_una_app/lib/shared/utils/fab_scroll_padding.dart):
+     - Si solo hay FAB de editar: **`bottom: FabScrollPadding.single` (112.0 px)**.
+     - Si hay 2 FABs (ej. WhatsApp + Editar): **`bottom: FabScrollPadding.doubleFab` (184.0 px)**.
 3. **Bloques de Datos:**
    - Cabecera con imagen o avatar si aplica.
    - Datos clave-valor organizados con [`InfoBlock.text(...)`](file:///c:/Users/aleja/flutter_apps/MVP/d_una_app/lib/shared/widgets/info_block.dart).
@@ -130,7 +130,7 @@ class _MyEntityDetailsScreenState extends ConsumerState<MyEntityDetailsScreen> {
           left: 16,
           right: 16,
           top: 24,
-          bottom: 112.0, // Regla matemática de 1 FAB
+          bottom: FabScrollPadding.single, // 112.0 px (MD3 nativo con 40px de despeje)
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -176,6 +176,9 @@ class _MyEntityDetailsScreenState extends ConsumerState<MyEntityDetailsScreen> {
 }
 ```
 
+> [!IMPORTANT]
+> **Prohibición de Padding Artificial:** El `FloatingActionButton` debe colocarse directamente en la propiedad `floatingActionButton` del `Scaffold`. Queda **estrictamente prohibido** envolverlo en `Padding(bottom: 40.0)`.
+
 ---
 
 ## 3. Checklist de Verificación para Detalles de Entidad
@@ -183,5 +186,6 @@ class _MyEntityDetailsScreenState extends ConsumerState<MyEntityDetailsScreen> {
 - [ ] ¿El AppBar tiene botón de eliminar protegido con validación preventiva de vínculos?
 - [ ] ¿La confirmación de borrado utiliza `CustomDialog.destructive` con botón rojo?
 - [ ] ¿Los campos de datos informativos utilizan `InfoBlock.text`?
-- [ ] ¿El padding inferior del scroll view aplica la fórmula dinámica (`112.0 px` con 1 FAB)?
+- [ ] ¿El padding inferior del scroll view aplica la constante canónica `FabScrollPadding.single` (`112.0 px`) con 1 FAB o `FabScrollPadding.doubleFab` (`184.0 px`) con 2 FABs?
+- [ ] ¿El FAB de editar reposa directamente en el `Scaffold` sin envoltorios `Padding(bottom: 40.0)`?
 - [ ] ¿El FAB de editar utiliza `colors.primaryContainer` y `colors.onPrimaryContainer`?

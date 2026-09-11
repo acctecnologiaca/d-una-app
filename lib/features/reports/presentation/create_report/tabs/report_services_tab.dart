@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:d_una_app/shared/utils/fab_scroll_padding.dart';
 import '../../../data/models/service_report_item_service.dart';
 import '../providers/create_report_provider.dart';
 import '../providers/report_service_selection_provider.dart';
@@ -57,7 +58,7 @@ class _ReportServicesTabState extends ConsumerState<ReportServicesTab>
       ..sort((a, b) => a.orderIndex.compareTo(b.orderIndex));
 
     return ListView.builder(
-      padding: const EdgeInsets.only(top: 8, bottom: 120),
+      padding: const EdgeInsets.only(top: 8, bottom: FabScrollPadding.single),
       itemCount: services.length,
       itemBuilder: (context, index) {
         final service = services[index];

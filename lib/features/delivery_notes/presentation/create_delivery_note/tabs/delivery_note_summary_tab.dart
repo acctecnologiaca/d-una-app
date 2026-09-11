@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import 'package:go_router/go_router.dart';
 import 'package:material_symbols_icons/symbols.dart';
+import 'package:d_una_app/shared/utils/fab_scroll_padding.dart';
 import '../providers/create_delivery_note_provider.dart';
 import '../../../domain/models/delivery_note_item_model.dart';
 
@@ -37,7 +38,7 @@ class DeliveryNoteSummaryTab extends ConsumerWidget {
     }
 
     return SingleChildScrollView(
-      padding: const EdgeInsets.only(left: 16, right: 16, top: 16, bottom: 120),
+      padding: const EdgeInsets.fromLTRB(16, 16, 16, FabScrollPadding.single),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [

@@ -193,89 +193,97 @@ class _OccupationScreenState extends ConsumerState<OccupationScreen> {
                   .where((id) => id != _primaryOccupationId)
                   .toList();
 
-              return SingleChildScrollView(
-                padding: const EdgeInsets.fromLTRB(16, 24, 16, 40),
-                child: Form(
-                  key: _formKey,
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Indícanos a qué te dedicas. Esto nos permitirá conectarte con los proveedores adecuados.',
-                        style: textTheme.bodyMedium?.copyWith(
-                          color: colors.onSurfaceVariant,
+              return Column(
+                children: [
+                  Expanded(
+                    child: SingleChildScrollView(
+                      padding: const EdgeInsets.fromLTRB(16, 24, 16, 24),
+                      child: Form(
+                        key: _formKey,
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Indícanos a qué te dedicas. Esto nos permitirá conectarte con los proveedores adecuados.',
+                              style: textTheme.bodyMedium?.copyWith(
+                                color: colors.onSurfaceVariant,
+                              ),
+                            ),
+                            const SizedBox(height: 24),
+
+                            // Primary Occupation Dropdown (Searchable)
+                            CustomDropdown<String>(
+                              label: 'Ocupación principal',
+                              searchable: true,
+                              isRequired: true,
+                              value: _primaryOccupationId,
+                              items: occupationsList
+                                  .map((e) => e['id'] as String)
+                                  .toList(),
+                              itemLabelBuilder: (id) {
+                                final occ = occupationsList.firstWhere(
+                                  (element) => element['id'] == id,
+                                  orElse: () => {'name': 'Desconocido'},
+                                );
+                                return occ['name'] as String;
+                              },
+                              onChanged: (val) {
+                                setState(() {
+                                  _primaryOccupationId = val;
+                                  if (val != null &&
+                                      _secondaryOccupationIds.contains(val)) {
+                                    _secondaryOccupationIds.remove(val);
+                                  }
+                                });
+                              },
+                              validator: (val) {
+                                if (val == null || val.isEmpty) {
+                                  return 'Selecciona una ocupación principal.';
+                                }
+                                return null;
+                              },
+                            ),
+
+                            const SizedBox(height: 24),
+
+                            // Secondary Occupations (CustomMultiDropdown with Search and max 2 selections)
+                            CustomMultiDropdown<String>(
+                              label: 'Otras ocupaciones',
+                              isRequired: false,
+                              maxSelections: 2,
+                              selectedValues: _secondaryOccupationIds,
+                              items: secondaryItems,
+                              itemLabelBuilder: (id) {
+                                final occ = occupationsList.firstWhere(
+                                  (element) => element['id'] == id,
+                                  orElse: () => {'name': 'Desconocido'},
+                                );
+                                return occ['name'] as String;
+                              },
+                              onChanged: (newIds) {
+                                setState(() {
+                                  _secondaryOccupationIds = newIds;
+                                });
+                              },
+                            ),
+                          ],
                         ),
                       ),
-                      const SizedBox(height: 24),
-
-                      // Primary Occupation Dropdown (Searchable)
-                      CustomDropdown<String>(
-                        label: 'Ocupación principal',
-                        searchable: true,
-                        isRequired: true,
-                        value: _primaryOccupationId,
-                        items: occupationsList
-                            .map((e) => e['id'] as String)
-                            .toList(),
-                        itemLabelBuilder: (id) {
-                          final occ = occupationsList.firstWhere(
-                            (element) => element['id'] == id,
-                            orElse: () => {'name': 'Desconocido'},
-                          );
-                          return occ['name'] as String;
-                        },
-                        onChanged: (val) {
-                          setState(() {
-                            _primaryOccupationId = val;
-                            if (val != null &&
-                                _secondaryOccupationIds.contains(val)) {
-                              _secondaryOccupationIds.remove(val);
-                            }
-                          });
-                        },
-                        validator: (val) {
-                          if (val == null || val.isEmpty) {
-                            return 'Selecciona una ocupación principal.';
-                          }
-                          return null;
-                        },
-                      ),
-
-                      const SizedBox(height: 24),
-
-                      // Secondary Occupations (CustomMultiDropdown with Search and max 2 selections)
-                      CustomMultiDropdown<String>(
-                        label: 'Otras ocupaciones',
-                        isRequired: false,
-                        maxSelections: 2,
-                        selectedValues: _secondaryOccupationIds,
-                        items: secondaryItems,
-                        itemLabelBuilder: (id) {
-                          final occ = occupationsList.firstWhere(
-                            (element) => element['id'] == id,
-                            orElse: () => {'name': 'Desconocido'},
-                          );
-                          return occ['name'] as String;
-                        },
-                        onChanged: (newIds) {
-                          setState(() {
-                            _secondaryOccupationIds = newIds;
-                          });
-                        },
-                      ),
-
-                      const SizedBox(height: 48),
-
-                      // Buttons
-                      FormBottomBar(
+                    ),
+                  ),
+                  SafeArea(
+                    top: false,
+                    child: Padding(
+                      padding: const EdgeInsets.fromLTRB(16.0, 8.0, 16.0, 16.0),
+                      child: FormBottomBar(
                         onCancel: () => context.pop(),
                         onSave: _hasChanges ? () => _save(profile) : null,
                         isSaveEnabled: _hasChanges,
                         isLoading: _isLoading,
                       ),
-                    ],
+                    ),
                   ),
-                ),
+                ],
               );
             },
           );

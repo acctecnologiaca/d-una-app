@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:d_una_app/shared/widgets/standard_app_bar.dart';
 import 'package:d_una_app/shared/widgets/sort_selector.dart';
 import 'package:d_una_app/shared/widgets/custom_extended_fab.dart';
+import 'package:d_una_app/shared/utils/fab_scroll_padding.dart';
 
 class GenericListScreen<T> extends ConsumerStatefulWidget {
   final String title;
@@ -102,16 +103,13 @@ class _GenericListScreenState<T> extends ConsumerState<GenericListScreen<T>> {
             : null,
       ),
       floatingActionButton: widget.onAddPressed != null
-          ? Padding(
-              padding: const EdgeInsets.only(bottom: 40.0),
-              child: CustomExtendedFab(
-                onPressed: widget.onAddPressed!,
-                label: widget.fabLabel,
-                icon: widget.fabIcon,
-                isEnabled: widget.isFabEnabled,
-                backgroundColor: colors.primaryContainer,
-                foregroundColor: colors.onPrimaryContainer,
-              ),
+          ? CustomExtendedFab(
+              onPressed: widget.onAddPressed!,
+              label: widget.fabLabel,
+              icon: widget.fabIcon,
+              isEnabled: widget.isFabEnabled,
+              backgroundColor: colors.primaryContainer,
+              foregroundColor: colors.onPrimaryContainer,
             )
           : null,
       body: Column(
@@ -182,7 +180,14 @@ class _GenericListScreenState<T> extends ConsumerState<GenericListScreen<T>> {
                 }
 
                 return ListView.separated(
-                  padding: const EdgeInsets.fromLTRB(16, 8, 16, 132),
+                  padding: EdgeInsets.fromLTRB(
+                    16,
+                    8,
+                    16,
+                    widget.onAddPressed != null
+                        ? FabScrollPadding.single
+                        : FabScrollPadding.none,
+                  ),
                   itemCount: processedList.length,
                   separatorBuilder: (context, index) =>
                       const Divider(height: 8),

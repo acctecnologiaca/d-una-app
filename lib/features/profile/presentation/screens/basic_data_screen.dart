@@ -358,124 +358,133 @@ class _BasicDataScreenState extends ConsumerState<BasicDataScreen> {
                   });
                 }
 
-                return SingleChildScrollView(
-                  padding: const EdgeInsets.fromLTRB(16, 24, 16, 40),
-                  child: Form(
-                    key: _formKey,
-                    child: Column(
-                      children: [
-                        // Avatar with Edit Icon
-                        Center(
-                          child: Stack(
+                return Column(
+                  children: [
+                    Expanded(
+                      child: SingleChildScrollView(
+                        padding: const EdgeInsets.fromLTRB(16, 24, 16, 24),
+                        child: Form(
+                          key: _formKey,
+                          child: Column(
                             children: [
-                              _buildAvatarWidget(colors),
-                              Positioned(
-                                bottom: 0,
-                                right: 0,
-                                child: GestureDetector(
-                                  onTap: _pickImage,
-                                  child: Container(
-                                    padding: const EdgeInsets.all(8),
-                                    decoration: BoxDecoration(
-                                      color: colors.primary,
-                                      shape: BoxShape.circle,
-                                      border: Border.all(
-                                        color: colors.surface,
-                                        width: 2,
+                              // Avatar with Edit Icon
+                              Center(
+                                child: Stack(
+                                  children: [
+                                    _buildAvatarWidget(colors),
+                                    Positioned(
+                                      bottom: 0,
+                                      right: 0,
+                                      child: GestureDetector(
+                                        onTap: _pickImage,
+                                        child: Container(
+                                          padding: const EdgeInsets.all(8),
+                                          decoration: BoxDecoration(
+                                            color: colors.primary,
+                                            shape: BoxShape.circle,
+                                            border: Border.all(
+                                              color: colors.surface,
+                                              width: 2,
+                                            ),
+                                          ),
+                                          child: Icon(
+                                            Icons.edit,
+                                            size: 20,
+                                            color: colors.onPrimary,
+                                          ),
+                                        ),
                                       ),
                                     ),
-                                    child: Icon(
-                                      Icons.edit,
-                                      size: 20,
-                                      color: colors.onPrimary,
+                                  ],
+                                ),
+                              ),
+                              const SizedBox(height: 32),
+
+                              // Name Field
+                              CustomTextField(
+                                controller: _nameController,
+                                label: 'Nombre*',
+                                validator: (value) {
+                                  if (value == null || value.trim().isEmpty) {
+                                    return 'El nombre es obligatorio';
+                                  }
+                                  return null;
+                                },
+                              ),
+                              const SizedBox(height: 16),
+
+                              // Last Name Field
+                              CustomTextField(
+                                controller: _lastNameController,
+                                label: 'Apellido*',
+                                validator: (value) {
+                                  if (value == null || value.trim().isEmpty) {
+                                    return 'El apellido es obligatorio';
+                                  }
+                                  return null;
+                                },
+                              ),
+                              const SizedBox(height: 16),
+
+                              // Date of Birth Field
+                              GestureDetector(
+                                onTap: () => _selectDate(context),
+                                child: AbsorbPointer(
+                                  child: CustomTextField(
+                                    controller: _dobController,
+                                    label: 'Fecha de nacimiento*',
+                                    suffixIcon: const Icon(
+                                      Icons.calendar_today_outlined,
                                     ),
+                                    validator: (value) {
+                                      if (_selectedDate == null ||
+                                          (value == null || value.trim().isEmpty)) {
+                                        return 'La fecha de nacimiento es obligatoria';
+                                      }
+                                      return null;
+                                    },
                                   ),
                                 ),
+                              ),
+                              const SizedBox(height: 16),
+
+                              // Gender Dropdown
+                              CustomDropdown<String>(
+                                label: 'Género',
+                                value: _selectedGender,
+                                items: const ['Masculino', 'Femenino', 'Otro'],
+                                itemLabelBuilder: (val) => val,
+                                onChanged: (value) {
+                                  setState(() {
+                                    _selectedGender = value;
+                                  });
+                                },
+                                validator: (val) =>
+                                    val == null || val.isEmpty ? 'Requerido' : null,
+                              ),
+                              const SizedBox(height: 16),
+
+                              // ID Field
+                              CustomTextField(
+                                controller: _idController,
+                                label: 'Cédula/DNI/ID*',
+                                validator: (value) {
+                                  if (value == null || value.trim().isEmpty) {
+                                    return 'La cédula/DNI es obligatoria';
+                                  }
+                                  return null;
+                                },
                               ),
                             ],
                           ),
                         ),
-                        const SizedBox(height: 32),
-
-                        // Name Field
-                        CustomTextField(
-                          controller: _nameController,
-                          label: 'Nombre*',
-                          validator: (value) {
-                            if (value == null || value.trim().isEmpty) {
-                              return 'El nombre es obligatorio';
-                            }
-                            return null;
-                          },
-                        ),
-                        const SizedBox(height: 16),
-
-                        // Last Name Field
-                        CustomTextField(
-                          controller: _lastNameController,
-                          label: 'Apellido*',
-                          validator: (value) {
-                            if (value == null || value.trim().isEmpty) {
-                              return 'El apellido es obligatorio';
-                            }
-                            return null;
-                          },
-                        ),
-                        const SizedBox(height: 16),
-
-                        // Date of Birth Field
-                        GestureDetector(
-                          onTap: () => _selectDate(context),
-                          child: AbsorbPointer(
-                            child: CustomTextField(
-                              controller: _dobController,
-                              label: 'Fecha de nacimiento*',
-                              suffixIcon: const Icon(
-                                Icons.calendar_today_outlined,
-                              ),
-                              validator: (value) {
-                                if (_selectedDate == null ||
-                                    (value == null || value.trim().isEmpty)) {
-                                  return 'La fecha de nacimiento es obligatoria';
-                                }
-                                return null;
-                              },
-                            ),
-                          ),
-                        ),
-                        const SizedBox(height: 16),
-
-                        // Gender Dropdown
-                        CustomDropdown<String>(
-                          label: 'Género',
-                          value: _selectedGender,
-                          items: const ['Masculino', 'Femenino', 'Otro'],
-                          itemLabelBuilder: (val) => val,
-                          onChanged: (value) {
-                            setState(() {
-                              _selectedGender = value;
-                            });
-                          },
-                          validator: (val) =>
-                              val == null || val.isEmpty ? 'Requerido' : null,
-                        ),
-                        const SizedBox(height: 16),
-
-                        // ID Field
-                        CustomTextField(
-                          controller: _idController,
-                          label: 'Cédula/DNI/ID*',
-                          validator: (value) {
-                            if (value == null || value.trim().isEmpty) {
-                              return 'La cédula/DNI es obligatoria';
-                            }
-                            return null;
-                          },
-                        ),
-                        const SizedBox(height: 48),
-
-                        // Actions
-                        FormBottomBar(
+                      ),
+                    ),
+                    SafeArea(
+                      top: false,
+                      child: Padding(
+                        padding: const EdgeInsets.fromLTRB(16.0, 8.0, 16.0, 16.0),
+                        child: FormBottomBar(
                           onCancel: () => context.pop(),
                           onSave: _hasChanges && profile != null
                               ? () => _save(profile.id, profile)
@@ -483,9 +492,9 @@ class _BasicDataScreenState extends ConsumerState<BasicDataScreen> {
                           isSaveEnabled: _hasChanges && profile != null,
                           isLoading: _isLoading,
                         ),
-                      ],
+                      ),
                     ),
-                  ),
+                  ],
                 );
               },
             ),

@@ -9,6 +9,7 @@ import 'package:d_una_app/shared/widgets/info_block.dart';
 import 'package:d_una_app/features/clients/presentation/providers/clients_provider.dart';
 import 'package:d_una_app/features/clients/data/models/client_model.dart';
 import 'package:d_una_app/core/utils/contact_utils.dart';
+import 'package:d_una_app/shared/utils/fab_scroll_padding.dart';
 
 class ClientDetailsScreen extends ConsumerWidget {
   final String clientId;
@@ -216,23 +217,21 @@ class ClientDetailsScreen extends ConsumerWidget {
               ),
             ],
           ),
-          floatingActionButton: Padding(
-            padding: const EdgeInsets.only(bottom: 40.0),
-            child: FloatingActionButton(
-              onPressed: () {
-                // Pass IDs and let Edit Screen fetch fresh or pass full object
-                // Passing ID is safer for consistency.
-                if (isCompany) {
-                  context.go('/clients/$clientId/edit-company', extra: client);
-                } else {
-                  context.go('/clients/$clientId/edit-person', extra: client);
-                }
-              },
-              backgroundColor: colors.primaryContainer,
-              child: Icon(Icons.edit, color: colors.onPrimaryContainer),
-            ),
+          floatingActionButton: FloatingActionButton(
+            onPressed: () {
+              // Pass IDs and let Edit Screen fetch fresh or pass full object
+              // Passing ID is safer for consistency.
+              if (isCompany) {
+                context.go('/clients/$clientId/edit-company', extra: client);
+              } else {
+                context.go('/clients/$clientId/edit-person', extra: client);
+              }
+            },
+            backgroundColor: colors.primaryContainer,
+            child: Icon(Icons.edit, color: colors.onPrimaryContainer),
           ),
           body: SingleChildScrollView(
+            padding: const EdgeInsets.only(bottom: FabScrollPadding.single),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
@@ -487,7 +486,6 @@ class ClientDetailsScreen extends ConsumerWidget {
                           ),
                         ),
                       ],
-                      const SizedBox(height: 40), // Bottom padding
                     ],
                   ),
                 ),

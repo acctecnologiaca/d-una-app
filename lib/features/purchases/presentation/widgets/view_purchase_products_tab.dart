@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:d_una_app/shared/utils/fab_scroll_padding.dart';
 import '../providers/purchase_details_provider.dart';
 import 'purchase_added_product_card.dart';
 
@@ -29,7 +30,7 @@ class ViewPurchaseProductsTab extends StatelessWidget {
     return Scaffold(
       backgroundColor: Colors.transparent,
       body: ListView.builder(
-        padding: const EdgeInsets.only(top: 8, bottom: 120),
+        padding: const EdgeInsets.only(top: 8, bottom: FabScrollPadding.single),
         itemCount: data.items.length,
         itemBuilder: (context, index) {
           final item = data.items[index];

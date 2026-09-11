@@ -249,6 +249,9 @@ floatingActionButton: selection.isSelectionMode
       ),
 ```
 
+> [!IMPORTANT]
+> **Prohibición de Padding Artificial:** El FAB reposa directamente sobre el `Scaffold` siguiendo Material Design 3 nativo. Queda **estrictamente prohibido** envolverlo en `Padding(bottom: 40.0)`. La separación con el contenido desplazable se maneja automáticamente en la lista mediante `FabScrollPadding.list` (`88.0px`).
+
 ---
 
 ## 3. Checklist de Verificación para Listas Principales
@@ -257,6 +260,8 @@ floatingActionButton: selection.isSelectionMode
 - [ ] ¿La cabecera cambia a modo selección con el número de elementos y botón de cerrar?
 - [ ] ¿La barra de búsqueda tiene `readOnly: true` y redirige a la ruta `/search`?
 - [ ] ¿El ordenamiento usa el modal `SortSelector`?
-- [ ] ¿La lista utiliza `PaginatedListView` con `emptyState` y `errorStateBuilder`?
+- [ ] ¿La lista utiliza `PaginatedListView` con `emptyState`, `errorStateBuilder` y clearance inferior `FabScrollPadding.list` (`88.0px`)?
+- [ ] ¿El FAB extendido reposa directamente sobre el `Scaffold` sin envoltorios `Padding(bottom: 40.0)`?
 - [ ] ¿El FAB extendido desaparece en modo selección múltiple?
+- [ ] ¿Si la pantalla es standalone (sin `BottomNavigationBar`), el cuerpo está envuelto en `SafeArea(child: Column(...))`?
 - [ ] ¿Se implementa `WidgetsBindingObserver` para auto-refrescar en `resumed`?

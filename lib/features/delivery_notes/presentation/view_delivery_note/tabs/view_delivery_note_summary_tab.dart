@@ -71,28 +71,26 @@ class ViewDeliveryNoteSummaryTab extends ConsumerWidget {
                 fill: 1.0,
               ),
               _buildProductsCard(context, note, displayItems),
-              const SizedBox(height: 16),
 
               // 4. Documento Vinculado Section (si aplica)
               if (note.quoteId != null || note.supplierOrderId != null) ...[
+                const SizedBox(height: 16),
                 _buildSectionHeader(context, Icons.link, 'Documento vinculado'),
                 _buildLinkedDocumentCard(context, note),
-                const SizedBox(height: 16),
               ],
 
               // 5. Recepción y Firma Section (solo si ya fue entregada / firmada)
               if (isDelivered ||
                   (note.receivedByName != null &&
                       note.receivedByName!.isNotEmpty)) ...[
+                const SizedBox(height: 16),
                 _buildSectionHeader(
                   context,
                   Symbols.signature,
                   'Recepción y Firma',
                 ),
                 _buildReceptionCard(context, ref, note),
-                const SizedBox(height: 16),
               ],
-              const SizedBox(height: 24),
             ],
           ),
         );

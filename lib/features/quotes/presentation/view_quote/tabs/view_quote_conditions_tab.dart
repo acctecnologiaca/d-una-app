@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:material_symbols_icons/symbols.dart';
 import '../providers/view_quote_provider.dart';
+import '../../../../../shared/utils/fab_scroll_padding.dart';
 
 class ViewQuoteConditionsTab extends ConsumerWidget {
   final String quoteId;
@@ -10,6 +11,8 @@ class ViewQuoteConditionsTab extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final state = ref.watch(viewQuoteProvider(quoteId));
+    final activeFabs = ref.watch(quoteActiveFabsCountProvider(quoteId));
+    final bottomPadding = FabScrollPadding.calculate(activeFabs);
 
     if (state.isLoading && state.quote == null) {
       return const Center(child: CircularProgressIndicator());
@@ -39,7 +42,7 @@ class ViewQuoteConditionsTab extends ConsumerWidget {
     }
 
     return ListView.builder(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      padding: EdgeInsets.fromLTRB(16, 12, 16, bottomPadding),
       itemCount: state.conditions.length,
       itemBuilder: (context, index) {
         final condition = state.conditions[index];

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:d_una_app/shared/utils/fab_scroll_padding.dart';
 import '../../../data/models/service_report_item_product.dart';
 import '../providers/create_report_provider.dart';
 import '../providers/report_product_selection_provider.dart';
@@ -54,7 +55,7 @@ class _ReportProductsTabState extends ConsumerState<ReportProductsTab>
       ..sort((a, b) => a.groupIndex.compareTo(b.groupIndex));
 
     return ListView.builder(
-      padding: const EdgeInsets.only(top: 8, bottom: 120),
+      padding: const EdgeInsets.only(top: 8, bottom: FabScrollPadding.single),
       itemCount: products.length,
       itemBuilder: (context, index) {
         final product = products[index];

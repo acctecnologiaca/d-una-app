@@ -10,6 +10,7 @@ import '../../../../../shared/widgets/empty_list_state.dart';
 import '../../../../../shared/widgets/paginated_list_view.dart';
 import '../../../../../shared/widgets/friendly_error_widget.dart';
 import '../../../../../shared/widgets/custom_extended_fab.dart';
+import '../../../../../shared/utils/fab_scroll_padding.dart';
 import '../providers/reports_provider.dart';
 import '../widgets/service_report_card.dart';
 import '../report_selection_actions.dart';
@@ -179,7 +180,12 @@ class _ReportsListScreenState extends ConsumerState<ReportsListScreen>
                       onLoadMore: () => ref
                           .read(paginatedReportsListProvider.notifier)
                           .loadMore(),
-                      padding: const EdgeInsets.fromLTRB(0, 0, 0, 64),
+                      padding: const EdgeInsets.fromLTRB(
+                        0,
+                        0,
+                        0,
+                        FabScrollPadding.list,
+                      ),
                       separatorBuilder: (context, index) => const Divider(
                         height: 0,
                         indent: 16,
@@ -211,16 +217,13 @@ class _ReportsListScreenState extends ConsumerState<ReportsListScreen>
       ),
       floatingActionButton: selection.isSelectionMode
           ? null
-          : Padding(
-              padding: const EdgeInsets.only(bottom: 0.0),
-              child: CustomExtendedFab(
-                onPressed: () {
-                  ref.read(createReportProvider.notifier).reset();
-                  context.push('/reports/create');
-                },
-                icon: Icons.add,
-                label: 'Nuevo',
-              ),
+          : CustomExtendedFab(
+              onPressed: () {
+                ref.read(createReportProvider.notifier).reset();
+                context.push('/reports/create');
+              },
+              icon: Icons.add,
+              label: 'Nuevo',
             ),
     );
   }

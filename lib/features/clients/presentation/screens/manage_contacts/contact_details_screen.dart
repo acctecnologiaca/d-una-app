@@ -7,6 +7,7 @@ import 'package:d_una_app/shared/widgets/info_block.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:d_una_app/shared/widgets/custom_dialog.dart';
 import 'package:d_una_app/features/clients/presentation/providers/clients_provider.dart';
+import 'package:d_una_app/shared/utils/fab_scroll_padding.dart';
 
 class ContactDetailsScreen extends ConsumerWidget {
   final String clientId;
@@ -131,30 +132,27 @@ class ContactDetailsScreen extends ConsumerWidget {
         elevation: 0,
       ),
       floatingActionButton: canEdit
-          ? Padding(
-              padding: const EdgeInsets.only(bottom: 40.0),
-              child: FloatingActionButton(
-                onPressed: () {
-                  context.go(
-                    '/clients/$clientId/contacts/edit',
-                    extra: {
-                      'companyName': companyName,
-                      'contact': contact,
-                      'contactCount': contactCount,
-                    },
-                  );
-                },
-                backgroundColor: colors.primaryContainer,
-                foregroundColor: colors.onPrimaryContainer,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(16),
-                ),
-                child: const Icon(Icons.edit_outlined),
+          ? FloatingActionButton(
+              onPressed: () {
+                context.go(
+                  '/clients/$clientId/contacts/edit',
+                  extra: {
+                    'companyName': companyName,
+                    'contact': contact,
+                    'contactCount': contactCount,
+                  },
+                );
+              },
+              backgroundColor: colors.primaryContainer,
+              foregroundColor: colors.onPrimaryContainer,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(16),
               ),
+              child: const Icon(Icons.edit_outlined),
             )
           : null,
       body: SingleChildScrollView(
-        padding: const EdgeInsets.fromLTRB(16, 24, 16, 40),
+        padding: const EdgeInsets.fromLTRB(16, 24, 16, FabScrollPadding.single),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [

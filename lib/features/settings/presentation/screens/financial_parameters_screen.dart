@@ -162,8 +162,11 @@ class _FinancialParametersScreenState
     return Scaffold(
       backgroundColor: colors.surface,
       appBar: const StandardAppBar(title: 'Parámetros financieros'),
-      body: ListView(
-        padding: const EdgeInsets.all(16),
+      body: Column(
+        children: [
+          Expanded(
+            child: ListView(
+              padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
         children: [
           Text(
             'Establece los parametros financieros por defecto que usarás en tus cotizaciones o reportes de servicios.',
@@ -392,24 +395,23 @@ class _FinancialParametersScreenState
               style: textTheme.bodySmall?.copyWith(color: colors.error),
             ),
           ),
-          const SizedBox(height: 48),
-
-          // ── Bottom Bar ────────────────────────────────────────────
-          Padding(
-            padding: EdgeInsets.only(
-              bottom: MediaQuery.of(context).padding.bottom > 0
-                  ? MediaQuery.of(context).padding.bottom
-                  : 40.0,
-            ),
-            child: FormBottomBar(
-              onCancel: () => context.pop(),
-              onSave: _hasChanged ? _save : null,
-              isSaveEnabled: _hasChanged,
-              isLoading: _isSaving,
-            ),
-          ),
         ],
       ),
+    ),
+    SafeArea(
+      top: false,
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(16.0, 8.0, 16.0, 16.0),
+        child: FormBottomBar(
+          onCancel: () => context.pop(),
+          onSave: _hasChanged ? _save : null,
+          isSaveEnabled: _hasChanged,
+          isLoading: _isSaving,
+        ),
+      ),
+    ),
+  ],
+),
     );
   }
 

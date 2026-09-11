@@ -210,6 +210,7 @@ class _PurchaseDetailsScreenState extends ConsumerState<PurchaseDetailsScreen>
 
   void _showActionsMenu(WidgetRef ref, PurchaseDetailsData data) {
     final notifier = ref.read(addPurchaseProvider.notifier);
+    final hasChanges = notifier.hasChanges;
 
     CustomActionSheet.show(
       context: context,
@@ -219,6 +220,7 @@ class _PurchaseDetailsScreenState extends ConsumerState<PurchaseDetailsScreen>
           icon: Icons.bookmark_add_outlined,
           label: 'Guardar y continuar luego',
           subtitle: 'Guarda un borrador local y vuelve al detalle',
+          enabled: hasChanges,
           onTap: () async {
             context.pop();
             await notifier.saveDraftNow(
@@ -244,6 +246,7 @@ class _PurchaseDetailsScreenState extends ConsumerState<PurchaseDetailsScreen>
           icon: Icons.delete_outline,
           label: 'Descartar cambios locales',
           subtitle: 'Descarta los cambios y recarga desde el servidor',
+          enabled: hasChanges,
           onTap: () async {
             context.pop();
             final shouldDiscard = await _showDiscardDialog();
@@ -437,28 +440,22 @@ class _PurchaseDetailsScreenState extends ConsumerState<PurchaseDetailsScreen>
     if (_isEditing) {
       // Hide the 'Agregar' button if the purchase is linked to a supplier order
       if (_tabController.index == 1 && data.purchase.supplierOrderId == null) {
-        return Padding(
-          padding: const EdgeInsets.only(bottom: 40.0),
-          child: CustomExtendedFab(
-            onPressed: () {
-              context.push('/my-purchases/add/select-product');
-            },
-            icon: Icons.add,
-            label: 'Agregar',
-          ),
+        return CustomExtendedFab(
+          onPressed: () {
+            context.push('/my-purchases/add/select-product');
+          },
+          icon: Icons.add,
+          label: 'Agregar',
         );
       }
       return null;
     }
 
     // View Mode FABs
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 40.0),
-      child: FloatingActionButton(
-        onPressed: () => _enterEditMode(data),
-        backgroundColor: colors.primaryContainer,
-        child: Icon(Icons.edit_outlined, color: colors.onPrimaryContainer),
-      ),
+    return FloatingActionButton(
+      onPressed: () => _enterEditMode(data),
+      backgroundColor: colors.primaryContainer,
+      child: Icon(Icons.edit_outlined, color: colors.onPrimaryContainer),
     );
   }
 }

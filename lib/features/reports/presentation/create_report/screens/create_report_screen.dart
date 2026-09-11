@@ -279,20 +279,22 @@ class _CreateReportScreenState extends ConsumerState<CreateReportScreen>
             ],
           ),
         ),
-        body: TabBarView(
-          controller: _tabController,
-          children: [
-            const ReportDetailsTab(),
-            const ReportProductsTab(),
-            const ReportServicesTab(),
-            const ReportClientTab(),
-            const ReportConditionsTab(),
-            ReportSummaryTab(
-              onNavigateToTab: (index) {
-                _tabController.animateTo(index);
-              },
-            ),
-          ],
+        body: SafeArea(
+          child: TabBarView(
+            controller: _tabController,
+            children: [
+              const ReportDetailsTab(),
+              const ReportProductsTab(),
+              const ReportServicesTab(),
+              const ReportClientTab(),
+              const ReportConditionsTab(),
+              ReportSummaryTab(
+                onNavigateToTab: (index) {
+                  _tabController.animateTo(index);
+                },
+              ),
+            ],
+          ),
         ),
         floatingActionButton: _buildFab(),
       ),
@@ -312,10 +314,8 @@ class _CreateReportScreenState extends ConsumerState<CreateReportScreen>
     }
 
     if (_tabController.index == 5) {
-      return Padding(
-        padding: const EdgeInsets.only(bottom: 40.0),
-        child: CustomExtendedFab(
-          label: state.isLoading ? 'Guardando...' : 'Guardar',
+      return CustomExtendedFab(
+        label: state.isLoading ? 'Guardando...' : 'Guardar',
           icon: state.isLoading ? Icons.hourglass_empty : Icons.save_outlined,
           isEnabled:
               state.isReadyToFinalize && state.hasChanges && !state.isLoading,
@@ -343,14 +343,11 @@ class _CreateReportScreenState extends ConsumerState<CreateReportScreen>
               );
             }
           },
-        ),
-      );
+        );
     }
 
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 40.0),
-      child: CustomExtendedFab(
-        onPressed: () {
+    return CustomExtendedFab(
+      onPressed: () {
           if (_tabController.index == 1) {
             context.push('/reports/create/select-product');
           } else if (_tabController.index == 2) {
@@ -361,8 +358,7 @@ class _CreateReportScreenState extends ConsumerState<CreateReportScreen>
         },
         icon: Icons.add,
         label: 'Agregar',
-      ),
-    );
+      );
   }
 
   void _showPostSaveOptions(WidgetRef ref, String reportNumber) {
@@ -476,6 +472,7 @@ class _CreateReportScreenState extends ConsumerState<CreateReportScreen>
           icon: Icons.bookmark_add_outlined,
           label: 'Guardar y continuar luego',
           subtitle: 'Guarda un borrador local para continuar luego',
+          enabled: state.hasChanges,
           onTap: () async {
             context.pop();
             final success = await notifier.saveAsDraft();
@@ -500,6 +497,7 @@ class _CreateReportScreenState extends ConsumerState<CreateReportScreen>
               ? 'Descartar cambios locales'
               : 'Descartar borrador',
           subtitle: 'Elimina las modificaciones no guardadas',
+          enabled: state.hasChanges,
           onTap: () async {
             context.pop();
             final shouldDiscard = await _showDiscardDialog();

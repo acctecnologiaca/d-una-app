@@ -265,6 +265,13 @@ class _AddPurchaseScreenState extends ConsumerState<AddPurchaseScreen>
     final notifier = ref.read(addPurchaseProvider.notifier);
     final isEditing = widget.purchaseId != null || state.purchaseId != null;
     final currentId = widget.purchaseId ?? state.purchaseId;
+    final hasChanges = isEditing
+        ? notifier.hasChanges
+        : (notifier.hasChanges ||
+            state.products.isNotEmpty ||
+            (state.supplierId != null && state.supplierId!.isNotEmpty) ||
+            (state.documentNumber != null &&
+                state.documentNumber!.trim().isNotEmpty));
 
     CustomActionSheet.show(
       context: context,
@@ -274,6 +281,7 @@ class _AddPurchaseScreenState extends ConsumerState<AddPurchaseScreen>
           icon: Icons.bookmark_add_outlined,
           label: 'Guardar y continuar luego',
           subtitle: 'Guarda un borrador local para continuar luego',
+          enabled: hasChanges,
           onTap: () async {
             context.pop();
             await notifier.saveDraftNow(
@@ -296,6 +304,7 @@ class _AddPurchaseScreenState extends ConsumerState<AddPurchaseScreen>
               ? 'Descartar cambios locales'
               : 'Descartar borrador',
           subtitle: 'Elimina las modificaciones no guardadas',
+          enabled: hasChanges,
           onTap: () async {
             context.pop();
             final shouldDiscard = await _showDiscardDialog();
@@ -420,15 +429,12 @@ class _AddPurchaseScreenState extends ConsumerState<AddPurchaseScreen>
     // Only show FAB on Products (1) tab
     if (_tabController.index != 1) return null;
 
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 40.0),
-      child: CustomExtendedFab(
-        onPressed: () {
-          context.push('/my-purchases/add/select-product');
-        },
-        icon: Icons.add,
-        label: 'Agregar',
-      ),
+    return CustomExtendedFab(
+      onPressed: () {
+        context.push('/my-purchases/add/select-product');
+      },
+      icon: Icons.add,
+      label: 'Agregar',
     );
   }
 }

@@ -5,6 +5,7 @@ import '../../create_quote/widgets/quote_added_service_card.dart';
 import '../../create_quote/providers/quote_service_selection_provider.dart';
 import '../widgets/view_service_details_sheet.dart';
 import '../../../../portfolio/presentation/providers/lookup_providers.dart';
+import '../../../../../shared/utils/fab_scroll_padding.dart';
 
 class ViewQuoteServicesTab extends ConsumerWidget {
   final String quoteId;
@@ -13,6 +14,8 @@ class ViewQuoteServicesTab extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final state = ref.watch(viewQuoteProvider(quoteId));
+    final activeFabs = ref.watch(quoteActiveFabsCountProvider(quoteId));
+    final bottomPadding = FabScrollPadding.calculate(activeFabs);
 
     if (state.isLoading && state.quote == null) {
       return const Center(child: CircularProgressIndicator());
@@ -52,7 +55,7 @@ class ViewQuoteServicesTab extends ConsumerWidget {
 
     return ListView.builder(
       itemCount: services.length,
-      padding: const EdgeInsets.only(bottom: 120),
+      padding: EdgeInsets.only(bottom: bottomPadding),
       itemBuilder: (context, index) {
         final item = services[index];
 

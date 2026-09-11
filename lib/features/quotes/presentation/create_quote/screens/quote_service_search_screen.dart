@@ -295,30 +295,27 @@ class _QuoteServiceSearchScreenState
       },
       floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
       floatingActionButton: hasSelection
-          ? Padding(
-              padding: const EdgeInsets.only(bottom: 40.0),
-              child: CustomExtendedFab(
-                icon: Icons.check,
-                label:
-                    'Confirmar ($formattedQty $rateSymbol - $formattedTotal)',
-                isEnabled: true,
-                onPressed: () async {
-                  if (_selectedService == null || _selectedQuantity <= 0) {
-                    return;
-                  }
+          ? CustomExtendedFab(
+              icon: Icons.check,
+              label:
+                  'Confirmar ($formattedQty $rateSymbol - $formattedTotal)',
+              isEnabled: true,
+              onPressed: () async {
+                if (_selectedService == null || _selectedQuantity <= 0) {
+                  return;
+                }
 
-                  final item = await QuoteServiceSaleDetailsSheet.show(
-                    context,
-                    service: _selectedService!,
-                    selectedQuantity: _selectedQuantity,
-                  );
+                final item = await QuoteServiceSaleDetailsSheet.show(
+                  context,
+                  service: _selectedService!,
+                  selectedQuantity: _selectedQuantity,
+                );
 
-                  if (item != null && context.mounted) {
-                    ref.read(createQuoteProvider.notifier).addService(item);
-                    Navigator.pop(context, true);
-                  }
-                },
-              ),
+                if (item != null && context.mounted) {
+                  ref.read(createQuoteProvider.notifier).addService(item);
+                  Navigator.pop(context, true);
+                }
+              },
             )
           : null,
     );

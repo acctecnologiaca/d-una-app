@@ -5,6 +5,8 @@ import '../../../../../shared/widgets/info_block.dart';
 import '../../../../clients/presentation/widgets/contact_list_tile.dart';
 import '../../../../../core/utils/contact_utils.dart';
 import '../providers/view_report_provider.dart';
+import '../../../domain/models/service_report_model.dart';
+import '../../../../../shared/utils/fab_scroll_padding.dart';
 
 class ViewReportClientTab extends ConsumerWidget {
   final String reportId;
@@ -28,8 +30,13 @@ class ViewReportClientTab extends ConsumerWidget {
           report.clientCountry,
         ].where((e) => e != null && e.isNotEmpty).join(', ');
 
+        final isFinalized =
+            report.status == ServiceReportStatus.finalized.dbValue;
+        final bottomPadding =
+            isFinalized ? FabScrollPadding.none : FabScrollPadding.single;
+
         return SingleChildScrollView(
-          padding: const EdgeInsets.all(16.0),
+          padding: EdgeInsets.fromLTRB(16.0, 16.0, 16.0, bottomPadding),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [

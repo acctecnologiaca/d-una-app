@@ -2,6 +2,7 @@ import 'package:d_una_app/features/portfolio/presentation/providers/lookup_provi
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:d_una_app/shared/utils/fab_scroll_padding.dart';
 import '../providers/create_quote_provider.dart';
 import '../providers/quote_service_selection_provider.dart';
 import '../widgets/quote_added_service_card.dart';
@@ -59,7 +60,7 @@ class _QuoteServicesTabState extends ConsumerState<QuoteServicesTab>
 
     return ListView.builder(
       itemCount: services.length,
-      padding: const EdgeInsets.only(bottom: 120),
+      padding: const EdgeInsets.only(bottom: FabScrollPadding.single),
       itemBuilder: (context, index) {
         final serviceItem = services[index];
         final serviceModel = serviceModels

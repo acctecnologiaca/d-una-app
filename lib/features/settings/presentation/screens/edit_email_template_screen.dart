@@ -158,7 +158,7 @@ class _EditEmailTemplateScreenState
           children: [
             Expanded(
               child: SingleChildScrollView(
-                padding: const EdgeInsets.all(16),
+                padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
                 child: Form(
                   key: _formKey,
                   child: Column(
@@ -205,32 +205,25 @@ class _EditEmailTemplateScreenState
                             widget.typeId != 'report')
                           '{{nombre_asesor}}',
                       ]),
-                      const SizedBox(height: 48),
-                      FormBottomBar(
-                        onCancel: () => Navigator.of(context).maybePop(),
-                        onSave: _save,
-                        isLoading: _isLoading,
-                        isSaveEnabled: _hasChanges && !_isLoading,
-                      ),
                     ],
                   ),
                 ),
               ),
             ),
+            SafeArea(
+              top: false,
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(16.0, 8.0, 16.0, 16.0),
+                child: FormBottomBar(
+                  onCancel: () => Navigator.of(context).maybePop(),
+                  onSave: _save,
+                  isLoading: _isLoading,
+                  isSaveEnabled: _hasChanges && !_isLoading,
+                ),
+              ),
+            ),
           ],
         ),
-        /* bottomNavigationBar: SafeArea(
-          child: Padding(
-            padding: EdgeInsets.fromLTRB(
-              16.0,
-              8.0,
-              16.0,
-
-              MediaQuery.of(context).padding.bottom > 0 ? 0.0 : 40.0,
-            ),
-            child:
-          ),
-        ),*/
       ),
     );
   }

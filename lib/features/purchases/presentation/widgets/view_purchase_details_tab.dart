@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:d_una_app/shared/widgets/info_block.dart';
+import 'package:d_una_app/shared/utils/fab_scroll_padding.dart';
 import '../providers/purchase_details_provider.dart';
 
 class ViewPurchaseDetailsTab extends StatelessWidget {
@@ -21,7 +22,7 @@ class ViewPurchaseDetailsTab extends StatelessWidget {
           left: 16,
           right: 16,
           top: 24,
-          bottom: 100,
+          bottom: FabScrollPadding.single,
         ),
         child: Column(
           children: [

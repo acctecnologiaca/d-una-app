@@ -11,6 +11,7 @@ import 'package:d_una_app/shared/widgets/custom_dialog.dart';
 import 'package:d_una_app/shared/utils/string_utils.dart';
 import 'package:d_una_app/core/utils/contact_utils.dart';
 import 'package:d_una_app/features/profile/presentation/providers/profile_provider.dart';
+import 'package:d_una_app/shared/utils/fab_scroll_padding.dart';
 import 'package:d_una_app/core/theme/app_theme.dart';
 import 'package:d_una_app/core/pdf/templates/delivery_note_pdf_template.dart';
 import '../../../domain/models/delivery_note_model.dart';
@@ -309,20 +310,8 @@ class _ViewDeliveryNoteScreenState extends ConsumerState<ViewDeliveryNoteScreen>
         if (showSignFab) activeFabsCount++;
         if (showEditFab) activeFabsCount++;
 
-        final double bottomPadding;
-        switch (activeFabsCount) {
-          case 3:
-            bottomPadding = 256.0;
-            break;
-          case 2:
-            bottomPadding = 184.0;
-            break;
-          case 1:
-            bottomPadding = 112.0;
-            break;
-          default:
-            bottomPadding = 24.0;
-        }
+        final double bottomPadding =
+            FabScrollPadding.calculate(activeFabsCount);
 
         final isSentOrResent =
             note.status == DeliveryNoteStatus.sent ||
@@ -421,94 +410,91 @@ class _ViewDeliveryNoteScreenState extends ConsumerState<ViewDeliveryNoteScreen>
           ),
           floatingActionButton: activeFabsCount == 0
               ? null
-              : Padding(
-                  padding: const EdgeInsets.only(bottom: 40.0),
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    crossAxisAlignment: CrossAxisAlignment.end,
-                    children: [
-                      if (showWhatsAppFab) ...[
-                        FloatingActionButton(
-                          heroTag: 'fab_delivery_note_whatsapp',
-                          tooltip: 'Contactar por WhatsApp',
-                          onPressed: () {
-                            final phone =
-                                note.contactPhone ?? note.clientPhone!;
-                            ContactUtils.launchWhatsApp(phone);
-                          },
-                          backgroundColor: colors.greenBase,
-                          child: Image.asset(
-                            'assets/icons/whatsapp_icon.png',
-                            width: 28,
-                            height: 28,
-                            color: colors.greenBaseOn,
-                          ),
+              : Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: [
+                    if (showWhatsAppFab) ...[
+                      FloatingActionButton(
+                        heroTag: 'fab_delivery_note_whatsapp',
+                        tooltip: 'Contactar por WhatsApp',
+                        onPressed: () {
+                          final phone =
+                              note.contactPhone ?? note.clientPhone!;
+                          ContactUtils.launchWhatsApp(phone);
+                        },
+                        backgroundColor: colors.greenBase,
+                        child: Image.asset(
+                          'assets/icons/whatsapp_icon.png',
+                          width: 28,
+                          height: 28,
+                          color: colors.greenBaseOn,
                         ),
-                        if (showSignFab || showEditFab)
-                          const SizedBox(height: 16),
-                      ],
-                      if (showSignFab) ...[
-                        FloatingActionButton(
-                          heroTag: 'fab_delivery_note_sign',
-                          tooltip: 'Firmar como recibido',
-                          backgroundColor: colors.secondaryContainer,
-                          onPressed: () {
-                            if (note.hasMissingSerialsEffective) {
-                              CustomDialog.show(
-                                context: context,
-                                dialog: CustomDialog.confirmation(
-                                  icon: Symbols.warning,
-                                  iconColor: Colors.amber.shade800,
-                                  title: 'Seriales pendientes',
-                                  contentText:
-                                      'No se puede confirmar la recepción porque faltan seriales por asignar a uno o más productos.',
-                                  actions: [
-                                    TextButton(
-                                      onPressed: () =>
-                                          Navigator.of(context, rootNavigator: true)
-                                              .pop(),
-                                      child: const Text('Entendido'),
-                                    ),
-                                  ],
-                                ),
-                              );
-                              return;
-                            }
-                            ConfirmDeliveryNoteReceptionDialog.show(
-                              context,
-                              ref,
-                              note,
-                            );
-                          },
-                          child: Icon(
-                            Symbols.signature,
-                            color: colors.onSecondaryContainer,
-                          ),
-                        ),
-                        if (showEditFab) const SizedBox(height: 16),
-                      ],
-                      if (showEditFab) ...[
-                        FloatingActionButton(
-                          heroTag: 'fab_delivery_note_edit',
-                          tooltip: 'Editar Nota de Entrega',
-                          onPressed: () async {
-                            ref
-                                .read(createDeliveryNoteProvider.notifier)
-                                .loadExistingDeliveryNote(note);
-                            await context.push(
-                              '/delivery-notes/edit/${note.id}?tab=${_tabController.index}',
-                            );
-                            if (context.mounted) {
-                              ref.invalidate(
-                                deliveryNoteDetailProvider(widget.noteId),
-                              );
-                            }
-                          },
-                          child: const Icon(Icons.edit_outlined),
-                        ),
-                      ],
+                      ),
+                      if (showSignFab || showEditFab)
+                        const SizedBox(height: 16),
                     ],
-                  ),
+                    if (showSignFab) ...[
+                      FloatingActionButton(
+                        heroTag: 'fab_delivery_note_sign',
+                        tooltip: 'Firmar como recibido',
+                        backgroundColor: colors.secondaryContainer,
+                        onPressed: () {
+                          if (note.hasMissingSerialsEffective) {
+                            CustomDialog.show(
+                              context: context,
+                              dialog: CustomDialog.confirmation(
+                                icon: Symbols.warning,
+                                iconColor: Colors.amber.shade800,
+                                title: 'Seriales pendientes',
+                                contentText:
+                                    'No se puede confirmar la recepción porque faltan seriales por asignar a uno o más productos.',
+                                actions: [
+                                  TextButton(
+                                    onPressed: () =>
+                                        Navigator.of(context, rootNavigator: true)
+                                            .pop(),
+                                    child: const Text('Entendido'),
+                                  ),
+                                ],
+                              ),
+                            );
+                            return;
+                          }
+                          ConfirmDeliveryNoteReceptionDialog.show(
+                            context,
+                            ref,
+                            note,
+                          );
+                        },
+                        child: Icon(
+                          Symbols.signature,
+                          color: colors.onSecondaryContainer,
+                        ),
+                      ),
+                      if (showEditFab) const SizedBox(height: 16),
+                    ],
+                    if (showEditFab) ...[
+                      FloatingActionButton(
+                        heroTag: 'fab_delivery_note_edit',
+                        tooltip: 'Editar Nota de Entrega',
+                        onPressed: () async {
+                          ref
+                              .read(createDeliveryNoteProvider.notifier)
+                              .loadExistingDeliveryNote(note);
+                          await context.push(
+                            '/delivery-notes/edit/${note.id}?tab=${_tabController.index}',
+                          );
+                          if (context.mounted) {
+                            ref.invalidate(
+                              deliveryNoteDetailProvider(widget.noteId),
+                            );
+                          }
+                        },
+                        child: const Icon(Icons.edit_outlined),
+                      ),
+                    ],
+                  ],
                 ),
         );
       },

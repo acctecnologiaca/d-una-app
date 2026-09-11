@@ -764,10 +764,13 @@ class _VerificationScreenState extends ConsumerState<VerificationScreen> {
                   ? (company?.verificationStatus ?? 'unverified')
                   : profile.verificationStatus;
 
-              return SingleChildScrollView(
-                padding: const EdgeInsets.fromLTRB(16, 24, 16, 40),
-                child: Form(
-                  key: _formKey,
+              return Column(
+                children: [
+                  Expanded(
+                    child: SingleChildScrollView(
+                      padding: const EdgeInsets.fromLTRB(16, 24, 16, 24),
+                      child: Form(
+                        key: _formKey,
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
@@ -1237,22 +1240,29 @@ class _VerificationScreenState extends ConsumerState<VerificationScreen> {
                           ),
                           textAlign: TextAlign.center,
                         ),
-                        const SizedBox(height: 32),
-
-                        // Form Actions (only when unverified/editable)
-                        FormBottomBar(
-                          onCancel: () => context.pop(),
-                          onSave: (_isLoading || !_hasChanges)
-                              ? null
-                              : () => _save(profile, company, uploadedDocs),
-                          isSaveEnabled: !_isLoading && _hasChanges,
-                          isLoading: _isLoading,
-                        ),
                       ],
                     ],
                   ),
                 ),
-              );
+              ),
+            ),
+            if (!isAccountVerified)
+              SafeArea(
+                top: false,
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(16.0, 8.0, 16.0, 16.0),
+                  child: FormBottomBar(
+                    onCancel: () => context.pop(),
+                    onSave: (_isLoading || !_hasChanges)
+                        ? null
+                        : () => _save(profile, company, uploadedDocs),
+                    isSaveEnabled: !_isLoading && _hasChanges,
+                    isLoading: _isLoading,
+                  ),
+                ),
+              ),
+          ],
+        );
             },
           );
         },

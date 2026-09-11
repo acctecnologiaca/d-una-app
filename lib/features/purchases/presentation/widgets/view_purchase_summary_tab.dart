@@ -6,6 +6,7 @@ import 'package:http/http.dart' as http;
 import 'package:printing/printing.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:d_una_app/shared/utils/currency_formatter.dart';
+import 'package:d_una_app/shared/utils/fab_scroll_padding.dart';
 import 'package:d_una_app/features/supplier_orders/presentation/supplier_orders_list/providers/supplier_orders_providers.dart';
 import '../providers/purchase_details_provider.dart';
 import 'purchase_rejected_support_notice.dart';
@@ -41,7 +42,7 @@ class ViewPurchaseSummaryTab extends ConsumerWidget {
           left: 16,
           right: 16,
           top: 16,
-          bottom: 100,
+          bottom: FabScrollPadding.single,
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,

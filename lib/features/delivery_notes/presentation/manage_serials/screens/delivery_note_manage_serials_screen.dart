@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:d_una_app/shared/utils/fab_scroll_padding.dart';
 import 'package:d_una_app/shared/widgets/standard_app_bar.dart';
 import 'package:d_una_app/shared/widgets/custom_text_field.dart';
 import 'package:d_una_app/shared/widgets/custom_extended_fab.dart';
@@ -170,8 +171,9 @@ class _DeliveryNoteManageSerialsScreenState
         onSearchChanged: (val) => setState(() => _searchQuery = val),
         onSearchClosed: () => setState(() => _searchQuery = ''),
       ),
-      body: Column(
-        children: [
+      body: SafeArea(
+        child: Column(
+          children: [
           // 1. Tarjeta informativa del producto y progreso
           Container(
             width: double.infinity,
@@ -392,7 +394,12 @@ class _DeliveryNoteManageSerialsScreenState
                     ),
                   )
                 : ListView.separated(
-                    padding: const EdgeInsets.fromLTRB(16, 0, 16, 120),
+                    padding: const EdgeInsets.fromLTRB(
+                      16,
+                      0,
+                      16,
+                      FabScrollPadding.single,
+                    ),
                     itemCount: filteredSerials.length,
                     separatorBuilder: (context, index) => Divider(
                       height: 1,
@@ -440,13 +447,11 @@ class _DeliveryNoteManageSerialsScreenState
           ),
         ],
       ),
-      floatingActionButton: Padding(
-        padding: const EdgeInsets.only(bottom: 40.0),
-        child: CustomExtendedFab(
-          label: _noSerials ? 'Guardar' : 'Guardar ($assigned/$needed)',
-          icon: Icons.check,
-          onPressed: _onConfirmWithCheck,
-        ),
+    ),
+    floatingActionButton: CustomExtendedFab(
+        label: _noSerials ? 'Guardar' : 'Guardar ($assigned/$needed)',
+        icon: Icons.check,
+        onPressed: _onConfirmWithCheck,
       ),
     );
   }

@@ -377,227 +377,231 @@ class _EditProductScreenState extends ConsumerState<EditProductScreen> {
             onPressed: _onCancelWithConfirmation,
           ),
         ),
-        body: SingleChildScrollView(
-          padding: const EdgeInsets.all(16.0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              // ... Image Picker ...
-              // Reuse existing code, just skipping for brevity in replacement if allowed,
-              // but ReplaceContent needs exact match or replaced block.
-              // I will replace lower part of build method.
-              Center(
-                child: Stack(
+        body: Column(
+          children: [
+            Expanded(
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.fromLTRB(16.0, 16.0, 16.0, 24.0),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    Container(
-                      width: 128,
-                      height: 128,
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        color: colors.surfaceContainerHighest,
-                        border: Border.all(
-                          color: colors.outlineVariant.withValues(alpha: 0.2),
-                        ),
-                      ),
-                      clipBehavior: Clip.antiAlias,
-                      child: _newImageFile != null
-                          ? Image.file(_newImageFile!, fit: BoxFit.cover)
-                          : (widget.product.imageUrl != null &&
-                                widget.product.imageUrl!.isNotEmpty)
-                          ? CachedNetworkImage(
-                              imageUrl: widget.product.imageUrl!,
-                              fit: BoxFit.cover,
-                              placeholder: (context, url) => const Center(
-                                child: CircularProgressIndicator(),
+                    // ... Image Picker ...
+                    Center(
+                      child: Stack(
+                        children: [
+                          Container(
+                            width: 128,
+                            height: 128,
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              color: colors.surfaceContainerHighest,
+                              border: Border.all(
+                                color: colors.outlineVariant.withValues(alpha: 0.2),
                               ),
-                              errorWidget: (context, url, error) => const Icon(
-                                Icons.image_not_supported_outlined,
-                              ),
-                            )
-                          : Icon(
-                              Icons.inventory_2_outlined,
-                              size: 50,
-                              color: colors.onSurfaceVariant,
                             ),
-                    ),
-                    Positioned(
-                      bottom: 0,
-                      right: 0,
-                      child: GestureDetector(
-                        onTap: _pickImage,
-                        child: CircleAvatar(
-                          backgroundColor: colors.surfaceContainerHighest,
-                          radius: 18,
-                          child: Icon(
-                            Icons.edit,
-                            size: 18,
-                            color: colors.onSurface,
+                            clipBehavior: Clip.antiAlias,
+                            child: _newImageFile != null
+                                ? Image.file(_newImageFile!, fit: BoxFit.cover)
+                                : (widget.product.imageUrl != null &&
+                                      widget.product.imageUrl!.isNotEmpty)
+                                ? CachedNetworkImage(
+                                    imageUrl: widget.product.imageUrl!,
+                                    fit: BoxFit.cover,
+                                    placeholder: (context, url) => const Center(
+                                      child: CircularProgressIndicator(),
+                                    ),
+                                    errorWidget: (context, url, error) => const Icon(
+                                      Icons.image_not_supported_outlined,
+                                    ),
+                                  )
+                                : Icon(
+                                    Icons.inventory_2_outlined,
+                                    size: 50,
+                                    color: colors.onSurfaceVariant,
+                                  ),
                           ),
-                        ),
+                          Positioned(
+                            bottom: 0,
+                            right: 0,
+                            child: GestureDetector(
+                              onTap: _pickImage,
+                              child: CircleAvatar(
+                                backgroundColor: colors.surfaceContainerHighest,
+                                radius: 18,
+                                child: Icon(
+                                  Icons.edit,
+                                  size: 18,
+                                  color: colors.onSurface,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
                       ),
+                    ),
+                    const SizedBox(height: 32),
+
+                    // Form Fields
+                    CustomDropdown<Category>(
+                      label: 'Categoría',
+                      value: _selectedCategory,
+                      items: categoriesList,
+                      searchable: true,
+                      onChanged: (val) {
+                        setState(() => _selectedCategory = val);
+                      },
+                      itemLabelBuilder: (item) => item.name,
+                      showAddOption: true,
+                      addOptionLabel: 'Agregar categoría',
+                      addOptionValue: const Category(
+                        id: 'ADD_NEW',
+                        name: 'Agregar',
+                        type: 'other',
+                      ),
+                      onAddPressed: () async {
+                        final newCategory = await AddEditCategorySheet.show(context);
+                        if (newCategory != null && mounted) {
+                          setState(() {
+                            _selectedCategory = newCategory;
+                          });
+                          ref.invalidate(categoriesProvider);
+                        }
+                      },
+                    ),
+                    const SizedBox(height: 24),
+
+                    CustomTextField(
+                      label: 'Modelo/Nro. parte',
+                      controller: _modelController,
+                      suffixIcon: IconButton(
+                        icon: const Icon(Symbols.barcode_scanner),
+                        tooltip: 'Escanear código',
+                        onPressed: () async {
+                          final scannedCode = await Navigator.of(context)
+                              .push<String>(
+                                MaterialPageRoute(
+                                  builder: (context) => const BarcodeScannerScreen(),
+                                ),
+                              );
+                          if (scannedCode != null) {
+                            _modelController.text =
+                                scannedCode; // Will trigger listener
+                          }
+                        },
+                      ),
+                    ),
+                    const SizedBox(height: 24),
+
+                    CustomDropdown<Brand>(
+                      label: 'Marca',
+                      value: _selectedBrand,
+                      items: brandsList,
+                      searchable: true,
+                      onChanged: (val) {
+                        setState(() => _selectedBrand = val);
+                      },
+                      itemLabelBuilder: (item) => item.name,
+                      showAddOption: true,
+                      addOptionValue: const Brand(id: 'new', name: '___ADD___'),
+                      onAddPressed: () async {
+                        final newBrand = await AddEditBrandSheet.show(context);
+                        if (newBrand != null && mounted) {
+                          setState(() => _selectedBrand = newBrand);
+                        }
+                      },
+                      addOptionLabel: 'Agregar marca',
+                    ),
+                    const SizedBox(height: 24),
+
+                    CustomTextField(
+                      label: 'Nombre del producto*',
+                      controller: _nameController,
+                    ),
+                    const SizedBox(height: 24),
+
+                    CustomTextField(
+                      label: 'Características',
+                      controller: _specsController,
+                      maxLines: 6,
+                      minLines: 4,
+                      hintText: '- Resolución de 4K...\n- Interfaz Ethernet...',
+                    ),
+                    const SizedBox(height: 24),
+
+                    CustomDropdown<Uom>(
+                      label: 'Unidad de medida',
+                      value: _selectedUom,
+                      items: uomsList,
+                      searchable: true,
+                      onChanged: (val) {
+                        if (val != null && val.id != '___ADD___') {
+                          setState(() => _selectedUom = val);
+                        }
+                      },
+                      itemLabelBuilder: (item) => '${item.name} (${item.symbol})',
+                      showAddOption: true,
+                      addOptionLabel: 'Agregar unidad de medida',
+                      addOptionValue: const Uom(
+                        id: '___ADD___',
+                        name: '___ADD___',
+                        symbol: '',
+                      ),
+                      onAddPressed: _showAddUomDialog,
+                    ),
+
+                    const SizedBox(height: 24),
+
+                    // Switch para seriales
+                    SwitchListTile(
+                      title: const Text(
+                        'Solicitar serial por defecto',
+                        style: TextStyle(fontWeight: FontWeight.w600),
+                      ),
+                      subtitle: const Text(
+                        'Activa por defecto la petición de números de serie al ingresar o vender el producto.',
+                      ),
+                      value: _requiresSerials,
+                      onChanged: (val) {
+                        setState(() => _requiresSerials = val);
+                      },
+                      contentPadding: EdgeInsets.zero,
+                      activeThumbColor: Theme.of(context).colorScheme.primary,
+                    ),
+
+                    const SizedBox(height: 12),
+
+                    // Switch para garantía
+                    SwitchListTile(
+                      title: const Text(
+                        'Solicitar tiempo de garantía por defecto',
+                        style: TextStyle(fontWeight: FontWeight.w600),
+                      ),
+                      subtitle: const Text(
+                        'Sugiere por defecto la configuración de plazos de garantía para este producto.',
+                      ),
+                      value: _hasWarranty,
+                      onChanged: (val) {
+                        setState(() => _hasWarranty = val);
+                      },
+                      contentPadding: EdgeInsets.zero,
+                      activeThumbColor: Theme.of(context).colorScheme.primary,
                     ),
                   ],
                 ),
               ),
-              const SizedBox(height: 32),
-
-              // Form Fields
-              CustomDropdown<Category>(
-                label: 'Categoría',
-                value: _selectedCategory,
-                items: categoriesList,
-                searchable: true,
-                onChanged: (val) {
-                  setState(() => _selectedCategory = val);
-                },
-                itemLabelBuilder: (item) => item.name,
-                showAddOption: true,
-                addOptionLabel: 'Agregar categoría',
-                addOptionValue: const Category(
-                  id: 'ADD_NEW',
-                  name: 'Agregar',
-                  type: 'other',
-                ),
-                onAddPressed: () async {
-                  final newCategory = await AddEditCategorySheet.show(context);
-                  if (newCategory != null && mounted) {
-                    setState(() {
-                      _selectedCategory = newCategory;
-                    });
-                    ref.invalidate(categoriesProvider);
-                  }
-                },
-              ),
-              const SizedBox(height: 24),
-
-              CustomTextField(
-                label: 'Modelo/Nro. parte',
-                controller: _modelController,
-                suffixIcon: IconButton(
-                  icon: const Icon(Symbols.barcode_scanner),
-                  tooltip: 'Escanear código',
-                  onPressed: () async {
-                    final scannedCode = await Navigator.of(context)
-                        .push<String>(
-                          MaterialPageRoute(
-                            builder: (context) => const BarcodeScannerScreen(),
-                          ),
-                        );
-                    if (scannedCode != null) {
-                      _modelController.text =
-                          scannedCode; // Will trigger listener
-                    }
-                  },
+            ),
+            SafeArea(
+              top: false,
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(16.0, 8.0, 16.0, 16.0),
+                child: FormBottomBar(
+                  onCancel: _onCancelWithConfirmation,
+                  onSave: _validateAndSave,
+                  isSaveEnabled: _isDirty,
                 ),
               ),
-              const SizedBox(height: 24),
-
-              CustomDropdown<Brand>(
-                label: 'Marca',
-                value: _selectedBrand,
-                items: brandsList,
-                searchable: true,
-                onChanged: (val) {
-                  setState(() => _selectedBrand = val);
-                },
-                itemLabelBuilder: (item) => item.name,
-                showAddOption: true,
-                addOptionValue: const Brand(id: 'new', name: '___ADD___'),
-                onAddPressed: () async {
-                  final newBrand = await AddEditBrandSheet.show(context);
-                  if (newBrand != null && mounted) {
-                    setState(() => _selectedBrand = newBrand);
-                  }
-                },
-                addOptionLabel: 'Agregar marca',
-              ),
-              const SizedBox(height: 24),
-
-              CustomTextField(
-                label: 'Nombre del producto*',
-                controller: _nameController,
-              ),
-              const SizedBox(height: 24),
-
-              CustomTextField(
-                label: 'Características',
-                controller: _specsController,
-                maxLines: 6,
-                minLines: 4,
-                hintText: '- Resolución de 4K...\n- Interfaz Ethernet...',
-              ),
-              const SizedBox(height: 24),
-
-              CustomDropdown<Uom>(
-                label: 'Unidad de medida',
-                value: _selectedUom,
-                items: uomsList,
-                searchable: true,
-                onChanged: (val) {
-                  if (val != null && val.id != '___ADD___') {
-                    setState(() => _selectedUom = val);
-                  }
-                },
-                itemLabelBuilder: (item) => '${item.name} (${item.symbol})',
-                showAddOption: true,
-                addOptionLabel: 'Agregar unidad de medida',
-                addOptionValue: const Uom(
-                  id: '___ADD___',
-                  name: '___ADD___',
-                  symbol: '',
-                ),
-                onAddPressed: _showAddUomDialog,
-              ),
-
-              const SizedBox(height: 24),
-
-              // Switch para seriales
-              SwitchListTile(
-                title: const Text(
-                  'Solicitar serial por defecto',
-                  style: TextStyle(fontWeight: FontWeight.w600),
-                ),
-                subtitle: const Text(
-                  'Activa por defecto la petición de números de serie al ingresar o vender el producto.',
-                ),
-                value: _requiresSerials,
-                onChanged: (val) {
-                  setState(() => _requiresSerials = val);
-                },
-                contentPadding: EdgeInsets.zero,
-                activeThumbColor: Theme.of(context).colorScheme.primary,
-              ),
-
-              const SizedBox(height: 12),
-
-              // Switch para garantía
-              SwitchListTile(
-                title: const Text(
-                  'Solicitar tiempo de garantía por defecto',
-                  style: TextStyle(fontWeight: FontWeight.w600),
-                ),
-                subtitle: const Text(
-                  'Sugiere por defecto la configuración de plazos de garantía para este producto.',
-                ),
-                value: _hasWarranty,
-                onChanged: (val) {
-                  setState(() => _hasWarranty = val);
-                },
-                contentPadding: EdgeInsets.zero,
-                activeThumbColor: Theme.of(context).colorScheme.primary,
-              ),
-
-              const SizedBox(height: 48),
-
-              // Action Buttons
-              FormBottomBar(
-                onCancel: _onCancelWithConfirmation,
-                onSave: _validateAndSave,
-                isSaveEnabled: _isDirty,
-              ),
-              const SizedBox(height: 24),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
     );

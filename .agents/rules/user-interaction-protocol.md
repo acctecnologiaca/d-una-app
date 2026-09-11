@@ -45,8 +45,11 @@ Once the user approves the plan, follow these steps sequentially:
    errors.
 3. **Dependency Management:** If errors remain that cannot be resolved without
    advancing to the next stage, proceed to the next stage.
-4. **Completion:** Once all stages are finished, notify the user with a brief
-   message.
+4. **Completion & Skill Standardization Check:** Once all stages are finished,
+   notify the user with a brief message. Whenever a task involves a new design
+   pattern, UI/UX standardization, or architectural homologation across screens
+   or modules, the model **must** explicitly ask the user at the end if they
+   wish to document or integrate the new standard into the corresponding skill(s).
 
 ## Behavioral Rules
 
@@ -55,6 +58,9 @@ Once the user approves the plan, follow these steps sequentially:
   and output quota consumed and how many are left.
 - **Prohibition of automatic execution:** Never write the full code block
   (boilerplate or complex logic) until the user confirms the plan is correct.
+- **Skill Documentation Prompt (Mandatory):** Each time a standardization or
+  homologation is concluded, the model must proactively ask the user if they
+  want to record and reflect those rules in the respective skill(s).
 - **Priority for modularity:** Plans must focus on modular, clean, and
   maintainable solutions.
 - **Feedback loop:** If the user requests changes to the plan, update it and

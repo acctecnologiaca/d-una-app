@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:d_una_app/shared/widgets/app_toast.dart';
+import '../utils/fab_scroll_padding.dart';
 import 'custom_extended_fab.dart';
 
 class CustomMultiDropdown<T extends Object> extends StatefulWidget {
@@ -264,6 +265,7 @@ class _SearchableMultiSelectionSheetState<T extends Object>
       maxChildSize: 0.9,
       expand: false,
       builder: (context, scrollController) {
+        final bottomInset = MediaQuery.paddingOf(context).bottom;
         return Stack(
           children: [
             Column(
@@ -424,14 +426,14 @@ class _SearchableMultiSelectionSheetState<T extends Object>
                           },
                         ),
                 ),
-                const SizedBox(height: 80),
+                SizedBox(height: FabScrollPadding.single + bottomInset),
               ],
             ),
 
             // Floating Bottom Action Button (CustomExtendedFab matching FilterBottomSheet)
             Positioned(
-              bottom: 40,
-              right: 16,
+              bottom: 16.0 + bottomInset,
+              right: 16.0,
               child: CustomExtendedFab(
                 onPressed: () {
                   Navigator.pop(context, _selectedSet.toList());

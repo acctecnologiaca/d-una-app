@@ -830,9 +830,12 @@ class _AddReportTemporalProductScreenState
       ),
       body: Form(
         key: _formKey,
-        child: ListView(
-          padding: const EdgeInsets.fromLTRB(16, 16, 16, 40),
+        child: Column(
           children: [
+            Expanded(
+              child: ListView(
+                padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
+                children: [
             Text(
               'Usa este apartado solo para incluir productos o repuestos que no existan en tu inventario.',
               style: TextStyle(
@@ -1271,28 +1274,27 @@ class _AddReportTemporalProductScreenState
                 const SizedBox(height: 8),
               ],
             ),
-
-            const SizedBox(height: 24),
-            Padding(
-              padding: EdgeInsets.only(
-                top: 8.0,
-                bottom: MediaQuery.of(context).padding.bottom > 0
-                    ? MediaQuery.of(context).padding.bottom
-                    : 24.0,
-              ),
-              child: FormBottomBar(
-                onCancel: () => context.pop(),
-                onSave: (_hasChanges() &&
-                        _nameController.text.trim().isNotEmpty)
-                    ? _saveProduct
-                    : null,
-                saveLabel:
-                    'Confirmar (${_quantityController.text} $_selectedMeasure)',
-              ),
-            ),
           ],
         ),
       ),
-    );
+      SafeArea(
+        top: false,
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(16.0, 8.0, 16.0, 16.0),
+          child: FormBottomBar(
+            onCancel: () => context.pop(),
+            onSave: (_hasChanges() &&
+                    _nameController.text.trim().isNotEmpty)
+                ? _saveProduct
+                : null,
+            saveLabel:
+                'Confirmar (${_quantityController.text} $_selectedMeasure)',
+          ),
+        ),
+      ),
+    ],
+  ),
+),
+);
   }
 }

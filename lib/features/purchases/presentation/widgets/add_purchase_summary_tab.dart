@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:d_una_app/shared/utils/currency_formatter.dart';
 import 'package:d_una_app/shared/widgets/custom_extended_fab.dart';
+import 'package:d_una_app/shared/utils/fab_scroll_padding.dart';
 import 'package:d_una_app/shared/widgets/app_toast.dart';
 import 'package:d_una_app/features/purchases/presentation/providers/add_purchase_provider.dart';
 
@@ -63,7 +64,7 @@ class AddPurchaseSummaryTab extends ConsumerWidget {
           left: 16,
           right: 16,
           top: 16,
-          bottom: 100,
+          bottom: FabScrollPadding.single,
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -113,16 +114,14 @@ class AddPurchaseSummaryTab extends ConsumerWidget {
           final notifier = ref.read(addPurchaseProvider.notifier);
           final isEnabled = notifier.hasChanges && !state.isLoading;
 
-          return Padding(
-            padding: const EdgeInsets.only(bottom: 40.0),
-            child: CustomExtendedFab(
-              label: state.isLoading ? 'Guardando...' : 'Guardar',
-              icon: state.isLoading ? Icons.hourglass_empty : Icons.save_outlined,
-              isEnabled: isEnabled,
-              onPressed: isEnabled
-                  ? () async {
-                      final success = await ref
-                          .read(addPurchaseProvider.notifier)
+          return CustomExtendedFab(
+            label: state.isLoading ? 'Guardando...' : 'Guardar',
+            icon: state.isLoading ? Icons.hourglass_empty : Icons.save_outlined,
+            isEnabled: isEnabled,
+            onPressed: isEnabled
+                ? () async {
+                    final success = await ref
+                        .read(addPurchaseProvider.notifier)
                           .createPurchase();
                       if (success && context.mounted) {
                         if (onSaved != null) {
@@ -144,7 +143,6 @@ class AddPurchaseSummaryTab extends ConsumerWidget {
                       }
                     }
                   : null,
-            ),
           );
         },
       ),

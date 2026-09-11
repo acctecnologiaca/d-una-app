@@ -1,6 +1,7 @@
 import 'package:d_una_app/features/profile/domain/models/user_profile.dart';
 import 'package:d_una_app/features/quotes/presentation/quotes_list/widgets/quote_card.dart';
 import 'package:d_una_app/shared/widgets/custom_extended_fab.dart';
+import 'package:d_una_app/shared/utils/fab_scroll_padding.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -202,7 +203,12 @@ class _QuotesListScreenState extends ConsumerState<QuotesListScreen>
                           ? null
                           : adBannersAsync?.valueOrNull,
                       screenContext: 'quotes_list',
-                      padding: const EdgeInsets.fromLTRB(0, 0, 0, 64),
+                      padding: const EdgeInsets.fromLTRB(
+                        0,
+                        0,
+                        0,
+                        FabScrollPadding.list,
+                      ),
                       separatorBuilder: (context, index) => const Divider(
                         height: 0,
                         indent: 16,
@@ -234,16 +240,13 @@ class _QuotesListScreenState extends ConsumerState<QuotesListScreen>
       ),
       floatingActionButton: selection.isSelectionMode
           ? null
-          : Padding(
-              padding: const EdgeInsets.only(bottom: 0.0),
-              child: CustomExtendedFab(
-                onPressed: () {
-                  ref.invalidate(createQuoteProvider);
-                  context.push('/quotes/create');
-                },
-                icon: Icons.add,
-                label: 'Nueva',
-              ),
+          : CustomExtendedFab(
+              onPressed: () {
+                ref.invalidate(createQuoteProvider);
+                context.push('/quotes/create');
+              },
+              icon: Icons.add,
+              label: 'Nueva',
             ),
     );
   }

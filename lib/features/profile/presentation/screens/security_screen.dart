@@ -119,101 +119,110 @@ class _SecurityScreenState extends ConsumerState<SecurityScreen> {
       ),
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
-          : SingleChildScrollView(
-              padding: const EdgeInsets.fromLTRB(16, 24, 16, 40),
-              child: Form(
-                key: _formKey,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Ingresa una contraseña segura.',
-                      style: textTheme.bodyMedium?.copyWith(
-                        color: colors.onSurfaceVariant,
-                      ),
-                    ),
-                    const SizedBox(height: 24),
+          : Column(
+              children: [
+                Expanded(
+                  child: SingleChildScrollView(
+                    padding: const EdgeInsets.fromLTRB(16, 24, 16, 24),
+                    child: Form(
+                      key: _formKey,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Ingresa una contraseña segura.',
+                            style: textTheme.bodyMedium?.copyWith(
+                              color: colors.onSurfaceVariant,
+                            ),
+                          ),
+                          const SizedBox(height: 24),
 
-                    // Current Password
-                    CustomTextField(
-                      label: 'Contraseña actual*',
-                      controller: _currentPasswordController,
-                      obscureText: _obscureCurrent,
-                      maxLines: 1,
-                      suffixIcon: IconButton(
-                        icon: Icon(
-                          _obscureCurrent
-                              ? Icons.visibility_off
-                              : Icons.visibility,
-                          color: Colors.grey,
-                        ),
-                        onPressed: _toggleCurrent,
-                      ),
-                      validator: (val) {
-                        if (val == null || val.isEmpty) return 'Requerido';
-                        return null;
-                      },
-                    ),
-                    const SizedBox(height: 24),
+                          // Current Password
+                          CustomTextField(
+                            label: 'Contraseña actual*',
+                            controller: _currentPasswordController,
+                            obscureText: _obscureCurrent,
+                            maxLines: 1,
+                            suffixIcon: IconButton(
+                              icon: Icon(
+                                _obscureCurrent
+                                    ? Icons.visibility_off
+                                    : Icons.visibility,
+                                color: Colors.grey,
+                              ),
+                              onPressed: _toggleCurrent,
+                            ),
+                            validator: (val) {
+                              if (val == null || val.isEmpty) return 'Requerido';
+                              return null;
+                            },
+                          ),
+                          const SizedBox(height: 24),
 
-                    // New Password
-                    CustomTextField(
-                      label: 'Nueva contraseña*',
-                      controller: _newPasswordController,
-                      obscureText: _obscureNew,
-                      maxLines: 1,
-                      suffixIcon: IconButton(
-                        icon: Icon(
-                          _obscureNew ? Icons.visibility_off : Icons.visibility,
-                          color: Colors.grey,
-                        ),
-                        onPressed: _toggleNew,
-                      ),
-                      validator: (val) {
-                        if (val == null || val.isEmpty) return 'Requerido';
-                        if (!_isPasswordValid(val)) {
-                          return 'La contraseña no cumple con los requisitos';
-                        }
-                        return null;
-                      },
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      'Debe contener al menos 8 caractéres, números, símbolos y mayúsculas.',
-                      style: textTheme.bodySmall?.copyWith(
-                        color: colors.onSurfaceVariant,
-                        fontSize: 12,
-                      ),
-                    ),
-                    const SizedBox(height: 24),
+                          // New Password
+                          CustomTextField(
+                            label: 'Nueva contraseña*',
+                            controller: _newPasswordController,
+                            obscureText: _obscureNew,
+                            maxLines: 1,
+                            suffixIcon: IconButton(
+                              icon: Icon(
+                                _obscureNew ? Icons.visibility_off : Icons.visibility,
+                                color: Colors.grey,
+                              ),
+                              onPressed: _toggleNew,
+                            ),
+                            validator: (val) {
+                              if (val == null || val.isEmpty) return 'Requerido';
+                              if (!_isPasswordValid(val)) {
+                                return 'La contraseña no cumple con los requisitos';
+                              }
+                              return null;
+                            },
+                          ),
+                          const SizedBox(height: 8),
+                          Text(
+                            'Debe contener al menos 8 caractéres, números, símbolos y mayúsculas.',
+                            style: textTheme.bodySmall?.copyWith(
+                              color: colors.onSurfaceVariant,
+                              fontSize: 12,
+                            ),
+                          ),
+                          const SizedBox(height: 24),
 
-                    // Confirm Password
-                    CustomTextField(
-                      label: 'Confirma nueva contraseña*',
-                      controller: _confirmPasswordController,
-                      obscureText: _obscureConfirm,
-                      maxLines: 1,
-                      suffixIcon: IconButton(
-                        icon: Icon(
-                          _obscureConfirm
-                              ? Icons.visibility_off
-                              : Icons.visibility,
-                          color: Colors.grey,
-                        ),
-                        onPressed: _toggleConfirm,
+                          // Confirm Password
+                          CustomTextField(
+                            label: 'Confirma nueva contraseña*',
+                            controller: _confirmPasswordController,
+                            obscureText: _obscureConfirm,
+                            maxLines: 1,
+                            suffixIcon: IconButton(
+                              icon: Icon(
+                                _obscureConfirm
+                                    ? Icons.visibility_off
+                                    : Icons.visibility,
+                                color: Colors.grey,
+                              ),
+                              onPressed: _toggleConfirm,
+                            ),
+                            validator: (val) {
+                              if (val == null || val.isEmpty) return 'Requerido';
+                              if (val != _newPasswordController.text) {
+                                return 'Las contraseñas no coinciden';
+                              }
+                              return null;
+                            },
+                          ),
+                        ],
                       ),
-                      validator: (val) {
-                        if (val == null || val.isEmpty) return 'Requerido';
-                        if (val != _newPasswordController.text) {
-                          return 'Las contraseñas no coinciden';
-                        }
-                        return null;
-                      },
                     ),
-                    const SizedBox(height: 48),
-
-                    // Actions
-                    FormBottomBar(
+                  ),
+                ),
+                SafeArea(
+                  top: false,
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(16.0, 8.0, 16.0, 16.0),
+                    child: FormBottomBar(
                       onCancel: () => context.pop(),
                       onSave:
                           (_currentPasswordController.text.isNotEmpty &&
@@ -227,9 +236,9 @@ class _SecurityScreenState extends ConsumerState<SecurityScreen> {
                           _confirmPasswordController.text.isNotEmpty,
                       isLoading: _isLoading,
                     ),
-                  ],
+                  ),
                 ),
-              ),
+              ],
             ),
     );
   }

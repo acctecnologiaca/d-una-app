@@ -5,6 +5,7 @@ import 'package:material_symbols_icons/symbols.dart';
 import 'package:d_una_app/shared/widgets/custom_search_bar.dart';
 import 'package:d_una_app/shared/widgets/sort_selector.dart';
 import 'package:d_una_app/shared/widgets/custom_extended_fab.dart';
+import 'package:d_una_app/shared/utils/fab_scroll_padding.dart';
 import 'package:d_una_app/shared/widgets/empty_list_state.dart';
 import 'package:d_una_app/shared/widgets/paginated_list_view.dart';
 import 'package:d_una_app/shared/widgets/friendly_error_widget.dart';
@@ -178,7 +179,12 @@ class _DeliveryNotesListScreenState extends ConsumerState<DeliveryNotesListScree
                       onLoadMore: () => ref
                           .read(paginatedDeliveryNotesProvider.notifier)
                           .loadMore(),
-                      padding: const EdgeInsets.fromLTRB(0, 8, 0, 120),
+                      padding: const EdgeInsets.fromLTRB(
+                        0,
+                        8,
+                        0,
+                        FabScrollPadding.list,
+                      ),
                       separatorBuilder: (context, index) =>
                           const Divider(height: 0, color: Colors.transparent),
                       itemBuilder: (context, index, note) {
@@ -215,16 +221,13 @@ class _DeliveryNotesListScreenState extends ConsumerState<DeliveryNotesListScree
       ),
       floatingActionButton: selection.isSelectionMode
           ? null
-          : Padding(
-              padding: const EdgeInsets.only(bottom: 40.0),
-              child: CustomExtendedFab(
-                onPressed: () {
-                  ref.read(createDeliveryNoteProvider.notifier).reset();
-                  context.push('/delivery-notes/create');
-                },
-                label: 'Nueva',
-                icon: Icons.add,
-              ),
+          : CustomExtendedFab(
+              onPressed: () {
+                ref.read(createDeliveryNoteProvider.notifier).reset();
+                context.push('/delivery-notes/create');
+              },
+              label: 'Nueva',
+              icon: Icons.add,
             ),
     );
   }

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:material_symbols_icons/symbols.dart';
+import 'package:d_una_app/shared/utils/fab_scroll_padding.dart';
 import 'package:d_una_app/features/portfolio/data/models/product_model.dart';
 import 'package:d_una_app/features/portfolio/presentation/providers/products_provider.dart';
 import '../../../domain/models/delivery_note_item_model.dart';
@@ -69,7 +70,7 @@ class DeliveryNoteItemsTab extends ConsumerWidget {
     final allProducts = productsAsync.value ?? [];
 
     return ListView.builder(
-      padding: const EdgeInsets.fromLTRB(0, 8, 0, 120),
+      padding: const EdgeInsets.fromLTRB(0, 8, 0, FabScrollPadding.single),
       itemCount: state.items.length,
       itemBuilder: (context, index) {
         final item = state.items[index];

@@ -459,6 +459,7 @@ class _CreateDeliveryNoteScreenState
   }
 
   void _showActionsMenu(WidgetRef ref) {
+    final state = ref.read(createDeliveryNoteProvider);
     final notifier = ref.read(createDeliveryNoteProvider.notifier);
     final isEditing = widget.noteId != null && widget.noteId!.isNotEmpty;
 
@@ -470,6 +471,7 @@ class _CreateDeliveryNoteScreenState
           icon: Icons.bookmark_add_outlined,
           label: 'Guardar y continuar luego',
           subtitle: 'Guarda un borrador local para continuar luego',
+          enabled: state.isDirty,
           onTap: () async {
             context.pop();
             await notifier.saveDraftNow(
@@ -492,6 +494,7 @@ class _CreateDeliveryNoteScreenState
               ? 'Descartar cambios locales'
               : 'Descartar borrador',
           subtitle: 'Elimina las modificaciones no guardadas',
+          enabled: state.isDirty,
           onTap: () async {
             context.pop();
             final shouldDiscard = await _showDiscardDialog();
@@ -572,18 +575,20 @@ class _CreateDeliveryNoteScreenState
             ],
           ),
         ),
-        body: TabBarView(
-          controller: _tabController,
-          children: [
-            const DeliveryNoteDetailsTab(),
-            const DeliveryNoteClientTab(),
-            const DeliveryNoteItemsTab(),
-            const DeliveryNoteDeliveryTab(),
-            const DeliveryNoteObservationsTab(),
-            DeliveryNoteSummaryTab(
-              onNavigateToTab: (index) => _tabController.animateTo(index),
-            ),
-          ],
+        body: SafeArea(
+          child: TabBarView(
+            controller: _tabController,
+            children: [
+              const DeliveryNoteDetailsTab(),
+              const DeliveryNoteClientTab(),
+              const DeliveryNoteItemsTab(),
+              const DeliveryNoteDeliveryTab(),
+              const DeliveryNoteObservationsTab(),
+              DeliveryNoteSummaryTab(
+                onNavigateToTab: (index) => _tabController.animateTo(index),
+              ),
+            ],
+          ),
         ),
         floatingActionButton: _buildFab(state),
       ),
@@ -592,36 +597,30 @@ class _CreateDeliveryNoteScreenState
 
   Widget? _buildFab(DeliveryNoteCreateState state) {
     if (_tabController.index == 2) {
-      return Padding(
-        padding: const EdgeInsets.only(bottom: 40.0),
-        child: CustomExtendedFab(
-          label: 'Agregar',
-          icon: Icons.add,
-          onPressed: () {
-            Navigator.of(context).push(
-              MaterialPageRoute(
-                builder: (_) => const SelectDeliveryNoteProductScreen(),
-              ),
-            );
-          },
-        ),
+      return CustomExtendedFab(
+        label: 'Agregar',
+        icon: Icons.add,
+        onPressed: () {
+          Navigator.of(context).push(
+            MaterialPageRoute(
+              builder: (_) => const SelectDeliveryNoteProductScreen(),
+            ),
+          );
+        },
       );
     }
 
     if (_tabController.index == 4) {
-      return Padding(
-        padding: const EdgeInsets.only(bottom: 40.0),
-        child: CustomExtendedFab(
-          label: 'Agregar',
-          icon: Icons.add,
-          onPressed: () {
-            Navigator.of(context).push(
-              MaterialPageRoute(
-                builder: (_) => const SelectDeliveryNoteObservationScreen(),
-              ),
-            );
-          },
-        ),
+      return CustomExtendedFab(
+        label: 'Agregar',
+        icon: Icons.add,
+        onPressed: () {
+          Navigator.of(context).push(
+            MaterialPageRoute(
+              builder: (_) => const SelectDeliveryNoteObservationScreen(),
+            ),
+          );
+        },
       );
     }
 
@@ -631,14 +630,11 @@ class _CreateDeliveryNoteScreenState
           state.isDeliveryValid;
       final canSave = !state.isLoading && state.isDirty && isReadyToSave;
 
-      return Padding(
-        padding: const EdgeInsets.only(bottom: 40.0),
-        child: CustomExtendedFab(
-          label: state.isLoading ? 'Guardando...' : 'Guardar',
-          icon: state.isLoading ? Icons.hourglass_empty : Icons.save_outlined,
-          isEnabled: canSave,
-          onPressed: canSave ? _saveDeliveryNote : null,
-        ),
+      return CustomExtendedFab(
+        label: state.isLoading ? 'Guardando...' : 'Guardar',
+        icon: state.isLoading ? Icons.hourglass_empty : Icons.save_outlined,
+        isEnabled: canSave,
+        onPressed: canSave ? _saveDeliveryNote : null,
       );
     }
 

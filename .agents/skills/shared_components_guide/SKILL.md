@@ -53,25 +53,54 @@ La aplicación utiliza un esquema de color armonizado basado en la semilla `Colo
 - `32.0 px`: Separación vertical antes de bloques de acción final o grupos de inputs.
 - `40.0 px`: Margen inferior mínimo para pantallas sin FAB o respiro para botones fijos.
 
-### D. 📐 Regla Matemática Universal de Padding Dinámico para FABs
-Cuando una vista con scroll (`SingleChildScrollView` o `ListView`) contiene Floating Action Buttons, el contenido inferior **nunca debe quedar oculto** detrás de los botones flotantes. Debe calcularse y aplicarse en el `padding` inferior del scroll view:
+### D. 📐 Regla Matemática Universal de Padding Dinámico para FABs (MD3 Nativo)
+Cuando una vista con scroll (`SingleChildScrollView`, `ListView`, `PaginatedListView`) contiene Floating Action Buttons, el contenido inferior **nunca debe quedar oculto** detrás de los botones flotantes. Bajo el estándar nativo de Material Design 3 (sin envoltorios manuales adicionales), el botón reposa a $16\text{px}$ sobre el fondo del Scaffold (`SafeArea` o `NavigationBar`). Para garantizar una holgura de respiro visual confortable entre el contenido y el FAB más alto, se utiliza la clase canónica [`FabScrollPadding`](file:///c:/Users/aleja/flutter_apps/MVP/d_una_app/lib/shared/utils/fab_scroll_padding.dart):
 
-$$\text{bottomPadding} = \begin{cases} 
-184.0\text{ px} & \text{si hay 2 FABs apilados } (40\text{px base} + 56\text{px FAB 1} + 16\text{px gap} + 56\text{px FAB 2} + 16\text{px respiro}) \\ 
-112.0\text{ px} & \text{si hay 1 FAB } (40\text{px base} + 56\text{px FAB} + 16\text{px respiro}) \\ 
-24.0\text{ px} & \text{si no hay ningún FAB activo} 
+$$\text{bottomPadding}(N) = \begin{cases} 
+24.0\text{ px} & \text{si } N = 0 \text{ (`FabScrollPadding.none`: sin ningún FAB activo)} \\ 
+88.0\text{ px} & \text{listas paginadas (`FabScrollPadding.list`: con pie de página/footer en `PaginatedListView`)} \\
+112.0\text{ px} & \text{si hay 1 FAB } (\text{`FabScrollPadding.single`: } 16\text{px base} + 56\text{px FAB} + 40\text{px clearance}) \\ 
+184.0\text{ px} & \text{si hay 2 FABs apilados } (\text{`FabScrollPadding.doubleFab`: } 16\text{px base} + 112\text{px FABs} + 16\text{px gap} + 40\text{px clearance}) \\ 
+256.0\text{ px} & \text{si hay 3 FABs apilados } (\text{`FabScrollPadding.tripleFab`: } 16\text{px base} + 168\text{px FABs} + 32\text{px gaps} + 40\text{px clearance}) 
 \end{cases}$$
 
 ```dart
-final hasTwoFabs = showFab1 && showFab2;
-final hasOneFab = showFab1 ^ showFab2;
-final double dynamicBottomPadding = hasTwoFabs ? 184.0 : (hasOneFab ? 112.0 : 24.0);
+// Cálculo dinámico para vistas de documentos con N FABs (Resumen, Pestañas):
+final double dynamicBottomPadding = FabScrollPadding.calculate(activeFabsCount);
 
 SingleChildScrollView(
   padding: EdgeInsets.only(left: 16, right: 16, top: 24, bottom: dynamicBottomPadding),
   child: ...
 )
+
+// Para listas principales o paginadas (PaginatedListView):
+PaginatedListView<Entity>(
+  // Usa por defecto FabScrollPadding.list (88.0 px) cuando hay FAB activo
+  ...
+)
 ```
+
+#### ⚠️ Reglas Obligatorias de Integración:
+1. **Prohibición de Wrappers Artificiales en FABs:** Queda **estrictamente prohibido** envolver cualquier `FloatingActionButton` o `CustomExtendedFab` dentro de `Padding(bottom: 40.0)`. Los FABs deben colocarse directamente en la propiedad `floatingActionButton` del `Scaffold`.
+2. **Coordinación de `SafeArea` en Pantallas Standalone:**
+   - **Pantallas con `BottomNavigationBar`** (Rutas principales `/portfolio`, `/quotes`, `/reports`, `/clients`): La barra absorbe el inset del sistema (`MediaQuery.padding.bottom = 0`), manteniendo el FAB y la lista alineados naturalmente.
+   - **Pantallas Standalone (sin `BottomNavigationBar`)** (Notas de Entrega, Órdenes de Compra, Compras, Wizards, Selectores): Flutter empuja automáticamente el FAB hacia arriba según el inset del sistema (`MediaQuery.padding.bottom`). Para que la lista y el FAB mantengan su separación matemática exacta y no se encimen, el cuerpo del `Scaffold` **DEBE** envolverse siempre en `SafeArea(child: ...)` (por ejemplo, `body: SafeArea(child: Column(...))` o `body: SafeArea(child: TabBarView(...))`).
+3. **Modales y Bottom Sheets con FAB Flotante (`DraggableScrollableSheet` / `Stack`):**
+   - En hojas modales donde el FAB flota sobre una lista dentro de un `Stack` (como [`FilterBottomSheet`](file:///c:/Users/aleja/flutter_apps/MVP/d_una_app/lib/shared/widgets/filter_bottom_sheet.dart), [`CustomMultiDropdown`](file:///c:/Users/aleja/flutter_apps/MVP/d_una_app/lib/shared/widgets/custom_multi_dropdown.dart) o [`SelectOcSuppliersSheet`](file:///c:/Users/aleja/flutter_apps/MVP/d_una_app/lib/features/quotes/presentation/view_quote/widgets/select_oc_suppliers_sheet.dart)), el FAB **DEBE** posicionarse a $16.0\text{px}$ sobre el inset del sistema:
+     ```dart
+     final bottomInset = MediaQuery.paddingOf(context).bottom;
+     ...
+     Positioned(
+       bottom: 16.0 + bottomInset,
+       right: 16.0,
+       child: CustomExtendedFab(...),
+     )
+     ```
+   - **Scroll Clearance:** El listado interno **DEBE** dejar un clearance inferior dinámico que compense tanto el FAB como el área segura:
+     ```dart
+     SizedBox(height: FabScrollPadding.single + bottomInset)
+     ```
+   - **Prohibición Estricta:** Queda **estrictamente prohibido** hardcodear valores como `bottom: 40`, `bottom: 24` o espaciadores fijos insuficientes como `SizedBox(height: 80)` en modales.
 
 ---
 

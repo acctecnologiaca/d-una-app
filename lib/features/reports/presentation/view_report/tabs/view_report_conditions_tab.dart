@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:material_symbols_icons/symbols.dart';
 import '../providers/view_report_provider.dart';
+import '../../../domain/models/service_report_model.dart';
+import '../../../../../shared/utils/fab_scroll_padding.dart';
 
 class ViewReportConditionsTab extends ConsumerWidget {
   final String reportId;
@@ -16,6 +18,10 @@ class ViewReportConditionsTab extends ConsumerWidget {
       error: (err, _) => Center(child: Text('Error: $err')),
       data: (report) {
         final conditions = report.conditions ?? [];
+        final isFinalized =
+            report.status == ServiceReportStatus.finalized.dbValue;
+        final bottomPadding =
+            isFinalized ? FabScrollPadding.none : FabScrollPadding.single;
 
         if (conditions.isEmpty) {
           return Column(
@@ -41,7 +47,7 @@ class ViewReportConditionsTab extends ConsumerWidget {
         }
 
         return ListView.builder(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          padding: EdgeInsets.fromLTRB(16, 12, 16, bottomPadding),
           itemCount: conditions.length,
           itemBuilder: (context, index) {
             final condition = conditions[index];

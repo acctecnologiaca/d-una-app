@@ -720,35 +720,32 @@ class _ViewQuoteScreenState extends ConsumerState<ViewQuoteScreen>
             return const SizedBox.shrink();
           }
 
-          return Padding(
-            padding: const EdgeInsets.only(bottom: 40.0),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.end,
-              children: [
-                if (showWhatsAppFab) ...[
-                  FloatingActionButton(
-                    heroTag: 'quote_whatsapp_contact_fab',
-                    onPressed: () => _contactClientWhatsApp(context, quote),
-                    backgroundColor: colors.greenBase,
-                    tooltip: 'Contactar por WhatsApp',
-                    child: Image.asset(
-                      'assets/icons/whatsapp_icon.png',
-                      width: 28,
-                      height: 28,
-                      color: colors.greenBaseOn,
-                    ),
+          return Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              if (showWhatsAppFab) ...[
+                FloatingActionButton(
+                  heroTag: 'quote_whatsapp_contact_fab',
+                  onPressed: () => _contactClientWhatsApp(context, quote),
+                  backgroundColor: colors.greenBase,
+                  tooltip: 'Contactar por WhatsApp',
+                  child: Image.asset(
+                    'assets/icons/whatsapp_icon.png',
+                    width: 28,
+                    height: 28,
+                    color: colors.greenBaseOn,
                   ),
-                  if (canEdit) const SizedBox(height: 16),
-                ],
-                if (canEdit)
-                  FloatingActionButton(
-                    heroTag: 'quote_edit_fab',
-                    onPressed: _handleEditQuote,
-                    child: const Icon(Icons.edit_outlined),
-                  ),
+                ),
+                if (canEdit) const SizedBox(height: 16),
               ],
-            ),
+              if (canEdit)
+                FloatingActionButton(
+                  heroTag: 'quote_edit_fab',
+                  onPressed: _handleEditQuote,
+                  child: const Icon(Icons.edit_outlined),
+                ),
+            ],
           );
         },
       ),

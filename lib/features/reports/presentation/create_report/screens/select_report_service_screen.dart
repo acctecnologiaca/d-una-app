@@ -6,6 +6,7 @@ import '../../../../../shared/widgets/standard_app_bar.dart';
 import '../../../../../shared/widgets/custom_search_bar.dart';
 import '../../../../../shared/widgets/sort_selector.dart';
 import '../../../../../shared/widgets/custom_extended_fab.dart';
+import '../../../../../shared/utils/fab_scroll_padding.dart';
 import '../../../../../shared/widgets/friendly_error_widget.dart';
 import '../../../../../shared/utils/currency_formatter.dart';
 import '../../../../portfolio/data/models/service_model.dart';
@@ -57,8 +58,9 @@ class _SelectReportServiceScreenState
         title: 'Agregar servicio',
         subtitle: reportNumber.isNotEmpty ? 'Reporte #$reportNumber' : null,
       ),
-      body: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
+      body: SafeArea(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           // 1. Search Bar (Read-only -> Navigates to Search)
           Padding(
@@ -186,7 +188,7 @@ class _SelectReportServiceScreenState
                 }
 
                 return ListView.separated(
-                  //padding: const EdgeInsets.symmetric(horizontal: 16),
+                  padding: const EdgeInsets.fromLTRB(16, 0, 16, FabScrollPadding.single),
                   itemCount: sortedServices.length,
                   separatorBuilder: (_, _) =>
                       const Divider(height: 1, color: Colors.transparent),
@@ -230,14 +232,13 @@ class _SelectReportServiceScreenState
           ),
         ],
       ),
+      ),
       floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
       floatingActionButton: hasSelection
-          ? Padding(
-              padding: const EdgeInsets.only(bottom: 40.0),
-              child: CustomExtendedFab(
-                icon: Icons.check,
-                label:
-                    'Confirmar ($formattedQty $rateSymbol - $formattedTotal)',
+          ? CustomExtendedFab(
+              icon: Icons.check,
+              label:
+                  'Confirmar ($formattedQty $rateSymbol - $formattedTotal)',
                 isEnabled: true,
                 onPressed: () async {
                   if (_selectedService == null || _selectedQuantity <= 0) {
@@ -255,8 +256,7 @@ class _SelectReportServiceScreenState
                     context.pop(true);
                   }
                 },
-              ),
-            )
+              )
           : null,
     );
   }

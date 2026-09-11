@@ -262,10 +262,13 @@ class _AddShippingMethodScreenState
 
           return _isLoading
               ? const Center(child: CircularProgressIndicator())
-              : SingleChildScrollView(
-                  padding: const EdgeInsets.fromLTRB(16, 24, 16, 40),
-                  child: Form(
-                    key: _formKey,
+              : Column(
+                  children: [
+                    Expanded(
+                      child: SingleChildScrollView(
+                        padding: const EdgeInsets.fromLTRB(16, 24, 16, 24),
+                        child: Form(
+                          key: _formKey,
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
@@ -457,20 +460,25 @@ class _AddShippingMethodScreenState
                             ),
                           ],
                         ),
-                        const SizedBox(height: 48),
-
-                        // Actions
-                        FormBottomBar(
-                          onCancel: () => context.pop(),
-                          onSave: _hasChanges ? () => _save(profile.id) : null,
-                          isSaveEnabled: _hasChanges,
-                          isLoading: _isLoading,
-                        ),
-                        const SizedBox(height: 24),
                       ],
                     ),
                   ),
-                );
+                ),
+              ),
+              SafeArea(
+                top: false,
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(16.0, 8.0, 16.0, 16.0),
+                  child: FormBottomBar(
+                    onCancel: () => context.pop(),
+                    onSave: _hasChanges ? () => _save(profile.id) : null,
+                    isSaveEnabled: _hasChanges,
+                    isLoading: _isLoading,
+                  ),
+                ),
+              ),
+            ],
+          );
         },
       ),
     );

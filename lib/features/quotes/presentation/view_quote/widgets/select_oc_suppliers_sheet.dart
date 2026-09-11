@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
+import 'package:d_una_app/shared/utils/fab_scroll_padding.dart';
 import 'package:d_una_app/shared/widgets/custom_extended_fab.dart';
 import 'package:d_una_app/features/supplier_orders/domain/models/quote_supplier_oc_status.dart';
 
@@ -77,6 +78,7 @@ class _SelectOcSuppliersSheetState extends State<SelectOcSuppliersSheet> {
       maxChildSize: 0.95,
       expand: false,
       builder: (context, scrollController) {
+        final bottomInset = MediaQuery.paddingOf(context).bottom;
         return Stack(
           children: [
             Column(
@@ -281,13 +283,13 @@ class _SelectOcSuppliersSheetState extends State<SelectOcSuppliersSheet> {
                     },
                   ),
                 ),
-                const SizedBox(height: 80),
+                SizedBox(height: FabScrollPadding.single + bottomInset),
               ],
             ),
             if (_selectedSupplierIds.isNotEmpty)
               Positioned(
-                bottom: 24,
-                right: 16,
+                bottom: 16.0 + bottomInset,
+                right: 16.0,
                 child: CustomExtendedFab(
                   onPressed: () {
                     widget.onConfirm(

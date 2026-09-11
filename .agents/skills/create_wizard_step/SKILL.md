@@ -102,11 +102,94 @@ class _CreateMyDocumentScreenState extends ConsumerState<CreateMyDocumentScreen>
   }
 ```
 
-### 2. Pestaña de Resumen y Guardado
-La última pestaña (Resumen) consolida los datos ingresados en las pestañas anteriores y contiene el botón de confirmación final. Al completarse con éxito la inserción en base de datos:
-1. Se invoca obligatoriamente `notifier.clearDraft()`.
-2. Se muestra retroalimentación flotante con `AppToast.showSuccess(context, 'Documento creado exitosamente')`.
-3. Se navega a la pantalla de visualización ejecutiva del documento.
+### 2. Las 3 Modalidades Canónicas de Guardado
+
+El guardado de documentos ejecutivos y formularios comerciales sigue tres modalidades canónicas según el contexto:
+
+```text
+┌─────────────────────────────────────────────────────────────────────────────┐
+│ MODALIDAD 1: CREACIÓN DE DOCUMENTO DESDE CERO (documentId == null)          │
+│  • Botón de guardado: EXCLUSIVAMENTE en el CustomExtendedFab de la pestaña  │
+│    "Resumen". El AppBar NO contiene botón de guardar.                       │
+│  • Habilitación reactiva: Requiere cambios reales del usuario (isDirty /     │
+│    hasChanges) y campos obligatorios válidos (isDetailsValid, notEmpty).    │
+│  • Al salir sin cambios: Cierre limpio sin generar borrador ni toasts.      │
+│  • Al salir con cambios pendientes: Auto-guarda borrador silencioso y       │
+│    notifica con AppToast.info('Cambios guardados temporalmente').           │
+│  • Al guardar en backend: Limpia borrador (clearDraft), invalida providers  │
+│    y navega a la vista ejecutiva del documento.                             │
+├─────────────────────────────────────────────────────────────────────────────┤
+│ MODALIDAD 2: EDICIÓN DE DOCUMENTO EXISTENTE (documentId != null)             │
+│  • Botón Dual Simétrico: El guardado está disponible en DOS lugares:        │
+│    1. En el AppBar.actions: IconButton(icon: save_outlined, onPressed: ...)│
+│    2. En el CustomExtendedFab de la pestaña "Resumen".                      │
+│  • Habilitación Simultánea Reactiva: Ambos botones se habilitan ÚNICAMENTE  │
+│    si el usuario modificó algún dato (state.isDirty / state.hasChanges).    │
+│    Si revierte los cambios manualmente, ambos se deshabilitan al unísono.   │
+│  • Tooltip reactivo: 'Guardar cambios' vs 'Sin modificaciones'.             │
+│  • Al guardar: AppToast.success, limpia borrador, invalida providers de     │
+│    detalle y listado, y cierra el modo edición / pantalla.                  │
+├─────────────────────────────────────────────────────────────────────────────┤
+│ MODALIDAD 3: AUTO-GUARDADO TEMPORAL Y RECUPERACIÓN REACTIVA                 │
+│  • Disparadores: Cambio de pestaña, app en pausa/segundo plano (lifecycle)  │
+│    y navegación hacia atrás (PopScope -> _handlePop).                       │
+│  • Condición estricta: Solo persiste si hay cambios reales del usuario.     │
+│  • Al reabrir: Despliega DraftToast.show ofreciendo "Descartar".            │
+│  • Al descartar: Dialog destructivo (CustomDialog.destructive) que purga el │
+│    borrador en SharedPreferences y restaura el estado original.             │
+└─────────────────────────────────────────────────────────────────────────────┘
+```
+
+### 3. Estandarización del Menú Vertical de Acciones (`more_vert`)
+Todo creador o editor de documentos comerciales debe incluir en `AppBar.actions` el menú vertical estandarizado mediante [`CustomActionSheet`](file:///c:/Users/aleja/flutter_apps/MVP/d_una_app/lib/shared/widgets/custom_action_sheet.dart). Queda estrictamente prohibido usar botones ad-hoc o cajas espaciadoras artificiales (`const SizedBox(width: 48)`).
+
+```dart
+AppBar(
+  actions: [
+    if (widget.documentId != null) // Solo en modo edición
+      IconButton(
+        icon: Icon(state.isLoading ? Icons.hourglass_empty : Icons.save_outlined),
+        tooltip: canSave ? 'Guardar cambios' : 'Sin modificaciones',
+        onPressed: canSave ? _saveDocument : null,
+      ),
+    IconButton(
+      icon: Icon(Icons.more_vert, color: colors.onSurfaceVariant),
+      onPressed: () => _showActionsMenu(ref),
+    ),
+  ],
+)
+```
+
+El método `_showActionsMenu(ref)` despliega dos opciones con **habilitación reactiva simétrica** (`enabled: hasChanges`):
+1. **"Guardar y continuar luego"** (`bookmark_added_outlined`):
+   - Habilitado solo si hay modificaciones no guardadas (`hasChanges`).
+   - Persiste el borrador en `SharedPreferences`, muestra `AppToast.info(context, message: 'Cambios guardados temporalmente')` y sale de la vista.
+2. **"Descartar cambios locales"** (`delete_outline`, `colors.error`):
+   - Habilitado solo si hay modificaciones no guardadas (`hasChanges`).
+   - Muestra confirmación preventiva destructiva con [`CustomDialog.destructive`](file:///c:/Users/aleja/flutter_apps/MVP/d_una_app/lib/shared/widgets/custom_dialog.dart). Al confirmar, elimina el borrador local, restablece los datos originales y notifica al usuario.
+
+### 4. Floating Action Buttons (FABs), Clearance y SafeArea
+En los creadores de documentos comerciales, los botones de acción principal (`Agregar` en pestañas intermedias y `Guardar` en Resumen) se presentan mediante `CustomExtendedFab`:
+1. **Scroll Clearance en Pestañas:** Todas las pestañas que contengan contenido scrollable (`SingleChildScrollView`, `ListView.builder`, `ReorderableListView`) y convivan con un FAB activo **DEBEN** aplicar `FabScrollPadding.single` (`112.0px`) en su padding inferior:
+   ```dart
+   SingleChildScrollView(
+     padding: const EdgeInsets.fromLTRB(16, 16, 16, FabScrollPadding.single),
+     child: ...
+   )
+   ```
+2. **Coordinación con `SafeArea`:** Al tratarse de flujos independientes a pantalla completa (sin `BottomNavigationBar`), el `Scaffold` empuja automáticamente el FAB según `MediaQuery.padding.bottom`. Para evitar desajustes visuales, el cuerpo del Scaffold **DEBE** envolverse siempre en `SafeArea`:
+   ```dart
+   Scaffold(
+     body: SafeArea(
+       child: TabBarView(
+         controller: _tabController,
+         children: [...],
+       ),
+     ),
+     floatingActionButton: _buildFab(),
+   )
+   ```
+3. **Prohibición de Padding Artificial:** Queda **estrictamente prohibido** envolver los `CustomExtendedFab` en `Padding(bottom: 40.0)`. Los FABs deben asignarse directamente al `Scaffold`.
 
 ---
 

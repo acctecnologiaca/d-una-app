@@ -255,156 +255,164 @@ class _ContactDataScreenState extends ConsumerState<ContactDataScreen> {
                   });
                 }
 
-                return SingleChildScrollView(
-                  padding: const EdgeInsets.fromLTRB(16, 24, 16, 40),
-                  child: Form(
-                    key: _formKey,
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'Tus datos de contacto son:',
-                          style: textTheme.bodyLarge?.copyWith(
-                            color: colors.onSurface,
-                          ),
-                        ),
-                        const SizedBox(height: 24),
-
-                        // Email Field (Read Only)
-                        CustomTextField(
-                          controller: _emailController,
-                          label: 'Correo electrónico*',
-                          enabled: false,
-                        ),
-                        const SizedBox(height: 32),
-
-                        // Primary Phone Section
-                        Text(
-                          'Teléfono principal',
-                          style: textTheme.titleMedium?.copyWith(
-                            fontWeight: FontWeight.bold,
-                            color: colors.onSurface,
-                          ),
-                        ),
-                        const SizedBox(height: 16),
-                        Row(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            // Code Dropdown
-                            SizedBox(
-                              width: 110,
-                              child: CustomDropdown<String>(
-                                label: 'Código',
-                                value: _selectedPrimaryCode,
-                                items: _phoneCodes,
-                                itemLabelBuilder: (item) => item,
-                                onChanged: (val) {
-                                  if (val != null) {
-                                    setState(() {
-                                      _selectedPrimaryCode = val;
-                                    });
-                                  }
-                                },
+                return Column(
+                  children: [
+                    Expanded(
+                      child: SingleChildScrollView(
+                        padding: const EdgeInsets.fromLTRB(16, 24, 16, 24),
+                        child: Form(
+                          key: _formKey,
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'Tus datos de contacto son:',
+                                style: textTheme.bodyLarge?.copyWith(
+                                  color: colors.onSurface,
+                                ),
                               ),
-                            ),
-                            const SizedBox(width: 16),
-                            // Phone Number
-                            Expanded(
-                              child: CustomTextField(
-                                controller: _primaryPhoneController,
-                                label: 'Teléfono*',
-                                keyboardType: TextInputType.phone,
-                                inputFormatters: [
-                                  FilteringTextInputFormatter.digitsOnly,
-                                  LengthLimitingTextInputFormatter(7),
+                              const SizedBox(height: 24),
+
+                              // Email Field (Read Only)
+                              CustomTextField(
+                                controller: _emailController,
+                                label: 'Correo electrónico*',
+                                enabled: false,
+                              ),
+                              const SizedBox(height: 32),
+
+                              // Primary Phone Section
+                              Text(
+                                'Teléfono principal',
+                                style: textTheme.titleMedium?.copyWith(
+                                  fontWeight: FontWeight.bold,
+                                  color: colors.onSurface,
+                                ),
+                              ),
+                              const SizedBox(height: 16),
+                              Row(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  // Code Dropdown
+                                  SizedBox(
+                                    width: 110,
+                                    child: CustomDropdown<String>(
+                                      label: 'Código',
+                                      value: _selectedPrimaryCode,
+                                      items: _phoneCodes,
+                                      itemLabelBuilder: (item) => item,
+                                      onChanged: (val) {
+                                        if (val != null) {
+                                          setState(() {
+                                            _selectedPrimaryCode = val;
+                                          });
+                                        }
+                                      },
+                                    ),
+                                  ),
+                                  const SizedBox(width: 16),
+                                  // Phone Number
+                                  Expanded(
+                                    child: CustomTextField(
+                                      controller: _primaryPhoneController,
+                                      label: 'Teléfono*',
+                                      keyboardType: TextInputType.phone,
+                                      inputFormatters: [
+                                        FilteringTextInputFormatter.digitsOnly,
+                                        LengthLimitingTextInputFormatter(7),
+                                      ],
+                                      validator: (val) {
+                                        if (val == null || val.trim().isEmpty) {
+                                          return 'El teléfono es obligatorio';
+                                        }
+                                        if (val.trim().length != 7) {
+                                          return 'Debe tener 7 dígitos';
+                                        }
+                                        return null;
+                                      },
+                                    ),
+                                  ),
                                 ],
-                                validator: (val) {
-                                  if (val == null || val.trim().isEmpty) {
-                                    return 'El teléfono es obligatorio';
-                                  }
-                                  if (val.trim().length != 7) {
-                                    return 'Debe tener 7 dígitos';
-                                  }
-                                  return null;
-                                },
                               ),
-                            ),
-                          ],
-                        ),
 
-                        const SizedBox(height: 32),
+                              const SizedBox(height: 32),
 
-                        // Alternative Phone Section
-                        Text(
-                          'Teléfono alternativo',
-                          style: textTheme.titleMedium?.copyWith(
-                            fontWeight: FontWeight.bold,
-                            color: colors.onSurface,
+                              // Alternative Phone Section
+                              Text(
+                                'Teléfono alternativo',
+                                style: textTheme.titleMedium?.copyWith(
+                                  fontWeight: FontWeight.bold,
+                                  color: colors.onSurface,
+                                ),
+                              ),
+                              const SizedBox(height: 16),
+                              Row(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  // Code Dropdown (Optional with blank option)
+                                  SizedBox(
+                                    width: 110,
+                                    child: CustomDropdown<String>(
+                                      label: 'Código',
+                                      isRequired: false,
+                                      value: _selectedAltCode,
+                                      items: _altPhoneCodes,
+                                      itemLabelBuilder: (item) =>
+                                          item.isEmpty ? ' ' : item,
+                                      onChanged: (val) {
+                                        setState(() {
+                                          _selectedAltCode =
+                                              (val == null || val.isEmpty)
+                                              ? null
+                                              : val;
+                                        });
+                                        _formKey.currentState?.validate();
+                                      },
+                                      validator: (val) {
+                                        final altDigits = _altPhoneController.text
+                                            .trim();
+                                        if (altDigits.isNotEmpty &&
+                                            (val == null || val.isEmpty)) {
+                                          return 'Requerido';
+                                        }
+                                        return null;
+                                      },
+                                    ),
+                                  ),
+                                  const SizedBox(width: 16),
+
+                                  // Phone Number
+                                  Expanded(
+                                    child: CustomTextField(
+                                      controller: _altPhoneController,
+                                      label: 'Teléfono (Opcional)',
+                                      keyboardType: TextInputType.phone,
+                                      inputFormatters: [
+                                        FilteringTextInputFormatter.digitsOnly,
+                                        LengthLimitingTextInputFormatter(7),
+                                      ],
+                                      validator: (val) {
+                                        if (val != null &&
+                                            val.trim().isNotEmpty &&
+                                            val.trim().length != 7) {
+                                          return 'Debe tener 7 dígitos';
+                                        }
+                                        return null;
+                                      },
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ],
                           ),
                         ),
-                        const SizedBox(height: 16),
-                        Row(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            // Code Dropdown (Optional with blank option)
-                            SizedBox(
-                              width: 110,
-                              child: CustomDropdown<String>(
-                                label: 'Código',
-                                isRequired: false,
-                                value: _selectedAltCode,
-                                items: _altPhoneCodes,
-                                itemLabelBuilder: (item) =>
-                                    item.isEmpty ? ' ' : item,
-                                onChanged: (val) {
-                                  setState(() {
-                                    _selectedAltCode =
-                                        (val == null || val.isEmpty)
-                                        ? null
-                                        : val;
-                                  });
-                                  _formKey.currentState?.validate();
-                                },
-                                validator: (val) {
-                                  final altDigits = _altPhoneController.text
-                                      .trim();
-                                  if (altDigits.isNotEmpty &&
-                                      (val == null || val.isEmpty)) {
-                                    return 'Requerido';
-                                  }
-                                  return null;
-                                },
-                              ),
-                            ),
-                            const SizedBox(width: 16),
-
-                            // Phone Number
-                            Expanded(
-                              child: CustomTextField(
-                                controller: _altPhoneController,
-                                label: 'Teléfono (Opcional)',
-                                keyboardType: TextInputType.phone,
-                                inputFormatters: [
-                                  FilteringTextInputFormatter.digitsOnly,
-                                  LengthLimitingTextInputFormatter(7),
-                                ],
-                                validator: (val) {
-                                  if (val != null &&
-                                      val.trim().isNotEmpty &&
-                                      val.trim().length != 7) {
-                                    return 'Debe tener 7 dígitos';
-                                  }
-                                  return null;
-                                },
-                              ),
-                            ),
-                          ],
-                        ),
-
-                        const SizedBox(height: 48),
-
-                        // Actions
-                        FormBottomBar(
+                      ),
+                    ),
+                    SafeArea(
+                      top: false,
+                      child: Padding(
+                        padding: const EdgeInsets.fromLTRB(16.0, 8.0, 16.0, 16.0),
+                        child: FormBottomBar(
                           onCancel: () => context.pop(),
                           onSave: _hasChanges && profile != null
                               ? () => _save(profile.id, profile)
@@ -412,9 +420,9 @@ class _ContactDataScreenState extends ConsumerState<ContactDataScreen> {
                           isSaveEnabled: _hasChanges && profile != null,
                           isLoading: _isLoading,
                         ),
-                      ],
+                      ),
                     ),
-                  ),
+                  ],
                 );
               },
             ),

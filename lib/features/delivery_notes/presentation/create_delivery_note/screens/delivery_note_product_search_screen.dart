@@ -212,11 +212,9 @@ class _DeliveryNoteProductSearchScreenState
       },
       floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
       floatingActionButton: hasSelection
-          ? Padding(
-              padding: const EdgeInsets.only(bottom: 40.0),
-              child: CustomExtendedFab(
-                icon: Icons.check,
-                label: 'Confirmar ($formattedQty $uom)',
+          ? CustomExtendedFab(
+              icon: Icons.check,
+              label: 'Confirmar ($formattedQty $uom)',
                 isEnabled: true,
                 onPressed: () async {
                   if (_selectedProduct == null || _selectedQuantity <= 0) {
@@ -351,8 +349,7 @@ class _DeliveryNoteProductSearchScreenState
                     }
                   }
                 },
-              ),
-            )
+              )
           : null,
     );
   }

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import '../utils/fab_scroll_padding.dart';
 import 'custom_extended_fab.dart';
 
 class FilterOption {
@@ -202,6 +203,7 @@ class _FilterBottomSheetState extends State<FilterBottomSheet> {
       maxChildSize: 0.9,
       expand: false,
       builder: (context, scrollController) {
+        final bottomInset = MediaQuery.paddingOf(context).bottom;
         return Stack(
           children: [
             Column(
@@ -320,15 +322,15 @@ class _FilterBottomSheetState extends State<FilterBottomSheet> {
                           },
                         );
                       }),
-                      const SizedBox(height: 80),
+                      SizedBox(height: FabScrollPadding.single + bottomInset),
                     ],
                   ),
                 ),
               ],
             ),
             Positioned(
-              bottom: 40,
-              right: 16,
+              bottom: 16.0 + bottomInset,
+              right: 16.0,
               child: CustomExtendedFab(
                 onPressed: () {
                   widget.onApply?.call(_tempSelected);

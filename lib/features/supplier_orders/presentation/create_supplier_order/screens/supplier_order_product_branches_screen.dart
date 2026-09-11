@@ -8,6 +8,7 @@ import '../../../../../shared/utils/currency_formatter.dart';
 import '../../../../../shared/widgets/friendly_error_widget.dart';
 import '../../../../../shared/widgets/custom_extended_fab.dart';
 import '../../../../../shared/widgets/sort_selector.dart';
+import '../../../../../shared/utils/fab_scroll_padding.dart';
 import '../../../../portfolio/domain/models/aggregated_product.dart';
 import '../../../domain/models/supplier_order_item.dart';
 import '../providers/create_supplier_order_provider.dart';
@@ -77,8 +78,9 @@ class _SupplierOrderProductBranchesScreenState
 
     return Scaffold(
       appBar: const StandardAppBar(title: 'Sucursales y cantidades'),
-      body: Column(
-        children: [
+      body: SafeArea(
+        child: Column(
+          children: [
           // Product header
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
@@ -205,6 +207,9 @@ class _SupplierOrderProductBranchesScreenState
                 });
 
                 return ListView.builder(
+                  padding: const EdgeInsets.only(
+                    bottom: FabScrollPadding.single,
+                  ),
                   itemCount: sortedBranches.length,
                   itemBuilder: (context, index) {
                     final branchData = sortedBranches[index];
@@ -266,11 +271,10 @@ class _SupplierOrderProductBranchesScreenState
           ),
         ],
       ),
-      floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
-      floatingActionButton: Padding(
-        padding: const EdgeInsets.only(bottom: 40.0),
-        child: CustomExtendedFab(
-          onPressed: () {
+    ),
+    floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
+    floatingActionButton: CustomExtendedFab(
+        onPressed: () {
             final branchesList = branchesAsync.valueOrNull ?? [];
             final notifier = ref.read(createSupplierOrderProvider.notifier);
             final productKey =
@@ -343,7 +347,6 @@ class _SupplierOrderProductBranchesScreenState
           }(),
           isEnabled: totalQuantity > 0,
         ),
-      ),
     );
   }
 }

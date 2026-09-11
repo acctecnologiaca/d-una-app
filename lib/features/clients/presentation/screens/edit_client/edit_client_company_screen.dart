@@ -249,80 +249,88 @@ class _EditClientCompanyScreenState
             onPressed: _onCancelWithConfirmation,
           ),
         ),
-        body: SingleChildScrollView(
-          padding: const EdgeInsets.fromLTRB(16, 24, 16, 40),
-          child: Form(
-            key: _formKey,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                CustomTextField(
-                  label: 'Nombre o razón social*',
-                  controller: _nameController,
-                  validator: (val) =>
-                      val == null || val.isEmpty ? 'Requerido' : null,
-                ),
-                const SizedBox(height: 16),
-                CustomTextField(
-                  label: 'RIF/NIF/RUT',
-                  controller: _rifController,
-                  validator: (val) {
-                    if (_rifError != null) return _rifError;
-                    return null;
-                  },
-                ),
-                const SizedBox(height: 16),
-                CustomTextField(
-                  label: 'Urbanización/Calle/Edificio*',
-                  controller: _addressController,
-                  validator: (val) =>
-                      val == null || val.isEmpty ? 'Requerido' : null,
-                ),
-                const SizedBox(height: 16),
+        body: Column(
+          children: [
+            Expanded(
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.fromLTRB(16, 24, 16, 24),
+                child: Form(
+                  key: _formKey,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      CustomTextField(
+                        label: 'Nombre o razón social*',
+                        controller: _nameController,
+                        validator: (val) =>
+                            val == null || val.isEmpty ? 'Requerido' : null,
+                      ),
+                      const SizedBox(height: 16),
+                      CustomTextField(
+                        label: 'RIF/NIF/RUT',
+                        controller: _rifController,
+                        validator: (val) {
+                          if (_rifError != null) return _rifError;
+                          return null;
+                        },
+                      ),
+                      const SizedBox(height: 16),
+                      CustomTextField(
+                        label: 'Urbanización/Calle/Edificio*',
+                        controller: _addressController,
+                        validator: (val) =>
+                            val == null || val.isEmpty ? 'Requerido' : null,
+                      ),
+                      const SizedBox(height: 16),
 
-                // Location Picker (Country, State, City)
-                CustomLocationPicker(
-                  selectedCountry: _selectedCountry ?? 'Venezuela',
-                  selectedState: _selectedState,
-                  selectedCity: _selectedCity,
-                  onCountryChanged: (value) {
-                    setState(() {
-                      _selectedCountry = value;
-                      _checkChanges();
-                    });
-                  },
-                  onStateChanged: (value) {
-                    setState(() {
-                      _selectedState = value;
-                      _checkChanges();
-                    });
-                  },
-                  onCityChanged: (value) {
-                    setState(() {
-                      _selectedCity = value;
-                      _checkChanges();
-                    });
-                  },
+                      // Location Picker (Country, State, City)
+                      CustomLocationPicker(
+                        selectedCountry: _selectedCountry ?? 'Venezuela',
+                        selectedState: _selectedState,
+                        selectedCity: _selectedCity,
+                        onCountryChanged: (value) {
+                          setState(() {
+                            _selectedCountry = value;
+                            _checkChanges();
+                          });
+                        },
+                        onStateChanged: (value) {
+                          setState(() {
+                            _selectedState = value;
+                            _checkChanges();
+                          });
+                        },
+                        onCityChanged: (value) {
+                          setState(() {
+                            _selectedCity = value;
+                            _checkChanges();
+                          });
+                        },
+                      ),
+                      const SizedBox(height: 16),
+
+                      CustomTextField(
+                        label: 'Nombre corto o alias',
+                        controller: _aliasController,
+                      ),
+                    ],
+                  ),
                 ),
-                const SizedBox(height: 16),
-
-                CustomTextField(
-                  label: 'Nombre corto o alias',
-                  controller: _aliasController,
-                ),
-
-                const SizedBox(height: 48),
-
-                // Buttons
-                FormBottomBar(
+              ),
+            ),
+            SafeArea(
+              top: false,
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(16.0, 8.0, 16.0, 16.0),
+                child: FormBottomBar(
                   onCancel: _onCancelWithConfirmation,
                   onSave: _onSave,
                   isSaveEnabled: !_isSubmitting && _hasChanges,
                   isLoading: _isSubmitting,
                 ),
-              ],
+              ),
             ),
-          ),
+          ],
         ),
       ),
     );

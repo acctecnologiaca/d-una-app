@@ -11,6 +11,7 @@ import '../../../data/models/quote_item_service.dart';
 import 'package:go_router/go_router.dart';
 import '../../../../supplier_orders/domain/models/supplier_order.dart';
 import '../../../../supplier_orders/domain/models/supplier_order_status.dart';
+import '../../../../../shared/utils/fab_scroll_padding.dart';
 
 class ViewQuoteSummaryTab extends ConsumerWidget {
   final String quoteId;
@@ -25,6 +26,8 @@ class ViewQuoteSummaryTab extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final state = ref.watch(viewQuoteProvider(quoteId));
+    final activeFabs = ref.watch(quoteActiveFabsCountProvider(quoteId));
+    final bottomPadding = FabScrollPadding.calculate(activeFabs);
 
     if (state.isLoading && state.quote == null) {
       return const Center(child: CircularProgressIndicator());
@@ -86,7 +89,7 @@ class ViewQuoteSummaryTab extends ConsumerWidget {
     final displayServices = sortedServices.take(3).toList();
 
     return SingleChildScrollView(
-      padding: const EdgeInsets.fromLTRB(16, 16, 16, 80),
+      padding: EdgeInsets.fromLTRB(16, 16, 16, bottomPadding),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
@@ -126,7 +129,6 @@ class ViewQuoteSummaryTab extends ConsumerWidget {
           // 4. Rentabilidad Section
           _buildSectionHeader(context, Icons.bar_chart, 'Rentabilidad'),
           _buildUtilityCard(context, totalSales, totalCosts, estimatedProfit),
-          const SizedBox(height: 16),
 
           // 5. Órdenes de Compra vinculadas Section
           Builder(
@@ -140,6 +142,7 @@ class ViewQuoteSummaryTab extends ConsumerWidget {
               return Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
+                  const SizedBox(height: 16),
                   _buildSectionHeader(
                     context,
                     Icons.shopping_cart_outlined,
@@ -150,7 +153,6 @@ class ViewQuoteSummaryTab extends ConsumerWidget {
               );
             },
           ),
-          const SizedBox(height: 40),
         ],
       ),
     );

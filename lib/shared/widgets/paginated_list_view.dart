@@ -132,12 +132,12 @@ class _PaginatedListViewState<T> extends ConsumerState<PaginatedListView<T>> {
           // Bottom widget (Loading more / End of list)
           if (widget.isLoadingMore) {
             return const Padding(
-              padding: EdgeInsets.symmetric(vertical: 16.0),
+              padding: EdgeInsets.only(top: 16.0, bottom: 0.0),
               child: Center(child: CircularProgressIndicator()),
             );
           } else if (widget.hasReachedEnd && widget.items.isNotEmpty) {
             return Padding(
-              padding: const EdgeInsets.symmetric(vertical: 24.0),
+              padding: const EdgeInsets.only(top: 16.0, bottom: 0.0),
               child: Center(
                 child: Text(
                   'No hay más elementos',

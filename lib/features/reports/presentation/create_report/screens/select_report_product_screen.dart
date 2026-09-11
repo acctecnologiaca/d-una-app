@@ -7,6 +7,7 @@ import '../../../../../shared/widgets/custom_search_bar.dart';
 import '../../../../../shared/widgets/sort_selector.dart';
 import '../../../../../shared/widgets/friendly_error_widget.dart';
 import '../../../../../shared/widgets/custom_extended_fab.dart';
+import '../../../../../shared/utils/fab_scroll_padding.dart';
 import '../../../../../shared/utils/currency_formatter.dart';
 import '../../../../portfolio/data/models/product_model.dart';
 import '../providers/create_report_provider.dart';
@@ -57,8 +58,9 @@ class _SelectReportProductScreenState
         title: 'Agregar producto',
         subtitle: reportNumber.isNotEmpty ? 'Reporte #$reportNumber' : null,
       ),
-      body: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
+      body: SafeArea(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           // 1. Search Bar (Read-only -> Navigates to Search)
           Padding(
@@ -181,7 +183,7 @@ class _SelectReportProductScreenState
                 }
 
                 return ListView.builder(
-                  padding: const EdgeInsets.only(bottom: 120),
+                  padding: const EdgeInsets.only(bottom: FabScrollPadding.single),
                   itemCount: sortedProducts.length,
                   itemBuilder: (context, index) {
                     final product = sortedProducts[index];
@@ -223,13 +225,12 @@ class _SelectReportProductScreenState
           ),
         ],
       ),
+      ),
       floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
       floatingActionButton: hasSelection
-          ? Padding(
-              padding: const EdgeInsets.only(bottom: 40.0),
-              child: CustomExtendedFab(
-                icon: Icons.check,
-                label: 'Confirmar ($formattedQty $uom - $formattedTotal)',
+          ? CustomExtendedFab(
+              icon: Icons.check,
+              label: 'Confirmar ($formattedQty $uom - $formattedTotal)',
                 isEnabled: true,
                 onPressed: () async {
                   if (_selectedProduct == null || _selectedQuantity <= 0) {
@@ -248,8 +249,7 @@ class _SelectReportProductScreenState
                     context.pop(true);
                   }
                 },
-              ),
-            )
+              )
           : null,
     );
   }

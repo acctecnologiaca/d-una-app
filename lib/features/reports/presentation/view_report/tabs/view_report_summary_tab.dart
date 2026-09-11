@@ -8,6 +8,7 @@ import '../providers/view_report_provider.dart';
 import '../../../data/models/service_report.dart';
 import '../../../data/models/service_report_item_product.dart';
 import '../../../data/models/service_report_item_service.dart';
+import '../../../../../shared/utils/fab_scroll_padding.dart';
 
 class ViewReportSummaryTab extends ConsumerWidget {
   final String reportId;
@@ -84,8 +85,12 @@ class ViewReportSummaryTab extends ConsumerWidget {
           ..sort((a, b) => a.orderIndex.compareTo(b.orderIndex));
         final displayServices = sortedServices.take(3).toList();
 
+        final isFinalized = status == ServiceReportStatus.finalized;
+        final bottomPadding =
+            isFinalized ? FabScrollPadding.none : FabScrollPadding.single;
+
         return SingleChildScrollView(
-          padding: const EdgeInsets.fromLTRB(16, 16, 16, 80),
+          padding: EdgeInsets.fromLTRB(16, 16, 16, bottomPadding),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
@@ -132,7 +137,6 @@ class ViewReportSummaryTab extends ConsumerWidget {
                 totalCosts,
                 estimatedProfit,
               ),
-              const SizedBox(height: 40),
             ],
           ),
         );

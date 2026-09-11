@@ -31,10 +31,12 @@ class WizardButtonBar extends StatelessWidget {
   Widget build(BuildContext context) {
     final colors = Theme.of(context).colorScheme;
 
-    return Padding(
-      padding: const EdgeInsets.all(16.0),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+    return SafeArea(
+      top: false,
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(16.0, 8.0, 16.0, 16.0),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           // Left Side: Cancel (Optional)
           if (onCancel != null)
@@ -104,6 +106,7 @@ class WizardButtonBar extends StatelessWidget {
           ),
         ],
       ),
-    );
+    ),
+  );
   }
 }

@@ -10,6 +10,7 @@ import '../../../../../shared/widgets/custom_search_bar.dart';
 import '../widgets/inventory_action_sheet.dart';
 import '../../../../../shared/widgets/sort_selector.dart';
 import '../../../../../shared/widgets/custom_extended_fab.dart';
+import '../../../../../shared/utils/fab_scroll_padding.dart';
 import '../../../../../shared/widgets/empty_list_state.dart';
 import '../../../../../shared/widgets/paginated_list_view.dart';
 import '../../../../ads/presentation/providers/ads_provider.dart';
@@ -61,7 +62,8 @@ class _OwnInventoryScreenState extends ConsumerState<OwnInventoryScreen> {
           onPressed: () => context.pop(),
         ),
       ),
-      body: Column(
+      body: SafeArea(
+        child: Column(
         children: [
           // Search & Filter Bar
           Padding(
@@ -193,7 +195,12 @@ class _OwnInventoryScreenState extends ConsumerState<OwnInventoryScreen> {
                         ref.read(paginatedProductsProvider.notifier).loadMore(),
                     banners: adBannersAsync?.valueOrNull,
                     screenContext: 'own_inventory_list',
-                    padding: const EdgeInsets.fromLTRB(0, 8, 0, 132),
+                    padding: const EdgeInsets.fromLTRB(
+                      0,
+                      8,
+                      0,
+                      FabScrollPadding.list,
+                    ),
                     separatorBuilder: (context, index) =>
                         const Divider(height: 1, color: Colors.transparent),
                     itemBuilder: (context, index, product) {
@@ -227,15 +234,13 @@ class _OwnInventoryScreenState extends ConsumerState<OwnInventoryScreen> {
           ),
         ],
       ),
-      floatingActionButton: Padding(
-        padding: const EdgeInsets.only(bottom: 40.0),
-        child: CustomExtendedFab(
-          onPressed: () {
-            context.push('/portfolio/own-inventory/add');
-          },
-          label: 'Agregar',
-          icon: Icons.add,
-        ),
+      ),
+      floatingActionButton: CustomExtendedFab(
+        onPressed: () {
+          context.push('/portfolio/own-inventory/add');
+        },
+        label: 'Agregar',
+        icon: Icons.add,
       ),
     );
   }

@@ -216,11 +216,9 @@ class _AddPurchaseProductSearchScreenState
       },
       floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
       floatingActionButton: hasSelection
-          ? Padding(
-              padding: const EdgeInsets.only(bottom: 40.0),
-              child: CustomExtendedFab(
-                icon: Icons.check,
-                label: 'Confirmar ($formattedQty $uom - $formattedTotal)',
+          ? CustomExtendedFab(
+              icon: Icons.check,
+              label: 'Confirmar ($formattedQty $uom - $formattedTotal)',
                 isEnabled: true,
                 onPressed: () async {
                   if (_selectedProduct == null || _selectedQuantity <= 0) {
@@ -331,8 +329,7 @@ class _AddPurchaseProductSearchScreenState
                     }
                   }
                 },
-              ),
-            )
+              )
           : null,
     );
   }

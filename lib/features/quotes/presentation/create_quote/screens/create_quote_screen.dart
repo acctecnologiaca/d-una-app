@@ -313,20 +313,22 @@ class _CreateQuoteScreenState extends ConsumerState<CreateQuoteScreen>
             ],
           ),
         ),
-        body: TabBarView(
-          controller: _tabController,
-          children: [
-            const QuoteProductsTab(),
-            const QuoteServicesTab(),
-            const QuoteClientTab(),
-            const QuoteDetailsTab(),
-            const QuoteConditionsTab(),
-            QuoteSummaryTab(
-              onNavigateToTab: (index) {
-                _tabController.animateTo(index);
-              },
-            ),
-          ],
+        body: SafeArea(
+          child: TabBarView(
+            controller: _tabController,
+            children: [
+              const QuoteProductsTab(),
+              const QuoteServicesTab(),
+              const QuoteClientTab(),
+              const QuoteDetailsTab(),
+              const QuoteConditionsTab(),
+              QuoteSummaryTab(
+                onNavigateToTab: (index) {
+                  _tabController.animateTo(index);
+                },
+              ),
+            ],
+          ),
         ),
         floatingActionButton: _buildFab(),
       ),
@@ -345,10 +347,8 @@ class _CreateQuoteScreenState extends ConsumerState<CreateQuoteScreen>
     }
 
     if (_tabController.index == 5) {
-      return Padding(
-        padding: const EdgeInsets.only(bottom: 40.0),
-        child: CustomExtendedFab(
-          label: state.isLoading ? 'Guardando...' : 'Guardar',
+      return CustomExtendedFab(
+        label: state.isLoading ? 'Guardando...' : 'Guardar',
           icon: state.isLoading ? Icons.hourglass_empty : Icons.save_outlined,
           isEnabled:
               state.isReadyToFinalize && state.hasChanges && !state.isLoading,
@@ -420,14 +420,11 @@ class _CreateQuoteScreenState extends ConsumerState<CreateQuoteScreen>
               );
             }
           },
-        ),
-      );
+        );
     }
 
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 40.0),
-      child: CustomExtendedFab(
-        onPressed: () {
+    return CustomExtendedFab(
+      onPressed: () {
           if (_tabController.index == 0) {
             context.push('/quotes/create/select-product');
           } else if (_tabController.index == 1) {
@@ -442,8 +439,7 @@ class _CreateQuoteScreenState extends ConsumerState<CreateQuoteScreen>
         },
         icon: Icons.add,
         label: 'Agregar',
-      ),
-    );
+      );
   }
 
   void _showActionsMenu(WidgetRef ref) {
@@ -458,7 +454,7 @@ class _CreateQuoteScreenState extends ConsumerState<CreateQuoteScreen>
           icon: Icons.bookmark_add_outlined,
           label: 'Guardar y continuar luego',
           subtitle: 'Guarda un borrador local para continuar luego',
-          enabled: state.isReadyToSaveDraft && state.hasChanges,
+          enabled: state.hasChanges,
           onTap: () async {
             context.pop(); // Close sheet
             final success = await notifier.saveAsDraft();
@@ -484,6 +480,7 @@ class _CreateQuoteScreenState extends ConsumerState<CreateQuoteScreen>
               ? 'Descartar cambios locales'
               : 'Descartar borrador',
           subtitle: 'Elimina las modificaciones no guardadas',
+          enabled: state.hasChanges,
           onTap: () async {
             context.pop(); // Close sheet
             final shouldDiscard = await _showDiscardDialog();

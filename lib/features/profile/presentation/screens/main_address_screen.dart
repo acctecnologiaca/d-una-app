@@ -203,66 +203,74 @@ class _MainAddressScreenState extends ConsumerState<MainAddressScreen> {
                   });
                 }
 
-                return SingleChildScrollView(
-                  padding: const EdgeInsets.fromLTRB(16, 24, 16, 40),
-                  child: Form(
-                    key: _formKey,
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'Dirección fiscal o lugar de trabajo',
-                          style: textTheme.titleMedium?.copyWith(
-                            fontWeight: FontWeight.bold,
-                            color: colors.onSurface,
+                return Column(
+                  children: [
+                    Expanded(
+                      child: SingleChildScrollView(
+                        padding: const EdgeInsets.fromLTRB(16, 24, 16, 24),
+                        child: Form(
+                          key: _formKey,
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'Dirección fiscal o lugar de trabajo',
+                                style: textTheme.titleMedium?.copyWith(
+                                  fontWeight: FontWeight.bold,
+                                  color: colors.onSurface,
+                                ),
+                              ),
+                              const SizedBox(height: 24),
+
+                              // Address Line
+                              CustomTextField(
+                                controller: _addressController,
+                                label: 'Urbanización/Calle/Edificio*',
+                                maxLines: 2,
+                                validator: (value) {
+                                  if (value == null || value.trim().isEmpty) {
+                                    return 'Este campo es obligatorio';
+                                  }
+                                  return null;
+                                },
+                              ),
+                              const SizedBox(height: 24),
+
+                              // Location Picker (Country, State, City)
+                              CustomLocationPicker(
+                                selectedCountry: _selectedCountry ?? 'Venezuela',
+                                selectedState: _selectedState,
+                                selectedCity: _selectedCity,
+                                isRequired: true,
+                                onCountryChanged: (value) {
+                                  setState(() {
+                                    _selectedCountry = value;
+                                    _selectedState = null;
+                                    _selectedCity = null;
+                                  });
+                                },
+                                onStateChanged: (value) {
+                                  setState(() {
+                                    _selectedState = value;
+                                    _selectedCity = null;
+                                  });
+                                },
+                                onCityChanged: (value) {
+                                  setState(() {
+                                    _selectedCity = value;
+                                  });
+                                },
+                              ),
+                            ],
                           ),
                         ),
-                        const SizedBox(height: 24),
-
-                        // Address Line
-                        CustomTextField(
-                          controller: _addressController,
-                          label: 'Urbanización/Calle/Edificio*',
-                          maxLines: 2,
-                          validator: (value) {
-                            if (value == null || value.trim().isEmpty) {
-                              return 'Este campo es obligatorio';
-                            }
-                            return null;
-                          },
-                        ),
-                        const SizedBox(height: 24),
-
-                        // Location Picker (Country, State, City)
-                        CustomLocationPicker(
-                          selectedCountry: _selectedCountry ?? 'Venezuela',
-                          selectedState: _selectedState,
-                          selectedCity: _selectedCity,
-                          isRequired: true,
-                          onCountryChanged: (value) {
-                            setState(() {
-                              _selectedCountry = value;
-                              _selectedState = null;
-                              _selectedCity = null;
-                            });
-                          },
-                          onStateChanged: (value) {
-                            setState(() {
-                              _selectedState = value;
-                              _selectedCity = null;
-                            });
-                          },
-                          onCityChanged: (value) {
-                            setState(() {
-                              _selectedCity = value;
-                            });
-                          },
-                        ),
-
-                        const SizedBox(height: 48),
-
-                        // Actions
-                        FormBottomBar(
+                      ),
+                    ),
+                    SafeArea(
+                      top: false,
+                      child: Padding(
+                        padding: const EdgeInsets.fromLTRB(16.0, 8.0, 16.0, 16.0),
+                        child: FormBottomBar(
                           onCancel: () => context.pop(),
                           onSave: _hasChanges && profile != null
                               ? () => _save(profile.id, profile)
@@ -270,9 +278,9 @@ class _MainAddressScreenState extends ConsumerState<MainAddressScreen> {
                           isSaveEnabled: _hasChanges && profile != null,
                           isLoading: _isLoading,
                         ),
-                      ],
+                      ),
                     ),
-                  ),
+                  ],
                 );
               },
             ),

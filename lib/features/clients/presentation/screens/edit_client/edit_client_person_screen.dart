@@ -278,152 +278,160 @@ class _EditClientPersonScreenState
             onPressed: _onCancelWithConfirmation,
           ),
         ),
-        body: SingleChildScrollView(
-          padding: const EdgeInsets.fromLTRB(16, 24, 16, 40),
-          child: Form(
-            key: _formKey,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                Text(
-                  'Información fiscal',
-                  style: textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.bold,
-                    color: colors.onSurface,
-                  ),
-                ),
-                const SizedBox(height: 16),
-
-                CustomTextField(
-                  label: 'Nombre y apellido*',
-                  controller: _nameController,
-                  validator: (val) =>
-                      val == null || val.isEmpty ? 'Requerido' : null,
-                ),
-                const SizedBox(height: 16),
-                CustomTextField(
-                  label: 'Cédula/DNI/CC/Pasaporte',
-                  controller: _idController,
-                  validator: (val) {
-                    if (_idError != null) return _idError;
-                    return null;
-                  },
-                ),
-                const SizedBox(height: 16),
-                CustomTextField(
-                  label: 'Urbanización/Calle/Edificio*',
-                  controller: _addressController,
-                  validator: (val) =>
-                      val == null || val.isEmpty ? 'Requerido' : null,
-                ),
-                const SizedBox(height: 16),
-
-                // Location Picker (Country, State, City)
-                CustomLocationPicker(
-                  selectedCountry: _selectedCountry ?? 'Venezuela',
-                  selectedState: _selectedState,
-                  selectedCity: _selectedCity,
-                  onCountryChanged: (value) {
-                    setState(() {
-                      _selectedCountry = value;
-                      _checkChanges();
-                    });
-                  },
-                  onStateChanged: (value) {
-                    setState(() {
-                      _selectedState = value;
-                      _checkChanges();
-                    });
-                  },
-                  onCityChanged: (value) {
-                    setState(() {
-                      _selectedCity = value;
-                      _checkChanges();
-                    });
-                  },
-                ),
-
-                const SizedBox(height: 32),
-
-                Text(
-                  'Datos de contacto',
-                  style: textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.bold,
-                    color: colors.onSurface,
-                  ),
-                ),
-                const SizedBox(height: 16),
-
-                // Phone Row
-                Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Padding(
-                      padding: const EdgeInsets.only(top: 0.0),
-                      child: SizedBox(
-                        width: 110,
-                        child: CustomDropdown<String>(
-                          label: 'Código',
-                          value: _selectedPhoneCode,
-                          items: _phoneCodes,
-                          itemLabelBuilder: (item) => item,
-                          onChanged: (val) {
-                            if (val != null) {
-                              setState(() {
-                                _selectedPhoneCode = val;
-                                _checkChanges();
-                              });
-                            }
-                          },
+        body: Column(
+          children: [
+            Expanded(
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.fromLTRB(16, 24, 16, 24),
+                child: Form(
+                  key: _formKey,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      Text(
+                        'Información fiscal',
+                        style: textTheme.titleMedium?.copyWith(
+                          fontWeight: FontWeight.bold,
+                          color: colors.onSurface,
                         ),
                       ),
-                    ),
-                    const SizedBox(width: 16),
-                    Expanded(
-                      child: CustomTextField(
-                        label: 'Teléfono*',
-                        controller: _phoneController,
-                        keyboardType: TextInputType.phone,
-                        inputFormatters: [
-                          FilteringTextInputFormatter.digitsOnly,
-                        ],
+                      const SizedBox(height: 16),
+
+                      CustomTextField(
+                        label: 'Nombre y apellido*',
+                        controller: _nameController,
+                        validator: (val) =>
+                            val == null || val.isEmpty ? 'Requerido' : null,
+                      ),
+                      const SizedBox(height: 16),
+                      CustomTextField(
+                        label: 'Cédula/DNI/CC/Pasaporte',
+                        controller: _idController,
                         validator: (val) {
-                          if (val == null || val.isEmpty) return 'Requerido';
-                          if (val.length != 7) return 'Debe tener 7 dígitos';
+                          if (_idError != null) return _idError;
                           return null;
                         },
                       ),
-                    ),
-                  ],
+                      const SizedBox(height: 16),
+                      CustomTextField(
+                        label: 'Urbanización/Calle/Edificio*',
+                        controller: _addressController,
+                        validator: (val) =>
+                            val == null || val.isEmpty ? 'Requerido' : null,
+                      ),
+                      const SizedBox(height: 16),
+
+                      // Location Picker (Country, State, City)
+                      CustomLocationPicker(
+                        selectedCountry: _selectedCountry ?? 'Venezuela',
+                        selectedState: _selectedState,
+                        selectedCity: _selectedCity,
+                        onCountryChanged: (value) {
+                          setState(() {
+                            _selectedCountry = value;
+                            _checkChanges();
+                          });
+                        },
+                        onStateChanged: (value) {
+                          setState(() {
+                            _selectedState = value;
+                            _checkChanges();
+                          });
+                        },
+                        onCityChanged: (value) {
+                          setState(() {
+                            _selectedCity = value;
+                            _checkChanges();
+                          });
+                        },
+                      ),
+
+                      const SizedBox(height: 32),
+
+                      Text(
+                        'Datos de contacto',
+                        style: textTheme.titleMedium?.copyWith(
+                          fontWeight: FontWeight.bold,
+                          color: colors.onSurface,
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+
+                      // Phone Row
+                      Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Padding(
+                            padding: const EdgeInsets.only(top: 0.0),
+                            child: SizedBox(
+                              width: 110,
+                              child: CustomDropdown<String>(
+                                label: 'Código',
+                                value: _selectedPhoneCode,
+                                items: _phoneCodes,
+                                itemLabelBuilder: (item) => item,
+                                onChanged: (val) {
+                                  if (val != null) {
+                                    setState(() {
+                                      _selectedPhoneCode = val;
+                                      _checkChanges();
+                                    });
+                                  }
+                                },
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 16),
+                          Expanded(
+                            child: CustomTextField(
+                              label: 'Teléfono*',
+                              controller: _phoneController,
+                              keyboardType: TextInputType.phone,
+                              inputFormatters: [
+                                FilteringTextInputFormatter.digitsOnly,
+                              ],
+                              validator: (val) {
+                                if (val == null || val.isEmpty) return 'Requerido';
+                                if (val.length != 7) return 'Debe tener 7 dígitos';
+                                return null;
+                              },
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 16),
+
+                      CustomTextField(
+                        label: 'Correo electrónico',
+                        controller: _emailController,
+                        keyboardType: TextInputType.emailAddress,
+                        validator: (val) {
+                          if (val == null || val.isEmpty) return null; // Optional
+                          final emailRegex = RegExp(r'^[^@]+@[^@]+\.[^@]+');
+                          if (!emailRegex.hasMatch(val)) {
+                            return 'Correo inválido';
+                          }
+                          return null;
+                        },
+                      ),
+                    ],
+                  ),
                 ),
-                const SizedBox(height: 16),
-
-                CustomTextField(
-                  label: 'Correo electrónico',
-                  controller: _emailController,
-                  keyboardType: TextInputType.emailAddress,
-                  validator: (val) {
-                    if (val == null || val.isEmpty) return null; // Optional
-                    final emailRegex = RegExp(r'^[^@]+@[^@]+\.[^@]+');
-                    if (!emailRegex.hasMatch(val)) {
-                      return 'Correo inválido';
-                    }
-                    return null;
-                  },
-                ),
-
-                const SizedBox(height: 48),
-
-                // Buttons
-                FormBottomBar(
+              ),
+            ),
+            SafeArea(
+              top: false,
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(16.0, 8.0, 16.0, 16.0),
+                child: FormBottomBar(
                   onCancel: _onCancelWithConfirmation,
                   onSave: _onSave,
                   isSaveEnabled: !_isSubmitting && _hasChanges,
                   isLoading: _isSubmitting,
                 ),
-              ],
+              ),
             ),
-          ),
+          ],
         ),
       ),
     );

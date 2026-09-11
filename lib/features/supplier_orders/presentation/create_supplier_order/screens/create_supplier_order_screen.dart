@@ -245,6 +245,7 @@ class _CreateSupplierOrderScreenState
     final state = ref.read(createSupplierOrderProvider);
     final notifier = ref.read(createSupplierOrderProvider.notifier);
     final currentId = widget.orderId ?? state.id;
+    final hasChanges = widget.editMode ? state.isDirty : state.hasChanges;
 
     CustomActionSheet.show(
       context: context,
@@ -254,6 +255,7 @@ class _CreateSupplierOrderScreenState
           icon: Icons.bookmark_add_outlined,
           label: 'Guardar y continuar luego',
           subtitle: 'Guarda un borrador local para continuar luego',
+          enabled: hasChanges,
           onTap: () async {
             context.pop();
             await notifier.saveDraftNow(
@@ -276,6 +278,7 @@ class _CreateSupplierOrderScreenState
               ? 'Descartar cambios locales'
               : 'Descartar borrador',
           subtitle: 'Elimina las modificaciones no guardadas',
+          enabled: hasChanges,
           onTap: () async {
             context.pop();
             final shouldDiscard = await _showDiscardDialog();

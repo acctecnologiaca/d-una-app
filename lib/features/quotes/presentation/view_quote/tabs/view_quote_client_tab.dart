@@ -5,6 +5,7 @@ import '../../../../../shared/widgets/info_block.dart';
 import '../../../../clients/presentation/widgets/contact_list_tile.dart';
 import '../../../../../core/utils/contact_utils.dart';
 import '../providers/view_quote_provider.dart';
+import '../../../../../shared/utils/fab_scroll_padding.dart';
 
 class ViewQuoteClientTab extends ConsumerWidget {
   final String quoteId;
@@ -15,6 +16,8 @@ class ViewQuoteClientTab extends ConsumerWidget {
     final colors = Theme.of(context).colorScheme;
     final textTheme = Theme.of(context).textTheme;
     final state = ref.watch(viewQuoteProvider(quoteId));
+    final activeFabs = ref.watch(quoteActiveFabsCountProvider(quoteId));
+    final bottomPadding = FabScrollPadding.calculate(activeFabs);
 
     if (state.isLoading && state.quote == null) {
       return const Center(child: CircularProgressIndicator());
@@ -36,7 +39,7 @@ class ViewQuoteClientTab extends ConsumerWidget {
     ].where((e) => e != null && e.isNotEmpty).join(', ');
 
     return SingleChildScrollView(
-      padding: const EdgeInsets.all(16.0),
+      padding: EdgeInsets.fromLTRB(16.0, 16.0, 16.0, bottomPadding),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [

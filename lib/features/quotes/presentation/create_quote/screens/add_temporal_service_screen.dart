@@ -705,8 +705,11 @@ class _AddTemporalServiceScreenState
         ),
         body: Form(
           key: _formKey,
-          child: ListView(
-            padding: const EdgeInsets.fromLTRB(16, 16, 16, 40),
+          child: Column(
+            children: [
+              Expanded(
+                child: ListView(
+                  padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
             children: [
               Text(
                 'Usa este apartado solo para incluir servicios que no existan en tu portafolio aún.',
@@ -1128,29 +1131,28 @@ class _AddTemporalServiceScreenState
                   const SizedBox(height: 8),
                 ],
               ),
-
-              const SizedBox(height: 24),
-              Padding(
-                padding: EdgeInsets.only(
-                  top: 8.0,
-                  bottom: MediaQuery.of(context).padding.bottom > 0
-                      ? MediaQuery.of(context).padding.bottom
-                      : 24.0,
-                ),
-                child: FormBottomBar(
-                  onCancel: () => Navigator.maybePop(context),
-                  onSave: (_hasChanges() &&
-                          _nameController.text.trim().isNotEmpty)
-                      ? _saveService
-                      : null,
-                  saveLabel:
-                      'Confirmar (${_quantityController.text} $selectedRateSymbol)',
-                ),
-              ),
             ],
           ),
         ),
-      ),
+        SafeArea(
+          top: false,
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(16.0, 8.0, 16.0, 16.0),
+            child: FormBottomBar(
+              onCancel: () => Navigator.maybePop(context),
+              onSave: (_hasChanges() &&
+                      _nameController.text.trim().isNotEmpty)
+                  ? _saveService
+                  : null,
+              saveLabel:
+                  'Confirmar (${_quantityController.text} $selectedRateSymbol)',
+            ),
+          ),
+        ),
+      ],
+    ),
+  ),
+),
     );
   }
 }

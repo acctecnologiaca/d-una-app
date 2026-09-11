@@ -4,6 +4,7 @@ import 'package:intl/intl.dart';
 import 'package:material_symbols_icons/symbols.dart';
 import '../providers/create_report_provider.dart';
 import '../../../../../shared/utils/currency_formatter.dart';
+import 'package:d_una_app/shared/utils/fab_scroll_padding.dart';
 import '../../../domain/models/service_report_model.dart';
 import '../../../data/models/service_report.dart';
 import '../../../data/models/service_report_item_product.dart';
@@ -74,7 +75,7 @@ class ReportSummaryTab extends ConsumerWidget {
     final finalDisplayServices = displayServices.take(3).toList();
 
     return SingleChildScrollView(
-      padding: const EdgeInsets.only(left: 16, right: 16, top: 16, bottom: 120),
+      padding: const EdgeInsets.fromLTRB(16, 16, 16, FabScrollPadding.single),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [

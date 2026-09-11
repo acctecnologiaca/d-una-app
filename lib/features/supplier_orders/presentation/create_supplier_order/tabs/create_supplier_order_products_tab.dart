@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:material_symbols_icons/symbols.dart';
 import 'package:go_router/go_router.dart';
 import '../../../../../shared/widgets/custom_extended_fab.dart';
+import 'package:d_una_app/shared/utils/fab_scroll_padding.dart';
 import '../../../../portfolio/domain/models/aggregated_product.dart';
 import '../../../domain/models/supplier_order_item.dart';
 import '../providers/create_supplier_order_provider.dart';
@@ -38,14 +39,11 @@ class CreateSupplierOrderProductsTab extends ConsumerWidget {
             ],
           ),
         ),
-        floatingActionButton: Padding(
-          padding: const EdgeInsets.only(bottom: 40.0),
-          child: CustomExtendedFab(
-            onPressed: () => _addProduct(context),
-            icon: Icons.add,
-            label: 'Agregar',
-            isEnabled: hasSupplier,
-          ),
+        floatingActionButton: CustomExtendedFab(
+          onPressed: () => _addProduct(context),
+          icon: Icons.add,
+          label: 'Agregar',
+          isEnabled: hasSupplier,
         ),
       );
     }
@@ -60,9 +58,10 @@ class CreateSupplierOrderProductsTab extends ConsumerWidget {
     final keysList = groups.keys.toList();
 
     return Scaffold(
-      body: ListView.builder(
-        padding: const EdgeInsets.fromLTRB(0, 8, 0, 120),
-        itemCount: keysList.length,
+      body: SafeArea(
+        child: ListView.builder(
+          padding: const EdgeInsets.fromLTRB(0, 8, 0, FabScrollPadding.single),
+          itemCount: keysList.length,
         itemBuilder: (context, index) {
           final productKey = keysList[index];
           final groupItems = groups[productKey]!;
@@ -158,14 +157,12 @@ class CreateSupplierOrderProductsTab extends ConsumerWidget {
           );
         },
       ),
-      floatingActionButton: Padding(
-        padding: const EdgeInsets.only(bottom: 40.0),
-        child: CustomExtendedFab(
-          onPressed: () => _addProduct(context),
-          icon: Icons.add,
-          label: 'Agregar',
-          isEnabled: hasSupplier,
-        ),
+      ),
+      floatingActionButton: CustomExtendedFab(
+        onPressed: () => _addProduct(context),
+        icon: Icons.add,
+        label: 'Agregar',
+        isEnabled: hasSupplier,
       ),
     );
   }
