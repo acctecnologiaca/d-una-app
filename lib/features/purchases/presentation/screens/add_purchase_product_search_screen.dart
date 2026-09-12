@@ -215,15 +215,17 @@ class _AddPurchaseProductSearchScreenState
         );
       },
       floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
-      floatingActionButton: hasSelection
-          ? CustomExtendedFab(
-              icon: Icons.check,
-              label: 'Confirmar ($formattedQty $uom - $formattedTotal)',
-                isEnabled: true,
-                onPressed: () async {
-                  if (_selectedProduct == null || _selectedQuantity <= 0) {
-                    return;
-                  }
+      floatingActionButton: CustomExtendedFab(
+        icon: Icons.check,
+        label: hasSelection
+            ? 'Confirmar ($formattedQty $uom - $formattedTotal)'
+            : 'Confirmar',
+        isEnabled: hasSelection,
+        onPressed: hasSelection
+            ? () async {
+                if (_selectedProduct == null || _selectedQuantity <= 0) {
+                  return;
+                }
 
                   final result = await AddPurchaseProductDetailsSheet.show(
                     context,
@@ -328,9 +330,9 @@ class _AddPurchaseProductSearchScreenState
                       }
                     }
                   }
-                },
-              )
-          : null,
+                }
+              : null,
+      ),
     );
   }
 }

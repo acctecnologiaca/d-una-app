@@ -286,23 +286,27 @@ class _SelectOcSuppliersSheetState extends State<SelectOcSuppliersSheet> {
                 SizedBox(height: FabScrollPadding.single + bottomInset),
               ],
             ),
-            if (_selectedSupplierIds.isNotEmpty)
-              Positioned(
-                bottom: 16.0 + bottomInset,
-                right: 16.0,
-                child: CustomExtendedFab(
-                  onPressed: () {
-                    widget.onConfirm(
-                      OcSupplierSelectionResult(
-                        selectedSupplierIds: _selectedSupplierIds.toList(),
-                        supplierDestinations: _supplierDestinations,
-                      ),
-                    );
-                  },
-                  label: 'Generar (${_selectedSupplierIds.length})',
-                  icon: Icons.check,
-                ),
+            Positioned(
+              bottom: 16.0 + bottomInset,
+              right: 16.0,
+              child: CustomExtendedFab(
+                onPressed: _selectedSupplierIds.isNotEmpty
+                    ? () {
+                        widget.onConfirm(
+                          OcSupplierSelectionResult(
+                            selectedSupplierIds: _selectedSupplierIds.toList(),
+                            supplierDestinations: _supplierDestinations,
+                          ),
+                        );
+                      }
+                    : null,
+                label: _selectedSupplierIds.isNotEmpty
+                    ? 'Generar (${_selectedSupplierIds.length})'
+                    : 'Generar',
+                icon: Icons.check,
+                isEnabled: _selectedSupplierIds.isNotEmpty,
               ),
+            ),
           ],
         );
       },

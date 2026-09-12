@@ -101,6 +101,11 @@ PaginatedListView<Entity>(
      SizedBox(height: FabScrollPadding.single + bottomInset)
      ```
    - **Prohibición Estricta:** Queda **estrictamente prohibido** hardcodear valores como `bottom: 40`, `bottom: 24` o espaciadores fijos insuficientes como `SizedBox(height: 80)` en modales.
+4. **Regla de Permanencia Estable y Bloqueo Visual en EFABs (`isEnabled: false` vs `null`):**
+   - **Prohibición de Ocultar el FAB en Selectores y Búsquedas:** Queda **estrictamente prohibido** utilizar `floatingActionButton: hasSelection ? CustomExtendedFab(...) : null` en pantallas de selección de productos/servicios y búsquedas. Dado que la vista con scroll ya reserva permanentemente el espacio de respiro inferior (`FabScrollPadding.single = 112.0 px`), el botón DEBE permanecer siempre renderizado en el árbol de widgets, presentándose en estado **bloqueado / inactivo** (`isEnabled: false`) con etiqueta base (ej. `'Confirmar'`).
+   - **Activación Reactiva:** En cuanto el usuario selecciona una cantidad mayor a cero con el stepper (`+`), el botón se activa reactivamente (`isEnabled: true`), adquiere elevación Material 3 (`elevation: 4`), fondo `primaryContainer` y actualiza dinámicamente su texto (`'Confirmar ($formattedQty $uom - $formattedTotal)'`). Al volver a cero, retorna a su estado bloqueado sin desaparecer ni alterar el layout del scroll.
+   - **Acciones Secundarias de Creación en Selectores:** En selectores de catálogo (como Compras), la acción para crear una nueva entidad (ej. "Nuevo producto") no debe competir ni mutar el EFAB inferior; debe colocarse en `StandardAppBar.actions` como `IconButton(icon: Icon(Icons.add), tooltip: 'Nuevo...')`.
+   - **Regla de Habilitación en Gestión de Seriales:** En pantallas de seriales (`manage_product_serials_screen.dart` y `delivery_note_manage_serials_screen.dart`), el botón `Guardar` DEBE permanecer bloqueado (`isEnabled: false`) hasta que el usuario haya agregado al menos un número de serie o haya modificado el interruptor de requerimiento de seriales frente al estado inicial (`isDirty`).
 
 ### E. 📐 Regla Canónica para Barras de Botones Fijas Inferiores y Hojas Modales
 
@@ -191,7 +196,7 @@ Para formularios de pantalla completa (Arquetipo 5) y pasos de wizard (Arquetipo
 
 ### 📌 F. Botones y FABs
 29. **[`custom_button.dart`](file:///c:/Users/aleja/flutter_apps/MVP/d_una_app/lib/shared/widgets/custom_button.dart)**: Botón estilizado primario y secundario con soporte para estado de carga (`isLoading`) e icono.
-30. **[`custom_extended_fab.dart`](file:///c:/Users/aleja/flutter_apps/MVP/d_una_app/lib/shared/widgets/custom_extended_fab.dart)**: FAB extendido oficial para pantallas principales de listado (con icono `Icons.add` y etiqueta "Nuevo"). Debe ocultarse automáticamente durante el modo selección.
+30. **[`custom_extended_fab.dart`](file:///c:/Users/aleja/flutter_apps/MVP/d_una_app/lib/shared/widgets/custom_extended_fab.dart)**: FAB extendido oficial para pantallas principales de listado ("Nuevo"), pantallas de selección ("Confirmar") y guardado en pestañas de Resumen. Soporta estados reactivos mediante `isEnabled`: cuando es `false`, se muestra bloqueado con fondo tenue (`surfaceContainerHighest`), elevación 0 y texto atenuado (`onSurface` al 38%). Debe ocultarse únicamente durante el modo selección múltiple en listados.
 
 ---
 

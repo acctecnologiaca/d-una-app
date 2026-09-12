@@ -211,15 +211,17 @@ class _DeliveryNoteProductSearchScreenState
         );
       },
       floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
-      floatingActionButton: hasSelection
-          ? CustomExtendedFab(
-              icon: Icons.check,
-              label: 'Confirmar ($formattedQty $uom)',
-                isEnabled: true,
-                onPressed: () async {
-                  if (_selectedProduct == null || _selectedQuantity <= 0) {
-                    return;
-                  }
+      floatingActionButton: CustomExtendedFab(
+        icon: Icons.check,
+        label: hasSelection
+            ? 'Confirmar ($formattedQty $uom)'
+            : 'Confirmar',
+        isEnabled: hasSelection,
+        onPressed: hasSelection
+            ? () async {
+                if (_selectedProduct == null || _selectedQuantity <= 0) {
+                  return;
+                }
 
                   if (_selectedQuantity > _selectedProduct!.availableQuantity) {
                     ScaffoldMessenger.of(context).showSnackBar(
@@ -348,9 +350,9 @@ class _DeliveryNoteProductSearchScreenState
                       }
                     }
                   }
-                },
-              )
-          : null,
+                }
+              : null,
+      ),
     );
   }
 }

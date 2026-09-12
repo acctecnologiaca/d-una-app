@@ -28,7 +28,9 @@ class DeliveryNoteManageSerialsScreen extends StatefulWidget {
 class _DeliveryNoteManageSerialsScreenState
     extends State<DeliveryNoteManageSerialsScreen> {
   late final List<DeliveryNoteSerialModel> _serials;
+  late final List<String> _initialSerialNumbers;
   late bool _noSerials;
+  late final bool _initialNoSerials;
   final TextEditingController _textController = TextEditingController();
   final FocusNode _focusNode = FocusNode();
   String _searchQuery = '';
@@ -38,6 +40,22 @@ class _DeliveryNoteManageSerialsScreenState
     super.initState();
     _serials = List<DeliveryNoteSerialModel>.from(widget.item.serials);
     _noSerials = !widget.item.requiresSerials;
+    _initialNoSerials = _noSerials;
+    _initialSerialNumbers =
+        List.unmodifiable(_serials.map((s) => s.serialNumber).toList());
+  }
+
+  bool get _canSave {
+    if (_noSerials) {
+      return _initialNoSerials != _noSerials || _initialSerialNumbers.isNotEmpty;
+    }
+    if (_serials.isEmpty) return false;
+    if (_initialNoSerials != _noSerials) return true;
+    if (_serials.length != _initialSerialNumbers.length) return true;
+    for (int i = 0; i < _serials.length; i++) {
+      if (_serials[i].serialNumber != _initialSerialNumbers[i]) return true;
+    }
+    return false;
   }
 
   @override
@@ -451,7 +469,8 @@ class _DeliveryNoteManageSerialsScreenState
     floatingActionButton: CustomExtendedFab(
         label: _noSerials ? 'Guardar' : 'Guardar ($assigned/$needed)',
         icon: Icons.check,
-        onPressed: _onConfirmWithCheck,
+        isEnabled: _canSave,
+        onPressed: _canSave ? _onConfirmWithCheck : null,
       ),
     );
   }

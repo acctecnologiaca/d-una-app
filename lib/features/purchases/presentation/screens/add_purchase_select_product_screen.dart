@@ -49,7 +49,18 @@ class _AddPurchaseSelectProductScreenState
     final uom = _selectedProduct?.uomModel?.symbol ?? 'ud.';
 
     return Scaffold(
-      appBar: const StandardAppBar(title: 'Agregar producto'),
+      appBar: StandardAppBar(
+        title: 'Agregar producto',
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.add),
+            tooltip: 'Nuevo producto',
+            onPressed: () {
+              context.push('/portfolio/own-inventory/add');
+            },
+          ),
+        ],
+      ),
       body: SafeArea(
         child: Column(
         children: [
@@ -192,15 +203,18 @@ class _AddPurchaseSelectProductScreenState
         ],
       ),
       ),
-      floatingActionButton: hasSelection
-          ? CustomExtendedFab(
-              icon: Icons.check,
-              label: 'Confirmar ($formattedQty $uom - $formattedTotal)',
-                isEnabled: true,
-                onPressed: () async {
-                  if (_selectedProduct == null || _selectedQuantity <= 0) {
-                    return;
-                  }
+      floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
+      floatingActionButton: CustomExtendedFab(
+        icon: Icons.check,
+        label: hasSelection
+            ? 'Confirmar ($formattedQty $uom - $formattedTotal)'
+            : 'Confirmar',
+        isEnabled: hasSelection,
+        onPressed: hasSelection
+            ? () async {
+                if (_selectedProduct == null || _selectedQuantity <= 0) {
+                  return;
+                }
 
                   final result = await AddPurchaseProductDetailsSheet.show(
                     context,
@@ -303,15 +317,9 @@ class _AddPurchaseSelectProductScreenState
                       }
                     }
                   }
-                },
-              )
-          : CustomExtendedFab(
-              onPressed: () {
-                context.push('/portfolio/own-inventory/add');
-              },
-              label: 'Nuevo',
-              icon: Icons.add,
-            ),
+                }
+              : null,
+      ),
     );
   }
 }

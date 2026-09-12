@@ -32,7 +32,9 @@ class ManageProductSerialsScreen extends ConsumerStatefulWidget {
 class _ManageProductSerialsScreenState
     extends ConsumerState<ManageProductSerialsScreen> {
   late bool _noSerials;
+  late final bool _initialNoSerials;
   final List<String> _serials = [];
+  late final List<String> _initialSerials;
   final TextEditingController _textController = TextEditingController();
   final FocusNode _focusNode = FocusNode();
   String _searchQuery = '';
@@ -53,12 +55,27 @@ class _ManageProductSerialsScreenState
       ),
     );
     _noSerials = !item.requiresSerials;
+    _initialNoSerials = _noSerials;
 
     final existingSerials = purchaseState.serials
         .where((s) => s.productId == widget.product.id)
         .map((s) => s.serialNumber)
         .toList();
     _serials.addAll(existingSerials);
+    _initialSerials = List.unmodifiable(existingSerials);
+  }
+
+  bool get _canSave {
+    if (_noSerials) {
+      return _initialNoSerials != _noSerials || _initialSerials.isNotEmpty;
+    }
+    if (_serials.isEmpty) return false;
+    if (_initialNoSerials != _noSerials) return true;
+    if (_serials.length != _initialSerials.length) return true;
+    for (int i = 0; i < _serials.length; i++) {
+      if (_serials[i] != _initialSerials[i]) return true;
+    }
+    return false;
   }
 
   @override
@@ -486,7 +503,8 @@ class _ManageProductSerialsScreenState
     floatingActionButton: CustomExtendedFab(
         label: _noSerials ? 'Guardar' : 'Guardar ($assigned/$needed)',
         icon: Icons.check,
-        onPressed: _onConfirmWithCheck,
+        isEnabled: _canSave,
+        onPressed: _canSave ? _onConfirmWithCheck : null,
       ),
     );
   }
