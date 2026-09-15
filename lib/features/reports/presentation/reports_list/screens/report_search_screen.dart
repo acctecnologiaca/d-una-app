@@ -12,6 +12,8 @@ import '../widgets/service_report_card.dart';
 import '../providers/reports_provider.dart';
 import '../report_selection_actions.dart';
 import 'package:material_symbols_icons/symbols.dart';
+import 'package:d_una_app/core/providers/draft_providers.dart';
+import 'package:d_una_app/core/constants/draft_constants.dart';
 
 class ReportSearchScreen extends ConsumerStatefulWidget {
   final bool selectionMode;
@@ -261,6 +263,7 @@ class _ReportSearchScreenState extends ConsumerState<ReportSearchScreen> {
     );
     final selection = ref.watch(reportSelectionProvider);
     final allReports = paginatedAsync.valueOrNull?.items ?? [];
+    final draftService = ref.watch(draftStorageServiceProvider);
 
     return GenericSearchScreen<ServiceReportSummary>(
       title: widget.selectionMode ? 'Seleccionar reporte' : 'Buscar reporte',
@@ -351,8 +354,12 @@ class _ReportSearchScreenState extends ConsumerState<ReportSearchScreen> {
       ),
       comparator: null,
       itemBuilder: (context, report) {
+        final hasDraft = draftService.hasDraft(
+          '${DraftConstants.reportsModule}_${report.id}',
+        );
         return ServiceReportCard(
           report: report,
+          hasLocalChanges: hasDraft,
           isSelectionMode: selection.isSelectionMode,
           isSelected: selection.isSelected(report.id),
           onLongPress: () =>

@@ -14,6 +14,8 @@ import '../quote_selection_actions.dart';
 import 'package:material_symbols_icons/symbols.dart';
 import '../../../../profile/presentation/providers/profile_provider.dart';
 import '../../../../ads/presentation/providers/ads_provider.dart';
+import 'package:d_una_app/core/providers/draft_providers.dart';
+import 'package:d_una_app/core/constants/draft_constants.dart';
 
 class QuotesSearchScreen extends ConsumerStatefulWidget {
   final bool selectionMode;
@@ -190,7 +192,9 @@ class _QuotesSearchScreenState extends ConsumerState<QuotesSearchScreen> {
     final selection = ref.watch(quoteSelectionProvider);
     final allQuotes = paginatedAsync.valueOrNull?.items ?? [];
 
-    final userProfile = ref.watch(userProfileProvider).valueOrNull;
+    final userProfileAsync = ref.watch(userProfileProvider);
+    final userProfile = userProfileAsync.valueOrNull;
+    final draftService = ref.watch(draftStorageServiceProvider);
     final occupationIds = <String>[
       if (userProfile?.occupationId != null) userProfile!.occupationId!,
       ...userProfile?.secondaryOccupationIds ?? [],
@@ -303,8 +307,12 @@ class _QuotesSearchScreenState extends ConsumerState<QuotesSearchScreen> {
       ),
       comparator: null,
       itemBuilder: (context, quote) {
+        final hasDraft = draftService.hasDraft(
+          '${DraftConstants.quotesModule}_${quote.id}',
+        );
         return QuoteCard(
           quote: quote,
+          hasLocalChanges: hasDraft,
           isSelectionMode: selection.isSelectionMode,
           isSelected: selection.isSelected(quote.id),
           onLongPress: () =>

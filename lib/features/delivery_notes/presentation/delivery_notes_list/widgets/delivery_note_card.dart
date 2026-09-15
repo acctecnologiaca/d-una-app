@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:material_symbols_icons/symbols.dart';
 import 'package:d_una_app/shared/widgets/standard_list_item.dart';
+import 'package:d_una_app/shared/widgets/document_draft_icon.dart';
 import '../../../domain/models/delivery_note_model.dart';
 
 class DeliveryNoteCard extends StatelessWidget {
@@ -10,6 +11,7 @@ class DeliveryNoteCard extends StatelessWidget {
   final VoidCallback? onLongPress;
   final bool isSelectionMode;
   final bool isSelected;
+  final bool hasLocalChanges;
 
   const DeliveryNoteCard({
     super.key,
@@ -18,6 +20,7 @@ class DeliveryNoteCard extends StatelessWidget {
     this.onLongPress,
     this.isSelectionMode = false,
     this.isSelected = false,
+    this.hasLocalChanges = false,
   });
 
   @override
@@ -106,6 +109,10 @@ class DeliveryNoteCard extends StatelessWidget {
                         color: colors.onSurfaceVariant,
                       ),
                     ),
+                    const SizedBox(width: 4),
+                  ],
+                  if (hasLocalChanges) ...[
+                    const DocumentDraftIcon(),
                     const SizedBox(width: 4),
                   ],
                   Tooltip(

@@ -69,6 +69,33 @@ class _AddPurchaseDetailsTabState extends ConsumerState<AddPurchaseDetailsTab> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          if (isLinkedToOrder) ...[
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: colors.surfaceContainerHigh,
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: colors.outlineVariant),
+              ),
+              child: Row(
+                children: [
+                  Icon(Icons.info_outline, size: 20, color: colors.primary),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      'Registro asociado a una Orden de Compra. El proveedor y número de documento están protegidos contra modificaciones.',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: colors.onSurfaceVariant,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 16),
+          ],
+
           // Fecha de compra
           CustomTextField(
             label: 'Fecha de compra*',
@@ -98,8 +125,8 @@ class _AddPurchaseDetailsTabState extends ConsumerState<AddPurchaseDetailsTab> {
                 label: 'Proveedor',
                 value: selectedSupplier,
                 items: suppliers,
-                searchable: true,
-                showAddOption: true,
+                searchable: !isLinkedToOrder,
+                showAddOption: !isLinkedToOrder,
                 addOptionLabel: 'Agregar proveedor',
                 addOptionValue: UnaffiliatedSupplier(
                   id: '___ADD___',
@@ -107,44 +134,48 @@ class _AddPurchaseDetailsTabState extends ConsumerState<AddPurchaseDetailsTab> {
                 ),
                 itemLabelBuilder: (UnaffiliatedSupplier item) =>
                     item.legalName ?? item.name,
-                enabled: true,
-                onAddPressed: () async {
-                  final result =
-                      await showModalBottomSheet<UnaffiliatedSupplier>(
-                        context: context,
-                        isScrollControlled: true,
-                        shape: const RoundedRectangleBorder(
-                          borderRadius: BorderRadius.vertical(
-                            top: Radius.circular(16),
-                          ),
-                        ),
-                        backgroundColor: Theme.of(
-                          context,
-                        ).colorScheme.surfaceContainer,
-                        builder: (context) => const AddEditSupplierSheet(),
-                      );
+                enabled: !isLinkedToOrder,
+                onAddPressed: !isLinkedToOrder
+                    ? () async {
+                        final result =
+                            await showModalBottomSheet<UnaffiliatedSupplier>(
+                              context: context,
+                              isScrollControlled: true,
+                              shape: const RoundedRectangleBorder(
+                                borderRadius: BorderRadius.vertical(
+                                  top: Radius.circular(16),
+                                ),
+                              ),
+                              backgroundColor: Theme.of(
+                                context,
+                              ).colorScheme.surfaceContainer,
+                              builder: (context) => const AddEditSupplierSheet(),
+                            );
 
-                  if (result != null) {
-                    ref
-                        .read(addPurchaseProvider.notifier)
-                        .setSupplier(
-                          result.id,
-                          result.legalName ?? result.name,
-                          taxId: result.taxId,
-                        );
-                  }
-                },
-                onChanged: (UnaffiliatedSupplier? val) {
-                  if (val != null && val.id != '___ADD___') {
-                    ref
-                        .read(addPurchaseProvider.notifier)
-                        .setSupplier(
-                          val.id,
-                          val.legalName ?? val.name,
-                          taxId: val.taxId,
-                        );
-                  }
-                },
+                        if (result != null) {
+                          ref
+                              .read(addPurchaseProvider.notifier)
+                              .setSupplier(
+                                result.id,
+                                result.legalName ?? result.name,
+                                taxId: result.taxId,
+                              );
+                        }
+                      }
+                    : null,
+                onChanged: !isLinkedToOrder
+                    ? (UnaffiliatedSupplier? val) {
+                        if (val != null && val.id != '___ADD___') {
+                          ref
+                              .read(addPurchaseProvider.notifier)
+                              .setSupplier(
+                                val.id,
+                                val.legalName ?? val.name,
+                                taxId: val.taxId,
+                              );
+                        }
+                      }
+                    : null,
               );
             },
             loading: () => const Center(child: CircularProgressIndicator()),

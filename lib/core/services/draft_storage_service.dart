@@ -5,7 +5,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import '../models/draft_data.dart';
 import '../constants/draft_constants.dart';
 
-class DraftStorageService {
+class DraftStorageService with ChangeNotifier {
   final SharedPreferences _prefs;
   final Map<String, Timer> _debounceTimers = {};
 
@@ -23,6 +23,7 @@ class DraftStorageService {
       final jsonString = draft.toJson();
       await _prefs.setString(key, jsonString);
       debugPrint('[DraftStorageService] Draft guardado para ${draft.moduleKey} (Tab: ${draft.tabIndex})');
+      notifyListeners();
     } catch (e) {
       debugPrint('[DraftStorageService] Error guardando borrador ${draft.moduleKey}: $e');
     }
@@ -63,6 +64,7 @@ class DraftStorageService {
       final key = _buildKey(moduleKey);
       await _prefs.remove(key);
       debugPrint('[DraftStorageService] Borrador eliminado para $moduleKey');
+      notifyListeners();
     } catch (e) {
       debugPrint('[DraftStorageService] Error eliminando borrador $moduleKey: $e');
     }
@@ -77,5 +79,6 @@ class DraftStorageService {
       await _prefs.remove(key);
     }
     debugPrint('[DraftStorageService] Todos los borradores del usuario han sido eliminados');
+    notifyListeners();
   }
 }

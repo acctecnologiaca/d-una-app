@@ -4,6 +4,7 @@ import 'package:intl/intl.dart';
 import '../../../domain/models/supplier_order.dart';
 import '../../../../../shared/utils/currency_formatter.dart';
 import '../../../../../shared/widgets/standard_list_item.dart';
+import '../../../../../shared/widgets/document_draft_icon.dart';
 import 'package:d_una_app/features/portfolio/presentation/providers/suppliers_provider.dart';
 import 'package:d_una_app/features/portfolio/domain/models/supplier_model.dart';
 import 'package:d_una_app/features/quotes/domain/models/quote_model.dart'
@@ -15,6 +16,7 @@ class SupplierOrderCard extends ConsumerWidget {
   final bool isSelected;
   final VoidCallback onTap;
   final VoidCallback onLongPress;
+  final bool hasLocalChanges;
 
   const SupplierOrderCard({
     super.key,
@@ -23,6 +25,7 @@ class SupplierOrderCard extends ConsumerWidget {
     required this.isSelected,
     required this.onTap,
     required this.onLongPress,
+    this.hasLocalChanges = false,
   });
 
   @override
@@ -143,6 +146,10 @@ class SupplierOrderCard extends ConsumerWidget {
                             color: Colors.red.shade700,
                           ),
                         ),
+                        const SizedBox(width: 4),
+                      ],
+                      if (hasLocalChanges) ...[
+                        const DocumentDraftIcon(),
                         const SizedBox(width: 4),
                       ],
                       _buildStatusIcon(

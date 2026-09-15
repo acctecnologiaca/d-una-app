@@ -15,6 +15,8 @@ import '../providers/delivery_notes_providers.dart';
 import '../widgets/delivery_note_card.dart';
 import '../delivery_note_selection_actions.dart';
 import '../../create_delivery_note/providers/create_delivery_note_provider.dart';
+import 'package:d_una_app/core/providers/draft_providers.dart';
+import 'package:d_una_app/core/constants/draft_constants.dart';
 
 class DeliveryNotesListScreen extends ConsumerStatefulWidget {
   const DeliveryNotesListScreen({super.key});
@@ -55,6 +57,9 @@ class _DeliveryNotesListScreenState extends ConsumerState<DeliveryNotesListScree
     final paginatedAsync = ref.watch(paginatedDeliveryNotesProvider);
     final selection = ref.watch(deliveryNotesSelectionProvider);
     final userProfileAsync = ref.watch(userProfileProvider);
+    final draftService = ref.watch(draftStorageServiceProvider);
+    final hasNewDeliveryNoteDraft =
+        draftService.hasDraft(DraftConstants.deliveryNotesModule);
 
     final allNotes = paginatedAsync.valueOrNull?.items ?? [];
     final selectedNotes = allNotes
@@ -189,8 +194,12 @@ class _DeliveryNotesListScreenState extends ConsumerState<DeliveryNotesListScree
                           const Divider(height: 0, color: Colors.transparent),
                       itemBuilder: (context, index, note) {
                         final isSelected = selection.isSelected(note.id);
+                        final hasDraft = draftService.hasDraft(
+                          '${DraftConstants.deliveryNotesModule}_${note.id}',
+                        );
                         return DeliveryNoteCard(
                           note: note,
+                          hasLocalChanges: hasDraft,
                           isSelectionMode: selection.isSelectionMode,
                           isSelected: isSelected,
                           onLongPress: () {
@@ -228,6 +237,9 @@ class _DeliveryNotesListScreenState extends ConsumerState<DeliveryNotesListScree
               },
               label: 'Nueva',
               icon: Icons.add,
+              trailingIcon:
+                  hasNewDeliveryNoteDraft ? DraftConstants.draftIcon : null,
+              trailingTooltip: 'Borrador en proceso',
             ),
     );
   }

@@ -10,6 +10,8 @@ import '../../../domain/models/delivery_note_model.dart';
 import '../../../domain/models/delivery_note_status.dart';
 import '../providers/delivery_notes_providers.dart';
 import '../widgets/delivery_note_card.dart';
+import 'package:d_una_app/core/providers/draft_providers.dart';
+import 'package:d_una_app/core/constants/draft_constants.dart';
 
 class DeliveryNotesSearchScreen extends ConsumerStatefulWidget {
   final String? initialQuery;
@@ -111,6 +113,7 @@ class _DeliveryNotesSearchScreenState
   @override
   Widget build(BuildContext context) {
     final paginatedAsync = ref.watch(paginatedDeliveryNotesProvider);
+    final draftService = ref.watch(draftStorageServiceProvider);
     final dateFormat = DateFormat('dd/MM/yy');
 
     return GenericSearchScreen<DeliveryNoteModel>(
@@ -183,8 +186,12 @@ class _DeliveryNotesSearchScreenState
         return true;
       },
       itemBuilder: (context, note) {
+        final hasDraft = draftService.hasDraft(
+          '${DraftConstants.deliveryNotesModule}_${note.id}',
+        );
         return DeliveryNoteCard(
           note: note,
+          hasLocalChanges: hasDraft,
           onTap: () {
             context.push('/delivery-notes/view/${note.id}');
           },

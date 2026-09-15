@@ -17,6 +17,8 @@ import '../supplier_order_selection_actions.dart';
 import '../../create_supplier_order/providers/create_supplier_order_provider.dart';
 import '../widgets/supplier_order_card.dart';
 import '../../../domain/models/supplier_order_status.dart';
+import 'package:d_una_app/core/providers/draft_providers.dart';
+import 'package:d_una_app/core/constants/draft_constants.dart';
 
 class SupplierOrdersListScreen extends ConsumerStatefulWidget {
   const SupplierOrdersListScreen({super.key});
@@ -58,6 +60,9 @@ class _SupplierOrdersListScreenState
     final paginatedAsync = ref.watch(paginatedSupplierOrdersProvider);
     final selection = ref.watch(supplierOrderSelectionProvider);
     final userProfileAsync = ref.watch(userProfileProvider);
+    final draftService = ref.watch(draftStorageServiceProvider);
+    final hasNewOrderDraft =
+        draftService.hasDraft(DraftConstants.supplierOrdersModule);
 
     final allOrders = paginatedAsync.valueOrNull?.items ?? [];
     final selectedOrders = allOrders
@@ -228,8 +233,12 @@ class _SupplierOrdersListScreenState
                       separatorBuilder: (context, index) =>
                           const Divider(height: 0, color: Colors.transparent),
                       itemBuilder: (context, index, order) {
+                        final hasDraft = draftService.hasDraft(
+                          '${DraftConstants.supplierOrdersModule}_${order.id}',
+                        );
                         return SupplierOrderCard(
                           order: order,
+                          hasLocalChanges: hasDraft,
                           isSelectionMode: selection.isSelectionMode,
                           isSelected: selection.isSelected(order.id),
                           onLongPress: () => ref
@@ -267,6 +276,9 @@ class _SupplierOrdersListScreenState
               },
               label: 'Nueva',
               icon: Icons.add,
+              trailingIcon:
+                  hasNewOrderDraft ? DraftConstants.draftIcon : null,
+              trailingTooltip: 'Borrador en proceso',
             ),
     );
   }

@@ -4,6 +4,7 @@ import '../../../domain/models/quote_model.dart';
 // For TitleCase if needed
 import '../../../../../shared/utils/currency_formatter.dart';
 import '../../../../../shared/widgets/standard_list_item.dart';
+import '../../../../../shared/widgets/document_draft_icon.dart';
 
 class QuoteCard extends StatelessWidget {
   final Quote quote;
@@ -11,6 +12,7 @@ class QuoteCard extends StatelessWidget {
   final VoidCallback? onLongPress;
   final bool isSelectionMode;
   final bool isSelected;
+  final bool hasLocalChanges;
 
   const QuoteCard({
     super.key,
@@ -19,6 +21,7 @@ class QuoteCard extends StatelessWidget {
     this.onLongPress,
     this.isSelectionMode = false,
     this.isSelected = false,
+    this.hasLocalChanges = false,
   });
 
   @override
@@ -115,6 +118,10 @@ class QuoteCard extends StatelessWidget {
                             color: Color(0xFFFFB964),
                           ),
                         ),
+                      ],
+                      if (hasLocalChanges) ...[
+                        const SizedBox(width: 4),
+                        const DocumentDraftIcon(),
                       ],
                       const SizedBox(width: 4),
                       _buildStatusIcon(

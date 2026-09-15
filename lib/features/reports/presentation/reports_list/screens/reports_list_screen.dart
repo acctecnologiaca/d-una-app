@@ -16,6 +16,8 @@ import '../widgets/service_report_card.dart';
 import '../report_selection_actions.dart';
 import '../../create_report/providers/create_report_provider.dart';
 import '../../../domain/models/service_report_model.dart';
+import 'package:d_una_app/core/providers/draft_providers.dart';
+import 'package:d_una_app/core/constants/draft_constants.dart';
 
 class ReportsListScreen extends ConsumerStatefulWidget {
   const ReportsListScreen({super.key});
@@ -52,6 +54,9 @@ class _ReportsListScreenState extends ConsumerState<ReportsListScreen>
     final colors = Theme.of(context).colorScheme;
     final selection = ref.watch(reportSelectionProvider);
     final paginatedStateAsync = ref.watch(paginatedReportsListProvider);
+    final draftService = ref.watch(draftStorageServiceProvider);
+    final hasNewReportDraft =
+        draftService.hasDraft(DraftConstants.reportsModule);
 
     final allReports = paginatedStateAsync.valueOrNull?.items ?? [];
 
@@ -193,8 +198,12 @@ class _ReportsListScreenState extends ConsumerState<ReportsListScreen>
                         color: Colors.transparent,
                       ),
                       itemBuilder: (context, index, item) {
+                        final hasDraft = draftService.hasDraft(
+                          '${DraftConstants.reportsModule}_${item.id}',
+                        );
                         return ServiceReportCard(
                           report: item,
+                          hasLocalChanges: hasDraft,
                           isSelectionMode: selection.isSelectionMode,
                           isSelected: selection.isSelected(item.id),
                           onLongPress: () => ref
@@ -224,6 +233,9 @@ class _ReportsListScreenState extends ConsumerState<ReportsListScreen>
               },
               icon: Icons.add,
               label: 'Nuevo',
+              trailingIcon:
+                  hasNewReportDraft ? DraftConstants.draftIcon : null,
+              trailingTooltip: 'Borrador en proceso',
             ),
     );
   }

@@ -212,8 +212,11 @@ Expanded(
         );
       }
 
+      final hasLocalChanges = draftService.hasDraft('${DraftConstants.myEntity}_${item.id}');
+
       return EntityCard(
         entity: item,
+        hasLocalChanges: hasLocalChanges,
         isSelectionMode: selection.isSelectionMode,
         isSelected: selection.isSelected(item.id),
         onTap: selection.isSelectionMode
@@ -237,15 +240,24 @@ Expanded(
 ---
 
 ### Paso 6: Floating Action Button Extendido (`CustomExtendedFab`)
-El FAB debe ser del tipo [`CustomExtendedFab`](file:///c:/Users/aleja/flutter_apps/MVP/d_una_app/lib/shared/widgets/custom_extended_fab.dart) y **debe ocultarse dinámicamente (`null`) cuando el modo de selección esté activo**:
+El FAB debe ser del tipo [`CustomExtendedFab`](file:///c:/Users/aleja/flutter_apps/MVP/d_una_app/lib/shared/widgets/custom_extended_fab.dart) y **debe ocultarse dinámicamente (`null`) cuando el modo de selección esté activo**.
+
+En módulos que implementan borradores locales ([`implement_draftable_module`](file:///c:/Users/aleja/flutter_apps/MVP/d_una_app/.agents/skills/implement_draftable_module/SKILL.md)), debe enriquecerse con el indicador de borrador nuevo:
 
 ```dart
+final draftService = ref.watch(draftStorageServiceProvider);
+final hasNewDraft = draftService.hasDraft(DraftConstants.myEntity);
+
+...
+
 floatingActionButton: selection.isSelectionMode
     ? null
     : CustomExtendedFab(
         onPressed: () => context.push('/my-entity/create'),
         icon: Icons.add,
         label: 'Nuevo',
+        trailingIcon: hasNewDraft ? DraftConstants.draftIcon : null,
+        trailingTooltip: hasNewDraft ? 'Borrador nuevo en progreso' : null,
       ),
 ```
 
@@ -261,6 +273,7 @@ floatingActionButton: selection.isSelectionMode
 - [ ] ¿La barra de búsqueda tiene `readOnly: true` y redirige a la ruta `/search`?
 - [ ] ¿El ordenamiento usa el modal `SortSelector`?
 - [ ] ¿La lista utiliza `PaginatedListView` con `emptyState`, `errorStateBuilder` y clearance inferior `FabScrollPadding.list` (`88.0px`)?
+- [ ] ¿En módulos de documentos, se pasa `hasLocalChanges` a las tarjetas y `trailingIcon: DraftConstants.draftIcon` al EFAB cuando existe borrador activo?
 - [ ] ¿El FAB extendido reposa directamente sobre el `Scaffold` sin envoltorios `Padding(bottom: 40.0)`?
 - [ ] ¿El FAB extendido desaparece en modo selección múltiple?
 - [ ] ¿Si la pantalla es standalone (sin `BottomNavigationBar`), el cuerpo está envuelto en `SafeArea(child: Column(...))`?

@@ -1,6 +1,6 @@
 ---
 name: shared_components_guide
-description: Guía Maestra y Sistema de Diseño UI/UX de D'Una App. Contiene los Design Tokens oficiales, el catálogo exhaustivo clasificado de los 47 componentes compartidos en /lib/shared/widgets/, fórmulas matemáticas de padding dinámico y la matriz de decisión de arquetipos de pantalla.
+description: Guía Maestra y Sistema de Diseño UI/UX de D'Una App. Contiene los Design Tokens oficiales, el catálogo exhaustivo clasificado de los 48 componentes compartidos en /lib/shared/widgets/, fórmulas matemáticas de padding dinámico y la matriz de decisión de arquetipos de pantalla.
 ---
 
 # Master UI/UX Design System & Shared Components Guide
@@ -196,7 +196,7 @@ Para formularios de pantalla completa (Arquetipo 5) y pasos de wizard (Arquetipo
 
 ### 📌 F. Botones y FABs
 29. **[`custom_button.dart`](file:///c:/Users/aleja/flutter_apps/MVP/d_una_app/lib/shared/widgets/custom_button.dart)**: Botón estilizado primario y secundario con soporte para estado de carga (`isLoading`) e icono.
-30. **[`custom_extended_fab.dart`](file:///c:/Users/aleja/flutter_apps/MVP/d_una_app/lib/shared/widgets/custom_extended_fab.dart)**: FAB extendido oficial para pantallas principales de listado ("Nuevo"), pantallas de selección ("Confirmar") y guardado en pestañas de Resumen. Soporta estados reactivos mediante `isEnabled`: cuando es `false`, se muestra bloqueado con fondo tenue (`surfaceContainerHighest`), elevación 0 y texto atenuado (`onSurface` al 38%). Debe ocultarse únicamente durante el modo selección múltiple en listados.
+30. **[`custom_extended_fab.dart`](file:///c:/Users/aleja/flutter_apps/MVP/d_una_app/lib/shared/widgets/custom_extended_fab.dart)**: FAB extendido oficial para pantallas principales de listado ("Nuevo"), pantallas de selección ("Confirmar") y guardado en pestañas de Resumen. Soporta estados reactivos mediante `isEnabled`: cuando es `false`, se muestra bloqueado con fondo tenue (`surfaceContainerHighest`), elevación 0 y texto atenuado (`onSurface` al 38%). Soporta `trailingIcon` y `trailingTooltip` para mostrar indicadores auxiliares como el marcador de borrador en progreso (`DraftConstants.draftIcon`). Debe ocultarse únicamente durante el modo selección múltiple en listados.
 
 ---
 
@@ -218,18 +218,19 @@ Para formularios de pantalla completa (Arquetipo 5) y pasos de wizard (Arquetipo
 41. **[`product_image_avatar.dart`](file:///c:/Users/aleja/flutter_apps/MVP/d_una_app/lib/shared/widgets/product_image_avatar.dart)**: Contenedor con fallback elegante para miniaturas de productos.
 42. **[`user_profile_avatar.dart`](file:///c:/Users/aleja/flutter_apps/MVP/d_una_app/lib/shared/widgets/user_profile_avatar.dart)**: Avatar del usuario autenticado para encabezados principales.
 43. **[`custom_menu_tile.dart`](file:///c:/Users/aleja/flutter_apps/MVP/d_una_app/lib/shared/widgets/custom_menu_tile.dart)**: Fila de menú estilizada con icono, título y flecha de navegación para dashboards (Ajustes, Perfil).
+44. **[`document_draft_icon.dart`](file:///c:/Users/aleja/flutter_apps/MVP/d_una_app/lib/shared/widgets/document_draft_icon.dart)**: Indicador visual estandarizado para señalar cambios locales no guardados en base de datos (`Icons.bookmark_added_outlined`) en tarjetas de documentos ejecutivos. Se ubica a la izquierda del estatus principal.
 
 ---
 
 ### 📌 I. Hojas de Acción y Envío
-44. **[`custom_action_sheet.dart`](file:///c:/Users/aleja/flutter_apps/MVP/d_una_app/lib/shared/widgets/custom_action_sheet.dart)**: Hoja inferior estándar para desplegar menús de opciones y acciones (`CustomActionSheet.show(...)`).
-45. **[`bottom_sheet_action_item.dart`](file:///c:/Users/aleja/flutter_apps/MVP/d_una_app/lib/shared/widgets/bottom_sheet_action_item.dart)**: Fila individual de acción dentro de un `CustomActionSheet`.
-46. **[`send_document_email_sheet.dart`](file:///c:/Users/aleja/flutter_apps/MVP/d_una_app/lib/shared/widgets/send_document_email_sheet.dart)**: Hoja estandarizada para envío de documentos por correo electrónico con prellenado de plantilla y destinatarios.
+45. **[`custom_action_sheet.dart`](file:///c:/Users/aleja/flutter_apps/MVP/d_una_app/lib/shared/widgets/custom_action_sheet.dart)**: Hoja inferior estándar para desplegar menús de opciones y acciones (`CustomActionSheet.show(...)`).
+46. **[`bottom_sheet_action_item.dart`](file:///c:/Users/aleja/flutter_apps/MVP/d_una_app/lib/shared/widgets/bottom_sheet_action_item.dart)**: Fila individual de acción dentro de un `CustomActionSheet`.
+47. **[`send_document_email_sheet.dart`](file:///c:/Users/aleja/flutter_apps/MVP/d_una_app/lib/shared/widgets/send_document_email_sheet.dart)**: Hoja estandarizada para envío de documentos por correo electrónico con prellenado de plantilla y destinatarios.
 
 ---
 
 ### 📌 J. Herramientas Especializadas
-47. **[`barcode_scanner_screen.dart`](file:///c:/Users/aleja/flutter_apps/MVP/d_una_app/lib/shared/widgets/barcode_scanner_screen.dart)**: Pantalla completa con visor de cámara para escanear códigos de barras y QR con linterna y retorno de valor.
+48. **[`barcode_scanner_screen.dart`](file:///c:/Users/aleja/flutter_apps/MVP/d_una_app/lib/shared/widgets/barcode_scanner_screen.dart)**: Pantalla completa con visor de cámara para escanear códigos de barras y QR con linterna y retorno de valor.
 
 ---
 

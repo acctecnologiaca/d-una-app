@@ -12,6 +12,8 @@ import 'package:d_una_app/features/portfolio/presentation/providers/lookup_provi
 
 import '../widgets/purchase_list_item.dart';
 import '../../domain/models/purchase_model.dart';
+import 'package:d_una_app/core/providers/draft_providers.dart';
+import 'package:d_una_app/core/constants/draft_constants.dart';
 
 class PurchasesSearchScreen extends ConsumerStatefulWidget {
   final bool selectionMode;
@@ -165,6 +167,7 @@ class _PurchasesSearchScreenState extends ConsumerState<PurchasesSearchScreen> {
   @override
   Widget build(BuildContext context) {
     final paginatedAsync = ref.watch(paginatedPurchaseSearchProvider(widget.productId));
+    final draftService = ref.watch(draftStorageServiceProvider);
     final dateFormat = DateFormat('dd/MM/yyyy');
 
     return GenericSearchScreen<Purchase>(
@@ -220,8 +223,12 @@ class _PurchasesSearchScreenState extends ConsumerState<PurchasesSearchScreen> {
         ),
       ),
       itemBuilder: (context, purchase) {
+        final hasDraft = draftService.hasDraft(
+          '${DraftConstants.purchasesModule}_${purchase.id}',
+        );
         return PurchaseListItem(
           purchase: purchase,
+          hasLocalChanges: hasDraft,
           onTap: () {
             if (widget.selectionMode) {
               Navigator.of(context).pop(purchase);

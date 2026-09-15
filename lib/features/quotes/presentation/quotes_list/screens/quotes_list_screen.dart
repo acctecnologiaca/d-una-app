@@ -18,6 +18,8 @@ import '../../../../../shared/widgets/paginated_list_view.dart';
 import '../quote_selection_actions.dart';
 import '../../../domain/models/quote_model.dart';
 import '../../../../ads/presentation/providers/ads_provider.dart';
+import 'package:d_una_app/core/providers/draft_providers.dart';
+import 'package:d_una_app/core/constants/draft_constants.dart';
 
 class QuotesListScreen extends ConsumerStatefulWidget {
   const QuotesListScreen({super.key});
@@ -55,6 +57,9 @@ class _QuotesListScreenState extends ConsumerState<QuotesListScreen>
     final userProfileAsync = ref.watch(userProfileProvider);
     final selection = ref.watch(quoteSelectionProvider);
     final paginatedStateAsync = ref.watch(paginatedQuotesListProvider);
+    final draftService = ref.watch(draftStorageServiceProvider);
+    final hasNewQuoteDraft =
+        draftService.hasDraft(DraftConstants.quotesModule);
 
     final userProfile = userProfileAsync.valueOrNull;
     final occupationIds = <String>[
@@ -216,8 +221,12 @@ class _QuotesListScreenState extends ConsumerState<QuotesListScreen>
                         color: Colors.transparent,
                       ),
                       itemBuilder: (context, index, item) {
+                        final hasDraft = draftService.hasDraft(
+                          '${DraftConstants.quotesModule}_${item.id}',
+                        );
                         return QuoteCard(
                           quote: item,
+                          hasLocalChanges: hasDraft,
                           isSelectionMode: selection.isSelectionMode,
                           isSelected: selection.isSelected(item.id),
                           onLongPress: () => ref
@@ -247,6 +256,9 @@ class _QuotesListScreenState extends ConsumerState<QuotesListScreen>
               },
               icon: Icons.add,
               label: 'Nueva',
+              trailingIcon:
+                  hasNewQuoteDraft ? DraftConstants.draftIcon : null,
+              trailingTooltip: 'Borrador en proceso',
             ),
     );
   }

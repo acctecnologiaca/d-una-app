@@ -2,12 +2,19 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../../domain/models/purchase_model.dart';
 import 'package:d_una_app/shared/utils/currency_formatter.dart';
+import 'package:d_una_app/shared/widgets/document_draft_icon.dart';
 
 class PurchaseListItem extends StatelessWidget {
   final Purchase purchase;
   final VoidCallback? onTap;
+  final bool hasLocalChanges;
 
-  const PurchaseListItem({super.key, required this.purchase, this.onTap});
+  const PurchaseListItem({
+    super.key,
+    required this.purchase,
+    this.onTap,
+    this.hasLocalChanges = false,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -109,6 +116,10 @@ class PurchaseListItem extends StatelessWidget {
                             color: colors.onSurfaceVariant,
                           ),
                         ),
+                        const SizedBox(width: 4),
+                      ],
+                      if (hasLocalChanges) ...[
+                        const DocumentDraftIcon(),
                         const SizedBox(width: 4),
                       ],
                       Tooltip(

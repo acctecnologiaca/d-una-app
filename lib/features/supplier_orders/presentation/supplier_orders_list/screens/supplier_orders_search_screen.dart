@@ -16,6 +16,8 @@ import 'package:d_una_app/features/portfolio/presentation/providers/suppliers_pr
 import 'package:d_una_app/features/portfolio/domain/models/supplier_model.dart';
 import 'package:d_una_app/features/profile/presentation/providers/profile_provider.dart';
 import '../widgets/supplier_order_card.dart';
+import 'package:d_una_app/core/providers/draft_providers.dart';
+import 'package:d_una_app/core/constants/draft_constants.dart';
 
 /// Search screen for supplier orders.
 ///
@@ -246,6 +248,7 @@ class _SupplierOrdersSearchScreenState
     final suppliersAsync = ref.watch(suppliersProvider);
     final userProfile = ref.watch(userProfileProvider).valueOrNull;
     final selection = ref.watch(supplierOrderSelectionProvider);
+    final draftService = ref.watch(draftStorageServiceProvider);
     final dateFormat = DateFormat('dd/MM/yyyy');
 
     final suppliers = suppliersAsync.valueOrNull ?? [];
@@ -376,8 +379,12 @@ class _SupplierOrdersSearchScreenState
         ),
       ),
       itemBuilder: (context, order) {
+        final hasDraft = draftService.hasDraft(
+          '${DraftConstants.supplierOrdersModule}_${order.id}',
+        );
         return SupplierOrderCard(
           order: order,
+          hasLocalChanges: hasDraft,
           isSelectionMode: selection.isSelectionMode,
           isSelected: selection.isSelected(order.id),
           onLongPress: () =>

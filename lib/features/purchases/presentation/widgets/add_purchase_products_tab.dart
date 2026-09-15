@@ -45,8 +45,9 @@ class AddPurchaseProductsTab extends ConsumerWidget {
 
     final productsAsync = ref.watch(productsProvider);
     final allProducts = productsAsync.value ?? [];
+    final isLinkedToOrder = state.supplierOrderId != null;
 
-    return ListView.builder(
+    final listView = ListView.builder(
       padding: const EdgeInsets.fromLTRB(0, 8, 0, FabScrollPadding.single),
       itemCount: state.products.length,
       itemBuilder: (context, index) {
@@ -69,8 +70,6 @@ class AddPurchaseProductsTab extends ConsumerWidget {
             item.requiresSerials &&
             state.serials.where((s) => s.productId == item.productId).length <
                 item.quantity;
-
-        final isLinkedToOrder = state.supplierOrderId != null;
 
         Widget buildCard(Color? highlightColor) {
           return PurchaseAddedProductCard(
@@ -175,6 +174,42 @@ class AddPurchaseProductsTab extends ConsumerWidget {
         }
         return buildCard(null);
       },
+    );
+
+    if (!isLinkedToOrder) {
+      return listView;
+    }
+
+    return Column(
+      children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+          child: Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: colors.surfaceContainerHigh,
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(color: colors.outlineVariant),
+            ),
+            child: Row(
+              children: [
+                Icon(Icons.info_outline, size: 20, color: colors.primary),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    'Los productos, cantidades y costos provienen de la Orden de Compra. Puedes gestionar seriales y garantías.',
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: colors.onSurfaceVariant,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+        Expanded(child: listView),
+      ],
     );
   }
 }

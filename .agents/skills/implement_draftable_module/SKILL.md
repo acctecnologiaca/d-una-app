@@ -123,3 +123,53 @@ The `CustomActionSheet` actions:
 - [ ] Backend Save: purges draft via `clearDraft(docId: widget.documentId)` upon success.
 - [ ] Scroll Clearance: all scrollable tabs apply `FabScrollPadding.single` (`112.0px`) bottom padding when a FAB is present.
 - [ ] Scaffold body wrapped in `SafeArea` to handle dynamic bottom insets correctly.
+
+---
+
+## 6. Indicadores Reactivos de Borrador en Listados y Botón Nuevo (EFAB)
+
+Para brindar transparencia inmediata al usuario desde la pantalla principal del módulo y en búsquedas, el sistema señala la presencia de borradores locales activos:
+
+### A. Iconografía Canónica
+- **Constante Universal:** `DraftConstants.draftIcon = Icons.bookmark_added_outlined` en [`draft_constants.dart`](file:///c:/Users/aleja/flutter_apps/MVP/d_una_app/lib/core/constants/draft_constants.dart).
+- **Razón de Diseño:**
+  - `Symbols.chronic` (reloj) está reservado exclusivamente para productos/servicios temporales.
+  - `status_draft.png` (lápiz dentro de un círculo) representa el estatus de negocio "Borrador" en base de datos.
+  - `Icons.bookmark_added_outlined` representa la acción de "Guardar y continuar luego" (marcador de posición), evitando ambigüedad visual.
+
+### B. Widget de Tarjeta: `DocumentDraftIcon`
+En las tarjetas de documentos (`QuoteCard`, `ServiceReportCard`, `SupplierOrderCard`, `DeliveryNoteCard`, `PurchaseListItem`), se utiliza [`DocumentDraftIcon`](file:///c:/Users/aleja/flutter_apps/MVP/d_una_app/lib/shared/widgets/document_draft_icon.dart):
+- Se ubica en la fila de estatus del trailing, **inmediatamente a la izquierda del estatus principal** (`Row(mainAxisSize: MainAxisSize.min, children: [if (hasLocalChanges) DocumentDraftIcon(), ..., StatusBadge/StatusIcon])`), conservando la alineación vertical de la columna de estados en la lista.
+- Cuenta con Tooltip institucional: `'Cambios locales sin guardar en base de datos'`.
+
+### C. Botón de Creación: EFAB con `trailingIcon`
+En [`CustomExtendedFab`](file:///c:/Users/aleja/flutter_apps/MVP/d_una_app/lib/shared/widgets/custom_extended_fab.dart), cuando existe un borrador de nuevo documento en progreso (`hasDraft(DraftConstants.module)`):
+- Se pasa `trailingIcon: hasNewDraft ? DraftConstants.draftIcon : null` y `trailingTooltip: hasNewDraft ? 'Borrador nuevo en progreso' : null`.
+- Se renderiza a la derecha del texto principal (`[ (+) Nueva Cotización  🔖 ]`).
+
+### D. Reactividad con `DraftStorageService`
+`DraftStorageService` extiende `ChangeNotifier` y notifica a sus escuchas en `saveDraftNow`, `clearDraft` y `clearAllUserDrafts`. En las pantallas de listado y búsqueda:
+```dart
+final draftService = ref.watch(draftStorageServiceProvider);
+final hasNewDraft = draftService.hasDraft(DraftConstants.quotes);
+
+// En el itemBuilder de la lista:
+final hasLocalChanges = draftService.hasDraft('${DraftConstants.quotes}_${quote.id}');
+QuoteCard(
+  quote: quote,
+  hasLocalChanges: hasLocalChanges,
+  ...
+);
+
+// En el Scaffold:
+floatingActionButton: selection.isSelectionMode
+    ? null
+    : CustomExtendedFab(
+        onPressed: () => context.push('/quotes/create'),
+        icon: Icons.add,
+        label: 'Nueva Cotización',
+        trailingIcon: hasNewDraft ? DraftConstants.draftIcon : null,
+        trailingTooltip: hasNewDraft ? 'Borrador nuevo en progreso' : null,
+      ),
+```
+

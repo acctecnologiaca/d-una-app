@@ -13,6 +13,8 @@ import 'package:d_una_app/features/purchases/presentation/providers/purchases_pr
 import '../widgets/purchase_list_item.dart';
 import '../../../../shared/widgets/empty_list_state.dart';
 import '../../../../shared/widgets/paginated_list_view.dart';
+import 'package:d_una_app/core/providers/draft_providers.dart';
+import 'package:d_una_app/core/constants/draft_constants.dart';
 
 class PurchasesListScreen extends ConsumerStatefulWidget {
   const PurchasesListScreen({super.key});
@@ -32,9 +34,10 @@ class _PurchasesListScreenState extends ConsumerState<PurchasesListScreen> {
       context,
     ).uri.queryParameters['productId'];
 
-    // Note: If productId is present, we might still want to use the FutureProvider
-    // or pass it to PaginatedPurchasesList. For this refactor, we use paginated list.
     final paginatedAsync = ref.watch(paginatedPurchasesListProvider);
+    final draftService = ref.watch(draftStorageServiceProvider);
+    final hasNewPurchaseDraft =
+        draftService.hasDraft(DraftConstants.purchasesModule);
 
     return Scaffold(
       backgroundColor: colors.surface,
@@ -153,8 +156,12 @@ class _PurchasesListScreenState extends ConsumerState<PurchasesListScreen> {
                     separatorBuilder: (context, index) =>
                         const Divider(height: 0, color: Colors.transparent),
                     itemBuilder: (context, index, purchase) {
+                      final hasDraft = draftService.hasDraft(
+                        '${DraftConstants.purchasesModule}_${purchase.id}',
+                      );
                       return PurchaseListItem(
                         purchase: purchase,
+                        hasLocalChanges: hasDraft,
                         onTap: () {
                           context.push('/my-purchases/view/${purchase.id}');
                         },
@@ -175,6 +182,9 @@ class _PurchasesListScreenState extends ConsumerState<PurchasesListScreen> {
         },
         label: 'Nuevo',
         icon: Icons.add,
+        trailingIcon:
+            hasNewPurchaseDraft ? DraftConstants.draftIcon : null,
+        trailingTooltip: 'Borrador en proceso',
       ),
     );
   }

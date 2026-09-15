@@ -3,6 +3,7 @@ import 'package:intl/intl.dart';
 import '../../../domain/models/service_report_model.dart';
 import '../../../../../shared/utils/currency_formatter.dart';
 import '../../../../../shared/widgets/standard_list_item.dart';
+import '../../../../../shared/widgets/document_draft_icon.dart';
 
 class ServiceReportCard extends StatelessWidget {
   final ServiceReportSummary report;
@@ -10,6 +11,7 @@ class ServiceReportCard extends StatelessWidget {
   final VoidCallback? onLongPress;
   final bool isSelectionMode;
   final bool isSelected;
+  final bool hasLocalChanges;
 
   const ServiceReportCard({
     super.key,
@@ -18,6 +20,7 @@ class ServiceReportCard extends StatelessWidget {
     this.onLongPress,
     this.isSelectionMode = false,
     this.isSelected = false,
+    this.hasLocalChanges = false,
   });
 
   @override
@@ -76,11 +79,16 @@ class ServiceReportCard extends StatelessWidget {
                           'assets/icons/status_archived.png',
                           'Archivado',
                         )
-                      else
+                      else ...[
+                        if (hasLocalChanges) ...[
+                          const DocumentDraftIcon(),
+                          const SizedBox(width: 4),
+                        ],
                         _buildStatusIcon(
                           report.status.iconPath,
                           report.status.label,
                         ),
+                      ],
                     ],
                   ),
           ],

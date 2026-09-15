@@ -8,7 +8,7 @@ final sharedPreferencesProvider = Provider<SharedPreferences>((ref) {
   );
 });
 
-final draftStorageServiceProvider = Provider<DraftStorageService>((ref) {
+final draftStorageServiceProvider = ChangeNotifierProvider<DraftStorageService>((ref) {
   final prefs = ref.watch(sharedPreferencesProvider);
   return DraftStorageService(prefs);
 });
