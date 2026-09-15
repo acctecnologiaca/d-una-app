@@ -4,6 +4,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../data/repositories/ads_repository.dart';
 import '../../domain/models/ad_banner_model.dart';
 import '../../domain/models/ad_placement_setting.dart';
+import '../../../profile/presentation/providers/profile_provider.dart';
 
 final adsRepositoryProvider = Provider<AdsRepository>((ref) {
   return AdsRepository(Supabase.instance.client);
@@ -42,6 +43,17 @@ final isAdPlacementEnabledProvider =
   return true;
 });
 
+/// Helper que extrae de forma reactiva los IDs de ocupación del usuario logueado
+final userOccupationIdsProvider = Provider<List<String>>((ref) {
+  final profile = ref.watch(userProfileProvider).valueOrNull;
+  if (profile == null) return const [];
+  return [
+    if (profile.occupationId != null && profile.occupationId!.isNotEmpty)
+      profile.occupationId!,
+    ...profile.secondaryOccupationIds,
+  ];
+});
+
 class AdBannerParams {
   final List<String> occupationIds;
   final String? searchQuery;
@@ -63,6 +75,7 @@ class AdBannerParams {
   int get hashCode => Object.hash(Object.hashAll(occupationIds), searchQuery);
 }
 
+/// Provider principal de banners que respeta el orden de prioridad del backend
 final adBannersProvider =
     FutureProvider.family<List<AdBanner>, AdBannerParams>((ref, params) async {
   final repo = ref.watch(adsRepositoryProvider);
@@ -72,6 +85,29 @@ final adBannersProvider =
     searchQuery: params.searchQuery,
   );
 
-  // Barajar aleatoriamente para garantizar variedad dinámica en cada refresco
-  return List<AdBanner>.from(banners)..shuffle();
+  // El backend ya los ordena por b.priority DESC, RANDOM().
+  // Retornamos la lista directa preservando la jerarquía comercial.
+  return banners;
+});
+
+/// Parámetros para el helper de ubicación
+typedef PlacementBannerKey = ({String placementKey, String? searchQuery});
+
+/// Provider de conveniencia para consumir banners en cualquier pantalla con 1 sola línea
+final placementBannersProvider =
+    Provider.family<List<AdBanner>, PlacementBannerKey>((ref, key) {
+  final isEnabled = ref.watch(isAdPlacementEnabledProvider(key.placementKey));
+  if (!isEnabled) return const [];
+
+  final occupationIds = ref.watch(userOccupationIdsProvider);
+  final bannersAsync = ref.watch(
+    adBannersProvider(
+      AdBannerParams(
+        occupationIds: occupationIds,
+        searchQuery: key.searchQuery,
+      ),
+    ),
+  );
+
+  return bannersAsync.valueOrNull ?? const [];
 });

@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'package:flutter/foundation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../domain/models/ad_banner_model.dart';
 import '../../domain/models/ad_placement_setting.dart';
@@ -14,10 +15,6 @@ class AdsRepository {
     int limit = 10,
   }) async {
     try {
-      // debugPrint para diagnóstico
-      // ignore: avoid_print
-      print('[ADS_DEBUG] Fetching banners for occupationIds: $occupationIds, query: $searchQuery');
-      
       final response = await _supabase.rpc(
         'get_banners_for_user',
         params: {
@@ -27,20 +24,12 @@ class AdsRepository {
         },
       );
 
-      // ignore: avoid_print
-      print('[ADS_DEBUG] Supabase RPC raw response: $response');
-
       final data = response as List<dynamic>;
-      final banners = data
+      return data
           .map((json) => AdBanner.fromJson(json as Map<String, dynamic>))
           .toList();
-      
-      // ignore: avoid_print
-      print('[ADS_DEBUG] Parsed ${banners.length} banners successfully');
-      return banners;
     } catch (e, stack) {
-      // ignore: avoid_print
-      print('[ADS_DEBUG] Error fetching banners: $e\n$stack');
+      debugPrint('[AdsRepository] Error fetching banners: $e\n$stack');
       return [];
     }
   }
@@ -60,7 +49,8 @@ class AdsRepository {
         map[setting.placementKey] = setting;
       }
       return map;
-    } catch (_) {
+    } catch (e) {
+      debugPrint('[AdsRepository] Error fetching placement settings: $e');
       return {};
     }
   }
@@ -73,9 +63,13 @@ class AdsRepository {
     unawaited(
       _supabase.from('ad_clicks').insert({
         'banner_id': bannerId,
+        'user_id': _supabase.auth.currentUser?.id,
         'screen_context': screenContext,
         'search_query': searchQuery,
-      }).catchError((_) => null),
+      }).catchError((e) {
+        debugPrint('[AdsRepository] Error recording click: $e');
+        return null;
+      }),
     );
   }
 }

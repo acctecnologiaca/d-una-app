@@ -42,6 +42,7 @@ class AdBanner {
   final String title;
   final String? subtitle;
   final String? imageUrl;
+  final String? promoImageUrl;
   final String? supplierId;
   final String? advertiserName;
   final List<String> sectorIds;
@@ -56,6 +57,7 @@ class AdBanner {
     required this.title,
     this.subtitle,
     this.imageUrl,
+    this.promoImageUrl,
     this.supplierId,
     this.advertiserName,
     this.sectorIds = const [],
@@ -72,6 +74,7 @@ class AdBanner {
       title: json['title'] as String? ?? '',
       subtitle: json['subtitle'] as String?,
       imageUrl: json['image_url'] as String?,
+      promoImageUrl: json['promo_image_url'] as String?,
       supplierId: json['supplier_id'] as String?,
       advertiserName: json['advertiser_name'] as String?,
       sectorIds: (json['sector_ids'] as List<dynamic>?)
@@ -98,6 +101,7 @@ class AdBanner {
       'title': title,
       'subtitle': subtitle,
       'image_url': imageUrl,
+      'promo_image_url': promoImageUrl,
       'supplier_id': supplierId,
       'advertiser_name': advertiserName,
       'sector_ids': sectorIds,

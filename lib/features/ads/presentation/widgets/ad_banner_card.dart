@@ -1,7 +1,6 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:url_launcher/url_launcher.dart';
 import '../../domain/models/ad_banner_model.dart';
 import '../providers/ads_provider.dart';
 import 'ad_detail_bottom_sheet.dart';
@@ -59,6 +58,28 @@ class AdBannerCard extends ConsumerWidget {
                           ? Image.network(
                               banner.imageUrl!,
                               fit: BoxFit.contain,
+                              loadingBuilder:
+                                  (context, child, loadingProgress) {
+                                    if (loadingProgress == null) return child;
+                                    return Center(
+                                      child: SizedBox(
+                                        width: 18,
+                                        height: 18,
+                                        child: CircularProgressIndicator(
+                                          strokeWidth: 2,
+                                          value:
+                                              loadingProgress
+                                                      .expectedTotalBytes !=
+                                                  null
+                                              ? loadingProgress
+                                                        .cumulativeBytesLoaded /
+                                                    loadingProgress
+                                                        .expectedTotalBytes!
+                                              : null,
+                                        ),
+                                      ),
+                                    );
+                                  },
                               errorBuilder: (context, error, stackTrace) =>
                                   Icon(
                                     Icons.storefront_outlined,
@@ -195,10 +216,7 @@ class AdBannerCard extends ConsumerWidget {
     switch (banner.actionType) {
       case AdActionType.externalUrl:
         if (banner.actionPayload != null && banner.actionPayload!.isNotEmpty) {
-          launchUrl(
-            Uri.parse(banner.actionPayload!),
-            mode: LaunchMode.externalApplication,
-          );
+          AdDetailBottomSheet.showExternalUrlWarning(context, banner);
         }
         break;
 
