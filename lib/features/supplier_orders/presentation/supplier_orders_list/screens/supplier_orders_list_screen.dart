@@ -19,6 +19,7 @@ import '../widgets/supplier_order_card.dart';
 import '../../../domain/models/supplier_order_status.dart';
 import 'package:d_una_app/core/providers/draft_providers.dart';
 import 'package:d_una_app/core/constants/draft_constants.dart';
+import 'package:d_una_app/features/ads/presentation/providers/ads_provider.dart';
 
 class SupplierOrdersListScreen extends ConsumerStatefulWidget {
   const SupplierOrdersListScreen({super.key});
@@ -63,6 +64,12 @@ class _SupplierOrdersListScreenState
     final draftService = ref.watch(draftStorageServiceProvider);
     final hasNewOrderDraft =
         draftService.hasDraft(DraftConstants.supplierOrdersModule);
+    final adBanners = ref.watch(
+      placementBannersProvider((
+        placementKey: 'supplier_orders_list',
+        searchQuery: null,
+      )),
+    );
 
     final allOrders = paginatedAsync.valueOrNull?.items ?? [];
     final selectedOrders = allOrders
@@ -224,6 +231,8 @@ class _SupplierOrdersListScreenState
                       onLoadMore: () => ref
                           .read(paginatedSupplierOrdersProvider.notifier)
                           .loadMore(),
+                      banners: selection.isSelectionMode ? null : adBanners,
+                      screenContext: 'supplier_orders_list',
                       padding: const EdgeInsets.fromLTRB(
                         0,
                         8,

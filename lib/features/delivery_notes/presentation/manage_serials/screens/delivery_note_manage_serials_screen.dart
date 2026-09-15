@@ -39,7 +39,7 @@ class _DeliveryNoteManageSerialsScreenState
   void initState() {
     super.initState();
     _serials = List<DeliveryNoteSerialModel>.from(widget.item.serials);
-    _noSerials = !widget.item.requiresSerials;
+    _noSerials = !widget.item.requiresSerials && widget.item.serials.isEmpty;
     _initialNoSerials = _noSerials;
     _initialSerialNumbers =
         List.unmodifiable(_serials.map((s) => s.serialNumber).toList());

@@ -60,11 +60,13 @@ class DeliveryNoteSelectionActions {
         BottomSheetActionItem(
           icon: Icons.edit_outlined,
           label: 'Modificar',
-          enabled: !isFinalized,
-          subtitle: isFinalized
-              ? 'Nota finalizada o cancelada. No se puede modificar'
+          enabled: note.status.canEdit,
+          subtitle: !note.status.canEdit
+              ? 'Nota ${note.status.label.toLowerCase()}. No se puede modificar'
               : null,
-          onTap: () async {
+          onTap: !note.status.canEdit
+              ? null
+              : () async {
             context.pop();
             // Cargar con detalles
             final detailedNote = await ref

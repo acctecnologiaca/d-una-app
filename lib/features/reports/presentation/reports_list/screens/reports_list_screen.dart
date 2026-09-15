@@ -18,6 +18,7 @@ import '../../create_report/providers/create_report_provider.dart';
 import '../../../domain/models/service_report_model.dart';
 import 'package:d_una_app/core/providers/draft_providers.dart';
 import 'package:d_una_app/core/constants/draft_constants.dart';
+import 'package:d_una_app/features/ads/presentation/providers/ads_provider.dart';
 
 class ReportsListScreen extends ConsumerStatefulWidget {
   const ReportsListScreen({super.key});
@@ -59,6 +60,11 @@ class _ReportsListScreenState extends ConsumerState<ReportsListScreen>
         draftService.hasDraft(DraftConstants.reportsModule);
 
     final allReports = paginatedStateAsync.valueOrNull?.items ?? [];
+    final adBanners = ref.watch(
+      placementBannersProvider(
+        (placementKey: 'reports_list', searchQuery: null),
+      ),
+    );
 
     return Scaffold(
       backgroundColor: colors.surface,
@@ -185,6 +191,8 @@ class _ReportsListScreenState extends ConsumerState<ReportsListScreen>
                       onLoadMore: () => ref
                           .read(paginatedReportsListProvider.notifier)
                           .loadMore(),
+                      banners: selection.isSelectionMode ? null : adBanners,
+                      screenContext: 'reports_list',
                       padding: const EdgeInsets.fromLTRB(
                         0,
                         0,

@@ -31,10 +31,21 @@ class DeliveryNoteItemsTab extends ConsumerWidget {
       MaterialPageRoute(
         builder: (_) => DeliveryNoteManageSerialsScreen(
           item: item,
+          onRequiresSerialsChanged: (requires) {
+            final cur = ref.read(createDeliveryNoteProvider).items[index];
+            ref.read(createDeliveryNoteProvider.notifier).updateItem(
+              index,
+              cur.copyWith(requiresSerials: requires),
+            );
+          },
           onSerialsSaved: (serials) {
             ref
                 .read(createDeliveryNoteProvider.notifier)
-                .updateItemSerials(index, serials);
+                .updateItemSerials(
+                  index,
+                  serials,
+                  requiresSerials: serials.isNotEmpty ? true : null,
+                );
           },
         ),
       ),

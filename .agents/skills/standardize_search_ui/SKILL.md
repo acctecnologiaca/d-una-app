@@ -113,9 +113,38 @@ class _MyEntitySearchScreenState extends ConsumerState<MyEntitySearchScreen> {
 
 ---
 
-## 3. Checklist de Verificación para Búsqueda
+## 3. Integración Publicitaria (Ads) en Búsquedas
+
+En pantallas de búsqueda que muestren anuncios contextuales basados en el texto ingresado:
+1. Almacenar el término actual en el estado local: `String _searchQuery = '';`
+2. Inyectar `placementBannersProvider`:
+   ```dart
+   final adBanners = ref.watch(
+     placementBannersProvider((
+       placementKey: 'my_entity_search',
+       searchQuery: _searchQuery,
+     )),
+   );
+   ```
+3. Enlazar `banners`, `screenContext` y `onQueryChanged` en `GenericSearchScreen`:
+   ```dart
+   GenericSearchScreen<MyEntityModel>(
+     ...
+     banners: adBanners,
+     screenContext: 'my_entity_search',
+     onQueryChanged: (query) {
+       setState(() => _searchQuery = query);
+     },
+     ...
+   );
+   ```
+
+---
+
+## 4. Checklist de Verificación para Búsqueda
 
 - [ ] ¿Se utiliza `GenericSearchScreen` con una clave `historyKey` única?
 - [ ] ¿Los filtros usan `FilterBottomSheet.showMulti` o `FilterBottomSheet.showSingle`?
 - [ ] ¿La búsqueda normaliza el texto (`toLowerCase()` o `.normalized`) para ignorar mayúsculas y acentos?
 - [ ] ¿Se proporciona la función `onResetFilters` para limpiar todos los chips?
+- [ ] ¿Si la pantalla incluye anuncios, se vinculan `banners`, `screenContext` y `onQueryChanged` con `placementBannersProvider`?

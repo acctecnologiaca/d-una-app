@@ -43,8 +43,10 @@ enum DeliveryNoteStatus {
   }
 
   bool get canEdit =>
-      this != DeliveryNoteStatus.finalized &&
-      this != DeliveryNoteStatus.cancelled;
+      this == DeliveryNoteStatus.draft ||
+      this == DeliveryNoteStatus.sent ||
+      this == DeliveryNoteStatus.resent ||
+      this == DeliveryNoteStatus.opened;
 
   bool get canSendDirectly =>
       this == DeliveryNoteStatus.draft ||

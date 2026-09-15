@@ -18,6 +18,7 @@ import 'package:d_una_app/features/profile/presentation/providers/profile_provid
 import '../widgets/supplier_order_card.dart';
 import 'package:d_una_app/core/providers/draft_providers.dart';
 import 'package:d_una_app/core/constants/draft_constants.dart';
+import 'package:d_una_app/features/ads/presentation/providers/ads_provider.dart';
 
 /// Search screen for supplier orders.
 ///
@@ -52,6 +53,7 @@ class _SupplierOrdersSearchScreenState
 
   // Sort state
   SortOption _currentSort = SortOption.orderNumberDesc;
+  String _searchQuery = '';
 
   @override
   void initState() {
@@ -250,6 +252,11 @@ class _SupplierOrdersSearchScreenState
     final selection = ref.watch(supplierOrderSelectionProvider);
     final draftService = ref.watch(draftStorageServiceProvider);
     final dateFormat = DateFormat('dd/MM/yyyy');
+    final adBanners = ref.watch(
+      placementBannersProvider(
+        (placementKey: 'supplier_orders_search', searchQuery: _searchQuery),
+      ),
+    );
 
     final suppliers = suppliersAsync.valueOrNull ?? [];
     final allOrders = paginatedAsync.valueOrNull?.items ?? [];
@@ -323,6 +330,8 @@ class _SupplierOrdersSearchScreenState
       readOnly: widget.isSearchQueryReadOnly,
       isPaginatedMode: true,
       paginatedDataAsync: paginatedAsync,
+      banners: selection.isSelectionMode ? null : adBanners,
+      screenContext: 'supplier_orders_search',
       appBarOverride: selection.isSelectionMode
           ? _buildSelectionHeader(
               context,
@@ -356,7 +365,7 @@ class _SupplierOrdersSearchScreenState
         ref.read(paginatedSupplierOrderSearchProvider.notifier).loadMore();
       },
       onQueryChanged: (query) {
-        // Handled by onServerSearch debounce
+        setState(() => _searchQuery = query);
       },
       bottomFilterWidget: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 16.0),

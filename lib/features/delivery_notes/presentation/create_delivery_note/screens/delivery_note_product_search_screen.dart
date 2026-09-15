@@ -324,10 +324,26 @@ class _DeliveryNoteProductSearchScreenState
                         MaterialPageRoute(
                           builder: (_) => DeliveryNoteManageSerialsScreen(
                             item: item,
+                            onRequiresSerialsChanged: (requires) {
+                              final cur = ref
+                                  .read(createDeliveryNoteProvider)
+                                  .items[itemIndex];
+                              ref
+                                  .read(createDeliveryNoteProvider.notifier)
+                                  .updateItem(
+                                    itemIndex,
+                                    cur.copyWith(requiresSerials: requires),
+                                  );
+                            },
                             onSerialsSaved: (serials) {
                               ref
                                   .read(createDeliveryNoteProvider.notifier)
-                                  .updateItemSerials(itemIndex, serials);
+                                  .updateItemSerials(
+                                    itemIndex,
+                                    serials,
+                                    requiresSerials:
+                                        serials.isNotEmpty ? true : null,
+                                  );
                             },
                           ),
                         ),

@@ -4,6 +4,7 @@ import 'package:d_una_app/shared/widgets/custom_text_field.dart';
 import 'package:d_una_app/shared/widgets/custom_button.dart';
 import 'package:d_una_app/shared/widgets/custom_action_sheet.dart';
 import 'package:d_una_app/shared/widgets/custom_dialog.dart';
+import 'package:d_una_app/shared/widgets/app_toast.dart';
 import 'package:d_una_app/shared/widgets/credit_banner_card.dart';
 import 'package:d_una_app/shared/widgets/info_block.dart';
 import 'package:d_una_app/core/utils/phone_utils.dart';
@@ -181,12 +182,10 @@ class _SendDeliveryNoteWhatsAppSheetState
       ref.invalidate(creditTransactionsHistoryProvider);
 
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
+        AppToast.success(
+          context,
+          message:
               'Nota de entrega enviada exitosamente por WhatsApp (créditos restantes: ${freshCreditStatus.remainingCredits})',
-            ),
-          ),
         );
         Navigator.of(context).pop();
       }

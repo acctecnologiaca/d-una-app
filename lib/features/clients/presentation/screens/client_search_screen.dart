@@ -9,6 +9,7 @@ import '../../../../shared/widgets/filter_bottom_sheet.dart';
 import '../../../../shared/widgets/sort_selector.dart';
 import '../../../auth/presentation/providers/register_provider.dart';
 import '../../../../shared/widgets/standard_list_item.dart';
+import 'package:d_una_app/features/ads/presentation/providers/ads_provider.dart';
 
 class ClientSearchScreen extends ConsumerStatefulWidget {
   const ClientSearchScreen({super.key});
@@ -22,6 +23,7 @@ class _ClientSearchScreenState extends ConsumerState<ClientSearchScreen> {
   final Set<String> _selectedFilterCities = {};
   bool _showArchived = false;
   SortOption _currentSort = SortOption.recent;
+  String _searchQuery = '';
 
   String _getHistoryKey() {
     final user = ref.read(authRepositoryProvider).currentUser;
@@ -32,12 +34,22 @@ class _ClientSearchScreenState extends ConsumerState<ClientSearchScreen> {
   Widget build(BuildContext context) {
     final paginatedAsync = ref.watch(paginatedClientSearchProvider);
     final colors = Theme.of(context).colorScheme;
+    final adBanners = ref.watch(
+      placementBannersProvider(
+        (placementKey: 'clients_search', searchQuery: _searchQuery),
+      ),
+    );
 
     return GenericSearchScreen<Client>(
       hintText: 'Buscar cliente...',
       historyKey: _getHistoryKey(),
       isPaginatedMode: true,
       paginatedDataAsync: paginatedAsync,
+      banners: adBanners,
+      screenContext: 'clients_search',
+      onQueryChanged: (query) {
+        setState(() => _searchQuery = query);
+      },
       onServerSearch: (query) {
         ref.read(paginatedClientSearchProvider.notifier).updateSearch(query);
       },
@@ -58,9 +70,6 @@ class _ClientSearchScreenState extends ConsumerState<ClientSearchScreen> {
         ref
             .read(paginatedClientSearchProvider.notifier)
             .updateSort('created_at', false);
-      },
-      onQueryChanged: (query) {
-        // Handle query if needed locally, though server search debounce takes care of it
       },
       filters: [
         FilterChipData(

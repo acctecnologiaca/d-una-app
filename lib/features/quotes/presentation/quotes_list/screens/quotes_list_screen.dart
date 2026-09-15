@@ -61,18 +61,11 @@ class _QuotesListScreenState extends ConsumerState<QuotesListScreen>
     final hasNewQuoteDraft =
         draftService.hasDraft(DraftConstants.quotesModule);
 
-    final userProfile = userProfileAsync.valueOrNull;
-    final occupationIds = <String>[
-      if (userProfile?.occupationId != null) userProfile!.occupationId!,
-      ...userProfile?.secondaryOccupationIds ?? [],
-    ];
-
-    final isAdsEnabled = ref.watch(isAdPlacementEnabledProvider('quotes_list'));
-    final adBannersAsync = isAdsEnabled
-        ? ref.watch(
-            adBannersProvider(AdBannerParams(occupationIds: occupationIds)),
-          )
-        : null;
+    final adBanners = ref.watch(
+      placementBannersProvider(
+        (placementKey: 'quotes_list', searchQuery: null),
+      ),
+    );
 
     final allQuotes = paginatedStateAsync.valueOrNull?.items ?? [];
 
@@ -204,9 +197,8 @@ class _QuotesListScreenState extends ConsumerState<QuotesListScreen>
                       onLoadMore: () => ref
                           .read(paginatedQuotesListProvider.notifier)
                           .loadMore(),
-                      banners: selection.isSelectionMode
-                          ? null
-                          : adBannersAsync?.valueOrNull,
+                      banners:
+                          selection.isSelectionMode ? null : adBanners,
                       screenContext: 'quotes_list',
                       padding: const EdgeInsets.fromLTRB(
                         0,

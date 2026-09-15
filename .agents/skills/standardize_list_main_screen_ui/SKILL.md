@@ -185,33 +185,38 @@ Padding(
 
 ---
 
-### Paso 5: Lista Paginada Infinita con `PaginatedListView`
-No uses `ListView.builder` crudo en listas que consulten backend. Utiliza [`PaginatedListView`](file:///c:/Users/aleja/flutter_apps/MVP/d_una_app/lib/shared/widgets/paginated_list_view.dart) dentro de un `Expanded`:
+### Paso 5: Lista Paginada Infinita con `PaginatedListView` y Sistema Publicitario Reactivo
+No uses `ListView.builder` crudo en listas que consulten backend. Utiliza [`PaginatedListView`](file:///c:/Users/aleja/flutter_apps/MVP/d_una_app/lib/shared/widgets/paginated_list_view.dart) dentro de un `Expanded`.
+
+#### Integración de Anuncios (Ads) en Tiempo Real:
+La integración publicitaria en listas y búsquedas está homologada a través del helper reactivo `placementBannersProvider`:
+
+1. **Inyección en `build`:**
+   ```dart
+   final adBanners = ref.watch(
+     placementBannersProvider((
+       placementKey: 'my_module_list', // Clave registrada en ad_placement_settings
+       searchQuery: null,
+     )),
+   );
+   ```
+2. **Parámetros en `PaginatedListView`:**
+   Pasa `banners: selection.isSelectionMode ? null : adBanners` y `screenContext: 'my_module_list'`. 
+   `PaginatedListView` maneja internamente el cálculo de posiciones con `AdListPositionHelper`, el renderizado de `AdBannerCard` y el descarte interactivo (✕) sin contaminar el `itemBuilder`:
 
 ```dart
 Expanded(
   child: PaginatedListView<EntityModel>(
-    state: paginatedStateAsync,
+    items: state.items,
+    isLoadingMore: state.isLoadingMore,
+    hasReachedEnd: state.hasReachedEnd,
     onLoadMore: () => ref.read(paginatedMyEntityProvider.notifier).loadMore(),
-    onRefresh: () async => ref.read(paginatedMyEntityProvider.notifier).refresh(),
+    banners: selection.isSelectionMode ? null : adBanners,
+    screenContext: 'my_module_list',
+    padding: const EdgeInsets.fromLTRB(0, 8, 0, FabScrollPadding.list),
+    separatorBuilder: (context, index) =>
+        const Divider(height: 0, color: Colors.transparent),
     itemBuilder: (context, index, item) {
-      // Inserción opcional de banner publicitario usando AdListPositionHelper
-      if (isAdsEnabled && AdListPositionHelper.shouldShowAd(index)) {
-        return Column(
-          children: [
-            EntityCard(
-              entity: item,
-              isSelectionMode: selection.isSelectionMode,
-              isSelected: selection.isSelected(item.id),
-              onTap: () { ... },
-              onLongPress: () => ref.read(entitySelectionProvider.notifier).toggle(item.id),
-            ),
-            const SizedBox(height: 16),
-            AdBannerWidget(...),
-          ],
-        );
-      }
-
       final hasLocalChanges = draftService.hasDraft('${DraftConstants.myEntity}_${item.id}');
 
       return EntityCard(
@@ -225,17 +230,14 @@ Expanded(
         onLongPress: () => ref.read(entitySelectionProvider.notifier).toggle(item.id),
       );
     },
-    emptyState: const EmptyListState(
-      message: 'No hay elementos registrados',
-      icon: Symbols.folder_open,
-    ),
-    errorStateBuilder: (context, error) => FriendlyErrorWidget(
-      error: error,
-      onRetry: () => ref.read(paginatedMyEntityProvider.notifier).refresh(),
-    ),
   ),
 )
 ```
+
+> [!TIP]
+> **Sincronización en Tiempo Real (Supabase Realtime):**
+> Tanto `ad_placement_settings` como `ad_banners` operan con WebSockets (`StreamProvider`). Si se desactiva una ubicación o módulo en base de datos, o si un anunciante/admin publica o activa un nuevo banner, la pantalla en la app reacciona de forma inmediata y automática sin requerir recargar ni reiniciar la sesión.
+
 
 ---
 
@@ -276,5 +278,6 @@ floatingActionButton: selection.isSelectionMode
 - [ ] ¿En módulos de documentos, se pasa `hasLocalChanges` a las tarjetas y `trailingIcon: DraftConstants.draftIcon` al EFAB cuando existe borrador activo?
 - [ ] ¿El FAB extendido reposa directamente sobre el `Scaffold` sin envoltorios `Padding(bottom: 40.0)`?
 - [ ] ¿El FAB extendido desaparece en modo selección múltiple?
+- [ ] ¿Los anuncios usan `placementBannersProvider` con su clave correspondiente y se silencian en modo selección (`banners: selection.isSelectionMode ? null : adBanners`)?
 - [ ] ¿Si la pantalla es standalone (sin `BottomNavigationBar`), el cuerpo está envuelto en `SafeArea(child: Column(...))`?
 - [ ] ¿Se implementa `WidgetsBindingObserver` para auto-refrescar en `resumed`?

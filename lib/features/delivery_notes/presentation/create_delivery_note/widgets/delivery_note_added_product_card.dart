@@ -121,7 +121,9 @@ class DeliveryNoteAddedProductCard extends StatelessWidget {
             tooltip: 'Ajustar detalles del producto',
             onPressed: onEditDetails,
           ),
-        if (!isReadOnly && item.requiresSerials && onManageSerials != null)
+        if (!isReadOnly &&
+            (item.requiresSerials || item.serials.isNotEmpty) &&
+            onManageSerials != null)
           IconButton(
             icon: const Icon(Symbols.barcode),
             color: hasMissing ? colors.error : colors.onSurfaceVariant,

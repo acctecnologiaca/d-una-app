@@ -14,6 +14,7 @@ import '../report_selection_actions.dart';
 import 'package:material_symbols_icons/symbols.dart';
 import 'package:d_una_app/core/providers/draft_providers.dart';
 import 'package:d_una_app/core/constants/draft_constants.dart';
+import 'package:d_una_app/features/ads/presentation/providers/ads_provider.dart';
 
 class ReportSearchScreen extends ConsumerStatefulWidget {
   final bool selectionMode;
@@ -265,6 +266,12 @@ class _ReportSearchScreenState extends ConsumerState<ReportSearchScreen> {
     final allReports = paginatedAsync.valueOrNull?.items ?? [];
     final draftService = ref.watch(draftStorageServiceProvider);
 
+    final adBanners = ref.watch(
+      placementBannersProvider(
+        (placementKey: 'reports_search', searchQuery: _searchQuery),
+      ),
+    );
+
     return GenericSearchScreen<ServiceReportSummary>(
       title: widget.selectionMode ? 'Seleccionar reporte' : 'Buscar reporte',
       hintText: 'Cliente, número o tag...',
@@ -273,6 +280,8 @@ class _ReportSearchScreenState extends ConsumerState<ReportSearchScreen> {
       readOnly: widget.isSearchQueryReadOnly,
       isPaginatedMode: true,
       paginatedDataAsync: paginatedAsync,
+      banners: selection.isSelectionMode ? null : adBanners,
+      screenContext: 'reports_search',
       showHistory:
           !widget.selectionMode &&
           widget.productId == null &&

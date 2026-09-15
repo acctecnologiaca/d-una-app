@@ -12,11 +12,17 @@ final adsRepositoryProvider = Provider<AdsRepository>((ref) {
 
 final dismissedBannerIdsProvider = StateProvider<Set<String>>((ref) => {});
 
-/// Provider de configuración de activación de módulos y listas
+/// Provider de configuración de activación de módulos y listas en tiempo real
 final adPlacementSettingsProvider =
-    FutureProvider<Map<String, AdPlacementSetting>>((ref) async {
+    StreamProvider<Map<String, AdPlacementSetting>>((ref) {
   final repo = ref.watch(adsRepositoryProvider);
-  return repo.getPlacementSettings();
+  return repo.streamPlacementSettings();
+});
+
+/// Canal de actualización en tiempo real cuando se inserta o modifica un anuncio en Supabase
+final adBannersRealtimeTriggerProvider = StreamProvider<void>((ref) {
+  final repo = ref.watch(adsRepositoryProvider);
+  return repo.streamBannersChangeTrigger();
 });
 
 /// Provider que evalúa si un placement (lista o módulo) está activo considerando la jerarquía
@@ -75,9 +81,12 @@ class AdBannerParams {
   int get hashCode => Object.hash(Object.hashAll(occupationIds), searchQuery);
 }
 
-/// Provider principal de banners que respeta el orden de prioridad del backend
+/// Provider principal de banners que respeta el orden de prioridad del backend y reacciona en tiempo real
 final adBannersProvider =
     FutureProvider.family<List<AdBanner>, AdBannerParams>((ref, params) async {
+  // Observar cambios en tiempo real en la tabla ad_banners
+  ref.watch(adBannersRealtimeTriggerProvider);
+
   final repo = ref.watch(adsRepositoryProvider);
 
   final banners = await repo.getBannersForUser(

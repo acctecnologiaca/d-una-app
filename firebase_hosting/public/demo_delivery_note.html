@@ -1,0 +1,574 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Nota de Entrega - NE-2026-0089 (DEMO)</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --neutral-dark: #0F172A;
+      --neutral-body: #334155;
+      --neutral-muted: #64748B;
+      --neutral-border: #E2E8F0;
+      --neutral-bg-subtle: #F8FAFC;
+      --success-green: #059669;
+      --success-bg: #ECFDF5;
+      --success-border: #A7F3D0;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background-color: #F1F5F9;
+      color: var(--neutral-body);
+      line-height: 1.5;
+      padding: 24px 12px;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    .container {
+      max-width: 820px;
+      margin: 0 auto;
+    }
+
+    .card {
+      background: #FFFFFF;
+      border-radius: 16px;
+      border: 1px solid var(--neutral-border);
+      box-shadow: 0 10px 25px -5px rgba(15, 23, 42, 0.05);
+      overflow: hidden;
+    }
+
+    /* 1. ENCABEZADO Y MEMBRETE (HOMOLOGADO) */
+    .header-banner {
+      padding: 28px 32px;
+      border-bottom: 1px solid var(--neutral-border);
+      background: #FFFFFF;
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 20px;
+    }
+
+    .brand-container {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .brand-logo-row {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+
+    .brand-logo-row img {
+      max-height: 48px;
+      max-width: 140px;
+      object-fit: contain;
+    }
+
+    .doc-meta h1 {
+      font-size: 20px;
+      font-weight: 800;
+      color: var(--neutral-dark);
+      letter-spacing: -0.5px;
+      line-height: 1.1;
+      margin-bottom: 4px;
+    }
+
+    .doc-meta .doc-num {
+      font-size: 13px;
+      color: var(--neutral-muted);
+      font-weight: 600;
+    }
+
+    .issuer-letterhead {
+      font-size: 12px;
+      color: var(--neutral-muted);
+      line-height: 1.5;
+      margin-top: 4px;
+    }
+
+    .issuer-letterhead strong {
+      color: var(--neutral-dark);
+      font-weight: 700;
+      font-size: 13px;
+    }
+
+    /* BADGE DE DISPONIBILIDAD */
+    .validity-badge {
+      display: inline-block;
+      font-size: 12px;
+      color: var(--neutral-dark);
+      background: var(--neutral-bg-subtle);
+      border: 1px solid var(--neutral-border);
+      padding: 6px 14px;
+      border-radius: 8px;
+      font-weight: 600;
+      white-space: nowrap;
+    }
+
+    /* 2. CUERPO PRINCIPAL */
+    .body-content {
+      padding: 32px;
+    }
+
+    /* GRILLA DE INFORMACIÓN */
+    .info-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 24px;
+      margin-bottom: 32px;
+    }
+
+    .info-box {
+      background: var(--neutral-bg-subtle);
+      border: 1px solid var(--neutral-border);
+      border-radius: 12px;
+      padding: 20px;
+    }
+
+    .info-box h3 {
+      font-size: 12px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: var(--neutral-muted);
+      margin-bottom: 12px;
+      border-bottom: 1px solid var(--neutral-border);
+      padding-bottom: 8px;
+    }
+
+    .info-box p {
+      font-size: 13px;
+      margin-bottom: 6px;
+      line-height: 1.45;
+    }
+
+    .info-box p strong {
+      color: var(--neutral-dark);
+      font-weight: 600;
+    }
+
+    /* 3. TABLA DE PRODUCTOS (SCROLL HORIZONTAL PARA MÓVILES) */
+    .table-container {
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
+      margin-bottom: 32px;
+      border: 1px solid var(--neutral-border);
+      border-radius: 12px;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      min-width: 540px;
+    }
+
+    th {
+      background: var(--neutral-bg-subtle);
+      color: var(--neutral-muted);
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      padding: 14px 16px;
+      border-bottom: 1px solid var(--neutral-border);
+    }
+
+    td {
+      padding: 14px 16px;
+      border-bottom: 1px solid var(--neutral-border);
+      font-size: 13px;
+      vertical-align: top;
+    }
+
+    tr:last-child td {
+      border-bottom: none;
+    }
+
+    .text-left { text-align: left; }
+    .text-center { text-align: center; }
+    .text-right { text-align: right; }
+
+    /* SERIALES */
+    .item-serials {
+      margin-top: 5px;
+      font-size: 12px;
+      color: var(--neutral-muted);
+    }
+
+    .item-serials strong {
+      color: var(--neutral-dark);
+      font-weight: 600;
+    }
+
+    /* 4. CONDICIONES */
+    .conditions-box {
+      background: var(--neutral-bg-subtle);
+      border: 1px solid var(--neutral-border);
+      border-radius: 12px;
+      padding: 16px 20px;
+      margin-bottom: 32px;
+    }
+
+    .conditions-box h4 {
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: var(--neutral-muted);
+      margin-bottom: 8px;
+    }
+
+    .conditions-box ul {
+      padding-left: 18px;
+      font-size: 12px;
+      color: var(--neutral-muted);
+      line-height: 1.6;
+    }
+
+    /* 5. TARJETA DE RECEPCIÓN / FIRMA */
+    .reception-card {
+      border-radius: 12px;
+      border: 1px solid var(--neutral-border);
+      background: #FFFFFF;
+      overflow: hidden;
+    }
+
+    .reception-card.finalized {
+      border-color: var(--success-border);
+      background: var(--success-bg);
+    }
+
+    .reception-header {
+      padding: 14px 20px;
+      border-bottom: 1px solid var(--neutral-border);
+      font-size: 13px;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .reception-card.finalized .reception-header {
+      background: #D1FAE5;
+      border-color: var(--success-border);
+      color: #065F46;
+    }
+
+    .reception-body {
+      padding: 20px;
+    }
+
+    .reception-body p {
+      font-size: 13px;
+      margin-bottom: 6px;
+    }
+
+    .reception-body p strong {
+      color: var(--neutral-dark);
+    }
+
+    .signature-preview-box {
+      margin-top: 10px;
+      background: #FFFFFF;
+      border: 1px solid var(--success-border);
+      border-radius: 8px;
+      padding: 12px 20px;
+      display: inline-block;
+    }
+
+    .signature-preview-box img {
+      max-height: 80px;
+      max-width: 240px;
+      display: block;
+    }
+
+    /* AVISO DE CONFIDENCIALIDAD */
+    .disclaimer-card {
+      background: #FFFFFF;
+      border: 1px solid var(--neutral-border);
+      border-radius: 16px;
+      padding: 20px 24px;
+      margin-top: 20px;
+      font-size: 11px;
+      color: var(--neutral-muted);
+      line-height: 1.6;
+      text-align: justify;
+      box-shadow: 0 4px 15px -3px rgba(15, 23, 42, 0.03);
+    }
+
+    .disclaimer-card strong {
+      color: var(--neutral-dark);
+      font-weight: 700;
+    }
+
+    /* FOOTER INSTITUCIONAL */
+    .footer {
+      text-align: center;
+      padding: 24px;
+      font-size: 12px;
+      color: var(--neutral-muted);
+    }
+
+    /* BOTÓN FLOTANTE IMPRIMIR / PDF */
+    .print-fab {
+      position: fixed;
+      bottom: 24px;
+      right: 24px;
+      background: var(--neutral-dark);
+      color: #fff;
+      border: none;
+      padding: 12px 20px;
+      border-radius: 12px;
+      font-weight: 700;
+      font-size: 13px;
+      font-family: inherit;
+      cursor: pointer;
+      box-shadow: 0 4px 14px rgba(15, 23, 42, 0.25);
+      z-index: 9999;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      transition: transform 0.15s ease, box-shadow 0.15s ease;
+    }
+
+    .print-fab:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 20px rgba(15, 23, 42, 0.35);
+    }
+
+    .print-fab:active {
+      transform: scale(0.97);
+    }
+
+    @media print {
+      body {
+        background: #FFFFFF !important;
+        padding: 0 !important;
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+      }
+      .container {
+        max-width: 100% !important;
+        box-shadow: none !important;
+        margin: 0 !important;
+        padding: 0 !important;
+      }
+      .card {
+        border: none !important;
+        box-shadow: none !important;
+        border-radius: 0 !important;
+      }
+      .print-fab,
+      .validity-badge,
+      .disclaimer-card,
+      .footer,
+      .no-print {
+        display: none !important;
+      }
+      .header-banner {
+        border-bottom: 2px solid #000;
+        padding: 16px 24px;
+      }
+      .body-content {
+        padding: 16px 24px;
+      }
+      .table-container {
+        overflow: visible;
+        border: none;
+      }
+      table {
+        page-break-inside: auto;
+      }
+      tr {
+        page-break-inside: avoid;
+      }
+    }
+
+    @media (max-width: 640px) {
+      .header-banner {
+        flex-direction: column;
+        align-items: flex-start;
+        padding: 20px;
+      }
+      .body-content {
+        padding: 20px;
+      }
+      .info-grid {
+        grid-template-columns: 1fr;
+        gap: 16px;
+      }
+      .print-fab {
+        bottom: 16px;
+        right: 16px;
+        padding: 10px 16px;
+        font-size: 12px;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <div class="container">
+    <div class="card">
+      
+      <!-- 1. ENCABEZADO MONOCROMÁTICO NEUTRO CON MEMBRETE (HOMOLOGADO) -->
+      <div class="header-banner">
+        <div class="brand-container">
+          <div class="brand-logo-row">
+            <img src="https://fdkswvzrozijbizdthge.supabase.co/storage/v1/object/public/app_images/logo_d_una.png" alt="D-UNA">
+            <div class="doc-meta">
+              <h1>NOTA DE ENTREGA</h1>
+              <div class="doc-num">NE-2026-0089 &bull; 15/09/2026</div>
+            </div>
+          </div>
+          <div class="issuer-letterhead">
+            <strong>SERVICIOS Y SOLUCIONES EMPRESARIALES, C.A.</strong><br>
+            RIF / ID Fiscal: J-40192837-4<br>
+            Dirección: Av. Principal Los Ruices, Torre Empresarial, Piso 4, Ofic. 4-B, Caracas<br>
+            Teléfono: +58 (412) 345-6789
+          </div>
+        </div>
+
+        <div style="text-align: right;">
+          <span class="validity-badge">⌛ Disponible hasta: 15/10/2026</span>
+        </div>
+      </div>
+
+      <!-- 2. CUERPO PRINCIPAL -->
+      <div class="body-content">
+        
+        <!-- GRILLA DE INFORMACIÓN: CLIENTE + DESPACHO -->
+        <div class="info-grid">
+          <div class="info-box">
+            <h3>Datos del Cliente</h3>
+            <p><strong>Nombre:</strong> Carlos Eduardo Mendoza</p>
+            <p><strong>Cédula:</strong> V-14.892.341</p>
+            <p><strong>Teléfono:</strong> +58 (414) 987-6543</p>
+            <p><strong>Email:</strong> cmendoza@itglobal.com</p>
+            <p><strong>Dirección:</strong> Av. Francisco de Miranda, Edif. Parque Cristal, Piso 8, Caracas</p>
+          </div>
+
+          <div class="info-box">
+            <h3>Detalles del Despacho</h3>
+            <p><strong>Fecha entrega:</strong> 15/09/2026</p>
+            <p><strong>Modalidad:</strong> Despacho Directo</p>
+            <p><strong>Orden de Compra (Cliente):</strong> OC-CLI-8492</p>
+            <p><strong>Dirección de despacho:</strong> Av. Francisco de Miranda, Edif. Parque Cristal, Piso 8, Caracas</p>
+            <p><strong>Instrucciones:</strong> Recibir en horario de oficina (8:00 AM a 4:30 PM). Contactar al receptor antes de llegar.</p>
+          </div>
+        </div>
+
+        <!-- 3. TABLA DE PRODUCTOS Y SERIALES CON SCROLL HORIZONTAL -->
+        <div class="table-container">
+          <table>
+            <thead>
+              <tr>
+                <th class="text-left">Producto / Seriales</th>
+                <th class="text-center" style="width: 100px;">Garantía</th>
+                <th class="text-right" style="width: 90px;">Cant.</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>
+                  <strong>Switch Administrable Gigabit 24 Puertos PoE+</strong><br>
+                  <small style="color: var(--neutral-muted);">Cisco - CBS350-24P-4G</small>
+                  <div class="item-serials">
+                    <strong>Serial(es):</strong> FOC2541A09B
+                  </div>
+                </td>
+                <td class="text-center">12 Meses</td>
+                <td class="text-right">1 Ud</td>
+              </tr>
+              <tr>
+                <td>
+                  <strong>Punto de Acceso Inalámbrico WiFi 6 Long Range</strong><br>
+                  <small style="color: var(--neutral-muted);">Ubiquiti - U6-LR</small>
+                  <div class="item-serials">
+                    <strong>Serial(es):</strong> 7483C21A4401, 7483C21A4402
+                  </div>
+                </td>
+                <td class="text-center">12 Meses</td>
+                <td class="text-right">2 Ud</td>
+              </tr>
+              <tr>
+                <td>
+                  <strong>Bobina Cable UTP Cat6 100% Cobre 305 Metros</strong><br>
+                  <small style="color: var(--neutral-muted);">Panduit - NUC6C04BU-C</small>
+                </td>
+                <td class="text-center">6 Meses</td>
+                <td class="text-right">1 Ud</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <!-- 4. OBSERVACIONES Y TÉRMINOS -->
+        <div class="conditions-box">
+          <h4>Observaciones y Términos de Entrega</h4>
+          <ul>
+            <li>La mercancía viaja por cuenta y riesgo del comprador una vez recibida a conformidad.</li>
+            <li>Todo reclamo referente a defectos visibles, faltantes o averías debe realizarse al momento de la recepción.</li>
+            <li>La garantía cubre defectos de fábrica de acuerdo a las políticas oficiales del fabricante. No cubre daños por fluctuaciones eléctricas.</li>
+          </ul>
+        </div>
+
+        <!-- 5. CONFORMIDAD Y FIRMA DE RECEPCIÓN (DEMO FINALIZADA) -->
+        <div class="reception-card finalized">
+          <div class="reception-header">
+            <span>✅ Mercancía Recibida Conforme</span>
+          </div>
+          <div class="reception-body">
+            <p><strong>Recibido por:</strong> Carlos Eduardo Mendoza</p>
+            <p><strong>Cédula / Documento:</strong> V-14.892.341</p>
+            <p><strong>Teléfono de contacto:</strong> +58 (414) 987-6543</p>
+            <p><strong>Cargo (opcional):</strong> Gerente de Operaciones</p>
+            <p><strong>Fecha y hora de recepción:</strong> 15/09/2026, 11:45 AM</p>
+            <div style="margin-top: 12px;">
+              <p style="font-weight: 600; color: #065F46; font-size: 12px; margin-bottom: 6px;">Firma Digital Registrada de Conformidad:</p>
+              <div class="signature-preview-box">
+                <svg width="220" height="70" viewBox="0 0 220 70" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M15 45 C 30 15, 45 60, 60 25 C 75 5, 80 50, 95 30 C 110 15, 120 40, 140 20 C 160 10, 170 35, 195 25" stroke="#0F172A" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
+                  <path d="M30 55 Q 80 48, 180 52" stroke="#0F172A" stroke-width="1.8" stroke-linecap="round"/>
+                </svg>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- TARJETA DEL AVISO DE CONFIDENCIALIDAD -->
+    <div class="disclaimer-card">
+      <strong>Aviso de Confidencialidad y Entrega de Mercancía:</strong><br>
+      La presente nota de entrega y la constancia de recepción electrónica certifican el despacho físico y la entrega de los bienes detallados, emitida directamente por la empresa remitente identificada. D-UNA opera exclusivamente como plataforma tecnológica de registro y gestión operativa, sin asumir responsabilidad sobre el transporte, garantías comerciales ni el estado físico posterior de los bienes una vez recibidos conforme.
+    </div>
+
+    <!-- FOOTER INSTITUCIONAL -->
+    <div class="footer">
+      <img src="https://fdkswvzrozijbizdthge.supabase.co/storage/v1/object/public/app_images/logo_d_una.png" alt="D-UNA Logo" style="height: 24px; margin-bottom: 6px; vertical-align: middle; object-fit: contain;"><br>
+      Tecnología D-UNA &bull; Plataforma de Gestión Transaccional &bull; &copy; 2026 Todos los derechos reservados.
+    </div>
+
+  </div>
+
+  <!-- BOTÓN FLOTANTE IMPRIMIR -->
+  <button class="print-fab" onclick="window.print()" title="Imprimir / Guardar como PDF">
+    🖨️ Imprimir / Guardar PDF
+  </button>
+
+</body>
+</html>

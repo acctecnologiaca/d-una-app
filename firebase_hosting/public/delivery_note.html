@@ -10,388 +10,519 @@
   <style>
     :root {
       --neutral-dark: #0F172A;
-      --neutral-medium: #334155;
+      --neutral-body: #334155;
       --neutral-muted: #64748B;
       --neutral-border: #E2E8F0;
-      --neutral-border-dark: #CBD5E1;
       --neutral-bg-subtle: #F8FAFC;
-      --neutral-bg-header: #F1F5F9;
-      --primary-color: #1E293B;
-      --accent-color: #0284C7;
-      --success-color: #10B981;
+      --success-green: #059669;
+      --success-bg: #ECFDF5;
+      --success-border: #A7F3D0;
     }
-    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
     body {
       font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-      background: #F1F5F9;
-      color: var(--neutral-dark);
-      min-height: 100vh;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      padding: 24px 16px;
+      background-color: #F1F5F9;
+      color: var(--neutral-body);
+      line-height: 1.5;
+      padding: 24px 12px;
+      -webkit-font-smoothing: antialiased;
     }
+
     .container {
-      max-width: 780px;
-      width: 100%;
+      max-width: 820px;
       margin: 0 auto;
     }
+
     .card {
       background: #FFFFFF;
       border-radius: 16px;
+      border: 1px solid var(--neutral-border);
       box-shadow: 0 10px 25px -5px rgba(15, 23, 42, 0.05);
       overflow: hidden;
-      border: 1px solid var(--neutral-border);
     }
+
+    /* 1. ENCABEZADO Y MEMBRETE (HOMOLOGADO) */
     .header-banner {
+      padding: 28px 32px;
+      border-bottom: 1px solid var(--neutral-border);
       background: #FFFFFF;
-      padding: 24px 32px;
       display: flex;
       justify-content: space-between;
       align-items: flex-start;
-      flex-wrap: wrap;
-      gap: 16px;
-      border-bottom: 2px solid var(--neutral-dark);
+      gap: 20px;
     }
-    .header-banner .brand-container {
+
+    .brand-container {
       display: flex;
       flex-direction: column;
-      gap: 8px;
+      gap: 12px;
     }
-    .header-banner .brand-logo-row {
+
+    .brand-logo-row {
       display: flex;
       align-items: center;
-      gap: 14px;
+      gap: 16px;
     }
-    .header-banner .brand-logo-row img {
+
+    .brand-logo-row img {
       max-height: 48px;
-      width: auto;
+      max-width: 140px;
       object-fit: contain;
     }
-    .header-banner .doc-meta {
-      text-align: right;
-    }
-    .header-banner .doc-meta h1 {
-      font-size: 22px;
+
+    .doc-meta h1 {
+      font-size: 20px;
       font-weight: 800;
       color: var(--neutral-dark);
-      letter-spacing: 0.5px;
-      line-height: 1.2;
+      letter-spacing: -0.5px;
+      line-height: 1.1;
+      margin-bottom: 4px;
     }
-    .header-banner .doc-meta .doc-num {
+
+    .doc-meta .doc-num {
       font-size: 13px;
       color: var(--neutral-muted);
       font-weight: 600;
-      margin-top: 2px;
     }
+
     .issuer-letterhead {
-      font-size: 11px;
+      font-size: 12px;
       color: var(--neutral-muted);
-      line-height: 1.4;
+      line-height: 1.5;
       margin-top: 4px;
     }
+
     .issuer-letterhead strong {
       color: var(--neutral-dark);
-      font-size: 12px;
       font-weight: 700;
+      font-size: 13px;
     }
-    .status-badge-row {
-      display: flex;
-      align-items: center;
-      justify-content: flex-end;
-      gap: 8px;
-      margin-top: 6px;
+
+    /* BADGE DE DISPONIBILIDAD */
+    .validity-badge {
+      display: inline-block;
+      font-size: 12px;
+      color: var(--neutral-dark);
+      background: var(--neutral-bg-subtle);
+      border: 1px solid var(--neutral-border);
+      padding: 6px 14px;
+      border-radius: 8px;
+      font-weight: 600;
+      white-space: nowrap;
     }
-    .status-badge-row img {
-      height: 20px;
-      width: auto;
+
+    /* 2. CUERPO PRINCIPAL */
+    .body-content {
+      padding: 32px;
     }
-    .content-body {
-      padding: 24px 32px;
-    }
+
+    /* GRILLA DE INFORMACIÓN */
     .info-grid {
       display: grid;
       grid-template-columns: 1fr 1fr;
       gap: 24px;
-      margin-bottom: 24px;
+      margin-bottom: 32px;
     }
+
     .info-box {
       background: var(--neutral-bg-subtle);
       border: 1px solid var(--neutral-border);
       border-radius: 12px;
-      padding: 16px;
+      padding: 20px;
     }
+
     .info-box h3 {
-      font-size: 11px;
+      font-size: 12px;
+      font-weight: 700;
       text-transform: uppercase;
       letter-spacing: 0.5px;
       color: var(--neutral-muted);
-      margin-bottom: 10px;
-      font-weight: 700;
+      margin-bottom: 12px;
+      border-bottom: 1px solid var(--neutral-border);
+      padding-bottom: 8px;
     }
+
     .info-box p {
       font-size: 13px;
-      line-height: 1.5;
-      color: var(--neutral-medium);
-      margin-bottom: 4px;
+      margin-bottom: 6px;
+      line-height: 1.45;
     }
-    .info-box p:last-child { margin-bottom: 0; }
+
     .info-box p strong {
       color: var(--neutral-dark);
+      font-weight: 600;
     }
+
+    /* 3. TABLA DE PRODUCTOS (SCROLL HORIZONTAL PARA MÓVILES) */
     .table-container {
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
+      margin-bottom: 32px;
       border: 1px solid var(--neutral-border);
       border-radius: 12px;
-      overflow: hidden;
-      margin-bottom: 24px;
     }
+
     table {
       width: 100%;
       border-collapse: collapse;
-      font-size: 13px;
+      min-width: 540px;
     }
-    thead th {
-      background: var(--neutral-bg-header);
-      padding: 12px 14px;
-      font-weight: 600;
-      color: var(--neutral-medium);
+
+    th {
+      background: var(--neutral-bg-subtle);
+      color: var(--neutral-muted);
       font-size: 11px;
+      font-weight: 700;
       text-transform: uppercase;
       letter-spacing: 0.5px;
+      padding: 14px 16px;
       border-bottom: 1px solid var(--neutral-border);
     }
-    tbody td {
-      padding: 12px 14px;
+
+    td {
+      padding: 14px 16px;
       border-bottom: 1px solid var(--neutral-border);
-      color: var(--neutral-medium);
+      font-size: 13px;
       vertical-align: top;
     }
-    tbody tr:last-child td {
+
+    tr:last-child td {
       border-bottom: none;
     }
-    tbody tr:nth-child(even) {
-      background: var(--neutral-bg-subtle);
-    }
+
     .text-left { text-align: left; }
     .text-center { text-align: center; }
     .text-right { text-align: right; }
-    .serial-chip {
-      display: inline-block;
-      font-family: monospace;
-      font-size: 11px;
-      background: #E0F2FE;
-      color: #0369A1;
-      padding: 2px 6px;
-      border-radius: 4px;
-      margin: 2px 4px 2px 0;
-      border: 1px solid #BAE6FD;
-    }
-    .totals-block {
-      display: flex;
-      justify-content: flex-end;
-      margin-bottom: 24px;
-    }
-    .totals-card {
-      width: 280px;
-      background: var(--neutral-bg-subtle);
-      border: 1px solid var(--neutral-border);
-      border-radius: 12px;
-      padding: 14px 18px;
-    }
-    .totals-row {
-      display: flex;
-      justify-content: space-between;
-      font-size: 13px;
+
+    /* SERIALES */
+    .item-serials {
+      margin-top: 5px;
+      font-size: 12px;
       color: var(--neutral-muted);
-      margin-bottom: 6px;
     }
-    .totals-row.grand-total {
-      font-size: 16px;
-      font-weight: 800;
+
+    .item-serials strong {
       color: var(--neutral-dark);
-      border-top: 2px solid var(--neutral-dark);
-      padding-top: 8px;
-      margin-top: 8px;
-      margin-bottom: 0;
+      font-weight: 600;
     }
+
+    /* 4. CONDICIONES */
     .conditions-box {
       background: var(--neutral-bg-subtle);
       border: 1px solid var(--neutral-border);
       border-radius: 12px;
-      padding: 16px;
-      margin-bottom: 24px;
+      padding: 16px 20px;
+      margin-bottom: 32px;
     }
+
     .conditions-box h4 {
-      font-size: 12px;
+      font-size: 11px;
       font-weight: 700;
       text-transform: uppercase;
       letter-spacing: 0.5px;
-      color: var(--neutral-dark);
+      color: var(--neutral-muted);
       margin-bottom: 8px;
     }
+
     .conditions-box ul {
       padding-left: 18px;
       font-size: 12px;
-      color: var(--neutral-medium);
+      color: var(--neutral-muted);
       line-height: 1.6;
     }
-    /* SECCIÓN DE RECEPCIÓN / CONFORMIDAD */
+
+    /* 5. TARJETA DE RECEPCIÓN / FIRMA */
     .reception-card {
-      border: 2px solid var(--neutral-border-dark);
       border-radius: 12px;
-      padding: 20px;
+      border: 1px solid var(--neutral-border);
       background: #FFFFFF;
-      margin-bottom: 24px;
+      overflow: hidden;
     }
+
     .reception-card.finalized {
-      border-color: #A7F3D0;
-      background: #F0FDF4;
+      border-color: var(--success-border);
+      background: var(--success-bg);
     }
+
     .reception-header {
-      font-size: 14px;
-      font-weight: 800;
-      color: var(--neutral-dark);
-      margin-bottom: 12px;
+      padding: 14px 20px;
+      border-bottom: 1px solid var(--neutral-border);
+      font-size: 13px;
+      font-weight: 700;
       display: flex;
       align-items: center;
-      gap: 8px;
+      justify-content: space-between;
     }
+
+    .reception-card.finalized .reception-header {
+      background: #D1FAE5;
+      border-color: var(--success-border);
+      color: #065F46;
+    }
+
+    .reception-body {
+      padding: 20px;
+    }
+
+    .reception-body p {
+      font-size: 13px;
+      margin-bottom: 6px;
+    }
+
+    .reception-body p strong {
+      color: var(--neutral-dark);
+    }
+
+    .signature-preview-img {
+      max-height: 90px;
+      max-width: 260px;
+      border: 1px solid var(--success-border);
+      background: #FFFFFF;
+      border-radius: 8px;
+      padding: 8px;
+      display: block;
+      margin-top: 6px;
+    }
+
+    /* FORMULARIO DE FIRMA */
     .form-group {
       margin-bottom: 14px;
     }
+
     .form-group label {
       display: block;
       font-size: 12px;
       font-weight: 600;
-      color: var(--neutral-medium);
+      color: var(--neutral-dark);
       margin-bottom: 4px;
     }
+
     .form-control {
       width: 100%;
-      padding: 8px 12px;
+      padding: 10px 12px;
+      border: 1px solid var(--neutral-border);
+      border-radius: 8px;
       font-size: 13px;
-      border: 1px solid var(--neutral-border-dark);
-      border-radius: 6px;
-      outline: none;
       font-family: inherit;
+      color: var(--neutral-dark);
+      background: #FFFFFF;
+      outline: none;
+      transition: border-color 0.15s;
     }
+
     .form-control:focus {
       border-color: var(--neutral-dark);
     }
+
     .canvas-container {
-      border: 1px dashed var(--neutral-border-dark);
-      border-radius: 6px;
-      background: #FAFAFA;
+      border: 1.5px dashed var(--neutral-muted);
+      border-radius: 8px;
+      background: #FAFBFD;
+      height: 140px;
       position: relative;
-      margin-bottom: 8px;
+      touch-action: none;
+      cursor: crosshair;
     }
+
     canvas {
       width: 100%;
-      height: 140px;
+      height: 100%;
       display: block;
-      touch-action: none;
     }
+
     .canvas-actions {
       display: flex;
       justify-content: space-between;
       align-items: center;
-      margin-bottom: 16px;
+      margin-top: 6px;
     }
+
     .btn-secondary {
-      background: transparent;
-      border: 1px solid var(--neutral-border-dark);
-      padding: 6px 12px;
+      background: none;
+      border: 1px solid var(--neutral-border);
+      padding: 4px 10px;
       border-radius: 6px;
-      font-size: 12px;
-      color: var(--neutral-medium);
+      font-size: 11px;
       cursor: pointer;
+      color: var(--neutral-muted);
+      font-family: inherit;
     }
+
     .btn-secondary:hover {
       background: var(--neutral-bg-subtle);
+      color: var(--neutral-dark);
     }
+
     .btn-submit {
+      width: 100%;
       background: var(--neutral-dark);
       color: #FFFFFF;
       border: none;
-      padding: 12px 20px;
-      border-radius: 8px;
+      padding: 14px;
+      border-radius: 10px;
       font-size: 14px;
-      font-weight: 600;
+      font-weight: 700;
       cursor: pointer;
-      width: 100%;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      gap: 8px;
+      transition: background 0.15s, transform 0.1s;
+      margin-top: 16px;
     }
+
     .btn-submit:hover {
       background: #1E293B;
     }
-    .signature-preview-img {
-      max-height: 90px;
-      width: auto;
-      border: 1px solid var(--neutral-border);
-      border-radius: 4px;
-      background: #FFFFFF;
-      padding: 4px;
-      margin-top: 6px;
+
+    .btn-submit:active {
+      transform: scale(0.99);
     }
+
+    .btn-submit:disabled {
+      background: var(--neutral-muted);
+      cursor: not-allowed;
+    }
+
+    /* AVISO DE CONFIDENCIALIDAD */
     .disclaimer-card {
+      background: #FFFFFF;
+      border: 1px solid var(--neutral-border);
+      border-radius: 16px;
+      padding: 20px 24px;
+      margin-top: 20px;
       font-size: 11px;
       color: var(--neutral-muted);
-      line-height: 1.5;
-      padding: 16px;
-      text-align: center;
-      margin-top: 16px;
+      line-height: 1.6;
+      text-align: justify;
+      box-shadow: 0 4px 15px -3px rgba(15, 23, 42, 0.03);
     }
+
+    .disclaimer-card strong {
+      color: var(--neutral-dark);
+      font-weight: 700;
+    }
+
+    /* FOOTER INSTITUCIONAL */
     .footer {
       text-align: center;
-      font-size: 11px;
+      padding: 24px;
+      font-size: 12px;
       color: var(--neutral-muted);
-      margin-top: 16px;
-      line-height: 1.6;
     }
+
+    /* SPINNER */
     .spinner {
-      border: 3px solid rgba(15, 23, 42, 0.1);
-      border-top: 3px solid var(--neutral-dark);
+      width: 44px;
+      height: 44px;
+      border: 4px solid var(--neutral-border);
+      border-top-color: var(--neutral-dark);
       border-radius: 50%;
-      width: 36px;
-      height: 36px;
       animation: spin 0.8s linear infinite;
       margin: 60px auto;
     }
-    @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    /* BOTÓN FLOTANTE IMPRIMIR / PDF */
     .print-fab {
       position: fixed;
       bottom: 24px;
       right: 24px;
       background: var(--neutral-dark);
-      color: #FFFFFF;
+      color: #fff;
       border: none;
-      border-radius: 28px;
       padding: 12px 20px;
+      border-radius: 12px;
+      font-weight: 700;
       font-size: 13px;
-      font-weight: 600;
-      box-shadow: 0 4px 12px rgba(15, 23, 42, 0.2);
+      font-family: inherit;
       cursor: pointer;
+      box-shadow: 0 4px 14px rgba(15, 23, 42, 0.25);
+      z-index: 9999;
       display: flex;
       align-items: center;
       gap: 8px;
-      z-index: 100;
+      transition: transform 0.15s ease, box-shadow 0.15s ease;
     }
+
+    .print-fab:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 20px rgba(15, 23, 42, 0.35);
+    }
+
+    .print-fab:active {
+      transform: scale(0.97);
+    }
+
     @media print {
-      body { background: #FFFFFF; padding: 0; }
-      .container { max-width: 100%; }
-      .card { border: none; box-shadow: none; }
-      .print-fab, .btn-submit, .canvas-actions, .canvas-container { display: none !important; }
-      .disclaimer-card, .footer { margin-top: 8px; }
+      body {
+        background: #FFFFFF !important;
+        padding: 0 !important;
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+      }
+      .container {
+        max-width: 100% !important;
+        box-shadow: none !important;
+        margin: 0 !important;
+        padding: 0 !important;
+      }
+      .card {
+        border: none !important;
+        box-shadow: none !important;
+        border-radius: 0 !important;
+      }
+      .print-fab,
+      .validity-badge,
+      .disclaimer-card,
+      .footer,
+      #reception-form,
+      .no-print {
+        display: none !important;
+      }
+      .header-banner {
+        border-bottom: 2px solid #000;
+        padding: 16px 24px;
+      }
+      .body-content {
+        padding: 16px 24px;
+      }
+      .table-container {
+        overflow: visible;
+        border: none;
+      }
+      table {
+        page-break-inside: auto;
+      }
+      tr {
+        page-break-inside: avoid;
+      }
     }
-    @media (max-width: 600px) {
-      .info-grid { grid-template-columns: 1fr; }
-      .header-banner { flex-direction: column; align-items: flex-start; }
-      .header-banner .doc-meta { text-align: left; margin-top: 12px; }
-      .status-badge-row { justify-content: flex-start; }
-      .content-body { padding: 16px; }
+
+    @media (max-width: 640px) {
+      .header-banner {
+        flex-direction: column;
+        align-items: flex-start;
+        padding: 20px;
+      }
+      .body-content {
+        padding: 20px;
+      }
+      .info-grid {
+        grid-template-columns: 1fr;
+        gap: 16px;
+      }
+      .print-fab {
+        bottom: 16px;
+        right: 16px;
+        padding: 10px 16px;
+        font-size: 12px;
+      }
     }
   </style>
 </head>
@@ -403,18 +534,20 @@
       <div id="content" style="display: none;"></div>
     </div>
 
-    <!-- AVISO DE CONFORMIDAD Y ENTREGA -->
+    <!-- TARJETA DEL AVISO DE CONFIDENCIALIDAD -->
     <div class="disclaimer-card">
-      <strong>Aviso de Conformidad y Entrega de Mercancía:</strong><br>
-      La presente nota de entrega certifica el despacho, recepción y verificación de los productos y seriales aquí descritos, emitida bajo responsabilidad del despachador identificado. D-UNA opera exclusivamente como plataforma tecnológica transaccional y de control logístico, sin asumir responsabilidad sobre el transporte de encomiendas externas ni acuerdos comerciales privados entre las partes.
+      <strong>Aviso de Confidencialidad y Entrega de Mercancía:</strong><br>
+      La presente nota de entrega y la constancia de recepción electrónica certifican el despacho físico y la entrega de los bienes detallados, emitida directamente por la empresa remitente identificada. D-UNA opera exclusivamente como plataforma tecnológica de registro y gestión operativa, sin asumir responsabilidad sobre el transporte, garantías comerciales ni el estado físico posterior de los bienes una vez recibidos conforme.
     </div>
 
+    <!-- FOOTER INSTITUCIONAL -->
     <div class="footer">
       <img src="https://fdkswvzrozijbizdthge.supabase.co/storage/v1/object/public/app_images/logo_d_una.png" alt="D-UNA Logo" style="height: 24px; margin-bottom: 6px; vertical-align: middle; object-fit: contain;"><br>
       Tecnología D-UNA &bull; Plataforma de Gestión Transaccional &bull; &copy; 2026 Todos los derechos reservados.
     </div>
   </div>
 
+  <!-- BOTÓN FLOTANTE IMPRIMIR -->
   <button class="print-fab" id="btn-print" onclick="window.print()" title="Imprimir / Guardar como PDF" style="display:none;">
     🖨️ Imprimir / Guardar PDF
   </button>
@@ -477,12 +610,28 @@
         const formattedDate = parseDate(n.date);
         const formattedDeliveryDate = n.delivery_date ? parseDate(n.delivery_date) : formattedDate;
 
+        // Fecha límite de disponibilidad
+        let expiresDateStr = '';
+        if (n.expires_at) {
+          expiresDateStr = parseDate(n.expires_at);
+        } else if (n.date) {
+          try {
+            const parts = n.date.split('T')[0].split('-');
+            const exp = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]) + 30);
+            const d = String(exp.getDate()).padStart(2, '0');
+            const m = String(exp.getMonth() + 1).padStart(2, '0');
+            const y = exp.getFullYear();
+            expiresDateStr = `${d}/${m}/${y}`;
+          } catch(e) {}
+        }
+
         const issuerHeaderTitle = issuer.company_name || issuer.user_name || 'Despachos Comerciales';
         const issuerTaxId = issuer.tax_id && issuer.tax_id !== '-' ? issuer.tax_id : null;
         const addressParts = [issuer.address, issuer.city, issuer.state, issuer.country].filter(p => p && p !== '-' && String(p).trim() !== '');
         const issuerFullAddress = addressParts.length > 0 ? addressParts.join(', ') : null;
         const issuerPhone = issuer.phone && issuer.phone !== '-' ? issuer.phone : null;
 
+        // 1. Reglas cliente: Persona Natural vs Jurídica
         const rawTaxId = (client.tax_id || '').trim();
         const isCompany = client.type === 'company' || (rawTaxId.length > 0 && rawTaxId.toUpperCase().startsWith('J'));
         const clientNameLabel = isCompany ? 'Razón Social' : 'Nombre';
@@ -500,13 +649,13 @@
         };
         const deliveryTypeLabel = deliveryTypeMap[n.delivery_type] || n.delivery_type;
 
-        // Items rows
-        const itemsRowsHtml = items.map((item, idx) => {
+        // 3. Seriales unificados y eliminación de precios
+        const itemsRowsHtml = items.map((item) => {
           const title = esc(item.name);
           const sub = [item.brand, item.model].filter(Boolean).join(' · ');
           const serials = item.serials || [];
           const serialsHtml = serials.length > 0
-            ? `<div style="margin-top: 4px;">${serials.map(s => `<span class="serial-chip">SN: ${esc(s)}</span>`).join('')}</div>`
+            ? `<div class="item-serials"><strong>Serial(es):</strong> ${serials.map(esc).join(', ')}</div>`
             : '';
 
           let warrantyStr = '---';
@@ -521,43 +670,44 @@
               <td class="text-left">
                 <strong>${title}</strong>
                 ${sub ? `<br><span style="font-size: 11px; color: var(--neutral-muted);">${esc(sub)}</span>` : ''}
-                ${item.description ? `<br><span style="font-size: 11px; color: var(--neutral-medium);">${esc(item.description)}</span>` : ''}
+                ${item.description ? `<br><span style="font-size: 11px; color: var(--neutral-body);">${esc(item.description)}</span>` : ''}
                 ${serialsHtml}
               </td>
               <td class="text-center" style="font-size: 12px;">${esc(warrantyStr)}</td>
               <td class="text-right">${esc(item.quantity)} ${esc(item.uom || 'Ud')}</td>
-              <td class="text-right">$${fmt(item.unit_price)}</td>
-              <td class="text-right"><strong>$${fmt(item.total_price)}</strong></td>
             </tr>
           `;
         }).join('');
 
-        const taxRatePct = n.tax_rate ? Number(n.tax_rate) : 0;
         const isFinalized = n.status === 'finalized';
 
         content.innerHTML = `
+          <!-- 1. ENCABEZADO Y MEMBRETE -->
           <div class="header-banner">
             <div class="brand-container">
               <div class="brand-logo-row">
                 ${issuer.logo_url ? `<img src="${esc(issuer.logo_url)}" alt="Logo">` : ''}
-                <div class="issuer-letterhead">
-                  <strong>${esc(issuerHeaderTitle)}</strong><br>
-                  ${issuerTaxId ? `RIF / ID Fiscal: ${esc(issuerTaxId)}<br>` : ''}
-                  ${issuerFullAddress ? `Dirección: ${esc(issuerFullAddress)}<br>` : ''}
-                  ${issuerPhone ? `Teléfono: ${esc(issuerPhone)}` : ''}
+                <div class="doc-meta">
+                  <h1>NOTA DE ENTREGA</h1>
+                  <div class="doc-num">${esc(n.delivery_note_number)} &bull; ${formattedDate}</div>
                 </div>
               </div>
-            </div>
-            <div class="doc-meta">
-              <h1>NOTA DE ENTREGA</h1>
-              <div class="doc-num">${esc(n.delivery_note_number)}</div>
-              <div class="status-badge-row">
-                <img src="${getStatusBadge(n.status)}" alt="${n.status}">
+              <div class="issuer-letterhead">
+                <strong>${esc(issuerHeaderTitle)}</strong><br>
+                ${issuerTaxId ? `RIF / ID Fiscal: ${esc(issuerTaxId)}<br>` : ''}
+                ${issuerFullAddress ? `Dirección: ${esc(issuerFullAddress)}<br>` : ''}
+                ${issuerPhone ? `Teléfono: ${esc(issuerPhone)}` : ''}
               </div>
             </div>
+            ${expiresDateStr ? `
+              <div style="text-align: right;">
+                <span class="validity-badge">⌛ Disponible hasta: ${expiresDateStr}</span>
+              </div>
+            ` : ''}
           </div>
 
-          <div class="content-body">
+          <!-- 2. CUERPO PRINCIPAL -->
+          <div class="body-content">
             <div class="info-grid">
               <div class="info-box">
                 <h3>Datos del Cliente</h3>
@@ -566,31 +716,30 @@
                 ${showAttention ? `<p><strong>Atención:</strong> ${esc(contactName)}</p>` : ''}
                 ${clientPhone ? `<p><strong>Teléfono:</strong> ${esc(clientPhone)}</p>` : ''}
                 ${clientEmail ? `<p><strong>Email:</strong> ${esc(clientEmail)}</p>` : ''}
-                ${n.recipient_address ? `<p><strong>Dirección Entrega:</strong> ${esc(n.recipient_address)}${n.recipient_city ? `, ${esc(n.recipient_city)}` : ''}</p>` : ''}
+                ${client.address && client.address !== '-' ? `<p><strong>Dirección:</strong> ${esc(client.address)}</p>` : ''}
               </div>
 
+              <!-- 2. DETALLES DEL DESPACHO: Sin fecha de emisión, con Orden de Compra y Dirección de despacho -->
               <div class="info-box">
                 <h3>Detalles del Despacho</h3>
-                <p><strong>Fecha emisión:</strong> ${formattedDate}</p>
-                <p><strong>Fecha de entrega:</strong> ${formattedDeliveryDate}</p>
+                <p><strong>Fecha de despacho:</strong> ${formattedDeliveryDate}</p>
                 <p><strong>Modalidad:</strong> ${esc(deliveryTypeLabel)}</p>
                 ${n.shipping_company_name ? `<p><strong>Encomienda:</strong> ${esc(n.shipping_company_name)}</p>` : ''}
                 ${n.tracking_number ? `<p><strong>N° de Guía:</strong> ${esc(n.tracking_number)}</p>` : ''}
-                ${n.client_po_number ? `<p><strong>OC del Cliente:</strong> ${esc(n.client_po_number)}</p>` : ''}
+                ${n.client_po_number ? `<p><strong>Orden de Compra (Cliente):</strong> ${esc(n.client_po_number)}</p>` : ''}
+                ${n.recipient_address ? `<p><strong>Dirección de despacho:</strong> ${esc(n.recipient_address)}${n.recipient_city ? `, ${esc(n.recipient_city)}` : ''}</p>` : ''}
                 ${n.delivery_instructions ? `<p><strong>Instrucciones:</strong> ${esc(n.delivery_instructions)}</p>` : ''}
               </div>
             </div>
 
-            <!-- TABLA DE PRODUCTOS -->
+            <!-- 3. TABLA DE PRODUCTOS (SIN MONTOS NI PRECIOS) -->
             <div class="table-container">
               <table>
                 <thead>
                   <tr>
                     <th class="text-left">Producto / Seriales</th>
-                    <th class="text-center">Garantía</th>
-                    <th class="text-right">Cant.</th>
-                    <th class="text-right">P. Unit</th>
-                    <th class="text-right">Total</th>
+                    <th class="text-center" style="width: 100px;">Garantía</th>
+                    <th class="text-right" style="width: 90px;">Cant.</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -599,27 +748,7 @@
               </table>
             </div>
 
-            <!-- TOTALES -->
-            <div class="totals-block">
-              <div class="totals-card">
-                <div class="totals-row">
-                  <span>SUB-TOTAL:</span>
-                  <span>$${fmt(n.subtotal)}</span>
-                </div>
-                ${taxRatePct > 0 ? `
-                  <div class="totals-row">
-                    <span>IVA (${taxRatePct}%):</span>
-                    <span>$${fmt(n.tax_amount)}</span>
-                  </div>
-                ` : ''}
-                <div class="totals-row grand-total">
-                  <span>TOTAL USD:</span>
-                  <span>$${fmt(n.total)}</span>
-                </div>
-              </div>
-            </div>
-
-            <!-- OBSERVACIONES -->
+            <!-- 4. OBSERVACIONES -->
             ${observations.length > 0 ? `
               <div class="conditions-box">
                 <h4>Observaciones y Términos de Entrega</h4>
@@ -632,80 +761,72 @@
             ${(n.notes && n.notes.trim() !== '') ? `
               <div class="conditions-box" style="margin-top: 12px;">
                 <h4>Notas Adicionales</h4>
-                <p style="font-size: 12px; color: var(--neutral-medium); line-height: 1.6; white-space: pre-wrap;">${esc(n.notes)}</p>
+                <p style="font-size: 12px; color: var(--neutral-body); line-height: 1.6; white-space: pre-wrap;">${esc(n.notes)}</p>
               </div>
             ` : ''}
 
-            <!-- CONFORMIDAD Y FIRMA DE RECEPCIÓN -->
+            <!-- 5. CONFORMIDAD Y FIRMA DE RECEPCIÓN -->
             <div class="reception-card ${isFinalized ? 'finalized' : ''}" id="reception-section">
               <div class="reception-header">
                 <span>${isFinalized ? '✅ Mercancía Recibida Conforme' : '✍️ Conformidad de Recepción'}</span>
               </div>
-
-              ${isFinalized ? `
-                <div style="font-size: 13px; color: var(--neutral-medium); line-height: 1.6;">
+              <div class="reception-body">
+                ${isFinalized ? `
                   <p><strong>Recibido por:</strong> ${esc(n.received_by_name || 'Receptor')}</p>
                   <p><strong>Cédula / Documento:</strong> ${esc(n.received_by_id || '-')}</p>
                   ${n.received_by_phone ? `<p><strong>Teléfono:</strong> ${esc(n.received_by_phone)}</p>` : ''}
-                  ${n.receiver_relationship ? `<p><strong>Relación:</strong> ${esc(n.receiver_relationship)}</p>` : ''}
+                  ${n.receiver_relationship ? `<p><strong>Cargo:</strong> ${esc(n.receiver_relationship)}</p>` : ''}
                   <p><strong>Fecha y hora de recepción:</strong> ${n.received_at ? new Date(n.received_at).toLocaleString('es-VE') : '-'}</p>
                   ${n.signature_data ? `
                     <div style="margin-top: 10px;">
-                      <p><strong>Firma de conformidad:</strong></p>
+                      <p><strong>Firma Digital Registrada:</strong></p>
                       <img src="${n.signature_data}" alt="Firma del receptor" class="signature-preview-img">
                     </div>
                   ` : ''}
-                </div>
-              ` : `
-                <form id="reception-form" onsubmit="return false;">
-                  <p style="font-size: 13px; color: var(--neutral-muted); margin-bottom: 14px;">
-                    Por favor complete sus datos y firme a continuación para dejar constancia formal de la entrega y buen estado de los productos recibidos.
-                  </p>
-                  <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
-                    <div class="form-group">
-                      <label for="rec-name">Nombre y Apellido *</label>
-                      <input type="text" id="rec-name" class="form-control" placeholder="Ej. Juan Pérez" required>
+                ` : `
+                  <form id="reception-form" onsubmit="return false;">
+                    <p style="font-size: 13px; color: var(--neutral-muted); margin-bottom: 14px;">
+                      Por favor complete sus datos y firme a continuación para dejar constancia formal de la entrega y buen estado de los productos recibidos.
+                    </p>
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+                      <div class="form-group">
+                        <label for="rec-name">Nombre y Apellido *</label>
+                        <input type="text" id="rec-name" class="form-control" placeholder="Ej. Juan Pérez" required>
+                      </div>
+                      <div class="form-group">
+                        <label for="rec-id">Cédula o Documento de Identidad *</label>
+                        <input type="text" id="rec-id" class="form-control" placeholder="Ej. V-12.345.678" required>
+                      </div>
                     </div>
-                    <div class="form-group">
-                      <label for="rec-id">Cédula o Documento de Identidad *</label>
-                      <input type="text" id="rec-id" class="form-control" placeholder="Ej. V-12.345.678" required>
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+                      <div class="form-group">
+                        <label for="rec-phone">Teléfono de Contacto</label>
+                        <input type="tel" id="rec-phone" class="form-control" placeholder="Ej. 0414-1234567">
+                      </div>
+                      <div class="form-group">
+                        <label for="rec-rel">Cargo (opcional)</label>
+                        <input type="text" id="rec-rel" class="form-control" placeholder="Ej. Gerente de Almacén, Administrador...">
+                      </div>
                     </div>
-                  </div>
-                  <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
-                    <div class="form-group">
-                      <label for="rec-phone">Teléfono de Contacto</label>
-                      <input type="tel" id="rec-phone" class="form-control" placeholder="Ej. 0414-1234567">
-                    </div>
-                    <div class="form-group">
-                      <label for="rec-rel">Relación con el Cliente</label>
-                      <select id="rec-rel" class="form-control">
-                        <option value="Titular">Titular / Cliente</option>
-                        <option value="Representante">Representante Legal / Encargado</option>
-                        <option value="Empleado">Empleado / Personal Autorizado</option>
-                        <option value="Familiar">Familiar</option>
-                        <option value="Vigilancia">Recepción / Vigilancia</option>
-                        <option value="Otro">Otro</option>
-                      </select>
-                    </div>
-                  </div>
 
-                  <div class="form-group">
-                    <label>Firma Digital de Conformidad *</label>
-                    <div class="canvas-container">
-                      <canvas id="sig-canvas"></canvas>
+                    <div class="form-group">
+                      <label>Firma Digital de Conformidad *</label>
+                      <div class="canvas-container">
+                        <canvas id="sig-canvas"></canvas>
+                      </div>
+                      <div class="canvas-actions">
+                        <span style="font-size: 11px; color: var(--neutral-muted);">Firme dentro del recuadro usando su dedo o puntero</span>
+                        <button type="button" class="btn-secondary" id="btn-clear-sig">Limpiar firma</button>
+                      </div>
                     </div>
-                    <div class="canvas-actions">
-                      <span style="font-size: 11px; color: var(--neutral-muted);">Firme dentro del recuadro usando su dedo o puntero</span>
-                      <button type="button" class="btn-secondary" id="btn-clear-sig">Limpiar firma</button>
-                    </div>
-                  </div>
 
-                  <button type="button" class="btn-submit" id="btn-confirm-reception">
-                    Confirmar Entrega y Registrar Firma
-                  </button>
-                  <div id="form-error" style="color: #EF4444; font-size: 12px; margin-top: 8px; display: none;"></div>
-                </form>
-              `}
+                    <button type="button" class="btn-submit" id="btn-confirm-reception">
+                      Confirmar Entrega y Registrar Firma
+                    </button>
+                    <div id="form-error" style="color: #EF4444; font-size: 12px; margin-top: 8px; display: none;"></div>
+                  </form>
+                `}
+              </div>
             </div>
 
           </div>
@@ -728,13 +849,17 @@
         let hasSigned = false;
 
         function resizeCanvas() {
-          const rect = canvas.getBoundingClientRect();
-          canvas.width = rect.width;
-          canvas.height = 140;
-          ctx.lineWidth = 2.5;
-          ctx.lineCap = 'round';
+          const rect = canvas.parentElement.getBoundingClientRect();
+          const dpr = window.devicePixelRatio || 1;
+          canvas.width = rect.width * dpr;
+          canvas.height = rect.height * dpr;
+          ctx.scale(dpr, dpr);
           ctx.strokeStyle = '#0F172A';
+          ctx.lineWidth = 2.2;
+          ctx.lineCap = 'round';
+          ctx.lineJoin = 'round';
         }
+
         resizeCanvas();
         window.addEventListener('resize', resizeCanvas);
 
@@ -748,45 +873,46 @@
           };
         }
 
-        function start(e) {
-          e.preventDefault();
+        function startDrawing(e) {
           isDrawing = true;
-          hasSigned = true;
           const pos = getPos(e);
           ctx.beginPath();
           ctx.moveTo(pos.x, pos.y);
+          e.preventDefault();
         }
 
         function draw(e) {
           if (!isDrawing) return;
-          e.preventDefault();
           const pos = getPos(e);
           ctx.lineTo(pos.x, pos.y);
           ctx.stroke();
+          hasSigned = true;
+          e.preventDefault();
         }
 
-        function stop(e) {
+        function stopDrawing(e) {
           if (isDrawing) {
-            e.preventDefault();
+            ctx.closePath();
             isDrawing = false;
           }
         }
 
-        canvas.addEventListener('mousedown', start);
+        canvas.addEventListener('mousedown', startDrawing);
         canvas.addEventListener('mousemove', draw);
-        canvas.addEventListener('mouseup', stop);
-        canvas.addEventListener('mouseleave', stop);
+        canvas.addEventListener('mouseup', stopDrawing);
+        canvas.addEventListener('mouseleave', stopDrawing);
 
-        canvas.addEventListener('touchstart', start, { passive: false });
+        canvas.addEventListener('touchstart', startDrawing, { passive: false });
         canvas.addEventListener('touchmove', draw, { passive: false });
-        canvas.addEventListener('touchend', stop);
+        canvas.addEventListener('touchend', stopDrawing, { passive: false });
 
-        document.getElementById('btn-clear-sig')?.addEventListener('click', () => {
+        document.getElementById('btn-clear-sig').addEventListener('click', () => {
           ctx.clearRect(0, 0, canvas.width, canvas.height);
           hasSigned = false;
         });
 
-        document.getElementById('btn-confirm-reception')?.addEventListener('click', async () => {
+        // Submit action
+        document.getElementById('btn-confirm-reception').addEventListener('click', async () => {
           const nameInput = document.getElementById('rec-name');
           const idInput = document.getElementById('rec-id');
           const phoneInput = document.getElementById('rec-phone');
@@ -796,7 +922,7 @@
           const name = nameInput.value.trim();
           const id = idInput.value.trim();
           const phone = phoneInput.value.trim();
-          const rel = relInput.value;
+          const rel = relInput.value.trim();
 
           if (!name) {
             showFormError('Por favor ingrese el nombre de la persona que recibe.');
@@ -861,31 +987,16 @@
         });
       }
 
-      function getStatusBadge(status) {
-        const map = {
-          'draft': 'status_draft.png',
-          'sent': 'status_sent.png',
-          'resent': 'status_resent.png',
-          'opened': 'status_opened.png',
-          'finalized': 'status_finalized.png',
-          'cancelled': 'status_cancelled.png',
-        };
-        return map[status] || 'status_draft.png';
-      }
-
       function showError(title, msg) {
         spinner.remove();
         content.innerHTML = `
-          <div style="padding: 40px 24px; text-align: center;">
-            <div style="font-size: 48px; margin-bottom: 16px;">⚠️</div>
-            <h2 style="font-size: 20px; margin-bottom: 10px; color: var(--neutral-dark);">${esc(title)}</h2>
-            <p style="color: var(--neutral-muted); font-size: 14px;">${esc(msg)}</p>
-          </div>`;
+          <div style="padding: 48px 24px; text-align: center;">
+            <div style="font-size: 40px; margin-bottom: 16px;">⚠️</div>
+            <h2 style="font-size: 18px; color: var(--neutral-dark); margin-bottom: 8px;">${esc(title)}</h2>
+            <p style="font-size: 13px; color: var(--neutral-muted); max-width: 420px; margin: 0 auto 24px auto;">${esc(msg)}</p>
+          </div>
+        `;
         content.style.display = 'block';
-      }
-
-      function fmt(val) {
-        return (Number(val) || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
       }
 
       function esc(str) {

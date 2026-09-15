@@ -14,6 +14,7 @@ import '../widgets/purchase_list_item.dart';
 import '../../domain/models/purchase_model.dart';
 import 'package:d_una_app/core/providers/draft_providers.dart';
 import 'package:d_una_app/core/constants/draft_constants.dart';
+import '../../../ads/presentation/providers/ads_provider.dart';
 
 class PurchasesSearchScreen extends ConsumerStatefulWidget {
   final bool selectionMode;
@@ -41,6 +42,7 @@ class _PurchasesSearchScreenState extends ConsumerState<PurchasesSearchScreen> {
   DateTimeRange? _dateRange;
   bool _missingSerialsOnly = false;
   SortOption _currentSort = SortOption.recent;
+  late String _searchQuery = widget.initialQuery ?? '';
 
   String _getChipLabel(Set<String> selected, String defaultLabel) {
     if (selected.isEmpty) return defaultLabel;
@@ -170,6 +172,12 @@ class _PurchasesSearchScreenState extends ConsumerState<PurchasesSearchScreen> {
     final draftService = ref.watch(draftStorageServiceProvider);
     final dateFormat = DateFormat('dd/MM/yyyy');
 
+    final adBanners = ref.watch(
+      placementBannersProvider(
+        (placementKey: 'purchases_search', searchQuery: _searchQuery),
+      ),
+    );
+
     return GenericSearchScreen<Purchase>(
       title: widget.selectionMode ? 'Seleccionar compra' : 'Buscar compra',
       hintText: 'Proveedor o número...',
@@ -178,6 +186,8 @@ class _PurchasesSearchScreenState extends ConsumerState<PurchasesSearchScreen> {
       readOnly: widget.isSearchQueryReadOnly,
       isPaginatedMode: true,
       paginatedDataAsync: paginatedAsync,
+      banners: adBanners,
+      screenContext: 'purchases_search',
       showHistory: !widget.selectionMode &&
           widget.productId == null &&
           widget.initialQuery == null,
@@ -199,7 +209,7 @@ class _PurchasesSearchScreenState extends ConsumerState<PurchasesSearchScreen> {
         ref.read(paginatedPurchaseSearchProvider(widget.productId).notifier).loadMore();
       },
       onQueryChanged: (query) {
-        // Handled by onServerSearch
+        setState(() => _searchQuery = query);
       },
       bottomFilterWidget: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 16.0),

@@ -148,6 +148,8 @@ class SupabaseDeliveryNotesRepository implements DeliveryNotesRepository {
       final item = note.items[i];
       final itemData = item.toJson();
       itemData.remove('id');
+      itemData.remove('delivery_note_serials');
+      itemData.remove('serials');
       itemData['delivery_note_id'] = newId;
       itemData['order_index'] = i;
       if (itemData.containsKey('product_id')) {
@@ -243,6 +245,8 @@ class SupabaseDeliveryNotesRepository implements DeliveryNotesRepository {
       final item = note.items[i];
       final itemData = item.toJson();
       itemData.remove('id');
+      itemData.remove('delivery_note_serials');
+      itemData.remove('serials');
       itemData['delivery_note_id'] = note.id;
       itemData['order_index'] = i;
       if (itemData.containsKey('product_id')) {
@@ -402,6 +406,17 @@ class SupabaseDeliveryNotesRepository implements DeliveryNotesRepository {
     String? receiverRelationship,
     required String signatureData,
   }) async {
+    final noteData = await _supabase
+        .from('delivery_notes')
+        .select('has_missing_serials')
+        .eq('id', id)
+        .maybeSingle();
+    if (noteData != null && noteData['has_missing_serials'] == true) {
+      throw Exception(
+        'No se puede confirmar la recepción porque faltan seriales por asignar a uno o más productos.',
+      );
+    }
+
     await _supabase.from('delivery_notes').update({
       'status': DeliveryNoteStatus.finalized.dbValue,
       'received_by_name': receivedByName,

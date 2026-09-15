@@ -14,6 +14,7 @@ import '../../../shared/widgets/standard_list_item.dart';
 import '../../../shared/widgets/user_profile_avatar.dart';
 import '../../../../shared/widgets/empty_list_state.dart';
 import '../../../../shared/widgets/paginated_list_view.dart';
+import 'package:d_una_app/features/ads/presentation/providers/ads_provider.dart';
 
 class ClientListScreen extends ConsumerStatefulWidget {
   const ClientListScreen({super.key});
@@ -41,6 +42,11 @@ class _ClientListScreenState extends ConsumerState<ClientListScreen> {
   Widget build(BuildContext context) {
     final paginatedStateAsync = ref.watch(paginatedClientsProvider);
     final colors = Theme.of(context).colorScheme;
+    final adBanners = ref.watch(
+      placementBannersProvider(
+        (placementKey: 'clients_list', searchQuery: null),
+      ),
+    );
 
     return Scaffold(
       backgroundColor: colors.surface,
@@ -178,6 +184,8 @@ class _ClientListScreenState extends ConsumerState<ClientListScreen> {
                       onLoadMore: () => ref
                           .read(paginatedClientsProvider.notifier)
                           .loadMore(),
+                      banners: adBanners,
+                      screenContext: 'clients_list',
                       padding: const EdgeInsets.fromLTRB(
                         0,
                         8,

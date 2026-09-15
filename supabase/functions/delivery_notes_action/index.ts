@@ -98,6 +98,7 @@ Deno.serve(async (req) => {
           status: note.status,
           date: note.date,
           delivery_date: note.delivery_date,
+          expires_at: note.action_token_expires_at,
           delivery_type: note.delivery_type || 'direct_delivery',
           shipping_company_name: note.shipping_companies?.name,
           tracking_number: note.tracking_number,

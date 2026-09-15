@@ -12,6 +12,7 @@ import '../providers/delivery_notes_providers.dart';
 import '../widgets/delivery_note_card.dart';
 import 'package:d_una_app/core/providers/draft_providers.dart';
 import 'package:d_una_app/core/constants/draft_constants.dart';
+import 'package:d_una_app/features/ads/presentation/providers/ads_provider.dart';
 
 class DeliveryNotesSearchScreen extends ConsumerStatefulWidget {
   final String? initialQuery;
@@ -28,6 +29,7 @@ class _DeliveryNotesSearchScreenState
   final Set<String> _selectedStatuses = {};
   DateTimeRange? _dateRange;
   SortOption _currentSort = SortOption.recent;
+  String _searchQuery = '';
 
   @override
   void initState() {
@@ -115,6 +117,11 @@ class _DeliveryNotesSearchScreenState
     final paginatedAsync = ref.watch(paginatedDeliveryNotesProvider);
     final draftService = ref.watch(draftStorageServiceProvider);
     final dateFormat = DateFormat('dd/MM/yy');
+    final adBanners = ref.watch(
+      placementBannersProvider(
+        (placementKey: 'delivery_notes_search', searchQuery: _searchQuery),
+      ),
+    );
 
     return GenericSearchScreen<DeliveryNoteModel>(
       title: 'Buscar notas de entrega',
@@ -123,6 +130,11 @@ class _DeliveryNotesSearchScreenState
       initialQuery: widget.initialQuery,
       isPaginatedMode: true,
       paginatedDataAsync: paginatedAsync,
+      banners: adBanners,
+      screenContext: 'delivery_notes_search',
+      onQueryChanged: (query) {
+        setState(() => _searchQuery = query);
+      },
       onServerSearch: (query) {
         ref.read(paginatedDeliveryNotesProvider.notifier).setSearchQuery(query);
       },

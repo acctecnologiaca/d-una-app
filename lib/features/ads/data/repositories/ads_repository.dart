@@ -55,6 +55,29 @@ class AdsRepository {
     }
   }
 
+  /// Escucha en tiempo real cambios en la configuración de activación de ubicaciones
+  Stream<Map<String, AdPlacementSetting>> streamPlacementSettings() {
+    return _supabase
+        .from('ad_placement_settings')
+        .stream(primaryKey: ['placement_key'])
+        .map((rows) {
+          final map = <String, AdPlacementSetting>{};
+          for (final json in rows) {
+            final setting = AdPlacementSetting.fromJson(json);
+            map[setting.placementKey] = setting;
+          }
+          return map;
+        });
+  }
+
+  /// Emite un evento cada vez que un anuncio es insertado, modificado o eliminado en Supabase
+  Stream<void> streamBannersChangeTrigger() {
+    return _supabase
+        .from('ad_banners')
+        .stream(primaryKey: ['id'])
+        .map((_) {});
+  }
+
   void recordClick({
     required String bannerId,
     required String screenContext,

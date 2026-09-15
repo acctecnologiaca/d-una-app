@@ -144,7 +144,6 @@ class DeliveryNoteCreateState extends Equatable {
     if ((tag ?? '').trim() != (initialNote!.tag ?? '').trim()) return true;
     if ((notes ?? '').trim() != (initialNote!.notes ?? '').trim()) return true;
     if ((clientPoNumber ?? '').trim() != (initialNote!.clientPoNumber ?? '').trim()) return true;
-    if (status != initialNote!.status) return true;
 
     if (date.year != initialNote!.date.year ||
         date.month != initialNote!.date.month ||
@@ -346,7 +345,7 @@ class DeliveryNoteCreateState extends Equatable {
       clientPoNumber: json['client_po_number'] as String?,
       tag: json['tag'] as String?,
       notes: json['notes'] as String?,
-      status: DeliveryNoteStatus.fromDbValue(json['status'] as String? ?? 'draft'),
+      status: DeliveryNoteStatus.draft,
       date: DateTime.tryParse(json['date'] as String? ?? '') ?? DateTime.now(),
       deliveryDate: json['delivery_date'] != null
           ? DateTime.tryParse(json['delivery_date'] as String)
@@ -679,7 +678,7 @@ class CreateDeliveryNoteNotifier
       clientPoNumber: note.clientPoNumber,
       tag: note.tag,
       notes: note.notes,
-      status: note.status,
+      status: DeliveryNoteStatus.draft,
       date: note.date,
       deliveryDate: note.deliveryDate,
       deliveryType: note.deliveryType,
@@ -979,8 +978,9 @@ class CreateDeliveryNoteNotifier
 
   void updateItemSerials(
     int index,
-    List<DeliveryNoteSerialModel> serials,
-  ) {
+    List<DeliveryNoteSerialModel> serials, {
+    bool? requiresSerials,
+  }) {
     if (index < 0 || index >= state.items.length) return;
     final item = state.items[index];
     final updated = DeliveryNoteItemModel(
@@ -1001,7 +1001,8 @@ class CreateDeliveryNoteNotifier
       warrantyTime: item.warrantyTime,
       warrantyUnit: item.warrantyUnit,
       sourceType: item.sourceType,
-      requiresSerials: item.requiresSerials,
+      requiresSerials:
+          requiresSerials ?? (serials.isNotEmpty ? true : item.requiresSerials),
       isDropshipping: item.isDropshipping,
       serials: serials,
     );
@@ -1143,7 +1144,7 @@ class CreateDeliveryNoteNotifier
         clientPoNumber: state.clientPoNumber,
         tag: state.tag,
         notes: state.notes,
-        status: state.status,
+        status: DeliveryNoteStatus.draft,
         date: state.date,
         deliveryDate: state.deliveryDate,
         deliveryType: state.deliveryType,

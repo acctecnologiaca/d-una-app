@@ -8,6 +8,7 @@ import 'package:d_una_app/shared/widgets/standard_app_bar.dart';
 import 'package:d_una_app/shared/widgets/custom_action_sheet.dart';
 import 'package:d_una_app/shared/widgets/bottom_sheet_action_item.dart';
 import 'package:d_una_app/shared/widgets/custom_dialog.dart';
+import 'package:d_una_app/shared/widgets/app_toast.dart';
 import 'package:d_una_app/shared/utils/string_utils.dart';
 import 'package:d_una_app/core/utils/contact_utils.dart';
 import 'package:d_una_app/features/profile/presentation/providers/profile_provider.dart';
@@ -42,6 +43,7 @@ class ViewDeliveryNoteScreen extends ConsumerStatefulWidget {
 class _ViewDeliveryNoteScreenState extends ConsumerState<ViewDeliveryNoteScreen>
     with SingleTickerProviderStateMixin, WidgetsBindingObserver {
   late TabController _tabController;
+  RealtimeChannel? _singleNoteChannel;
 
   @override
   void initState() {
@@ -52,6 +54,31 @@ class _ViewDeliveryNoteScreenState extends ConsumerState<ViewDeliveryNoteScreen>
     _tabController.addListener(() {
       if (!_tabController.indexIsChanging) setState(() {});
     });
+    _initSingleNoteRealtime();
+  }
+
+  void _initSingleNoteRealtime() {
+    _singleNoteChannel = Supabase.instance.client
+        .channel(
+          'public:delivery_note_${widget.noteId}_${DateTime.now().millisecondsSinceEpoch}',
+        )
+        .onPostgresChanges(
+          event: PostgresChangeEvent.all,
+          schema: 'public',
+          table: 'delivery_notes',
+          filter: PostgresChangeFilter(
+            type: PostgresChangeFilterType.eq,
+            column: 'id',
+            value: widget.noteId,
+          ),
+          callback: (payload) {
+            if (mounted) {
+              ref.invalidate(deliveryNoteDetailProvider(widget.noteId));
+              ref.read(paginatedDeliveryNotesProvider.notifier).refresh();
+            }
+          },
+        )
+        .subscribe();
   }
 
   @override
@@ -63,6 +90,8 @@ class _ViewDeliveryNoteScreenState extends ConsumerState<ViewDeliveryNoteScreen>
 
   @override
   void dispose() {
+    _singleNoteChannel?.unsubscribe();
+    _singleNoteChannel = null;
     WidgetsBinding.instance.removeObserver(this);
     _tabController.dispose();
     super.dispose();
@@ -74,12 +103,10 @@ class _ViewDeliveryNoteScreenState extends ConsumerState<ViewDeliveryNoteScreen>
     bool isSentOrResent,
   ) {
     if (note.hasMissingSerialsEffective) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text(
+      AppToast.warning(
+        context,
+        message:
             'No se puede enviar la nota de entrega porque faltan seriales por asignar.',
-          ),
-        ),
       );
       return;
     }
@@ -89,12 +116,10 @@ class _ViewDeliveryNoteScreenState extends ConsumerState<ViewDeliveryNoteScreen>
         note.status == DeliveryNoteStatus.cancelled;
 
     if (isSendDisabled) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
+      AppToast.warning(
+        context,
+        message:
             'La nota de entrega está ${note.status.label.toLowerCase()} y no se puede enviar.',
-          ),
-        ),
       );
       return;
     }
@@ -185,7 +210,6 @@ class _ViewDeliveryNoteScreenState extends ConsumerState<ViewDeliveryNoteScreen>
               ? 'Nota de entrega finalizada. No se puede cambiar de estado'
               : null,
           onTap: () async {
-            final messenger = ScaffoldMessenger.of(context);
             context.pop();
 
             final selected = await DeliveryNoteSelectionActions.showStatusDialog(
@@ -202,19 +226,19 @@ class _ViewDeliveryNoteScreenState extends ConsumerState<ViewDeliveryNoteScreen>
                 ref.invalidate(deliveryNoteDetailProvider(widget.noteId));
                 ref.read(paginatedDeliveryNotesProvider.notifier).refresh();
 
-                messenger.showSnackBar(
-                  SnackBar(
-                    content: Text(
-                      'Estatus cambiado a "${selected.label}"',
-                    ),
-                  ),
-                );
+                if (context.mounted) {
+                  AppToast.success(
+                    context,
+                    message: 'Estatus cambiado a "${selected.label}"',
+                  );
+                }
               } catch (e) {
-                messenger.showSnackBar(
-                  SnackBar(
-                    content: Text('Error al cambiar estatus: $e'),
-                  ),
-                );
+                if (context.mounted) {
+                  AppToast.error(
+                    context,
+                    message: 'Error al cambiar estatus: $e',
+                  );
+                }
               }
             }
           },
@@ -228,7 +252,6 @@ class _ViewDeliveryNoteScreenState extends ConsumerState<ViewDeliveryNoteScreen>
               : Icons.archive_outlined,
           label: note.isArchived ? 'Desarchivar' : 'Archivar',
           onTap: () async {
-            final messenger = ScaffoldMessenger.of(context);
             final router = GoRouter.of(context);
 
             context.pop();
@@ -239,15 +262,14 @@ class _ViewDeliveryNoteScreenState extends ConsumerState<ViewDeliveryNoteScreen>
             ref.invalidate(deliveryNoteDetailProvider(widget.noteId));
             ref.read(paginatedDeliveryNotesProvider.notifier).refresh();
 
-            messenger.showSnackBar(
-              SnackBar(
-                content: Text(
-                  note.isArchived
-                      ? 'Nota de entrega desarchivada exitosamente'
-                      : 'Nota de entrega archivada exitosamente',
-                ),
-              ),
-            );
+            if (context.mounted) {
+              AppToast.success(
+                context,
+                message: note.isArchived
+                    ? 'Nota de entrega desarchivada exitosamente'
+                    : 'Nota de entrega archivada exitosamente',
+              );
+            }
             if (!note.isArchived) {
               router.pop();
             }
@@ -290,8 +312,7 @@ class _ViewDeliveryNoteScreenState extends ConsumerState<ViewDeliveryNoteScreen>
           );
         }
 
-        final canEdit = note.status != DeliveryNoteStatus.finalized &&
-            note.status != DeliveryNoteStatus.cancelled;
+        final canEdit = note.status.canEdit;
         final canSign = note.status != DeliveryNoteStatus.finalized &&
             note.status != DeliveryNoteStatus.cancelled;
         final hasPhone = (note.contactPhone != null &&

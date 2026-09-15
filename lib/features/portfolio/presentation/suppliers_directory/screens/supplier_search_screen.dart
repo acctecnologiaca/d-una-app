@@ -21,6 +21,7 @@ import 'package:d_una_app/features/portfolio/presentation/suppliers_directory/sc
 import 'package:d_una_app/features/profile/presentation/providers/profile_provider.dart';
 import '../../../../profile/domain/models/user_profile.dart';
 import '../../../domain/models/product_search_filters.dart';
+import '../../../../ads/presentation/providers/ads_provider.dart';
 
 class SupplierSearchScreen extends ConsumerStatefulWidget {
   final String? initialSupplierId;
@@ -302,11 +303,19 @@ class _SupplierSearchScreenState extends ConsumerState<SupplierSearchScreen> {
     final suppliers = suppliersAsync.valueOrNull ?? [];
     final supplierNameMap = {for (var s in suppliers) s.id: s.name};
 
+    final adBanners = ref.watch(
+      placementBannersProvider(
+        (placementKey: 'supplier_search', searchQuery: _currentQuery),
+      ),
+    );
+
     return GenericSearchScreen<SearchResultItem>(
       title: 'Proveedores',
       hintText: 'Buscar proveedores, productos, marcas...',
       historyKey: 'supplier_search_history',
       data: combinedAsync,
+      banners: adBanners,
+      screenContext: 'supplier_search',
       // We handle query updates via onQueryChanged to feed the provider
       onQueryChanged: _onQueryChanged,
       onResetFilters: _resetFilters,

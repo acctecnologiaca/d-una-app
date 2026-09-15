@@ -14,6 +14,7 @@ import '../providers/quote_product_selection_provider.dart';
 import '../../../../portfolio/domain/models/product_search_filters.dart';
 import '../../../../portfolio/presentation/providers/product_search_provider.dart';
 import '../providers/create_quote_provider.dart';
+import '../../../../ads/presentation/providers/ads_provider.dart';
 
 class QuoteProductSearchScreen extends ConsumerStatefulWidget {
   final String? initialQuery;
@@ -276,9 +277,11 @@ class _QuoteProductSearchScreenState
 
     final quoteProducts = ref.watch(createQuoteProvider).products;
 
-    // We can't do local Verification Rules or Sorting on the full list if it's paginated on the server.
-    // The server-side RPC should eventually handle this or we just display what server gives.
-    // For now, the RPC handles base filtering, we just pass the async state directly to GenericSearchScreen.
+    final adBanners = ref.watch(
+      placementBannersProvider(
+        (placementKey: 'quote_product_search', searchQuery: _currentQuery),
+      ),
+    );
 
     return GenericSearchScreen<QuoteAggregatedProduct>(
       title: 'Buscar Producto',
@@ -286,6 +289,8 @@ class _QuoteProductSearchScreenState
       historyKey: 'quote_product_search_history',
       isPaginatedMode: true,
       paginatedDataAsync: paginatedAsync,
+      banners: adBanners,
+      screenContext: 'quote_product_search',
       onServerSearch: (query) {
         ref
             .read(paginatedQuoteProductSearchProvider.notifier)

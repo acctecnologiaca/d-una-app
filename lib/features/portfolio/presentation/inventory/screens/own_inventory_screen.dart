@@ -29,22 +29,11 @@ class _OwnInventoryScreenState extends ConsumerState<OwnInventoryScreen> {
   Widget build(BuildContext context) {
     final colors = Theme.of(context).colorScheme;
     final paginatedStateAsync = ref.watch(paginatedProductsProvider);
-    final userProfileAsync = ref.watch(userProfileProvider);
-
-    final userProfile = userProfileAsync.valueOrNull;
-    final occupationIds = <String>[
-      if (userProfile?.occupationId != null) userProfile!.occupationId!,
-      ...userProfile?.secondaryOccupationIds ?? [],
-    ];
-
-    final isAdsEnabled = ref.watch(
-      isAdPlacementEnabledProvider('own_inventory_list'),
+    final adBanners = ref.watch(
+      placementBannersProvider(
+        (placementKey: 'own_inventory_list', searchQuery: null),
+      ),
     );
-    final adBannersAsync = isAdsEnabled
-        ? ref.watch(
-            adBannersProvider(AdBannerParams(occupationIds: occupationIds)),
-          )
-        : null;
 
     return Scaffold(
       appBar: AppBar(
@@ -193,7 +182,7 @@ class _OwnInventoryScreenState extends ConsumerState<OwnInventoryScreen> {
                     hasReachedEnd: paginatedState.hasReachedEnd,
                     onLoadMore: () =>
                         ref.read(paginatedProductsProvider.notifier).loadMore(),
-                    banners: adBannersAsync?.valueOrNull,
+                    banners: adBanners,
                     screenContext: 'own_inventory_list',
                     padding: const EdgeInsets.fromLTRB(
                       0,

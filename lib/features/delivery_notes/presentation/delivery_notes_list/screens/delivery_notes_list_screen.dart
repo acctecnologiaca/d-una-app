@@ -17,6 +17,7 @@ import '../delivery_note_selection_actions.dart';
 import '../../create_delivery_note/providers/create_delivery_note_provider.dart';
 import 'package:d_una_app/core/providers/draft_providers.dart';
 import 'package:d_una_app/core/constants/draft_constants.dart';
+import 'package:d_una_app/features/ads/presentation/providers/ads_provider.dart';
 
 class DeliveryNotesListScreen extends ConsumerStatefulWidget {
   const DeliveryNotesListScreen({super.key});
@@ -60,6 +61,11 @@ class _DeliveryNotesListScreenState extends ConsumerState<DeliveryNotesListScree
     final draftService = ref.watch(draftStorageServiceProvider);
     final hasNewDeliveryNoteDraft =
         draftService.hasDraft(DraftConstants.deliveryNotesModule);
+    final adBanners = ref.watch(
+      placementBannersProvider(
+        (placementKey: 'delivery_notes_list', searchQuery: null),
+      ),
+    );
 
     final allNotes = paginatedAsync.valueOrNull?.items ?? [];
     final selectedNotes = allNotes
@@ -184,6 +190,8 @@ class _DeliveryNotesListScreenState extends ConsumerState<DeliveryNotesListScree
                       onLoadMore: () => ref
                           .read(paginatedDeliveryNotesProvider.notifier)
                           .loadMore(),
+                      banners: selection.isSelectionMode ? null : adBanners,
+                      screenContext: 'delivery_notes_list',
                       padding: const EdgeInsets.fromLTRB(
                         0,
                         8,

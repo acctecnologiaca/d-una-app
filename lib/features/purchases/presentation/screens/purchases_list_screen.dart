@@ -10,11 +10,13 @@ import 'package:d_una_app/shared/widgets/custom_extended_fab.dart';
 import 'package:d_una_app/shared/utils/fab_scroll_padding.dart';
 
 import 'package:d_una_app/features/purchases/presentation/providers/purchases_providers.dart';
+import '../../domain/models/purchase_model.dart';
 import '../widgets/purchase_list_item.dart';
 import '../../../../shared/widgets/empty_list_state.dart';
 import '../../../../shared/widgets/paginated_list_view.dart';
 import 'package:d_una_app/core/providers/draft_providers.dart';
 import 'package:d_una_app/core/constants/draft_constants.dart';
+import '../../../ads/presentation/providers/ads_provider.dart';
 
 class PurchasesListScreen extends ConsumerStatefulWidget {
   const PurchasesListScreen({super.key});
@@ -38,6 +40,11 @@ class _PurchasesListScreenState extends ConsumerState<PurchasesListScreen> {
     final draftService = ref.watch(draftStorageServiceProvider);
     final hasNewPurchaseDraft =
         draftService.hasDraft(DraftConstants.purchasesModule);
+    final adBanners = ref.watch(
+      placementBannersProvider(
+        (placementKey: 'purchases_list', searchQuery: null),
+      ),
+    );
 
     return Scaffold(
       backgroundColor: colors.surface,
@@ -140,13 +147,15 @@ class _PurchasesListScreenState extends ConsumerState<PurchasesListScreen> {
                     );
                   }
 
-                  return PaginatedListView(
+                  return PaginatedListView<Purchase>(
                     items: state.items,
                     isLoadingMore: state.isLoadingMore,
                     hasReachedEnd: state.hasReachedEnd,
                     onLoadMore: () => ref
                         .read(paginatedPurchasesListProvider.notifier)
                         .loadMore(),
+                    banners: adBanners,
+                    screenContext: 'purchases_list',
                     padding: const EdgeInsets.fromLTRB(
                       0,
                       8,

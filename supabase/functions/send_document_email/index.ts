@@ -50,6 +50,15 @@ function getDocumentConfig(docType: string): DocumentConfig {
         showValidityBadge: true,
         validityLabel: 'orden de compra',
       };
+    case 'delivery_note':
+    case 'nota_entrega':
+      return {
+        viewerPath: 'delivery_note.html',
+        buttonLabel: 'Ver nota de entrega',
+        emailTitle: 'Nota de Entrega D-UNA',
+        showValidityBadge: true,
+        validityLabel: 'nota de entrega',
+      };
     default:
       return {
         viewerPath: '',

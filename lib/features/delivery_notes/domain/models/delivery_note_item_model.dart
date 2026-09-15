@@ -55,7 +55,9 @@ class DeliveryNoteItemModel {
   bool get hasMissingSerials => missingSerialsCount > 0;
 
   factory DeliveryNoteItemModel.fromJson(Map<String, dynamic> json) {
-    final rawSerials = json['delivery_note_serials'] as List<dynamic>? ?? [];
+    final rawSerials =
+        (json['delivery_note_serials'] ?? json['serials']) as List<dynamic>? ??
+            [];
     final serialsList = rawSerials
         .map((s) => DeliveryNoteSerialModel.fromJson(s as Map<String, dynamic>))
         .toList();
@@ -105,6 +107,7 @@ class DeliveryNoteItemModel {
       'source_type': sourceType,
       'requires_serials': requiresSerials,
       'is_dropshipping': isDropshipping,
+      'delivery_note_serials': serials.map((s) => s.toJson()).toList(),
     };
   }
 

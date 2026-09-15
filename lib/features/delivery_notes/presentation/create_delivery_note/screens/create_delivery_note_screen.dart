@@ -123,6 +123,16 @@ class _CreateDeliveryNoteScreenState
       final repo = ref.read(deliveryNotesRepositoryProvider);
       final note = await repo.getDeliveryNoteById(widget.noteId!);
       if (note != null && mounted) {
+        if (!note.status.canEdit) {
+          AppToast.error(
+            context,
+            message:
+                'La nota de entrega está ${note.status.label.toLowerCase()} y no puede ser editada.',
+          );
+          context.pop();
+          return;
+        }
+
         notifier.loadExistingDeliveryNote(note);
 
         final draft = await notifier.checkExistingDraft(noteId: widget.noteId);
@@ -525,9 +535,11 @@ class _CreateDeliveryNoteScreenState
           title: widget.noteId != null
               ? 'Editar nota de entrega'
               : 'Nueva nota de entrega',
-          subtitle: state.clientName != null
-              ? '${state.deliveryNoteNumber ?? "NE-..."} (${state.clientName})'
-              : (state.deliveryNoteNumber ?? 'NE-...'),
+          subtitle: widget.noteId != null
+              ? '${state.deliveryNoteNumber ?? "NE-..."} · Borrador${state.clientName != null ? " (${state.clientName})" : ""}'
+              : (state.clientName != null
+                  ? '${state.deliveryNoteNumber ?? "NE-..."} (${state.clientName})'
+                  : (state.deliveryNoteNumber ?? 'NE-...')),
           actions: [
             if (widget.noteId != null)
               IconButton(
