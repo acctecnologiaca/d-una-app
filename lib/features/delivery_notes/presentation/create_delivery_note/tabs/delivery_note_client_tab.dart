@@ -3,9 +3,22 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:d_una_app/shared/widgets/custom_dropdown.dart';
 import 'package:d_una_app/shared/widgets/info_block.dart';
+import 'package:d_una_app/shared/widgets/custom_dialog.dart';
+import 'package:d_una_app/shared/utils/currency_formatter.dart';
 import 'package:d_una_app/features/clients/presentation/providers/clients_provider.dart';
 import 'package:d_una_app/features/clients/data/models/client_model.dart';
+import 'package:d_una_app/features/quotes/data/models/quote.dart';
+import 'package:d_una_app/features/quotes/domain/models/quote_model.dart' show QuoteStatus;
+import 'package:d_una_app/features/quotes/presentation/quotes_list/providers/quotes_provider.dart';
 import '../providers/create_delivery_note_provider.dart';
+
+final clientActiveQuotesProvider =
+    FutureProvider.autoDispose.family<List<Quote>, String>((ref, clientId) async {
+  if (clientId.trim().isEmpty) return [];
+  final repo = ref.watch(quotesRepositoryProvider);
+  final quotes = await repo.getQuotes(clientId: clientId, includeArchived: false);
+  return quotes.where((q) => q.status != 'finalized' && q.status != 'cancelled').toList();
+});
 
 class DeliveryNoteClientTab extends ConsumerStatefulWidget {
   const DeliveryNoteClientTab({super.key});
@@ -48,6 +61,13 @@ class _DeliveryNoteClientTabState extends ConsumerState<DeliveryNoteClientTab> {
         .firstOrNull;
 
     final isCompany = selectedClient != null && selectedClient.type == 'company';
+
+    final clientQuotes = (selectedClient != null && selectedClient.id.isNotEmpty)
+        ? ref.watch(clientActiveQuotesProvider(selectedClient.id)).valueOrNull ?? []
+        : <Quote>[];
+    final selectedQuoteItem = clientQuotes
+        .cast<Quote?>()
+        .firstWhere((q) => q?.id == state.quoteId, orElse: () => null);
 
     return SingleChildScrollView(
       padding: const EdgeInsets.all(16),
@@ -242,6 +262,119 @@ class _DeliveryNoteClientTabState extends ConsumerState<DeliveryNoteClientTab> {
                 icon: Icons.email_outlined,
                 label: 'Correo Electrónico',
                 value: selectedContact.email!,
+              ),
+            ],
+          ],
+
+          // 5. Vincular cotización (Opcional)
+          if (selectedClient != null && clientQuotes.isNotEmpty) ...[
+            const SizedBox(height: 24),
+            Text(
+              'Cotización asociada',
+              style: Theme.of(
+                context,
+              ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 12),
+            CustomDropdown<Quote>(
+              value: selectedQuoteItem,
+              items: clientQuotes,
+              label: 'Vincular cotización (Opcional)',
+              searchable: true,
+              itemLabelBuilder: (q) =>
+                  '${q.quoteNumber ?? (q.id.length >= 8 ? q.id.substring(0, 8) : q.id)} — ${CurrencyFormatter.format(q.total)} USD (${QuoteStatus.fromDbValue(q.status).label})',
+              onChanged: (quote) async {
+                if (quote == null) {
+                  ref
+                      .read(createDeliveryNoteProvider.notifier)
+                      .setLinkedQuote(null);
+                  return;
+                }
+                final fullQuote = await ref
+                    .read(quotesRepositoryProvider)
+                    .getQuoteWithDetails(quote.id);
+                if (!context.mounted) return;
+
+                if (state.items.isNotEmpty) {
+                  final replace = await CustomDialog.show<bool>(
+                    context: context,
+                    dialog: CustomDialog.confirmation(
+                      title: 'Cargar productos',
+                      contentText:
+                          '¿Deseas reemplazar los productos actuales de la nota con los productos de la cotización seleccionada?',
+                      actions: [
+                        TextButton(
+                          onPressed: () =>
+                              Navigator.of(context, rootNavigator: true)
+                                  .pop(false),
+                          child: const Text('Solo vincular'),
+                        ),
+                        FilledButton(
+                          onPressed: () =>
+                              Navigator.of(context, rootNavigator: true)
+                                  .pop(true),
+                          child: const Text('Reemplazar'),
+                        ),
+                      ],
+                    ),
+                  );
+                  if (!context.mounted) return;
+                  if (replace == true) {
+                    ref
+                        .read(createDeliveryNoteProvider.notifier)
+                        .loadFromQuote(fullQuote);
+                  } else {
+                    ref
+                        .read(createDeliveryNoteProvider.notifier)
+                        .setLinkedQuote(fullQuote);
+                  }
+                } else {
+                  ref
+                      .read(createDeliveryNoteProvider.notifier)
+                      .loadFromQuote(fullQuote);
+                }
+              },
+            ),
+            if (state.linkedQuote != null &&
+                state.linkedQuote!.status != 'approved') ...[
+              const SizedBox(height: 12),
+              Card(
+                color: Theme.of(context)
+                    .colorScheme
+                    .primaryContainer
+                    .withValues(alpha: 0.3),
+                elevation: 0,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8),
+                  side: BorderSide(
+                    color: Theme.of(context)
+                        .colorScheme
+                        .primary
+                        .withValues(alpha: 0.5),
+                  ),
+                ),
+                child: Padding(
+                  padding: const EdgeInsets.all(12),
+                  child: Row(
+                    children: [
+                      Icon(
+                        Icons.info_outline,
+                        color: Theme.of(context).colorScheme.primary,
+                        size: 20,
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          'Esta cotización pasará a estatus Aprobada automáticamente al generar la nota de entrega.',
+                          style: TextStyle(
+                            color: Theme.of(context).colorScheme.onSurface,
+                            fontSize: 12,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
               ),
             ],
           ],

@@ -10,6 +10,8 @@ import 'package:d_una_app/features/purchases/presentation/providers/purchases_pr
 import 'package:d_una_app/features/purchases/presentation/providers/purchase_details_provider.dart';
 import 'package:d_una_app/features/purchases/data/models/purchase_item_product.dart';
 import 'package:d_una_app/features/quotes/presentation/quotes_list/providers/quotes_provider.dart';
+import 'package:d_una_app/features/portfolio/presentation/providers/products_provider.dart';
+import 'package:d_una_app/features/supplier_orders/presentation/supplier_orders_list/providers/supplier_orders_providers.dart';
 
 import 'package:equatable/equatable.dart';
 
@@ -495,6 +497,22 @@ class AddPurchaseNotifier extends StateNotifier<AddPurchaseState> {
       if (wasEditing) {
         // Also invalidate details provider for this specific purchase
         _ref.invalidate(purchaseDetailsProvider(previousPurchaseId!));
+      }
+
+      // Refrescar inventario y catálogo propio al instante tras registrar compra
+      _ref.read(paginatedProductsProvider.notifier).refresh();
+      _ref.invalidate(productsProvider);
+      _ref.invalidate(paginatedProductSearchProvider);
+      for (final p in state.products) {
+        if (p.productId.isNotEmpty) {
+          _ref.invalidate(productDetailProvider(p.productId));
+        }
+      }
+
+      // Si proviene de una Orden de Compra a Proveedor, refrescar estado de la OC
+      if (state.supplierOrderId != null && state.supplierOrderId!.isNotEmpty) {
+        _ref.invalidate(supplierOrderDetailProvider(state.supplierOrderId!));
+        _ref.invalidate(linkedPurchaseProvider(state.supplierOrderId!));
       }
 
       state = state.copyWith(isLoading: false);

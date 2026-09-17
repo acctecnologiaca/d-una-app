@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import '../../../../core/utils/string_extensions.dart';
-import '../../../../shared/utils/currency_formatter.dart';
 import '../../../../shared/widgets/expandable_action_card.dart';
 import '../../../../shared/widgets/editable_quantity_stepper.dart';
 import '../../../../shared/widgets/uom_status_badge.dart';
@@ -68,28 +67,11 @@ class _PurchaseProductSelectionCardState
                   ),
                 )
               : null,
-          trailing: Column(
-            crossAxisAlignment: CrossAxisAlignment.end,
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Text(
-                uom.isNotEmpty
-                    ? '${CurrencyFormatter.format(widget.product.averageCost)}/$uom'
-                    : CurrencyFormatter.format(widget.product.averageCost),
-                style: textTheme.titleLarge?.copyWith(
-                  fontWeight: FontWeight.w700,
-                  fontSize: 16,
-                  color: colors.onSurface,
-                ),
-              ),
-              const SizedBox(height: 6),
-              UomStatusBadge(
-                quantity: widget.selectedQty,
-                showQuantity: widget.selectedQty > 0,
-                uomAbbreviation: uom,
-                uomIconName: widget.product.uomModel?.iconName,
-              ),
-            ],
+          trailing: UomStatusBadge(
+            quantity: widget.selectedQty,
+            showQuantity: widget.selectedQty > 0,
+            uomAbbreviation: uom,
+            uomIconName: widget.product.uomModel?.iconName,
           ),
           actions: [
             if (widget.selectedQty > 0)

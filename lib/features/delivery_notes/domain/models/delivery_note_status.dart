@@ -52,7 +52,8 @@ enum DeliveryNoteStatus {
       this == DeliveryNoteStatus.draft ||
       this == DeliveryNoteStatus.sent ||
       this == DeliveryNoteStatus.resent ||
-      this == DeliveryNoteStatus.opened;
+      this == DeliveryNoteStatus.opened ||
+      this == DeliveryNoteStatus.finalized;
 
   Color statusColor(ColorScheme colors) {
     switch (this) {

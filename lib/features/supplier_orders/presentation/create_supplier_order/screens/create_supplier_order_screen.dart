@@ -125,7 +125,7 @@ class _CreateSupplierOrderScreenState
         }
       } else {
         // Modo creación:
-        if (currentState.id != null && currentState.id!.isNotEmpty) {
+        if (currentState.id != null || currentState.initialOrder != null) {
           ref
               .read(createSupplierOrderProvider.notifier)
               .reset(clearPersistedDraft: false);

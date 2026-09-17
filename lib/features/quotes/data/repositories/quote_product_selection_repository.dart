@@ -54,6 +54,7 @@ class QuoteProductSelectionRepository {
     required String brand,
     required String model,
     required String uom,
+    String? quoteId,
   }) async {
     final response = await _supabase.rpc(
       'get_product_sources',
@@ -62,6 +63,7 @@ class QuoteProductSelectionRepository {
         'p_brand': brand,
         'p_model': model,
         'p_uom': uom,
+        if (quoteId != null && quoteId.isNotEmpty) 'p_quote_id': quoteId,
       },
     );
     return (response as List)

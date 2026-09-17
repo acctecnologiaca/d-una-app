@@ -35,10 +35,18 @@ class _DeliveryNoteDeliveryTabState
   void initState() {
     super.initState();
     final state = ref.read(createDeliveryNoteProvider);
+    final initialDeliveryDate = state.deliveryDate ?? DateTime.now();
+    if (state.deliveryDate == null) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) {
+          ref
+              .read(createDeliveryNoteProvider.notifier)
+              .setDeliveryDate(initialDeliveryDate);
+        }
+      });
+    }
     _deliveryDateController = TextEditingController(
-      text: state.deliveryDate != null
-          ? _dateFormat.format(state.deliveryDate!)
-          : '',
+      text: _dateFormat.format(initialDeliveryDate),
     );
     _trackingController = TextEditingController(
       text: state.trackingNumber ?? '',

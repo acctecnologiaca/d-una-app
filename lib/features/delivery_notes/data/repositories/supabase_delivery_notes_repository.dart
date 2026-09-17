@@ -314,13 +314,31 @@ class SupabaseDeliveryNotesRepository implements DeliveryNotesRepository {
       setArchived(id, isArchived);
 
   @override
-  Future<void> updateStatus(String id, DeliveryNoteStatus status) async {
+  Future<void> updateStatus(
+    String id,
+    DeliveryNoteStatus status, {
+    DateTime? deliveryDate,
+  }) async {
+    final noteData = await _supabase
+        .from('delivery_notes')
+        .select('status, has_missing_serials, supplier_order_id')
+        .eq('id', id)
+        .maybeSingle();
+
+    if (noteData != null) {
+      final currentStatusStr = noteData['status'] as String?;
+      if (currentStatusStr == DeliveryNoteStatus.cancelled.dbValue) {
+        throw Exception('No se puede modificar una nota de entrega cancelada.');
+      }
+      if (currentStatusStr == DeliveryNoteStatus.finalized.dbValue &&
+          status != DeliveryNoteStatus.cancelled) {
+        throw Exception(
+          'Una nota de entrega finalizada solo puede anularse (pasar a cancelada).',
+        );
+      }
+    }
+
     if (status == DeliveryNoteStatus.finalized) {
-      final noteData = await _supabase
-          .from('delivery_notes')
-          .select('has_missing_serials')
-          .eq('id', id)
-          .maybeSingle();
       if (noteData != null && noteData['has_missing_serials'] == true) {
         throw Exception(
           'No se puede finalizar la nota de entrega porque faltan seriales por asignar.',
@@ -328,15 +346,36 @@ class SupabaseDeliveryNotesRepository implements DeliveryNotesRepository {
       }
     }
 
-    await _supabase.from('delivery_notes').update({
+    final updatePayload = <String, dynamic>{
       'status': status.dbValue,
       'updated_at': DateTime.now().toIso8601String(),
-    }).eq('id', id);
+    };
+    if (deliveryDate != null) {
+      updatePayload['delivery_date'] =
+          deliveryDate.toIso8601String().split('T')[0];
+    }
+
+    await _supabase.from('delivery_notes').update(updatePayload).eq('id', id);
+
+    // Si pasa a finalized y proviene de una Orden de Compra, finalizar en cascada la OC
+    if (status == DeliveryNoteStatus.finalized && noteData != null) {
+      final supplierOrderId = noteData['supplier_order_id'] as String?;
+      if (supplierOrderId != null && supplierOrderId.isNotEmpty) {
+        await _supabase.from('supplier_orders').update({
+          'status': 'finalized',
+          'updated_at': DateTime.now().toIso8601String(),
+        }).eq('id', supplierOrderId);
+      }
+    }
   }
 
   @override
-  Future<void> updateDeliveryNoteStatus(String id, DeliveryNoteStatus status) =>
-      updateStatus(id, status);
+  Future<void> updateDeliveryNoteStatus(
+    String id,
+    DeliveryNoteStatus status, {
+    DateTime? deliveryDate,
+  }) =>
+      updateStatus(id, status, deliveryDate: deliveryDate);
 
   @override
   Future<void> confirmReception(
@@ -361,25 +400,62 @@ class SupabaseDeliveryNotesRepository implements DeliveryNotesRepository {
   @override
   Future<void> batchUpdateStatus(List<String> ids, DeliveryNoteStatus status) async {
     if (ids.isEmpty) return;
-    if (status == DeliveryNoteStatus.finalized) {
-      final res = await _supabase
-          .from('delivery_notes')
-          .select('id, has_missing_serials')
-          .inFilter('id', ids);
-      final hasMissing = (res as List<dynamic>).any(
-        (n) => n['has_missing_serials'] == true,
-      );
-      if (hasMissing) {
+
+    final notes = await _supabase
+        .from('delivery_notes')
+        .select('id, status, has_missing_serials, supplier_order_id')
+        .inFilter('id', ids);
+
+    final List<String> validIds = [];
+    final List<String> linkedSupplierOrderIdsToFinalize = [];
+
+    for (final note in (notes as List<dynamic>)) {
+      final noteId = note['id'] as String;
+      final currentStatus = note['status'] as String?;
+      final hasMissing = note['has_missing_serials'] == true;
+
+      // Canceladas son terminales e inmutables
+      if (currentStatus == DeliveryNoteStatus.cancelled.dbValue) {
+        continue;
+      }
+
+      // Finalizadas solo pueden pasar a canceladas
+      if (currentStatus == DeliveryNoteStatus.finalized.dbValue) {
+        if (status != DeliveryNoteStatus.cancelled) {
+          continue;
+        }
+      }
+
+      // Si se quiere finalizar, no puede tener seriales pendientes
+      if (status == DeliveryNoteStatus.finalized && hasMissing) {
         throw Exception(
-          'No se pueden finalizar las notas de entrega porque una o más notas tienen seriales pendientes por asignar.',
+          'No se pueden finalizar las notas de entrega porque una o más notas seleccionadas tienen seriales pendientes por asignar.',
         );
       }
+
+      validIds.add(noteId);
+
+      if (status == DeliveryNoteStatus.finalized) {
+        final supId = note['supplier_order_id'] as String?;
+        if (supId != null && supId.isNotEmpty) {
+          linkedSupplierOrderIdsToFinalize.add(supId);
+        }
+      }
     }
+
+    if (validIds.isEmpty) return;
 
     await _supabase.from('delivery_notes').update({
       'status': status.dbValue,
       'updated_at': DateTime.now().toIso8601String(),
-    }).inFilter('id', ids);
+    }).inFilter('id', validIds);
+
+    if (linkedSupplierOrderIdsToFinalize.isNotEmpty) {
+      await _supabase.from('supplier_orders').update({
+        'status': 'finalized',
+        'updated_at': DateTime.now().toIso8601String(),
+      }).inFilter('id', linkedSupplierOrderIdsToFinalize);
+    }
   }
 
   @override
@@ -408,7 +484,7 @@ class SupabaseDeliveryNotesRepository implements DeliveryNotesRepository {
   }) async {
     final noteData = await _supabase
         .from('delivery_notes')
-        .select('has_missing_serials')
+        .select('has_missing_serials, delivery_date, supplier_order_id')
         .eq('id', id)
         .maybeSingle();
     if (noteData != null && noteData['has_missing_serials'] == true) {
@@ -417,16 +493,38 @@ class SupabaseDeliveryNotesRepository implements DeliveryNotesRepository {
       );
     }
 
-    await _supabase.from('delivery_notes').update({
+    final now = DateTime.now();
+    final todayStr = now.toIso8601String().split('T')[0];
+    final currentDeliveryDateStr =
+        noteData != null ? noteData['delivery_date'] as String? : null;
+
+    final updatePayload = <String, dynamic>{
       'status': DeliveryNoteStatus.finalized.dbValue,
       'received_by_name': receivedByName,
       'received_by_id': receivedById,
       'received_by_phone': receivedByPhone,
       'receiver_relationship': receiverRelationship,
       'signature_data': signatureData,
-      'received_at': DateTime.now().toIso8601String(),
-      'updated_at': DateTime.now().toIso8601String(),
-    }).eq('id', id);
+      'received_at': now.toIso8601String(),
+      'updated_at': now.toIso8601String(),
+    };
+
+    // Si la fecha de despacho estaba vacía o era futura, se ajusta a hoy (la entrega ocurrió hoy)
+    if (currentDeliveryDateStr == null ||
+        currentDeliveryDateStr.compareTo(todayStr) > 0) {
+      updatePayload['delivery_date'] = todayStr;
+    }
+
+    await _supabase.from('delivery_notes').update(updatePayload).eq('id', id);
+
+    // Si proviene de una Orden de Compra (Dropshipping), finalizar la OC en cascada
+    final supplierOrderId = noteData?['supplier_order_id'] as String?;
+    if (supplierOrderId != null && supplierOrderId.isNotEmpty) {
+      await _supabase.from('supplier_orders').update({
+        'status': 'finalized',
+        'updated_at': now.toIso8601String(),
+      }).eq('id', supplierOrderId);
+    }
   }
 
   @override

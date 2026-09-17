@@ -14,6 +14,9 @@ import '../../domain/models/delivery_note_model.dart';
 import '../../domain/models/delivery_note_status.dart';
 import 'providers/delivery_notes_providers.dart';
 import '../create_delivery_note/providers/create_delivery_note_provider.dart';
+import 'package:d_una_app/features/portfolio/presentation/providers/products_provider.dart';
+import 'package:d_una_app/features/supplier_orders/domain/models/supplier_order_status.dart';
+import 'package:d_una_app/features/supplier_orders/presentation/supplier_orders_list/providers/supplier_orders_providers.dart';
 import '../view_delivery_note/widgets/send_delivery_note_whatsapp_sheet.dart';
 import '../view_delivery_note/widgets/send_delivery_note_email_sheet.dart';
 import '../view_delivery_note/widgets/confirm_delivery_note_reception_dialog.dart';
@@ -43,14 +46,13 @@ class DeliveryNoteSelectionActions {
     DeliveryNotesSelectionState selection,
     DeliveryNoteModel note,
   ) {
-    final isFinalized =
-        note.status == DeliveryNoteStatus.finalized ||
-        note.status == DeliveryNoteStatus.cancelled;
+    final isFinalized = note.status == DeliveryNoteStatus.finalized;
+    final isCancelled = note.status == DeliveryNoteStatus.cancelled;
     final isSentOrResent =
         note.status == DeliveryNoteStatus.sent ||
         note.status == DeliveryNoteStatus.resent ||
         note.status == DeliveryNoteStatus.opened;
-    final isSendDisabled = isFinalized;
+    final isSendDisabled = isCancelled;
     final isMissingSerials = note.hasMissingSerialsEffective;
 
     CustomActionSheet.show(
@@ -85,12 +87,14 @@ class DeliveryNoteSelectionActions {
         ),
         BottomSheetActionItem(
           icon: isSentOrResent ? Symbols.forward : Icons.send,
-          label: isSentOrResent ? 'Reenviar' : 'Enviar',
+          label: isFinalized
+              ? 'Enviar copia'
+              : (isSentOrResent ? 'Reenviar' : 'Enviar'),
           enabled: !isSendDisabled && !isMissingSerials,
           subtitle: isMissingSerials
               ? 'Faltan seriales por asignar. No se puede enviar'
               : (isSendDisabled
-                  ? 'Nota de entrega ${note.status.label.toLowerCase()}. No se puede enviar'
+                  ? 'Nota cancelada. No se puede enviar'
                   : null),
           onTap: () async {
             if (isMissingSerials) return;
@@ -160,9 +164,9 @@ class DeliveryNoteSelectionActions {
         BottomSheetActionItem(
           icon: Symbols.conversion_path,
           label: 'Cambiar estatus',
-          enabled: !isFinalized,
-          subtitle: isFinalized
-              ? 'Nota finalizada. No se puede cambiar de estado'
+          enabled: !isCancelled,
+          subtitle: isCancelled
+              ? 'Nota cancelada. No se puede cambiar de estado'
               : null,
           onTap: () async {
             context.pop();
@@ -175,6 +179,29 @@ class DeliveryNoteSelectionActions {
               await ref
                   .read(paginatedDeliveryNotesProvider.notifier)
                   .updateDeliveryNoteStatus(note.id, selected);
+              if (selected == DeliveryNoteStatus.finalized ||
+                  selected == DeliveryNoteStatus.cancelled) {
+                ref.invalidate(productsProvider);
+                ref.invalidate(paginatedProductsProvider);
+              }
+
+              // Cascada a OC vinculada al finalizar
+              if (selected == DeliveryNoteStatus.finalized &&
+                  note.supplierOrderId != null &&
+                  note.supplierOrderId!.isNotEmpty) {
+                try {
+                  await ref
+                      .read(supplierOrdersRepositoryProvider)
+                      .updateSupplierOrderStatus(
+                        note.supplierOrderId!,
+                        SupplierOrderStatus.finalized.dbValue,
+                      );
+                  ref.invalidate(paginatedSupplierOrdersProvider);
+                } catch (e) {
+                  debugPrint('Error auto-finalizando orden de compra vinculada: $e');
+                }
+              }
+
               ref
                   .read(deliveryNotesSelectionProvider.notifier)
                   .clearSelection();
@@ -298,6 +325,11 @@ class DeliveryNoteSelectionActions {
               await ref
                   .read(paginatedDeliveryNotesProvider.notifier)
                   .batchUpdateStatus(selectedIds, selectedStatus);
+              if (selectedStatus == DeliveryNoteStatus.finalized ||
+                  selectedStatus == DeliveryNoteStatus.cancelled) {
+                ref.invalidate(productsProvider);
+                ref.invalidate(paginatedProductsProvider);
+              }
               ref
                   .read(deliveryNotesSelectionProvider.notifier)
                   .clearSelection();
@@ -347,59 +379,147 @@ class DeliveryNoteSelectionActions {
     bool hasMissingSerials = false,
   }) async {
     final colors = Theme.of(context).colorScheme;
+    final isCurrentFinalized = currentStatus == DeliveryNoteStatus.finalized;
+
+    final allowedStatuses = [
+      DeliveryNoteStatus.draft,
+      DeliveryNoteStatus.sent,
+      DeliveryNoteStatus.finalized,
+      DeliveryNoteStatus.cancelled,
+    ];
 
     return await CustomDialog.show<DeliveryNoteStatus>(
       context: context,
       dialog: CustomDialog.vertical(
         icon: Symbols.conversion_path,
         title: 'Cambiar estatus',
-        contentWidget: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: DeliveryNoteStatus.values.map((status) {
-            final isSelected = currentStatus != null && status == currentStatus;
-            final isFinalizedDisabled =
-                status == DeliveryNoteStatus.finalized && hasMissingSerials;
+        contentWidget: Builder(
+          builder: (dialogContext) {
+            return Column(
+              mainAxisSize: MainAxisSize.min,
+              children: allowedStatuses.map((status) {
+                final isSelected =
+                    currentStatus != null && status == currentStatus;
+                final isFinalizedDisabled =
+                    status == DeliveryNoteStatus.finalized && hasMissingSerials;
+                final isReversionDisabled = isCurrentFinalized &&
+                    (status == DeliveryNoteStatus.draft ||
+                        status == DeliveryNoteStatus.sent);
+                final isDisabled = isFinalizedDisabled || isReversionDisabled;
 
-            final textColor = isFinalizedDisabled
-                ? colors.onSurfaceVariant.withValues(alpha: 0.4)
-                : (isSelected ? colors.primary : colors.onSurface);
+                final textColor = isDisabled
+                    ? colors.onSurfaceVariant.withValues(alpha: 0.4)
+                    : (isSelected ? colors.primary : colors.onSurface);
 
-            return ListTile(
-              leading: Opacity(
-                opacity: isFinalizedDisabled ? 0.4 : 1.0,
-                child: Image.asset(status.iconPath, width: 24, height: 24),
-              ),
-              title: Text(
-                status.label,
-                style: TextStyle(
-                  fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-                  color: textColor,
-                ),
-              ),
-              subtitle: isFinalizedDisabled
-                  ? Text(
-                      'Faltan seriales por asignar',
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: colors.error.withValues(alpha: 0.8),
-                      ),
-                    )
-                  : null,
-              trailing: isSelected
-                  ? Icon(Icons.check, color: colors.primary, size: 20)
-                  : null,
-              enabled: !isFinalizedDisabled,
-              onTap: isFinalizedDisabled
-                  ? null
-                  : () =>
-                      Navigator.of(context, rootNavigator: true).pop(status),
+                String? subtitle;
+                if (isFinalizedDisabled) {
+                  subtitle = 'Faltan seriales por asignar';
+                } else if (isCurrentFinalized &&
+                    status == DeliveryNoteStatus.cancelled) {
+                  subtitle = 'Reversar entrega e inventario';
+                }
+
+                return ListTile(
+                  leading: Opacity(
+                    opacity: isDisabled ? 0.4 : 1.0,
+                    child: Image.asset(status.iconPath, width: 24, height: 24),
+                  ),
+                  title: Text(
+                    status.label,
+                    style: TextStyle(
+                      fontWeight:
+                          isSelected ? FontWeight.bold : FontWeight.normal,
+                      color: textColor,
+                    ),
+                  ),
+                  subtitle: subtitle != null
+                      ? Text(
+                          subtitle,
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: isFinalizedDisabled
+                                ? colors.error.withValues(alpha: 0.8)
+                                : colors.primary,
+                          ),
+                        )
+                      : null,
+                  trailing: isSelected
+                      ? Icon(Icons.check, color: colors.primary, size: 20)
+                      : null,
+                  enabled: !isDisabled,
+                  onTap: isDisabled
+                      ? null
+                      : () async {
+                          if (status == DeliveryNoteStatus.finalized &&
+                              currentStatus != DeliveryNoteStatus.finalized) {
+                            final confirm = await CustomDialog.show<bool>(
+                              context: dialogContext,
+                              dialog: CustomDialog.confirmation(
+                                title: 'Finalizar entrega',
+                                contentText:
+                                    'Al finalizar la nota de entrega se descontará el inventario correspondiente. ¿Deseas continuar?',
+                                actions: [
+                                  Builder(
+                                    builder: (c) => TextButton(
+                                      onPressed: () =>
+                                          Navigator.of(c).pop(false),
+                                      child: const Text('Cancelar'),
+                                    ),
+                                  ),
+                                  Builder(
+                                    builder: (c) => FilledButton(
+                                      onPressed: () =>
+                                          Navigator.of(c).pop(true),
+                                      child: const Text('Finalizar'),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            );
+                            if (confirm != true) return;
+                          } else if (isCurrentFinalized &&
+                              status == DeliveryNoteStatus.cancelled) {
+                            final confirm = await CustomDialog.show<bool>(
+                              context: dialogContext,
+                              dialog: CustomDialog.destructive(
+                                title: 'Reversar entrega e inventario',
+                                contentText:
+                                    'Al cancelar esta nota finalizada se restituirá el inventario y los seriales a stock disponible. ¿Deseas reversar la entrega?',
+                                actions: [
+                                  Builder(
+                                    builder: (c) => TextButton(
+                                      onPressed: () =>
+                                          Navigator.of(c).pop(false),
+                                      child: const Text('Cancelar'),
+                                    ),
+                                  ),
+                                  Builder(
+                                    builder: (c) => FilledButton(
+                                      onPressed: () =>
+                                          Navigator.of(c).pop(true),
+                                      child: const Text('Reversar y cancelar'),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            );
+                            if (confirm != true) return;
+                          }
+                          if (dialogContext.mounted) {
+                            Navigator.of(dialogContext).pop(status);
+                          }
+                        },
+                );
+              }).toList(),
             );
-          }).toList(),
+          },
         ),
         actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context, rootNavigator: true).pop(),
-            child: const Text('Cancelar'),
+          Builder(
+            builder: (dialogContext) => TextButton(
+              onPressed: () => Navigator.of(dialogContext).pop(),
+              child: const Text('Cancelar'),
+            ),
           ),
         ],
       ),

@@ -191,6 +191,10 @@ En los creadores de documentos comerciales, los botones de acción principal (`A
    ```
 3. **Prohibición de Padding Artificial:** Queda **estrictamente prohibido** envolver los `CustomExtendedFab` en `Padding(bottom: 40.0)`. Los FABs deben asignarse directamente al `Scaffold`.
 
+### 5. Manejo de Fechas Operativas y de Despacho
+1. **Inicialización Obligatoria:** Todo campo de fecha operativo o logístico (ej. `deliveryDate`) debe inicializarse en el constructor del estado con `DateTime.now()`, precargándose en el controlador del formulario. Esto evita estados nulos que deriven en leyendas ambiguas como `"No especificada"` al guardar o recuperar borradores.
+2. **Respeto a Despachos Programados:** El campo debe ser interactivo para permitir programar fechas futuras cuando la operación lo requiera.
+
 ---
 
 ## 🏗️ Patrón B: Wizards Lineales por Pasos

@@ -449,8 +449,11 @@ class _QuotesSearchScreenState extends ConsumerState<QuotesSearchScreen> {
         IconButton(
           icon: Icon(Symbols.conversion_path, color: colors.onSurface),
           tooltip: 'Cambiar estatus',
-          onPressed: () =>
-              QuoteSelectionActions.showStatusDialog(context, ref, selection),
+          onPressed: () => QuoteSelectionActions.handleBatchStatusChange(
+            context,
+            ref,
+            selection,
+          ),
         ),
         IconButton(
           icon: Icon(Icons.more_vert, color: colors.onSurface),

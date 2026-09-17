@@ -106,20 +106,37 @@ class _SendDeliveryNoteWhatsAppSheetState
           userProfile.companyName != null &&
           userProfile.companyName!.trim().isNotEmpty;
 
-      // Header: Nombre de empresa si aplica, o nombre de usuario
+      // Header: Nombre de empresa si aplica, o nombre de usuario (máx 25 caracteres)
       final headerUser = isCompany
           ? userProfile.companyName!.trim()
           : (userName.isEmpty ? 'D-UNA' : userName);
 
-      // Contacto / Cliente
-      final recipientName =
-          widget.note.contactName ?? widget.note.clientName;
+      // Body 1: Contacto / Cliente destinatario
+      final rawContact = widget.note.contactName?.trim();
+      final contactName = (rawContact != null && rawContact.isNotEmpty && rawContact != '-')
+          ? rawContact
+          : (widget.note.clientName.trim().isNotEmpty ? widget.note.clientName.trim() : 'Cliente');
 
-      // Nota personalizada (nunca vacía para cumplir validación de Meta)
+      // Body 2: Emisor
+      final bodyUser = isCompany
+          ? userProfile.companyName!.trim()
+          : (userName.isEmpty ? 'D-UNA' : userName);
+
+      // Body 3: Teléfono del emisor
+      final userPhone = userProfile.phone?.trim() ?? '';
+
+      // Body 4: Nota personalizada (nunca vacía para cumplir validación de Meta; disponibilidad 30 días al final)
       final userNote = _messageController.text.trim();
-      final defaultMessage =
-          'Le adjuntamos el enlace para revisar y confirmar la Nota de Entrega ${widget.note.deliveryNoteNumber}.';
-      final finalMessage = userNote.isEmpty ? defaultMessage : userNote;
+      const availabilityText = 'Esta nota estará disponible sólo por 30 días';
+      final String finalNote;
+      if (userNote.isEmpty) {
+        finalNote = availabilityText;
+      } else {
+        final cleanUserNote = userNote.endsWith('.')
+            ? userNote.substring(0, userNote.length - 1)
+            : userNote;
+        finalNote = '$cleanUserNote. $availabilityText';
+      }
 
       final cleanPhone = PhoneUtils.normalizeForWhatsApp(phone) ??
           phone.replaceAll(RegExp(r'[^\d]'), '');
@@ -131,21 +148,25 @@ class _SendDeliveryNoteWhatsAppSheetState
         headerVariables: [
           {
             'name': 'usuario',
-            'text': _sanitizeHeaderParam(headerUser),
+            'text': _sanitizeHeaderParam(headerUser, maxLength: 25),
           },
         ],
         bodyVariables: [
           {
-            'name': 'cliente',
-            'text': _sanitizeParam(recipientName),
+            'name': 'contacto',
+            'text': _sanitizeParam(contactName),
           },
           {
-            'name': 'numero_nota',
-            'text': _sanitizeParam(widget.note.deliveryNoteNumber),
+            'name': 'usuario',
+            'text': _sanitizeParam(bodyUser),
           },
           {
-            'name': 'mensaje',
-            'text': _sanitizeParam(finalMessage),
+            'name': 'telefono',
+            'text': _sanitizeParam(userPhone.isNotEmpty ? userPhone : 'nuestro equipo'),
+          },
+          {
+            'name': 'nota_personalizada',
+            'text': _sanitizeParam(finalNote),
           },
         ],
         buttonUrlParam: 'delivery_note.html?token=$token',
@@ -159,17 +180,29 @@ class _SendDeliveryNoteWhatsAppSheetState
         documentNumber: widget.note.deliveryNoteNumber,
       );
 
-      // 4. Actualizar estado a 'sent' o 'resent'
-      final currentStatus = widget.note.status;
-      final newStatus = (currentStatus == DeliveryNoteStatus.sent ||
-              currentStatus == DeliveryNoteStatus.resent ||
-              currentStatus == DeliveryNoteStatus.opened)
-          ? DeliveryNoteStatus.resent
-          : DeliveryNoteStatus.sent;
+      // 4. Actualizar estado a 'sent' o 'resent' si no está finalizada
+      if (widget.note.status != DeliveryNoteStatus.finalized) {
+        final currentStatus = widget.note.status;
+        final newStatus = (currentStatus == DeliveryNoteStatus.sent ||
+                currentStatus == DeliveryNoteStatus.resent ||
+                currentStatus == DeliveryNoteStatus.opened)
+            ? DeliveryNoteStatus.resent
+            : DeliveryNoteStatus.sent;
 
-      await ref
-          .read(deliveryNotesRepositoryProvider)
-          .updateDeliveryNoteStatus(widget.note.id, newStatus);
+        final now = DateTime.now();
+        final today = DateTime(now.year, now.month, now.day);
+        final currentDeliveryDate = widget.note.deliveryDate;
+        final shouldUpdateDeliveryDate = currentDeliveryDate == null ||
+            DateTime(currentDeliveryDate.year, currentDeliveryDate.month, currentDeliveryDate.day).isBefore(today);
+
+        await ref
+            .read(deliveryNotesRepositoryProvider)
+            .updateDeliveryNoteStatus(
+              widget.note.id,
+              newStatus,
+              deliveryDate: shouldUpdateDeliveryDate ? today : null,
+            );
+      }
 
       // 5. Invalidar caché de detalle y lista
       ref.invalidate(deliveryNoteDetailProvider(widget.note.id));
@@ -182,10 +215,12 @@ class _SendDeliveryNoteWhatsAppSheetState
       ref.invalidate(creditTransactionsHistoryProvider);
 
       if (mounted) {
+        final isFinalized = widget.note.status == DeliveryNoteStatus.finalized;
         AppToast.success(
           context,
-          message:
-              'Nota de entrega enviada exitosamente por WhatsApp (créditos restantes: ${freshCreditStatus.remainingCredits})',
+          message: isFinalized
+              ? 'Copia de nota de entrega enviada exitosamente por WhatsApp (créditos restantes: ${freshCreditStatus.remainingCredits})'
+              : 'Nota de entrega enviada exitosamente por WhatsApp (créditos restantes: ${freshCreditStatus.remainingCredits})',
         );
         Navigator.of(context).pop();
       }
@@ -250,7 +285,7 @@ class _SendDeliveryNoteWhatsAppSheetState
             CustomTextField(
               controller: _phoneController,
               label: 'Teléfono de WhatsApp',
-              hintText: '+58 412 1234567',
+              helperText: 'Ej: +58 412 1234567',
               keyboardType: TextInputType.phone,
             ),
           ],

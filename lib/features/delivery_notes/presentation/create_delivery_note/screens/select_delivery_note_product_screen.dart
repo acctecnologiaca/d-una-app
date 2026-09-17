@@ -159,11 +159,15 @@ class _SelectDeliveryNoteProductScreenState
                       final currentQty = isThisSelected ? _selectedQuantity : 0.0;
                       final isLocked =
                           _selectedProductId != null && _selectedProductId != product.id;
+                      final availableStock = ref
+                          .read(createDeliveryNoteProvider.notifier)
+                          .getAvailableStockForProduct(product);
 
                       return DeliveryNoteProductSelectionCard(
                         key: ValueKey(product.id),
                         product: product,
                         selectedQty: currentQty,
+                        availableStock: availableStock,
                         isLocked: isLocked,
                         isAlreadyAdded: isAlreadyAdded,
                         onQtyChanged: (qty) {
@@ -204,10 +208,16 @@ class _SelectDeliveryNoteProductScreenState
                   return;
                 }
 
-                  if (_selectedQuantity > _selectedProduct!.availableQuantity) {
+                  final availableStock = ref
+                      .read(createDeliveryNoteProvider.notifier)
+                      .getAvailableStockForProduct(_selectedProduct!);
+
+                  if (_selectedQuantity > availableStock) {
                     ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text('La cantidad excede el stock disponible en inventario.'),
+                      SnackBar(
+                        content: Text(
+                          'La cantidad excede el stock disponible ($availableStock $uom).',
+                        ),
                       ),
                     );
                     return;

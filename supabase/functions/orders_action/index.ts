@@ -181,6 +181,12 @@ Deno.serve(async (req) => {
           expires_at: order.action_token_expires_at,
           supplier_feedback: order.supplier_feedback || null,
           supplier_feedback_at: order.supplier_feedback_at || null,
+          is_dropshipping: Boolean(order.is_dropshipping),
+          recipient_name: order.recipient_name || null,
+          recipient_contact_name: order.recipient_contact_name || null,
+          recipient_address: order.recipient_address || null,
+          recipient_phone: order.recipient_phone || null,
+          delivery_instructions: order.delivery_instructions || null,
         },
         buyer: {
           display_name: buyerDisplayName,

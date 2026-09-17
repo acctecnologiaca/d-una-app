@@ -6,7 +6,6 @@ import 'package:d_una_app/shared/widgets/generic_search_screen.dart';
 import 'package:d_una_app/shared/widgets/horizontal_filter_bar.dart';
 import 'package:d_una_app/shared/widgets/filter_bottom_sheet.dart';
 import 'package:d_una_app/shared/widgets/custom_extended_fab.dart';
-import 'package:d_una_app/shared/utils/currency_formatter.dart';
 import 'package:d_una_app/features/portfolio/presentation/providers/products_provider.dart';
 import 'package:d_una_app/features/portfolio/data/models/product_model.dart';
 import 'package:d_una_app/features/portfolio/data/models/category_model.dart';
@@ -82,9 +81,6 @@ class _AddPurchaseProductSearchScreenState
         _selectedQuantity.truncateToDouble() == _selectedQuantity
         ? _selectedQuantity.toInt().toString()
         : _selectedQuantity.toStringAsFixed(2);
-    final totalCost =
-        (_selectedProduct?.averageCost ?? 0.0) * _selectedQuantity;
-    final formattedTotal = CurrencyFormatter.format(totalCost);
     final uom = _selectedProduct?.uom ?? 'ud.';
 
     return GenericSearchScreen<Product>(
@@ -218,7 +214,7 @@ class _AddPurchaseProductSearchScreenState
       floatingActionButton: CustomExtendedFab(
         icon: Icons.check,
         label: hasSelection
-            ? 'Confirmar ($formattedQty $uom - $formattedTotal)'
+            ? 'Confirmar ($formattedQty $uom)'
             : 'Confirmar',
         isEnabled: hasSelection,
         onPressed: hasSelection

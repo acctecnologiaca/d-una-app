@@ -98,12 +98,19 @@ class DeliveryNoteItemsTab extends ConsumerWidget {
             updatedAt: DateTime.now(),
           ),
         );
+        final availableStock = ref
+            .read(createDeliveryNoteProvider.notifier)
+            .getAvailableStockForProduct(
+              product,
+              itemId: item.id,
+              itemName: item.name,
+            );
 
         Widget buildCard(Color? highlightColor) {
           return DeliveryNoteAddedProductCard(
             item: item,
             backgroundColor: highlightColor,
-            availableStock: product.availableQuantity,
+            availableStock: availableStock,
             onDelete: () {
               ref.read(createDeliveryNoteProvider.notifier).removeItem(index);
             },

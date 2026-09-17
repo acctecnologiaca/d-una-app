@@ -136,10 +136,44 @@ class PaginatedClients extends _$PaginatedClients {
   bool _ascending = false;
   String? _searchQuery;
   String? _typeFilter;
+  RealtimeChannel? _realtimeChannel;
 
   @override
   FutureOr<PaginatedState<Client>> build() async {
+    _initRealtimeSubscription();
     return _fetchPage(0);
+  }
+
+  void _initRealtimeSubscription() {
+    if (_realtimeChannel != null) return;
+    final userId = Supabase.instance.client.auth.currentUser?.id;
+    if (userId == null) return;
+
+    _realtimeChannel = Supabase.instance.client
+        .channel(
+          'public:clients_changes_${DateTime.now().millisecondsSinceEpoch}',
+        )
+        .onPostgresChanges(
+          event: PostgresChangeEvent.all,
+          schema: 'public',
+          table: 'clients',
+          filter: PostgresChangeFilter(
+            type: PostgresChangeFilterType.eq,
+            column: 'user_id',
+            value: userId,
+          ),
+          callback: (payload) {
+            ref.invalidate(paginatedClientSearchProvider);
+            ref.invalidate(clientsProvider);
+            refresh();
+          },
+        )
+        .subscribe();
+
+    ref.onDispose(() {
+      _realtimeChannel?.unsubscribe();
+      _realtimeChannel = null;
+    });
   }
 
   Future<PaginatedState<Client>> _fetchPage(int offset) async {

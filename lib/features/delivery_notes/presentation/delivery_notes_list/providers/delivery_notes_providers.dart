@@ -7,6 +7,7 @@ import '../../../domain/repositories/delivery_notes_repository.dart';
 import '../../../data/repositories/supabase_delivery_notes_repository.dart';
 import '../../../domain/models/delivery_note_model.dart';
 import '../../../domain/models/delivery_note_status.dart';
+import 'package:d_una_app/features/portfolio/presentation/providers/products_provider.dart';
 
 final deliveryNotesRepositoryProvider = Provider<DeliveryNotesRepository>((ref) {
   return SupabaseDeliveryNotesRepository(Supabase.instance.client);
@@ -125,6 +126,8 @@ class PaginatedDeliveryNotesNotifier
               _ref.invalidate(deliveryNoteDetailProvider(updatedId));
             }
             refresh();
+            _ref.read(paginatedProductsProvider.notifier).refresh();
+            _ref.invalidate(productsProvider);
           },
         )
         .subscribe();
@@ -144,8 +147,8 @@ class PaginatedDeliveryNotesNotifier
       case SortOption.recent:
       case SortOption.oldest:
         return 'date';
-      case SortOption.orderNumberAsc:
-      case SortOption.orderNumberDesc:
+      case SortOption.noteNumberAsc:
+      case SortOption.noteNumberDesc:
         return 'delivery_note_number';
       case SortOption.nameAZ:
       case SortOption.nameZA:
@@ -156,7 +159,7 @@ class PaginatedDeliveryNotesNotifier
 
   bool get _isAscending {
     return _sortOption == SortOption.oldest ||
-        _sortOption == SortOption.orderNumberAsc;
+        _sortOption == SortOption.noteNumberAsc;
   }
 
   Future<PaginatedState<DeliveryNoteModel>> _fetchPage(int offset) async {
@@ -251,6 +254,10 @@ class PaginatedDeliveryNotesNotifier
     final repo = _ref.read(deliveryNotesRepositoryProvider);
     await repo.updateDeliveryNoteStatus(id, status);
     _ref.invalidate(deliveryNoteDetailProvider(id));
+    if (status == DeliveryNoteStatus.finalized || status == DeliveryNoteStatus.cancelled) {
+      _ref.invalidate(productsProvider);
+      _ref.invalidate(paginatedProductsProvider);
+    }
     await refresh();
   }
 
@@ -273,6 +280,10 @@ class PaginatedDeliveryNotesNotifier
     await repo.batchUpdateStatus(ids, status);
     for (final id in ids) {
       _ref.invalidate(deliveryNoteDetailProvider(id));
+    }
+    if (status == DeliveryNoteStatus.finalized || status == DeliveryNoteStatus.cancelled) {
+      _ref.invalidate(productsProvider);
+      _ref.invalidate(paginatedProductsProvider);
     }
     await refresh();
   }

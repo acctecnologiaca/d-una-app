@@ -237,61 +237,77 @@
       line-height: 1.6;
     }
 
-    /* 5. TARJETA DE RECEPCIÓN / FIRMA */
+    /* 5. TARJETA DE RECEPCIÓN / FIRMA (SOBRIA, HOMOLOGADA A PDF) */
     .reception-card {
       border-radius: 12px;
       border: 1px solid var(--neutral-border);
-      background: #FFFFFF;
-      overflow: hidden;
+      background: var(--neutral-bg-subtle);
+      margin-top: 20px;
+      padding: 16px 20px;
+      box-shadow: 0 4px 15px -3px rgba(15, 23, 42, 0.03);
     }
 
-    .reception-card.finalized {
-      border-color: var(--success-border);
-      background: var(--success-bg);
+    /* BLOQUE DE FIRMA INSTITUCIONAL (PARIDAD EXACTA CON PDF) */
+    .signature-block-wrapper {
+      display: flex;
+      justify-content: flex-end;
+      width: 100%;
     }
 
-    .reception-header {
-      padding: 14px 20px;
-      border-bottom: 1px solid var(--neutral-border);
-      font-size: 13px;
-      font-weight: 700;
+    .signature-col {
+      width: 240px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      text-align: center;
+    }
+
+    .signature-slot {
+      height: 46px;
       display: flex;
       align-items: center;
-      justify-content: space-between;
+      justify-content: center;
+      margin-bottom: 2px;
     }
 
-    .reception-card.finalized .reception-header {
-      background: #D1FAE5;
-      border-color: var(--success-border);
-      color: #065F46;
-    }
-
-    .reception-body {
-      padding: 20px;
-    }
-
-    .reception-body p {
-      font-size: 13px;
-      margin-bottom: 6px;
-    }
-
-    .reception-body p strong {
-      color: var(--neutral-dark);
-    }
-
-    .signature-preview-box {
-      margin-top: 10px;
-      background: #FFFFFF;
-      border: 1px solid var(--success-border);
-      border-radius: 8px;
-      padding: 12px 20px;
-      display: inline-block;
-    }
-
-    .signature-preview-box img {
-      max-height: 80px;
-      max-width: 240px;
+    .signature-slot img {
+      max-height: 44px;
+      max-width: 220px;
+      object-fit: contain;
       display: block;
+    }
+
+    .signature-slot svg {
+      max-height: 44px;
+      max-width: 220px;
+      display: block;
+    }
+
+    .signature-line {
+      width: 200px;
+      height: 1px;
+      background: #CBD5E1;
+      margin: 4px auto 6px auto;
+    }
+
+    .sig-subtitle {
+      font-size: 11px;
+      color: var(--neutral-muted);
+      font-weight: 500;
+      margin-bottom: 3px;
+    }
+
+    .sig-name {
+      font-size: 12px;
+      font-weight: 700;
+      color: var(--neutral-dark);
+      margin-bottom: 2px;
+    }
+
+    .sig-detail {
+      font-size: 11px;
+      color: var(--neutral-muted);
+      line-height: 1.4;
     }
 
     /* AVISO DE CONFIDENCIALIDAD */
@@ -409,6 +425,12 @@
         grid-template-columns: 1fr;
         gap: 16px;
       }
+      .signature-block-wrapper {
+        justify-content: center;
+      }
+      .signature-col {
+        width: 100%;
+      }
       .print-fab {
         bottom: 16px;
         right: 16px;
@@ -525,25 +547,22 @@
           </ul>
         </div>
 
-        <!-- 5. CONFORMIDAD Y FIRMA DE RECEPCIÓN (DEMO FINALIZADA) -->
-        <div class="reception-card finalized">
-          <div class="reception-header">
-            <span>✅ Mercancía Recibida Conforme</span>
-          </div>
-          <div class="reception-body">
-            <p><strong>Recibido por:</strong> Carlos Eduardo Mendoza</p>
-            <p><strong>Cédula / Documento:</strong> V-14.892.341</p>
-            <p><strong>Teléfono de contacto:</strong> +58 (414) 987-6543</p>
-            <p><strong>Cargo (opcional):</strong> Gerente de Operaciones</p>
-            <p><strong>Fecha y hora de recepción:</strong> 15/09/2026, 11:45 AM</p>
-            <div style="margin-top: 12px;">
-              <p style="font-weight: 600; color: #065F46; font-size: 12px; margin-bottom: 6px;">Firma Digital Registrada de Conformidad:</p>
-              <div class="signature-preview-box">
-                <svg width="220" height="70" viewBox="0 0 220 70" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <!-- 5. CONFORMIDAD Y FIRMA DE RECEPCIÓN (DEMO FINALIZADA, HOMOLOGADA A PDF) -->
+        <div class="reception-card">
+          <div class="signature-block-wrapper">
+            <div class="signature-col">
+              <div class="signature-slot">
+                <svg width="220" height="44" viewBox="0 0 220 70" fill="none" xmlns="http://www.w3.org/2000/svg">
                   <path d="M15 45 C 30 15, 45 60, 60 25 C 75 5, 80 50, 95 30 C 110 15, 120 40, 140 20 C 160 10, 170 35, 195 25" stroke="#0F172A" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
                   <path d="M30 55 Q 80 48, 180 52" stroke="#0F172A" stroke-width="1.8" stroke-linecap="round"/>
                 </svg>
               </div>
+              <div class="signature-line"></div>
+              <div class="sig-subtitle">Recibido Conforme / Cliente</div>
+              <div class="sig-name">Carlos Eduardo Mendoza</div>
+              <div class="sig-detail">C.I. / ID: V-14.892.341</div>
+              <div class="sig-detail">Cargo: Gerente de Operaciones</div>
+              <div class="sig-detail">Fecha: 15/09/2026 - 11:45 AM</div>
             </div>
           </div>
         </div>

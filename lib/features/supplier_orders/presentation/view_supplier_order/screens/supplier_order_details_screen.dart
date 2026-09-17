@@ -33,6 +33,7 @@ import 'package:d_una_app/shared/utils/string_utils.dart';
 import 'package:d_una_app/features/quotes/domain/models/quote_model.dart'
     show StockStatus;
 import '../../create_supplier_order/providers/supplier_order_validation_provider.dart';
+import 'package:d_una_app/features/quotes/presentation/view_quote/providers/view_quote_provider.dart';
 
 class SupplierOrderDetailsScreen extends ConsumerStatefulWidget {
   final String orderId;
@@ -95,6 +96,11 @@ class _SupplierOrderDetailsScreenState
                 (payload.newRecord['id'] ?? payload.oldRecord['id']) as String?;
             if (recId == widget.orderId && mounted) {
               ref.invalidate(supplierOrderDetailProvider(widget.orderId));
+              final originQuoteId = (payload.newRecord['quote_id'] ??
+                  payload.oldRecord['quote_id']) as String?;
+              if (originQuoteId != null && originQuoteId.isNotEmpty) {
+                ref.invalidate(viewQuoteProvider(originQuoteId));
+              }
             }
           },
         )
@@ -241,17 +247,77 @@ class _SupplierOrderDetailsScreenState
                       const Divider(height: 1, indent: 16, endIndent: 16),
 
                       // Bloque 2: Ciclo de Vida y Flujo Operativo
-                      if (order.status == SupplierOrderStatus.approved)
-                        BottomSheetActionItem(
-                          icon: Icons.receipt_long_outlined,
-                          label: 'Registrar compra',
-                          onTap: () {
-                            context.pop();
-                            _finalizeOrderFlow(order, items);
-                          },
-                        ),
-                      if (order.status == SupplierOrderStatus.approved ||
-                          order.status == SupplierOrderStatus.finalized)
+                      if (order.status == SupplierOrderStatus.approved) ...[
+                        if (!order.isDropshipping)
+                          BottomSheetActionItem(
+                            icon: Icons.receipt_long_outlined,
+                            label: 'Registrar compra',
+                            onTap: () {
+                              context.pop();
+                              _finalizeOrderFlow(order, items);
+                            },
+                          )
+                        else ...[
+                          BottomSheetActionItem(
+                            icon: Symbols.list_alt,
+                            label: 'Generar nota de entrega',
+                            subtitle:
+                                'Generar documento de entrega al cliente a partir de esta orden',
+                            onTap: () {
+                              context.pop();
+                              context.push(
+                                '/delivery-notes/create?supplierOrderId=${order.id}',
+                              );
+                            },
+                          ),
+                          BottomSheetActionItem(
+                            icon: Symbols.check_circle,
+                            label: 'Finalizar orden (Entrega directa)',
+                            subtitle:
+                                'Cierra la orden si la entrega fue directa al cliente (Dropshipping)',
+                            onTap: () async {
+                              context.pop();
+                              final confirmed = await CustomDialog.show<bool>(
+                                context: context,
+                                dialog: CustomDialog.confirmation(
+                                  icon: Symbols.check_circle,
+                                  title: '¿Finalizar orden de compra?',
+                                  contentText:
+                                      'La orden quedará finalizada como entrega directa al cliente (Dropshipping). No se ingresará mercancía al inventario local.',
+                                  actions: [
+                                    TextButton(
+                                      onPressed: () => Navigator.of(context, rootNavigator: true).pop(false),
+                                      child: const Text('Cancelar'),
+                                    ),
+                                    FilledButton(
+                                      onPressed: () => Navigator.of(context, rootNavigator: true).pop(true),
+                                      child: const Text('Finalizar orden'),
+                                    ),
+                                  ],
+                                ),
+                              );
+                              if (confirmed == true && context.mounted) {
+                                await ref
+                                    .read(supplierOrdersRepositoryProvider)
+                                    .updateSupplierOrderStatus(
+                                      order.id,
+                                      SupplierOrderStatus.finalized.dbValue,
+                                    );
+                                ref.invalidate(
+                                  supplierOrderDetailProvider(order.id),
+                                );
+                                ref
+                                    .read(
+                                      paginatedSupplierOrdersProvider.notifier,
+                                    )
+                                    .refresh();
+                              }
+                            },
+                          ),
+                        ],
+                      ],
+                      if (order.status == SupplierOrderStatus.finalized &&
+                          order.isDropshipping)
                         BottomSheetActionItem(
                           icon: Symbols.list_alt,
                           label: 'Generar nota de entrega',
@@ -500,13 +566,16 @@ class _SupplierOrderDetailsScreenState
               ? null
               : Builder(
                   builder: (context) {
+                    final isApproved =
+                        order.status == SupplierOrderStatus.approved;
                     final showFinalizeFab =
-                        order.status == SupplierOrderStatus.approved;
+                        isApproved && !order.isDropshipping;
+                    final showDeliveryNoteFab =
+                        isApproved && order.isDropshipping;
                     final showWhatsAppFab =
-                        isSentOrResent ||
-                        order.status == SupplierOrderStatus.approved;
+                        isSentOrResent || isApproved;
 
-                    if (showFinalizeFab) {
+                    if (showFinalizeFab || showDeliveryNoteFab) {
                       return Column(
                         mainAxisSize: MainAxisSize.min,
                         crossAxisAlignment: CrossAxisAlignment.end,
@@ -528,16 +597,30 @@ class _SupplierOrderDetailsScreenState
                             ),
                             const SizedBox(height: 16),
                           ],
-                          FloatingActionButton(
-                            heroTag: 'finalize_order_fab',
-                            onPressed: () {
-                              _finalizeOrderFlow(order, items);
-                            },
-                            backgroundColor: colors.secondaryContainer,
-                            foregroundColor: colors.onSecondaryContainer,
-                            tooltip: 'Registrar compra',
-                            child: const Icon(Icons.receipt_long_outlined),
-                          ),
+                          if (showFinalizeFab)
+                            FloatingActionButton(
+                              heroTag: 'finalize_order_fab',
+                              onPressed: () {
+                                _finalizeOrderFlow(order, items);
+                              },
+                              backgroundColor: colors.secondaryContainer,
+                              foregroundColor: colors.onSecondaryContainer,
+                              tooltip: 'Registrar compra',
+                              child: const Icon(Icons.receipt_long_outlined),
+                            ),
+                          if (showDeliveryNoteFab)
+                            FloatingActionButton(
+                              heroTag: 'generate_delivery_note_fab',
+                              onPressed: () {
+                                context.push(
+                                  '/delivery-notes/create?supplierOrderId=${order.id}',
+                                );
+                              },
+                              backgroundColor: colors.secondaryContainer,
+                              foregroundColor: colors.onSecondaryContainer,
+                              tooltip: 'Generar nota de entrega',
+                              child: const Icon(Symbols.list_alt),
+                            ),
                         ],
                       );
                     }

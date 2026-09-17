@@ -51,6 +51,9 @@ class QuoteSelectionActions {
     Quote quote,
   ) {
     final isFinalized = quote.status == QuoteStatus.finalized;
+    final isCancelled = quote.status == QuoteStatus.cancelled;
+    final isApproved = quote.status == QuoteStatus.approved;
+    final isStatusChangeDisabled = isFinalized || isCancelled;
     final isBlockedForOcNe =
         quote.status == QuoteStatus.rejected ||
         quote.status == QuoteStatus.finalized ||
@@ -166,13 +169,20 @@ class QuoteSelectionActions {
         BottomSheetActionItem(
           icon: Symbols.conversion_path,
           label: 'Cambiar estatus',
-          enabled: !isFinalized,
-          subtitle: isFinalized
-              ? 'Cotización finalizada. No se puede cambiar de estado'
+          enabled: !isStatusChangeDisabled,
+          subtitle: isStatusChangeDisabled
+              ? (isFinalized
+                  ? 'Cotización finalizada. No se puede cambiar de estado'
+                  : 'Cotización cancelada. No se puede cambiar de estado')
               : null,
           onTap: () {
             context.pop();
-            showStatusDialog(context, ref, selection);
+            handleBatchStatusChange(
+              context,
+              ref,
+              selection,
+              currentStatus: quote.status,
+            );
           },
         ),
         FutureBuilder<data.Quote>(
@@ -340,9 +350,9 @@ class QuoteSelectionActions {
         BottomSheetActionItem(
           icon: Symbols.list_alt,
           label: 'Generar nota de entrega',
-          enabled: !isBlockedForOcNe,
-          subtitle: isBlockedForOcNe
-              ? 'No disponible para cotizaciones rechazadas, finalizadas o canceladas'
+          enabled: isApproved,
+          subtitle: !isApproved
+              ? 'Disponible únicamente cuando la cotización esté aprobada'
               : null,
           onTap: () async {
             final router = GoRouter.of(context);
@@ -462,7 +472,7 @@ class QuoteSelectionActions {
           label: 'Cambiar estatus',
           onTap: () {
             context.pop();
-            showStatusDialog(context, ref, selection);
+            handleBatchStatusChange(context, ref, selection);
           },
         ),
         const Divider(height: 1, indent: 16, endIndent: 16),
@@ -485,42 +495,63 @@ class QuoteSelectionActions {
     );
   }
 
-  static Future<void> showStatusDialog(
-    BuildContext context,
-    WidgetRef ref,
-    QuoteSelectionState selection,
-  ) async {
+  static Future<QuoteStatus?> showStatusDialog(
+    BuildContext context, [
+    QuoteStatus? currentStatus,
+  ]) async {
+    final colors = Theme.of(context).colorScheme;
     final selectedStatus = await CustomDialog.show<QuoteStatus>(
       context: context,
       dialog: CustomDialog.vertical(
         icon: Symbols.conversion_path,
         title: 'Cambiar estatus',
-        contentWidget: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: QuoteStatus.values
-              .where((status) => status != QuoteStatus.expired)
-              .map((status) {
-                return ListTile(
-                  leading: Image.asset(status.iconPath, width: 24, height: 24),
-                  title: Text(status.label),
-                  onTap: () =>
-                      Navigator.of(context, rootNavigator: true).pop(status),
-                );
-              })
-              .toList(),
+        contentWidget: Builder(
+          builder: (dialogContext) {
+            return Column(
+              mainAxisSize: MainAxisSize.min,
+              children: QuoteStatus.values
+                  .where((status) =>
+                      status != QuoteStatus.expired &&
+                      status != QuoteStatus.opened &&
+                      status != QuoteStatus.resent)
+                  .map((status) {
+                    final isSelected =
+                        currentStatus != null && status == currentStatus;
+                    return ListTile(
+                      leading: Image.asset(status.iconPath, width: 24, height: 24),
+                      title: Text(
+                        status.label,
+                        style: TextStyle(
+                          fontWeight:
+                              isSelected ? FontWeight.bold : FontWeight.normal,
+                          color: isSelected ? colors.primary : colors.onSurface,
+                        ),
+                      ),
+                      trailing: isSelected
+                          ? Icon(Icons.check, color: colors.primary, size: 20)
+                          : null,
+                      onTap: () => Navigator.of(dialogContext).pop(status),
+                    );
+                  })
+                  .toList(),
+            );
+          },
         ),
         actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context, rootNavigator: true).pop(),
-            child: const Text('Cancelar'),
+          Builder(
+            builder: (dialogContext) => TextButton(
+              onPressed: () => Navigator.of(dialogContext).pop(),
+              child: const Text('Cancelar'),
+            ),
           ),
         ],
       ),
     );
 
-    if (!context.mounted) return;
+    if (selectedStatus == null) return null;
 
     if (selectedStatus == QuoteStatus.finalized) {
+      if (!context.mounted) return null;
       final confirmFinalize = await CustomDialog.show<bool>(
         context: context,
         dialog: CustomDialog.confirmation(
@@ -530,77 +561,89 @@ class QuoteSelectionActions {
           contentText:
               '¿Estás seguro de que deseas finalizar esta cotización? Una vez finalizada, la cotización quedará cerrada permanentemente y no se podrá editar, enviar ni cambiar de estado.',
           actions: [
-            TextButton(
-              onPressed: () =>
-                  Navigator.of(context, rootNavigator: true).pop(false),
-              child: const Text('Cancelar'),
+            Builder(
+              builder: (c) => TextButton(
+                onPressed: () => Navigator.of(c).pop(false),
+                child: const Text('Cancelar'),
+              ),
             ),
-            FilledButton(
-              onPressed: () =>
-                  Navigator.of(context, rootNavigator: true).pop(true),
-              child: const Text('Confirmar y Finalizar'),
+            Builder(
+              builder: (c) => FilledButton(
+                onPressed: () => Navigator.of(c).pop(true),
+                child: const Text('Confirmar y Finalizar'),
+              ),
             ),
           ],
         ),
       );
 
-      if (confirmFinalize != true) return;
+      if (confirmFinalize != true) return null;
     }
 
-    if (selectedStatus != null) {
-      final result = await ref
-          .read(quotesListProvider.notifier)
-          .batchUpdateStatus(
-            selection.selectedIds.toList(),
-            selectedStatus.dbValue,
-          );
+    return selectedStatus;
+  }
 
-      ref.read(quoteSelectionProvider.notifier).clearSelection();
-      refreshAllQuoteProviders(ref);
+  static Future<void> handleBatchStatusChange(
+    BuildContext context,
+    WidgetRef ref,
+    QuoteSelectionState selection, {
+    QuoteStatus? currentStatus,
+  }) async {
+    final selectedStatus = await showStatusDialog(context, currentStatus);
+    if (!context.mounted || selectedStatus == null) return;
 
-      if (!context.mounted) return;
-
-      if (result.hasErrors) {
-        final List<String> allMissingProducts = [];
-        for (var error in result.stockErrors.values) {
-          allMissingProducts.addAll(error.productNames);
-        }
-
-        final uniqueMissingProducts = allMissingProducts.toSet().toList();
-
-        String contentText =
-            'Se actualizaron ${result.successfulIds.length} cotizaciones.\n\nSin embargo, ${result.stockErrors.length} fallaron debido a stock insuficiente en el inventario propio para los siguientes productos:\n\n${uniqueMissingProducts.map((name) => '• $name').join('\n')}\n\nPor favor, agregue más stock para poder aprobarlas.';
-
-        if (result.generalErrors.isNotEmpty) {
-          contentText +=
-              '\n\nAdemás, hubo ${result.generalErrors.length} errores generales adicionales.';
-        }
-
-        CustomDialog.show(
-          context: context,
-          dialog: CustomDialog.confirmation(
-            icon: Symbols.warning,
-            iconColor: Colors.amber.shade800,
-            title: 'Actualización Parcial',
-            contentText: contentText,
-            actions: [
-              TextButton(
-                onPressed: () =>
-                    Navigator.of(context, rootNavigator: true).pop(),
-                child: const Text('Entendido'),
-              ),
-            ],
-          ),
+    final result = await ref
+        .read(quotesListProvider.notifier)
+        .batchUpdateStatus(
+          selection.selectedIds.toList(),
+          selectedStatus.dbValue,
         );
-      } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              'Estatus cambiado a "${selectedStatus.label}" en ${result.successfulIds.length} cotizaciones.',
-            ),
-          ),
-        );
+
+    ref.read(quoteSelectionProvider.notifier).clearSelection();
+    refreshAllQuoteProviders(ref);
+
+    if (!context.mounted) return;
+
+    if (result.hasErrors) {
+      final List<String> allMissingProducts = [];
+      for (var error in result.stockErrors.values) {
+        allMissingProducts.addAll(error.productNames);
       }
+
+      final uniqueMissingProducts = allMissingProducts.toSet().toList();
+
+      String contentText =
+          'Se actualizaron ${result.successfulIds.length} cotizaciones.\n\nSin embargo, ${result.stockErrors.length} fallaron debido a stock insuficiente en el inventario propio para los siguientes productos:\n\n${uniqueMissingProducts.map((name) => '• $name').join('\n')}\n\nPor favor, agregue más stock para poder aprobarlas.';
+
+      if (result.generalErrors.isNotEmpty) {
+        contentText +=
+            '\n\nAdemás, hubo ${result.generalErrors.length} errores generales adicionales.';
+      }
+
+      CustomDialog.show(
+        context: context,
+        dialog: CustomDialog.confirmation(
+          icon: Symbols.warning,
+          iconColor: Colors.amber.shade800,
+          title: 'Actualización Parcial',
+          contentText: contentText,
+          actions: [
+            TextButton(
+              onPressed: () =>
+                  Navigator.of(context, rootNavigator: true).pop(),
+              child: const Text('Entendido'),
+            ),
+          ],
+        ),
+      );
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            'Estatus cambiado a "${selectedStatus.label}" en ${result.successfulIds.length} cotizaciones.',
+          ),
+        ),
+      );
     }
   }
 

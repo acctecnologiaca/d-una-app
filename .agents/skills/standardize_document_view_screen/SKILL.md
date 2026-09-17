@@ -48,12 +48,20 @@ Referencias canónicas en el proyecto:
 
 ### B. Floating Action Buttons (FABs) & Padding Dinámico
 La pantalla presenta acciones flotantes para editar el documento, contactar al cliente o firmar:
-1. **Botón Principal:** Editar (`Icons.edit_outlined`), visible solo si el estado del documento permite modificaciones.
+1. **Botón Principal:** Editar (`Icons.edit_outlined`), visible exclusivamente si el estado del documento permite modificaciones (`canEdit`).
 2. **Botón Secundario:** WhatsApp / Contacto (`Symbols.chat` o icono de WhatsApp).
-3. **Botón Terciario (si aplica):** Firmar documento (`Icons.draw_outlined` o acción auxiliar).
-4. **Cálculo Matemático de Padding Inferior:** En cada una de las pestañas que contenga un scroll (`SingleChildScrollView` o `ListView`), se debe aplicar la utilidad estándar [`FabScrollPadding`](file:///c:/Users/aleja/flutter_apps/MVP/d_una_app/lib/shared/utils/fab_scroll_padding.dart):
+3. **Botón Terciario (si aplica):** Firmar documento presencialmente (`Symbols.signature`).
+4. **Regla de Oro: Whitelist Estricta de Estados Editables (`canEdit`):**
+   - **Estados Editables:** `draft`, `sent`, `resent`, `opened`.
+   - **Estados Bloqueados:** `finalized`, `cancelled`, `delivered`.
+   - **Comportamiento en UI:**
+     - Si `!canEdit`: el FAB de edición no debe renderizarse.
+     - En la hoja de opciones ([`CustomActionSheet`](file:///c:/Users/aleja/flutter_apps/MVP/d_una_app/lib/shared/widgets/custom_action_sheet.dart)), la opción "Modificar nota / documento" se desactiva (`enabled: false`) con subtítulo informativo: `'Documento [estatus]. No se puede modificar'`.
+     - En el creador/editor (`create_*.dart`), se debe implementar una cláusula de guarda en `_initializeData()` que rechace el acceso forzado por URL o ruta directa, mostrando `AppToast.error(context, message: '...')` y retornando con `context.pop()`.
+   - **Reversión Automática a Borrador al Editar:** Al cargar cualquier documento previamente emitido (`sent`, `resent`, `opened`) para su modificación, su estado en el formulario de edición debe transicionar inmediatamente a `draft` (Borrador), garantizando que las modificaciones no alteren el estado formal hasta que el usuario guarde o reenvíe.
+5. **Cálculo Matemático de Padding Inferior:** En cada una de las pestañas que contenga un scroll (`SingleChildScrollView` o `ListView`), se debe aplicar la utilidad estándar [`FabScrollPadding`](file:///c:/Users/aleja/flutter_apps/MVP/d_una_app/lib/shared/utils/fab_scroll_padding.dart):
    ```dart
-   final int activeFabs = (showWhatsAppFab ? 1 : 0) + (showEditFab ? 1 : 0);
+   final int activeFabs = (showWhatsAppFab ? 1 : 0) + (showEditFab ? 1 : 0) + (showSignatureFab ? 1 : 0);
    final double bottomPadding = FabScrollPadding.calculate(activeFabs); 
    // 256.0 si 3 FABs, 184.0 si 2 FABs, 112.0 si 1 FAB, 24.0 si 0 FABs
 
@@ -192,13 +200,60 @@ void _showSendOptions(BuildContext context, DocumentModel document) {
 }
 ```
 
+### B. Modal Canónico de Confirmación de Recepción y Firma Presencial
+Para documentos logísticos o de entrega física donde el receptor firma directamente en el dispositivo:
+- Se invoca mediante diálogo modal estilizado con `CustomActionSheet` ([`ConfirmDeliveryNoteReceptionDialog.show(context, note)`](file:///c:/Users/aleja/flutter_apps/MVP/d_una_app/lib/features/delivery_notes/presentation/view_delivery_note/widgets/confirm_delivery_note_reception_dialog.dart)).
+- **Salvaguarda Previa Obligatoria por Seriales Pendientes:**
+  - Si el documento requiere seriales y tiene ítems incompletos (`document.hasMissingSerialsEffective == true`):
+    - La opción de confirmar recepción y el FAB de firma presencial se deshabilitan o despliegan un diálogo informativo preventivo con `CustomDialog.confirmation` (`'Seriales pendientes: No se puede confirmar la recepción porque faltan seriales por asignar a uno o más productos.'`).
+    - En el método `_handleConfirm()` del diálogo modal, se valida obligatoriamente esta condición antes de permitir la escritura en base de datos.
+
+### C. Descuento de Stock Propio e Invalidación Reactiva en Supabase y Riverpod
+1. **Lógica de Descuento en Base de Datos (PostgreSQL):**
+   - Los ítems de inventario propio (`source_type = 'own'`, `is_dropshipping = false`) solo descuentan existencias cuando el documento transiciona a estado `finalized` mediante la función computed column `public.inventory_quantity(product products)`.
+   - Si un documento previamente finalizado es cancelado (`cancelled`), el stock se restituye automáticamente en tiempo real y un trigger Postgres restaura los seriales asociados de `'dispatched'` a `'in_stock'`.
+2. **Limitación de Realtime con Columnas Computadas (`inventory_quantity`):**
+   - En PostgreSQL, las columnas computadas calculan el stock dinámicamente (`SUM(compras) - SUM(notas_finalizadas)`). Cuando una Nota de Entrega se finaliza o cancela, la fila modificada es de la tabla `delivery_notes`, **NO** de `products`. Por ende, PostgreSQL Realtime **nunca** emite un evento directo sobre la tabla `products`.
+3. **Invalidación Reactiva de Proveedores en Flutter (Riverpod):**
+   - Toda transición de estado a `finalized` o `cancelled` (en pantalla de detalle, menú de acciones individuales o acciones masivas por lote) **DEBE** invalidar obligatoriamente los proveedores de catálogo e inventario, y refrescar la lista paginada:
+     ```dart
+     ref.invalidate(productsProvider);
+     ref.invalidate(paginatedProductsProvider);
+     ref.read(paginatedProductsProvider.notifier).refresh();
+     ```
+   - **Invalidación Iterativa de Detalles de Producto:** Para evitar que la pantalla de detalle de un producto muestre existencias desactualizadas retenidas en caché al volver de una nota de entrega, se debe iterar sobre los ítems del documento e invalidar individualmente el proveedor de detalle de cada producto:
+     ```dart
+     for (final item in document.items) {
+       if (item.productId != null) {
+         ref.invalidate(productDetailProvider(item.productId!));
+       }
+     }
+     ```
+
 ---
 
 ## 5. Sincronización en Tiempo Real (`Supabase Postgres Realtime`) y Telemetría
 
-Toda pantalla de visualización de documentos ejecutivos debe actualizarse instantáneamente cuando el receptor interactúa con el visor web (apertura del enlace, confirmación o firma):
+Toda pantalla de visualización de documentos ejecutivos debe actualizarse instantáneamente cuando el receptor interactúa con el visor web (apertura del enlace, confirmación o firma) o cuando un cambio concurrente ocurra:
 
-1. **Suscripción en `initState`:**
+1. **Suscripción en `initState` y Auto-Refresco en Montaje:**
+   - Para evitar estados obsoletos si el usuario regresa a una pantalla ya montada o reingresa tras navegar, se debe forzar una invalidación en el primer frame tras montar la vista:
+   ```dart
+   @override
+   void initState() {
+     super.initState();
+     WidgetsBinding.instance.addObserver(this);
+     _tabController = TabController(...);
+     
+     // Garantiza datos 100% frescos al entrar a la pantalla
+     WidgetsBinding.instance.addPostFrameCallback((_) {
+       ref.invalidate(documentDetailProvider(widget.docId));
+     });
+
+     _initSingleDocRealtime();
+   }
+   ```
+2. **Canal Realtime con Canal Único por Instancia:**
    ```dart
    RealtimeChannel? _singleDocChannel;
 
@@ -226,16 +281,18 @@ Toda pantalla de visualización de documentos ejecutivos debe actualizarse insta
          .subscribe();
    }
    ```
-2. **Ciclo de Vida de la App:** Implementar `WidgetsBindingObserver` para invalidar la caché y refrescar datos al volver al foco (`AppLifecycleState.resumed`):
+3. **Ciclo de Vida de la App (`AppLifecycleState.resumed`):**
+   - Crítico cuando el usuario abre el visor web en un navegador externo (o un cliente firma en su propio dispositivo) y el operador regresa a la aplicación:
    ```dart
    @override
    void didChangeAppLifecycleState(AppLifecycleState state) {
      if (state == AppLifecycleState.resumed && mounted) {
        ref.invalidate(documentDetailProvider(widget.docId));
+       ref.read(paginatedDocumentsProvider.notifier).refresh();
      }
    }
    ```
-3. **Liberación en `dispose`:** Desuscribir el canal en `dispose()` para evitar fugas de memoria:
+4. **Liberación en `dispose`:** Desuscribir el canal en `dispose()` para evitar fugas de memoria:
    ```dart
    @override
    void dispose() {
@@ -246,7 +303,7 @@ Toda pantalla de visualización de documentos ejecutivos debe actualizarse insta
      super.dispose();
    }
    ```
-4. **Notificaciones Visuales Estandarizadas:**
+5. **Notificaciones Visuales Estandarizadas:**
    - **PROHIBIDO:** No usar `ScaffoldMessenger.of(context).showSnackBar`.
    - **OBLIGATORIO:** Usar `AppToast.success(...)`, `AppToast.warning(...)` o `AppToast.error(...)`, protegiendo siempre las llamadas asíncronas con `if (context.mounted)`.
 
@@ -310,13 +367,81 @@ Ubicado fuera del `#main-card`, antes del footer:
 - Icono y texto: `🖨️ Imprimir / Guardar PDF`.
 - En `@media print`: ocultar `.print-fab`, `.validity-badge`, `.disclaimer-card`, `.footer`, `#reception-form`, `.no-print`.
 
-### H. Recepción Conforme y Firma Digital
-- Etiqueta del cargo: `Cargo (opcional)` (no restrictivo).
-- En el visor web finalizado, renderizar `Cargo: [valor]` y el preview de la firma digital Base64 capturada en el canvas.
+### H. Recepción Conforme, Firma Digital y Botón de Acción
+Para documentos que requieran constancia de entrega o firma electrónica en el visor web (p. ej. Notas de Entrega):
+1. **Lienzo de Firma y Placeholder Interactivo (Estado Pendiente):**
+   - Contenedor `.canvas-container` con bordes redondeados (`12px`), fondo claro `#FAFBFD`, borde sólido pulido `#CBD5E1` (`height: 150px`).
+   - Placeholder `#sig-placeholder` centrado con ícono de lápiz que desaparece automáticamente al iniciar el trazo (`startDrawing`) y se restaura al pulsar `.btn-clear` ("Limpiar firma").
+2. **Botón de Envío (`btn-submit`):**
+   - Etiqueta estándar: **`"Confirmar recepción"`** (evitar frases largas como "Confirmar entrega y registrar firma").
+   - Dimensiones y alineación: en desktop `width: auto;` y alineado a la derecha dentro de `.form-actions { display: flex; justify-content: flex-end; margin-top: 24px; }`.
+   - Adaptación responsiva: en mobile (`max-width: 640px`), `.form-actions { justify-content: stretch; }` y `.btn-submit { width: 100%; }` para facilitar el toque ergonómico.
+   - Feedback de carga: Deshabilitar el botón y mostrar `"Confirmando..."` durante la petición HTTP.
+3. **Paridad Estricta y Sobriedad con el PDF (Estado Finalizado):**
+   - **PROHIBICIÓN DE TINTES VERDES:** Queda terminantemente prohibido teñir el bloque de recepción finalizada con fondos verdes (`#F0FDF4`, `#ECFDF5`), bordes verdes (`#A7F3D0`) o badges chillones. Tanto en pantalla como al imprimir / guardar en PDF (`window.print()`), el resultado debe ser **idéntico al PDF nativo generado en Flutter**.
+   - **Contenedor Sobrio:** Tarjeta `.reception-card` con fondo gris neutro `var(--neutral-bg-subtle)` (`#F8FAFC`), borde sutil `var(--neutral-border)` (`#E2E8F0`), esquinas de `12px` y padding `16px 20px`.
+   - **Disposición de Firma Alineada a la Derecha:** Estructura idéntica a `_buildSignaturesBlock` del PDF nativo:
+     - Ancho contenido (`240px`, centrado en mobile).
+     - Trazo de la firma digital centrado sobre la línea divisoria.
+     - Línea horizontal de firma de `200px`, altura `1px`, color `#CBD5E1`.
+     - Leyenda institucional: `"Recibido Conforme / Cliente"` (11px, `var(--neutral-muted)`).
+     - Nombre del receptor en negrita (12px, `var(--neutral-dark)`).
+     - Datos formales: `C.I. / ID: [valor]`, `Cargo: [valor]` (si aplica) y `Fecha: [fecha formateada en hora local]`.
+   - **Comportamiento en Impresión (@media print):**
+     - Si la nota está finalizada, se imprime el bloque de firma sobrio institucional.
+     - Si la nota está pendiente, `#reception-form` se oculta y en su lugar se imprime el bloque con la línea en blanco para firma física con `"Recibido Conforme / Cliente"` y `"Firma y Cédula"`, replicando con 100% de fidelidad el PDF de Flutter.
+
+### I. Flujo de Respuesta y Landing Pages Institucionales (`*_response.html`)
+1. **Prohibición de Alertas Nativas (`alert()`):** Queda terminantemente prohibido utilizar ventanas emergentes nativas de Javascript (`alert(...)` o recargas en bucle) tras completar una acción de cliente en la web.
+2. **Redirección a Landing Page de Éxito:** Todo flujo de confirmación, aprobación o firma digital debe redirigir a una página de respuesta institucional dedicada (`delivery_note_response.html`, `quote_response.html`, `order_response.html`):
+   ```javascript
+   if (resJson.status === 'success' || resJson.status === 'already_processed') {
+     const noteParam = docNumber ? `&note=${encodeURIComponent(docNumber)}` : '';
+     window.location.href = `delivery_note_response.html?token=${encodeURIComponent(token)}&status=success${noteParam}`;
+   }
+   ```
+3. **Anatomía de la Landing Page:**
+   - Tarjeta centrada con sombra suave y fondo blanco.
+   - Ícono circular animado de éxito (verde) o alerta (ámbar/rojo).
+   - Encabezado con número de documento y badge de estatus.
+   - Mensaje de confirmación claro y cordial ("Hemos registrado la recepción formal de los productos...").
+   - Botón primario de consulta (`"Ver nota de entrega"` / `"Ver documento"`) para regresar a la vista formal en cualquier momento.
+   - Footer institucional oficial D-UNA con logotipo corporativo.
 
 ---
 
-## 7. Checklist de Verificación para Document View Screens
+## 7. Ciclo de Vida y Asignación de Fechas Logísticas y Recepción (Notas de Entrega)
+
+En documentos logísticos o de despacho (como Notas de Entrega), intervienen 3 conceptos temporales que deben manejarse con precedencia estricta para evitar estados ambiguos como `"No especificada"`:
+1. **Fecha de Emisión (`date`):** Momento administrativo en el que se generó la nota (por defecto `DateTime.now()` al crear).
+2. **Fecha de Despacho (`delivery_date`):** Momento logístico en el que la mercancía sale del almacén/tienda o se entrega al courier.
+3. **Fecha de Recepción Conforme (`received_at`):** Timestamp exacto en el que el cliente/receptor firma y confirma la entrega.
+
+### Reglas de Precedencia y Automatización Logística:
+1. **Inicialización por Defecto:**
+   - En el estado del formulario (`CreateState`), `deliveryDate` se inicializa obligatoriamente con `DateTime.now()`, pre-cargándose en el controlador de la pestaña *Despacho*. Permanece 100% modificable para programar despachos futuros.
+   - Al cargar una nota existente en edición, si `deliveryDate == null`, se asigna `DateTime.now()` como salvaguarda.
+2. **Actualización Reactiva al Enviar (WhatsApp y Correo):**
+   - Si la nota pasa de borrador a enviada (`sent` / `resent`):
+     - Si `deliveryDate` era nula o anterior a hoy (un borrador guardado en días pasados), se actualiza automáticamente a `DateTime.now()`.
+     - Si el usuario configuró una fecha programada igual o posterior a hoy, **se respeta la fecha futura intacta**.
+3. **Garantía en Firma y Recepción (Modal Presencial y WebViewer):**
+   - Siempre se registra el timestamp exacto de la firma en `received_at`.
+   - Si `delivery_date` era nula o era una fecha futura (el cliente recibió y firmó antes de tiempo), se sincroniza automáticamente a la fecha de hoy.
+   - Si ya tenía una fecha de despacho pasada o igual a hoy, se preserva como la fecha real en que salió el despacho.
+4. **Prohibición de "No especificada" en la UI:**
+   - En pestañas de resumen, detalle y plantillas PDF, queda terminantemente prohibido mostrar `"No especificada"` o `"No establecida"`. Si `deliveryDate` llegase a ser nulo, debe utilizar como fallback visual inmediato la fecha de emisión `date`.
+5. **Conversión Obligatoria a Hora Local (`.toLocal()`):**
+   - Los timestamps de recepción (`received_at`) se persisten en base de datos en formato UTC (ISO-8601). Al deserializar en el modelo (`fromJson`), es **obligatorio invocar `DateTime.tryParse(json['received_at'])?.toLocal()`**.
+   - En vistas de resumen (`SummaryTab`) y en plantillas de exportación PDF (`DeliveryNotePdfTemplate`), la fecha y hora de recepción debe formatearse explícitamente en horario local con formato de 12 horas:
+     ```dart
+     DateFormat('dd/MM/yyyy - hh:mm a').format(note.receivedAt!.toLocal())
+     ```
+     para evitar que se muestre con el desfase de la hora UTC del servidor.
+
+---
+
+## 8. Checklist de Verificación para Document View Screens
 
 - [ ] ¿El `TabController` arranca en la pestaña Resumen (`initialIndex: totalTabs - 1`)?
 - [ ] ¿Los nombres de las pestañas carecen de números entre paréntesis?
@@ -332,3 +457,18 @@ Ubicado fuera del `#main-card`, antes del footer:
 - [ ] ¿El visor web aplica la regla de persona natural (`Nombre:`, `Cédula:`, sin `Atención:`)?
 - [ ] ¿Los seriales en el visor web usan una sola etiqueta `Serial(es):` separados por coma?
 - [ ] ¿El botón flotante de PDF en la web cuenta con `border-radius: 12px` y el footer oficial D-UNA?
+- [ ] ¿La opción y el FAB de edición respetan la whitelist `canEdit` (`'draft'`, `'sent'`, `'resent'`, `'opened'`) y se bloquean en `'finalized'`, `'cancelled'` y `'delivered'`?
+- [ ] ¿Al editar un documento emitido, el estado en el formulario pasa automáticamente a `'draft'`?
+- [ ] ¿Se previene la confirmación de entrega y firma presencial si hay seriales pendientes por asignar (`hasMissingSerialsEffective == true`)?
+- [ ] ¿El modal de recepción física utiliza `CustomActionSheet`, campos con `helperText` (sin `hintText`), teléfono modular, lienzo con `ClipRRect` y botón `'Confirmar entrega'` alineado a la derecha?
+- [ ] ¿Se programó `WidgetsBinding.instance.addPostFrameCallback` en `initState` para forzar la invalidación inicial del documento y evitar datos de caché obsoletos?
+- [ ] ¿Se implementa `WidgetsBindingObserver` con invalidación en `AppLifecycleState.resumed` para capturar interacciones ocurridas en el visor web externo?
+- [ ] ¿Al transicionar el estatus a `finalized` o `cancelled`, además de `paginatedProductsProvider.refresh()`, se invalidan iterativamente los `productDetailProvider(item.productId!)` de todos los ítems asociados?
+- [ ] ¿La fecha de despacho (`delivery_date`) aplica el modelo híbrido con fallback automático a la fecha actual si está vacía o vencida al enviar/firmar, respetando fechas futuras programadas y evitando textos como `"No especificada"`?
+- [ ] ¿El visor web utiliza el botón `"Confirmar recepción"` con ancho auto alineado a la derecha en escritorio y 100% en pantallas móviles?
+- [ ] ¿El lienzo de firma digital en la web incluye placeholder interactivo centrado que se oculta al trazar y se restaura al limpiar?
+- [ ] ¿Se eliminaron los `alert()` nativos al firmar/confirmar en la web, redirigiendo a su landing page institucional (`*_response.html`) con resumen y botón de consulta?
+- [ ] ¿El área de firma en la web finalizada carece por completo de fondos o cabeceras verdes y replica el bloque de firma sobrio del PDF (`slate50`/`slate200`) alineado a la derecha sobre la línea `#CBD5E1`?
+- [ ] ¿La impresión desde la web (`@media print` / guardar en PDF) es visualmente indistinguible del PDF nativo exportado en la app?
+- [ ] ¿Los timestamps de recepción (`receivedAt`) se convierten explícitamente a hora local (`.toLocal()`) en el modelo y se formatean en 12h con AM/PM (`DateFormat('dd/MM/yyyy - hh:mm a')`) tanto en la app como en el PDF?
+

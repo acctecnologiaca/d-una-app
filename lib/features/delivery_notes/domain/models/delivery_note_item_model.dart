@@ -46,7 +46,7 @@ class DeliveryNoteItemModel {
   });
 
   int get missingSerialsCount {
-    if (!requiresSerials || isDropshipping) return 0;
+    if (!requiresSerials) return 0;
     final needed = quantity.round();
     final current = serials.length;
     return (needed - current).clamp(0, 99999);

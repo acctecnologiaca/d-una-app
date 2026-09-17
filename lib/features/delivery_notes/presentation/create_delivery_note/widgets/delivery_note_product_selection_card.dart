@@ -11,6 +11,7 @@ class DeliveryNoteProductSelectionCard extends StatefulWidget {
   final ValueChanged<double> onQtyChanged;
   final bool isLocked;
   final bool isAlreadyAdded;
+  final double? availableStock;
 
   const DeliveryNoteProductSelectionCard({
     super.key,
@@ -19,6 +20,7 @@ class DeliveryNoteProductSelectionCard extends StatefulWidget {
     required this.onQtyChanged,
     this.isLocked = false,
     this.isAlreadyAdded = false,
+    this.availableStock,
   });
 
   @override
@@ -34,8 +36,12 @@ class _DeliveryNoteProductSelectionCardState
     final textTheme = Theme.of(context).textTheme;
 
     final uom = widget.product.uom ?? widget.product.uomModel?.symbol ?? 'ud.';
-    final hasStock = widget.product.availableQuantity > 0;
-    final maxStock = widget.product.availableQuantity;
+    final physicalStock = widget.product.inventoryQuantity;
+    final effectiveAvailable =
+        widget.availableStock ?? widget.product.availableQuantity;
+    final isReservedByOthers = physicalStock > 0 && effectiveAvailable <= 0;
+    final hasStock = effectiveAvailable > 0;
+    final maxStock = effectiveAvailable;
 
     final isInactive = widget.isAlreadyAdded || widget.isLocked || !hasStock;
     final opacity = (widget.isAlreadyAdded || !hasStock)
@@ -50,7 +56,8 @@ class _DeliveryNoteProductSelectionCardState
           isExpandable: hasStock && !widget.isAlreadyAdded,
           isExpanded: widget.selectedQty > 0 ? true : null,
           padding: const EdgeInsets.symmetric(horizontal: 0.0, vertical: 12.0),
-          overline: widget.product.brand?.name != null &&
+          overline:
+              widget.product.brand?.name != null &&
                   widget.product.brand!.name.isNotEmpty
               ? Text(
                   widget.product.brand!.name.toTitleCase,
@@ -61,13 +68,48 @@ class _DeliveryNoteProductSelectionCardState
                 )
               : null,
           title: widget.product.name,
-          subtitle: (widget.product.model != null &&
-                  widget.product.model!.isNotEmpty)
-              ? Text(
-                  widget.product.model!.toUpperCase(),
-                  style: textTheme.bodyMedium?.copyWith(
-                    color: colors.onSurfaceVariant,
-                  ),
+          subtitle:
+              (widget.product.model != null &&
+                      widget.product.model!.isNotEmpty) ||
+                  widget.product.reservedQuantity > 0
+              ? Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    if (widget.product.model != null &&
+                        widget.product.model!.isNotEmpty)
+                      Text(
+                        widget.product.model!.toUpperCase(),
+                        style: textTheme.bodyMedium?.copyWith(
+                          color: colors.onSurfaceVariant,
+                        ),
+                      ),
+                    if (isReservedByOthers) ...[
+                      if (widget.product.model != null &&
+                          widget.product.model!.isNotEmpty)
+                        const SizedBox(height: 2),
+                      Text(
+                        'Todo el inventario propio está reservado en cotizaciones aprobadas o notas de entrega no finalizadas.',
+                        style: TextStyle(
+                          color: colors.error,
+                          fontSize: 12,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ] else if (widget.product.reservedQuantity > 0) ...[
+                      if (widget.product.model != null &&
+                          widget.product.model!.isNotEmpty)
+                        const SizedBox(height: 2),
+                      Text(
+                        'Hay ${effectiveAvailable.toStringAsFixed(effectiveAvailable.truncateToDouble() == effectiveAvailable ? 0 : 2)} $uom disponibles de ${physicalStock.toStringAsFixed(physicalStock.truncateToDouble() == physicalStock ? 0 : 2)} en inventario propio.',
+                        style: TextStyle(
+                          color: colors.onSurfaceVariant,
+                          fontSize: 12,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ],
+                  ],
                 )
               : null,
           trailing: Column(
@@ -98,10 +140,8 @@ class _DeliveryNoteProductSelectionCardState
               UomStatusBadge(
                 quantity: widget.selectedQty > 0
                     ? widget.selectedQty
-                    : widget.product.availableQuantity,
-                maxStock: widget.selectedQty > 0
-                    ? widget.product.availableQuantity
-                    : null,
+                    : (isReservedByOthers ? physicalStock : effectiveAvailable),
+                maxStock: widget.selectedQty > 0 ? effectiveAvailable : null,
                 showQuantity: true,
                 uomAbbreviation: uom,
                 uomIconName: widget.product.uomModel?.iconName,

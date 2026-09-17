@@ -15,18 +15,37 @@ class SendDeliveryNoteEmailSheet {
       documentType: 'delivery_note',
       documentNumber: note.deliveryNoteNumber,
       initialRecipient: note.contactEmail ?? note.clientEmail,
-      sheetTitle: 'Enviar nota de entrega por correo',
+      sheetTitle: note.status == DeliveryNoteStatus.finalized
+          ? 'Enviar copia de nota de entrega por correo'
+          : 'Enviar nota de entrega por correo',
       tag: note.tag,
       clientDisplayName: note.contactName ?? note.clientName,
       generateToken: (ref) =>
           ref.read(deliveryNotesRepositoryProvider).generateActionToken(note.id),
       onStatusUpdate: (ref, _) async {
-        final currentStatus = note.status;
-        if (currentStatus == DeliveryNoteStatus.draft) {
-          await ref
-              .read(deliveryNotesRepositoryProvider)
-              .updateDeliveryNoteStatus(note.id, DeliveryNoteStatus.sent);
+        if (note.status == DeliveryNoteStatus.finalized) {
+          return;
         }
+        final currentStatus = note.status;
+        final newStatus = (currentStatus == DeliveryNoteStatus.sent ||
+                currentStatus == DeliveryNoteStatus.resent ||
+                currentStatus == DeliveryNoteStatus.opened)
+            ? DeliveryNoteStatus.resent
+            : DeliveryNoteStatus.sent;
+
+        final now = DateTime.now();
+        final today = DateTime(now.year, now.month, now.day);
+        final currentDeliveryDate = note.deliveryDate;
+        final shouldUpdateDeliveryDate = currentDeliveryDate == null ||
+            DateTime(currentDeliveryDate.year, currentDeliveryDate.month, currentDeliveryDate.day).isBefore(today);
+
+        await ref
+            .read(deliveryNotesRepositoryProvider)
+            .updateDeliveryNoteStatus(
+              note.id,
+              newStatus,
+              deliveryDate: shouldUpdateDeliveryDate ? today : null,
+            );
       },
       onSendSuccess: () {
         final container = ProviderScope.containerOf(context, listen: false);

@@ -192,7 +192,7 @@ class DeliveryNoteSummaryTab extends ConsumerWidget {
               'Fecha de Despacho',
               state.deliveryDate != null
                   ? dateFormat.format(state.deliveryDate!)
-                  : 'No establecida',
+                  : dateFormat.format(state.date),
               isTextValue: true,
             ),
             const SizedBox(height: 10),

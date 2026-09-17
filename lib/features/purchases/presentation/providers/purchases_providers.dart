@@ -4,6 +4,8 @@ import '../../data/repositories/purchases_repository.dart';
 import 'dart:async';
 import '../../domain/models/purchase_model.dart';
 import '../../../../shared/models/paginated_state.dart';
+import 'package:d_una_app/features/portfolio/presentation/providers/products_provider.dart';
+import 'purchase_details_provider.dart';
 
 final purchasesRepositoryProvider = Provider<PurchasesRepository>((ref) {
   return PurchasesRepository(Supabase.instance.client);
@@ -31,10 +33,52 @@ class PaginatedPurchasesList
   String? _statusFilter;
   String _orderBy = 'date';
   bool _ascending = false;
+  RealtimeChannel? _realtimeChannel;
 
   @override
   FutureOr<PaginatedState<Purchase>> build() async {
+    _initRealtimeSubscription();
     return _fetchPage(0);
+  }
+
+  void _initRealtimeSubscription() {
+    if (_realtimeChannel != null) return;
+    final userId = Supabase.instance.client.auth.currentUser?.id;
+    if (userId == null) return;
+
+    _realtimeChannel = Supabase.instance.client
+        .channel(
+          'public:purchases_changes_${DateTime.now().millisecondsSinceEpoch}',
+        )
+        .onPostgresChanges(
+          event: PostgresChangeEvent.all,
+          schema: 'public',
+          table: 'purchases',
+          filter: PostgresChangeFilter(
+            type: PostgresChangeFilterType.eq,
+            column: 'user_id',
+            value: userId,
+          ),
+          callback: (payload) {
+            final updatedRecord = payload.newRecord;
+            final updatedId =
+                (updatedRecord['id'] ?? payload.oldRecord['id']) as String?;
+            if (updatedId != null) {
+              ref.invalidate(purchaseDetailsProvider(updatedId));
+            }
+            ref.invalidate(paginatedPurchaseSearchProvider);
+            ref.invalidate(purchasesProvider);
+            ref.read(paginatedProductsProvider.notifier).refresh();
+            ref.invalidate(productsProvider);
+            refresh();
+          },
+        )
+        .subscribe();
+
+    ref.onDispose(() {
+      _realtimeChannel?.unsubscribe();
+      _realtimeChannel = null;
+    });
   }
 
   Future<PaginatedState<Purchase>> _fetchPage(int offset) async {

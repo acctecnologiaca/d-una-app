@@ -71,7 +71,7 @@ class ViewDeliveryNoteDeliveryTab extends ConsumerWidget {
                 label: 'Fecha de Despacho',
                 value: note.deliveryDate != null
                     ? dateFormat.format(note.deliveryDate!)
-                    : 'No especificada',
+                    : dateFormat.format(note.date),
               ),
 
               const SizedBox(height: 24),

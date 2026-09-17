@@ -103,9 +103,14 @@ PaginatedListView<Entity>(
    - **Prohibición Estricta:** Queda **estrictamente prohibido** hardcodear valores como `bottom: 40`, `bottom: 24` o espaciadores fijos insuficientes como `SizedBox(height: 80)` en modales.
 4. **Regla de Permanencia Estable y Bloqueo Visual en EFABs (`isEnabled: false` vs `null`):**
    - **Prohibición de Ocultar el FAB en Selectores y Búsquedas:** Queda **estrictamente prohibido** utilizar `floatingActionButton: hasSelection ? CustomExtendedFab(...) : null` en pantallas de selección de productos/servicios y búsquedas. Dado que la vista con scroll ya reserva permanentemente el espacio de respiro inferior (`FabScrollPadding.single = 112.0 px`), el botón DEBE permanecer siempre renderizado en el árbol de widgets, presentándose en estado **bloqueado / inactivo** (`isEnabled: false`) con etiqueta base (ej. `'Confirmar'`).
-   - **Activación Reactiva:** En cuanto el usuario selecciona una cantidad mayor a cero con el stepper (`+`), el botón se activa reactivamente (`isEnabled: true`), adquiere elevación Material 3 (`elevation: 4`), fondo `primaryContainer` y actualiza dinámicamente su texto (`'Confirmar ($formattedQty $uom - $formattedTotal)'`). Al volver a cero, retorna a su estado bloqueado sin desaparecer ni alterar el layout del scroll.
+   - **Activación Reactiva:** En cuanto el usuario selecciona una cantidad mayor a cero con el stepper (`+`), el botón se activa reactivamente (`isEnabled: true`), adquiere elevación Material 3 (`elevation: 4`), fondo `primaryContainer` y actualiza dinámicamente su texto según la naturaleza del flujo (ej. `'Confirmar ($formattedQty $uom)'` en compras o `'Confirmar ($formattedQty $uom - $formattedTotal)'` en ventas). Al volver a cero, retorna a su estado bloqueado sin desaparecer ni alterar el layout del scroll.
    - **Acciones Secundarias de Creación en Selectores:** En selectores de catálogo (como Compras), la acción para crear una nueva entidad (ej. "Nuevo producto") no debe competir ni mutar el EFAB inferior; debe colocarse en `StandardAppBar.actions` como `IconButton(icon: Icon(Icons.add), tooltip: 'Nuevo...')`.
    - **Regla de Habilitación en Gestión de Seriales:** En pantallas de seriales (`manage_product_serials_screen.dart` y `delivery_note_manage_serials_screen.dart`), el botón `Guardar` DEBE permanecer bloqueado (`isEnabled: false`) hasta que el usuario haya agregado al menos un número de serie o haya modificado el interruptor de requerimiento de seriales frente al estado inicial (`isDirty`).
+5. **Diferenciación de Tarjetas y EFABs en Selección de Productos (Venta vs Compra/Abastecimiento):**
+   - **Flujos de Salida/Venta (Cotizaciones, Notas de Entrega, Facturación):** Los productos del catálogo cuentan con un precio de venta preestablecido. La tarjeta de selección muestra el precio unitario en `trailing` y el EFAB de confirmación muestra el total acumulado estimado (`Confirmar ($formattedQty $uom - $formattedTotal)`).
+   - **Flujos de Entrada/Abastecimiento (Registros de Compra, Recepción de Mercancía):** El costo unitario **NO** se toma ni se fija desde el catálogo, sino que se define en la factura física o real de compra provista por el proveedor (ingresada en el modal de detalles del producto).
+     - **Tarjeta de Selección ([`PurchaseProductSelectionCard`](file:///c:/Users/aleja/flutter_apps/MVP/d_una_app/lib/features/purchases/presentation/widgets/purchase_product_selection_card.dart)):** Queda **estrictamente prohibido** mostrar precios o costos promedio de catálogo en el slot `trailing`. El slot `trailing` debe contener exclusivamente el [`UomStatusBadge`](file:///c:/Users/aleja/flutter_apps/MVP/d_una_app/lib/shared/widgets/uom_status_badge.dart) indicando la unidad de medida y la cantidad seleccionada.
+     - **EFAB de Confirmación:** El texto debe reflejar únicamente la cantidad y la unidad de medida a agregar (`Confirmar ($formattedQty $uom)`), sin montos calculados o precios ficticios.
 
 ### E. 📐 Regla Canónica para Barras de Botones Fijas Inferiores y Hojas Modales
 
@@ -137,10 +142,49 @@ Para formularios de pantalla completa (Arquetipo 5) y pasos de wizard (Arquetipo
      )
      ```
 
-3. **Hojas Modales y Bottom Sheets (`CustomActionSheet` y Sheets de Ajustes):**
-   - [`CustomActionSheet`](file:///c:/Users/aleja/flutter_apps/MVP/d_una_app/lib/shared/widgets/custom_action_sheet.dart) ya implementa internamente `SafeArea(top: false)` y un padding inferior canónico de 16px.
-   - **Prohibición de Spacers Redundantes:** Al definir listas de acciones en modales, **NO** se debe agregar `SizedBox(height: 16)` ni paddings inferiores adicionales al final del array `actions`, pues provocaría una doble separación artificial ($16 + 16 = 32\text{px}$).
-   - En modales ad-hoc con botones fijos al pie, siempre proteger con `SafeArea(top: false)` y aplicar un padding horizontal/vertical de 16px.
+3. **Hojas Modales y Bottom Sheets Operativos (`CustomActionSheet`):**
+   - [`CustomActionSheet`](file:///c:/Users/aleja/flutter_apps/MVP/d_una_app/lib/shared/widgets/custom_action_sheet.dart) implementa internamente `SafeArea(top: false)` y un padding inferior canónico de 16px.
+   - **Encabezado Limpio Sin Cards Redundantes:** El modal debe iniciar directamente con el título institucional de la acción. Queda prohibido añadir tarjetas inventadas o contenedores ad-hoc en la cabecera del sheet.
+   - **Avisos Informativos Canónicos:** Cuando sea necesario advertir sobre consecuencias de una acción (por ejemplo, descuento de stock o finalización), usar exclusivamente el componente compartido [`InfoDisclaimerCard`](file:///c:/Users/aleja/flutter_apps/MVP/d_una_app/lib/shared/widgets/info_disclaimer_card.dart).
+   - **Botón de Acción Inferior:** En modales con formulario o confirmación operativa, el botón principal (`CustomButton`) debe alinearse a la derecha:
+     ```dart
+     Align(
+       alignment: Alignment.centerRight,
+       child: CustomButton(
+         text: 'Confirmar entrega',
+         icon: Symbols.check_circle,
+         isLoading: _isSaving,
+         onPressed: _handleConfirm,
+       ),
+     )
+     ```
+   - **Prohibición de Spacers Redundantes:** No agregar `SizedBox(height: 16)` ni paddings inferiores adicionales al final del array `actions` de un `CustomActionSheet`.
+
+4. **Lienzo de Firma Digital Confinado (`ClipRRect` + Control Gestual + Tema Dinámico):**
+   Para modales o pantallas que capturen firma digital presencial:
+   - **Envoltura con `ClipRRect`:** Envolver el lienzo en `ClipRRect(borderRadius: BorderRadius.circular(12))` para garantizar que el renderizador GPU corte cualquier trazo que exceda el contenedor físico.
+   - **Control de Límites en Gestos (`LayoutBuilder` + `onPanUpdate`):** Evaluar `details.localPosition` respecto a `constraints.maxWidth` y la altura fija (140px). Si el puntero o dedo sale del recuadro, añadir `null` a la lista de puntos (levantar el trazo), impidiendo registrar coordenadas negativas o rallar fuera de la caja o del modal:
+     ```dart
+     onPanUpdate: (details) {
+       final pos = details.localPosition;
+       if (pos.dx < 0 || pos.dx > constraints.maxWidth || pos.dy < 0 || pos.dy > fixedHeight) {
+         _points.add(null);
+       } else {
+         _points.add(pos);
+       }
+     }
+     ```
+   - **Soporte Dinámico de Tema Claro/Oscuro:** El pincel en `CustomPainter` debe usar `colors.onSurface` (en lugar de `Colors.black87` fijo) para que el trazo sea perfectamente nítido y legible tanto en fondo claro como en superficie oscura.
+   - **Acción Limpiar:** Utilizar un botón sutil con `Symbols.ink_eraser` y etiqueta 'Limpiar firma'.
+
+5. **Regla Canónica de Entradas de Texto y Patrón de Teléfono Modular:**
+   - **Regla Estricta de Campos de Texto (`CustomTextField`):**
+     - **PROHIBIDO:** Usar `hintText:`.
+     - **OBLIGATORIO:** Usar `helperText:` para proporcionar contexto, ejemplos de formato o ayudas al usuario en todas las entradas de datos de la aplicación.
+   - **Patrón Estandarizado de Entrada de Teléfono:**
+     - Desacoplar siempre en dos componentes contiguos en un `Row`:
+       1. [`CustomDropdown<String>`](file:///c:/Users/aleja/flutter_apps/MVP/d_una_app/lib/shared/widgets/custom_dropdown.dart) de ancho compacto (`width: 105px`) para seleccionar el prefijo/código de área (`'0412'`, `'0422'`, `'0414'`, `'0424'`, `'0416'`, `'0426'`).
+       2. [`CustomTextField`](file:///c:/Users/aleja/flutter_apps/MVP/d_una_app/lib/shared/widgets/custom_text_field.dart) expandido para el número con `keyboardType: TextInputType.number`, `inputFormatters: [FilteringTextInputFormatter.digitsOnly]` y `helperText: 'Ej. 1234567'`.
 
 ---
 
@@ -155,7 +199,7 @@ Para formularios de pantalla completa (Arquetipo 5) y pasos de wizard (Arquetipo
 ---
 
 ### 📌 B. Entradas de Datos, Formularios y Selectores
-5. **[`custom_text_field.dart`](file:///c:/Users/aleja/flutter_apps/MVP/d_una_app/lib/shared/widgets/custom_text_field.dart)**: Campo de texto estándar con botón de limpieza (`clear`), validación integrada, soporte multilínea, formato monetario y estilos del tema.
+5. **[`custom_text_field.dart`](file:///c:/Users/aleja/flutter_apps/MVP/d_una_app/lib/shared/widgets/custom_text_field.dart)**: Campo de texto estándar con botón de limpieza (`clear`), validación integrada, soporte multilínea, formato monetario y estilos del tema. **Regla de oro:** Siempre configurar con `helperText:` (nunca `hintText:`).
 6. **[`custom_dropdown.dart`](file:///c:/Users/aleja/flutter_apps/MVP/d_una_app/lib/shared/widgets/custom_dropdown.dart)**: Dropdown configurable con soporte para selección simple, modo autocompletado con búsqueda y botón para agregar nuevos ítems en línea.
 7. **[`custom_multi_dropdown.dart`](file:///c:/Users/aleja/flutter_apps/MVP/d_una_app/lib/shared/widgets/custom_multi_dropdown.dart)**: Selector desplegable para selección múltiple con chips visuales y diálogo modal optimizado para colecciones grandes.
 8. **[`custom_stepper.dart`](file:///c:/Users/aleja/flutter_apps/MVP/d_una_app/lib/shared/widgets/custom_stepper.dart)**: Control numérico con botones decrementar/incrementar (`-` / `+`) para valores enteros o porcentajes.
@@ -213,7 +257,8 @@ Para formularios de pantalla completa (Arquetipo 5) y pasos de wizard (Arquetipo
 
 ### 📌 H. Badges, Iconografía y Avatares
 38. **[`status_badge.dart`](file:///c:/Users/aleja/flutter_apps/MVP/d_una_app/lib/shared/widgets/status_badge.dart)**: Badge compacto con color contextual para estatus (Aprobado, Pendiente, Rechazado, etc.).
-39. **[`uom_status_badge.dart`](file:///c:/Users/aleja/flutter_apps/MVP/d_una_app/lib/shared/widgets/uom_status_badge.dart)**: Badge que combina icono dinámico de Unidad de Medida (UOM) y texto de estatus.
+39. **[`uom_status_badge.dart`](file:///c:/Users/aleja/flutter_apps/MVP/d_una_app/lib/shared/widgets/uom_status_badge.dart)**: Badge que combina icono dinámico de Unidad de Medida (UOM) y texto de estatus o cantidad (`quantity` o `quantity/maxStock`).
+   - *Patrón de Reserva de Stock Propio:* Si un producto tiene stock físico en almacén pero su disponibilidad libre es 0 por estar reservado en otros documentos, el badge debe mostrar la cantidad física real (p. ej. `1 ud.`) en lugar de `"Sin stock"`, mientras que la tarjeta se deshabilita (`hasStock: false`, opacidad `0.5`) acompañada de subtítulo en rojo explicativo. Si tiene disponibilidad libre parcial, el badge muestra el saldo libre (p. ej. `2 ud.`) con subtítulo neutral informativo.
 40. **[`dynamic_material_symbol.dart`](file:///c:/Users/aleja/flutter_apps/MVP/d_una_app/lib/shared/widgets/dynamic_material_symbol.dart)**: Renderizador de Material Symbols dinámicos desde cadenas de texto (SVG/nombre) con caché en memoria.
 41. **[`product_image_avatar.dart`](file:///c:/Users/aleja/flutter_apps/MVP/d_una_app/lib/shared/widgets/product_image_avatar.dart)**: Contenedor con fallback elegante para miniaturas de productos.
 42. **[`user_profile_avatar.dart`](file:///c:/Users/aleja/flutter_apps/MVP/d_una_app/lib/shared/widgets/user_profile_avatar.dart)**: Avatar del usuario autenticado para encabezados principales.

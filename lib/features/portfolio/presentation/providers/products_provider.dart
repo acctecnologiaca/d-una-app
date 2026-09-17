@@ -89,10 +89,68 @@ class PaginatedProducts extends AsyncNotifier<PaginatedState<Product>> {
   String? _brandId;
   String _orderBy = 'created_at';
   bool _ascending = false;
+  RealtimeChannel? _realtimeChannel;
 
   @override
   FutureOr<PaginatedState<Product>> build() async {
+    _initRealtimeSubscription();
     return _fetchPage(0);
+  }
+
+  void _initRealtimeSubscription() {
+    if (_realtimeChannel != null) return;
+    final userId = Supabase.instance.client.auth.currentUser?.id;
+    if (userId == null) return;
+
+    _realtimeChannel = Supabase.instance.client
+        .channel(
+          'public:inventory_changes_${DateTime.now().millisecondsSinceEpoch}',
+        )
+        .onPostgresChanges(
+          event: PostgresChangeEvent.all,
+          schema: 'public',
+          table: 'products',
+          filter: PostgresChangeFilter(
+            type: PostgresChangeFilterType.eq,
+            column: 'user_id',
+            value: userId,
+          ),
+          callback: (_) => _onInventoryChanged(),
+        )
+        .onPostgresChanges(
+          event: PostgresChangeEvent.all,
+          schema: 'public',
+          table: 'delivery_notes',
+          filter: PostgresChangeFilter(
+            type: PostgresChangeFilterType.eq,
+            column: 'user_id',
+            value: userId,
+          ),
+          callback: (_) => _onInventoryChanged(),
+        )
+        .onPostgresChanges(
+          event: PostgresChangeEvent.all,
+          schema: 'public',
+          table: 'purchases',
+          filter: PostgresChangeFilter(
+            type: PostgresChangeFilterType.eq,
+            column: 'user_id',
+            value: userId,
+          ),
+          callback: (_) => _onInventoryChanged(),
+        )
+        .subscribe();
+
+    ref.onDispose(() {
+      _realtimeChannel?.unsubscribe();
+      _realtimeChannel = null;
+    });
+  }
+
+  void _onInventoryChanged() {
+    ref.invalidate(productsProvider);
+    ref.invalidate(paginatedProductSearchProvider);
+    refresh();
   }
 
   Future<PaginatedState<Product>> _fetchPage(int offset) async {
@@ -256,3 +314,14 @@ final productHasLinkedDocumentsProvider =
     FutureProvider.family<bool, String>((ref, productId) async {
   return ref.read(productsRepositoryProvider).hasLinkedDocuments(productId);
 });
+
+final productDetailProvider =
+    FutureProvider.autoDispose.family<Product?, String>((ref, productId) async {
+  return ref.read(productsRepositoryProvider).getProduct(productId);
+});
+
+void refreshAllProductProviders(dynamic ref) {
+  ref.invalidate(productsProvider);
+  ref.invalidate(paginatedProductsProvider);
+  ref.invalidate(paginatedProductSearchProvider);
+}

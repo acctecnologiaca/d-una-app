@@ -21,7 +21,11 @@ import '../../../domain/models/delivery_note_serial_model.dart';
 import '../../../domain/models/delivery_note_observation_model.dart';
 import 'package:uuid/uuid.dart';
 import 'package:d_una_app/features/portfolio/data/models/product_model.dart';
+import 'package:d_una_app/features/portfolio/presentation/providers/products_provider.dart';
 import '../../../data/repositories/supabase_delivery_notes_repository.dart';
+import '../../../domain/utils/delivery_note_stock_utils.dart';
+import 'package:d_una_app/features/quotes/domain/models/quote_model.dart' show QuoteStatus;
+import 'package:d_una_app/features/quotes/presentation/quotes_list/providers/quotes_provider.dart';
 
 class DeliveryNoteCreateState extends Equatable {
   final String? id;
@@ -61,6 +65,7 @@ class DeliveryNoteCreateState extends Equatable {
   final bool isLoading;
   final String? error;
   final DeliveryNoteModel? initialNote;
+  final Quote? linkedQuote;
 
   DeliveryNoteCreateState({
     this.id,
@@ -77,7 +82,7 @@ class DeliveryNoteCreateState extends Equatable {
     this.notes,
     this.status = DeliveryNoteStatus.draft,
     DateTime? date,
-    this.deliveryDate,
+    DateTime? deliveryDate,
     this.deliveryType = 'direct_delivery',
     this.shippingCompanyId,
     this.shippingCompanyName,
@@ -100,8 +105,10 @@ class DeliveryNoteCreateState extends Equatable {
     this.isLoading = false,
     this.error,
     this.initialNote,
+    this.linkedQuote,
     bool? isDirty,
-  }) : date = date ?? DateTime.now();
+  })  : date = date ?? DateTime.now(),
+        deliveryDate = deliveryDate ?? DateTime.now();
 
   double get subtotal => items.fold(0.0, (sum, i) => sum + i.totalPrice);
   double get taxAmount => subtotal * (taxRate / 100);
@@ -244,6 +251,7 @@ class DeliveryNoteCreateState extends Equatable {
     bool? isLoading,
     String? error,
     DeliveryNoteModel? initialNote,
+    Quote? linkedQuote,
     bool? isDirty,
   }) {
     return DeliveryNoteCreateState(
@@ -284,6 +292,7 @@ class DeliveryNoteCreateState extends Equatable {
       isLoading: isLoading ?? this.isLoading,
       error: error,
       initialNote: initialNote ?? this.initialNote,
+      linkedQuote: linkedQuote ?? this.linkedQuote,
     );
   }
 
@@ -406,6 +415,7 @@ class DeliveryNoteCreateState extends Equatable {
     isLoading,
     error,
     initialNote,
+    linkedQuote,
     isDirty,
   ];
 }
@@ -578,6 +588,9 @@ class CreateDeliveryNoteNotifier
     state = restored.copyWith(
       initialNote: originalNote ?? restored.initialNote ?? state.initialNote,
     );
+    if (restored.quoteId != null && restored.quoteId!.isNotEmpty) {
+      _loadLinkedQuote(restored.quoteId!);
+    }
   }
 
   Future<void> discardDraft({String? noteId}) async {
@@ -592,10 +605,17 @@ class CreateDeliveryNoteNotifier
 
   // Load from quote
   void loadFromQuote(Quote quote, {List<QuoteItemProduct>? filteredItems}) {
+    final allProducts = ref.read(productsProvider).valueOrNull ?? [];
     final itemsToUse = filteredItems ?? (quote.products ?? []);
     final convertedItems = itemsToUse.map((p) {
+      final matchedProduct = allProducts.cast<Product?>().firstWhere(
+        (prod) => prod?.id == p.productId,
+        orElse: () => null,
+      );
+      final requiresSerials = matchedProduct?.requiresSerials ?? false;
+
       return DeliveryNoteItemModel(
-        id: '',
+        id: p.id.isNotEmpty ? p.id : const Uuid().v4(),
         deliveryNoteId: '',
         productId: p.productId,
         name: p.name,
@@ -613,13 +633,14 @@ class CreateDeliveryNoteNotifier
         sourceType: p.sourceType == QuoteItemSourceType.affiliated
             ? 'affiliated'
             : (p.sourceType == QuoteItemSourceType.external ? 'external' : 'own'),
-        requiresSerials: false,
+        requiresSerials: requiresSerials,
         isDropshipping: false,
       );
     }).toList();
 
     state = state.copyWith(
       quoteId: quote.id,
+      linkedQuote: quote,
       clientId: quote.clientId,
       clientName: quote.clientName,
       clientTaxId: quote.clientTaxId,
@@ -633,12 +654,71 @@ class CreateDeliveryNoteNotifier
     );
   }
 
+  // Set or unlink quote
+  void setLinkedQuote(Quote? quote) {
+    if (quote == null) {
+      state = DeliveryNoteCreateState(
+        id: state.id,
+        deliveryNoteNumber: state.deliveryNoteNumber,
+        clientId: state.clientId,
+        clientName: state.clientName,
+        clientTaxId: state.clientTaxId,
+        contactId: state.contactId,
+        contactName: state.contactName,
+        quoteId: null,
+        supplierOrderId: state.supplierOrderId,
+        clientPoNumber: state.clientPoNumber,
+        tag: state.tag,
+        notes: state.notes,
+        status: state.status,
+        date: state.date,
+        deliveryDate: state.deliveryDate,
+        deliveryType: state.deliveryType,
+        shippingCompanyId: state.shippingCompanyId,
+        shippingCompanyName: state.shippingCompanyName,
+        trackingNumber: state.trackingNumber,
+        recipientAddress: state.recipientAddress,
+        recipientCity: state.recipientCity,
+        recipientState: state.recipientState,
+        deliveryInstructions: state.deliveryInstructions,
+        receivedByName: state.receivedByName,
+        receivedById: state.receivedById,
+        receivedByPhone: state.receivedByPhone,
+        receiverRelationship: state.receiverRelationship,
+        receivedAt: state.receivedAt,
+        signatureData: state.signatureData,
+        taxRate: state.taxRate,
+        items: state.items,
+        observations: state.observations,
+        isDropshipping: state.isDropshipping,
+        isLoading: state.isLoading,
+        error: state.error,
+        initialNote: state.initialNote,
+        linkedQuote: null,
+        isDirty: true,
+      );
+    } else {
+      state = state.copyWith(
+        quoteId: quote.id,
+        linkedQuote: quote,
+        isDirty: true,
+      );
+    }
+  }
+
   // Load from supplier order
   void loadFromSupplierOrder(SupplierOrder order, [List<SupplierOrderItem>? items]) {
+    final allProducts = ref.read(productsProvider).valueOrNull ?? [];
     final itemsList = items ?? order.items ?? [];
     final convertedItems = itemsList.map((i) {
+      final matchedProduct = allProducts.cast<Product?>().firstWhere(
+        (prod) => prod?.id == i.productId,
+        orElse: () => null,
+      );
+      final requiresSerials = matchedProduct?.requiresSerials ?? false;
+
       return DeliveryNoteItemModel(
-        id: '',
+        id: const Uuid().v4(),
         deliveryNoteId: '',
         productId: i.productId,
         name: i.name,
@@ -649,7 +729,7 @@ class CreateDeliveryNoteNotifier
         unitPrice: i.unitPrice,
         totalPrice: i.quantity * i.unitPrice,
         sourceType: 'affiliated',
-        requiresSerials: false,
+        requiresSerials: requiresSerials,
         isDropshipping: true,
       );
     }).toList();
@@ -657,6 +737,11 @@ class CreateDeliveryNoteNotifier
     state = state.copyWith(
       supplierOrderId: order.id,
       quoteId: order.quoteId,
+      clientId: order.clientId ?? state.clientId,
+      clientName: order.recipientName ?? state.clientName,
+      contactName: order.recipientContactName ?? state.contactName,
+      recipientAddress: order.recipientAddress ?? state.recipientAddress,
+      deliveryInstructions: order.deliveryInstructions ?? state.deliveryInstructions,
       items: convertedItems,
       isDropshipping: true,
       isDirty: true,
@@ -680,7 +765,7 @@ class CreateDeliveryNoteNotifier
       notes: note.notes,
       status: DeliveryNoteStatus.draft,
       date: note.date,
-      deliveryDate: note.deliveryDate,
+      deliveryDate: note.deliveryDate ?? DateTime.now(),
       deliveryType: note.deliveryType,
       shippingCompanyId: note.shippingCompanyId,
       shippingCompanyName: note.shippingCompanyName,
@@ -702,6 +787,9 @@ class CreateDeliveryNoteNotifier
       isDropshipping: note.isDropshipping,
       initialNote: note,
     );
+    if (note.quoteId != null && note.quoteId!.isNotEmpty) {
+      _loadLinkedQuote(note.quoteId!);
+    }
   }
 
   void setUseClientAddress(bool value) {
@@ -768,6 +856,8 @@ class CreateDeliveryNoteNotifier
       isDropshipping: state.isDropshipping,
       isLoading: state.isLoading,
       error: state.error,
+      initialNote: state.initialNote,
+      linkedQuote: state.linkedQuote,
       isDirty: true,
     );
   }
@@ -809,6 +899,8 @@ class CreateDeliveryNoteNotifier
       isDropshipping: state.isDropshipping,
       isLoading: state.isLoading,
       error: state.error,
+      initialNote: state.initialNote,
+      linkedQuote: state.linkedQuote,
       isDirty: true,
     );
   }
@@ -884,6 +976,8 @@ class CreateDeliveryNoteNotifier
       isDropshipping: state.isDropshipping,
       isLoading: state.isLoading,
       error: state.error,
+      initialNote: state.initialNote,
+      linkedQuote: state.linkedQuote,
       isDirty: true,
     );
   }
@@ -1180,12 +1274,81 @@ class CreateDeliveryNoteNotifier
         savedNote = await repo.updateDeliveryNote(noteModel);
       }
 
+      // Si hay una cotización vinculada y no está en estatus 'approved', promoverla automáticamente a 'approved'
+      if (state.quoteId != null && state.quoteId!.isNotEmpty) {
+        try {
+          final quote = state.linkedQuote ??
+              await ref.read(quotesRepositoryProvider).getQuoteWithDetails(state.quoteId!);
+          if (quote.status != QuoteStatus.approved.dbValue) {
+            await ref.read(quotesRepositoryProvider).updateQuoteStatus(
+              state.quoteId!,
+              QuoteStatus.approved.dbValue,
+            );
+            ref.invalidate(quotesListProvider);
+          }
+        } catch (e) {
+          debugPrint('Error promoviendo cotización a aprobada: $e');
+        }
+      }
+
       await discardDraft(noteId: state.id);
       state = state.copyWith(isLoading: false, initialNote: savedNote);
       return savedNote;
     } catch (e) {
+      final message = e.toString();
+      if (message.contains('STOCK_INSUFFICIENT')) {
+        final cleanMsg = message.contains(':')
+            ? message.substring(message.indexOf('STOCK_INSUFFICIENT') + 'STOCK_INSUFFICIENT:'.length).trim()
+            : 'Stock insuficiente para uno o más productos.';
+        state = state.copyWith(isLoading: false, error: cleanMsg);
+        throw Exception(cleanMsg);
+      }
       state = state.copyWith(isLoading: false, error: e.toString());
       rethrow;
     }
+  }
+
+  Future<void> _loadLinkedQuote(String quoteId) async {
+    try {
+      final quoteRepo = ref.read(quotesRepositoryProvider);
+      final quote = await quoteRepo.getQuoteWithDetails(quoteId);
+      if (mounted) {
+        state = state.copyWith(linkedQuote: quote);
+      }
+    } catch (e) {
+      debugPrint('Error cargando cotización vinculada en notifier: $e');
+    }
+  }
+
+  double getAvailableStockForProduct(
+    Product product, {
+    String? itemId,
+    String? itemName,
+  }) {
+    double currentItemQty = 0.0;
+    if (itemId != null && itemId.isNotEmpty) {
+      final found = state.items.where((i) => i.id == itemId);
+      if (found.isNotEmpty) {
+        currentItemQty = found.first.quantity;
+      }
+    } else if (product.id.isNotEmpty) {
+      final found = state.items.where((i) => i.productId == product.id);
+      if (found.isNotEmpty) {
+        currentItemQty = found.first.quantity;
+      }
+    } else if (itemName != null && itemName.isNotEmpty) {
+      final found = state.items.where(
+        (i) => i.name.trim().toLowerCase() == itemName.trim().toLowerCase(),
+      );
+      if (found.isNotEmpty) {
+        currentItemQty = found.first.quantity;
+      }
+    }
+    return DeliveryNoteStockUtils.calculateAvailableStock(
+      product: product,
+      quoteId: state.quoteId,
+      linkedQuote: state.linkedQuote,
+      currentItemQuantityInThisNote: currentItemQty,
+    );
   }
 }

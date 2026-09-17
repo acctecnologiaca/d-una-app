@@ -447,6 +447,84 @@ Cabecera de cotizaciones emitidas.
 - `user_id` (uuid) [FK -> auth.users] [default: auth.uid()]
 - `quote_tag` (text) (Nullable)
 - `is_archived` (boolean) (Nullable) [default: false]
+- **Triggers:**
+  - `trigger_quote_status_immutability`: Bloquea modificaciones de estatus si el documento está en `finalized` o `cancelled`.
+  - `trigger_quote_header_reservation_change`: Recalcula reservas de productos (`reserved_quantity`) tras cambios de estatus o borrado.
+
+---
+
+### `service_reports`
+
+Cabecera de reportes de servicio técnico emitidos.
+
+- `id` (uuid) [PK] [default: gen_random_uuid()]
+- `user_id` (uuid) [FK -> auth.users] [default: auth.uid()]
+- `report_number` (text) UNIQUE
+- `client_id` (uuid) [FK -> clients.id]
+- `contact_id` (uuid) [FK -> contacts.id] (Nullable)
+- `advisor_id` (uuid) [FK -> collaborators.id] (Nullable)
+- `category_id` (uuid) [FK -> categories.id] (Nullable)
+- `status` (text) [default: 'draft']
+- `intervention_type` (text) [default: 'corrective']
+- `request_description` (text) (Nullable)
+- `work_description` (text) (Nullable)
+- `recommendations` (text) (Nullable)
+- `service_date` (date) [default: CURRENT_DATE]
+- `start_time` (text) (Nullable)
+- `end_time` (text) (Nullable)
+- `duration_minutes` (integer) (Nullable)
+- `subtotal` (numeric) [default: 0]
+- `tax_amount` (numeric) [default: 0]
+- `total` (numeric) [default: 0]
+- `notes` (text) (Nullable)
+- `report_tag` (text) (Nullable)
+- `is_archived` (boolean) [default: false]
+- `action_token` (text) (Nullable)
+- `pdf_url` (text) (Nullable)
+- `created_at` (timestamp with time zone) [default: now()]
+- `updated_at` (timestamp with time zone) [default: now()]
+- **Triggers:**
+  - `trigger_service_report_status_immutability`: Si está `finalized` solo permite pasar a `cancelled`. Si está `cancelled` es estrictamente inmutable.
+
+---
+
+### `service_report_items_services`
+
+Servicios prestados detallados en el reporte de servicio.
+
+- `id` (uuid) [PK] [default: gen_random_uuid()]
+- `report_id` (uuid) [FK -> service_reports.id]
+- `service_id` (uuid) [FK -> services.id] (Nullable)
+- `name` (text)
+- `description` (text) (Nullable)
+- `quantity` (numeric) [default: 1]
+- `cost_price` (numeric) [default: 0]
+- `profit_margin` (numeric) [default: 0]
+- `unit_price` (numeric) [default: 0]
+- `tax_rate` (numeric) [default: 0]
+- `tax_amount` (numeric) [default: 0]
+- `total_price` (numeric) [default: 0]
+
+---
+
+### `service_report_items_products`
+
+Repuestos o productos instalados/utilizados en el reporte de servicio.
+
+- `id` (uuid) [PK] [default: gen_random_uuid()]
+- `report_id` (uuid) [FK -> service_reports.id]
+- `product_id` (uuid) [FK -> products.id] (Nullable)
+- `name` (text)
+- `brand` (text) (Nullable)
+- `model` (text) (Nullable)
+- `uom` (text) [default: 'Ud']
+- `quantity` (numeric) [default: 1]
+- `cost_price` (numeric) [default: 0]
+- `profit_margin` (numeric) [default: 0]
+- `unit_price` (numeric) [default: 0]
+- `tax_rate` (numeric) [default: 0]
+- `tax_amount` (numeric) [default: 0]
+- `total_price` (numeric) [default: 0]
 
 ---
 
@@ -499,6 +577,145 @@ Registro de facturas o notas de compra a proveedores.
 - `has_missing_serials` (boolean) [default: false]
 - `created_at` (timestamp with time zone) [default: now()]
 - `updated_at` (timestamp with time zone) [default: now()]
+
+---
+
+### `supplier_orders`
+
+Órdenes de compra emitidas a proveedores de la red (Marketplace).
+
+- `id` (uuid) [PK] [default: gen_random_uuid()]
+- `user_id` (uuid) [FK -> auth.users]
+- `supplier_id` (uuid) [FK -> suppliers.id]
+- `supplier_branch_id` (uuid) [FK -> supplier_branches.id] (Nullable)
+- `shipping_method_id` (uuid) [FK -> shipping_methods.id] (Nullable)
+- `receiver_collaborator_id` (uuid) [FK -> collaborators.id] (Nullable)
+- `order_number` (text) UNIQUE
+- `date` (date) [default: CURRENT_DATE]
+- `payment_method` (text) (Nullable)
+- `status` (text) [default: 'draft']
+- `subtotal` (numeric) [default: 0]
+- `tax` (numeric) [default: 0]
+- `total` (numeric) [default: 0]
+- `invoice_photo_url` (text) (Nullable)
+- `quote_id` (uuid) [FK -> quotes.id] (Nullable)
+- `action_token` (text) (Nullable)
+- `is_dropshipping` (boolean) [default: false]
+- `client_id` (uuid) [FK -> clients.id] (Nullable)
+- `recipient_name` (text) (Nullable)
+- `recipient_contact_name` (text) (Nullable)
+- `recipient_address` (text) (Nullable)
+- `recipient_phone` (text) (Nullable)
+- `delivery_instructions` (text) (Nullable)
+- `is_archived` (boolean) [default: false]
+- `created_at` (timestamp with time zone) [default: now()]
+- `updated_at` (timestamp with time zone) [default: now()]
+- **Triggers:**
+  - `trigger_supplier_order_status_immutability`: Inmutable si está en `finalized` o `cancelled`.
+
+---
+
+### `supplier_order_items`
+
+Ítems de productos solicitados en una orden de compra a proveedor.
+
+- `id` (uuid) [PK] [default: gen_random_uuid()]
+- `supplier_order_id` (uuid) [FK -> supplier_orders.id]
+- `product_id` (uuid) [FK -> products.id] (Nullable)
+- `name` (text)
+- `brand` (text) (Nullable)
+- `model` (text) (Nullable)
+- `uom` (text) [default: 'Ud']
+- `quantity` (numeric) [default: 1]
+- `unit_price` (numeric) [default: 0]
+- `created_at` (timestamp with time zone) [default: now()]
+- `updated_at` (timestamp with time zone) [default: now()]
+
+---
+
+### `delivery_notes`
+
+Notas de entrega emitidas a clientes finales para formalizar despacho y recepción.
+
+- `id` (uuid) [PK] [default: gen_random_uuid()]
+- `user_id` (uuid) [FK -> auth.users] [default: auth.uid()]
+- `delivery_note_number` (text) UNIQUE
+- `client_id` (uuid) [FK -> clients.id]
+- `contact_id` (uuid) [FK -> contacts.id] (Nullable)
+- `quote_id` (uuid) [FK -> quotes.id] (Nullable)
+- `supplier_order_id` (uuid) [FK -> supplier_orders.id] (Nullable)
+- `client_po_number` (text) (Nullable)
+- `tag` (text) (Nullable)
+- `notes` (text) (Nullable)
+- `status` (text) [default: 'draft']
+- `date` (date) [default: CURRENT_DATE]
+- `delivery_date` (date) (Nullable)
+- `delivery_type` (text) [default: 'direct_delivery']
+- `shipping_company_id` (uuid) [FK -> shipping_companies.id] (Nullable)
+- `tracking_number` (text) (Nullable)
+- `recipient_address` (text) (Nullable)
+- `recipient_city` (text) (Nullable)
+- `recipient_state` (text) (Nullable)
+- `delivery_instructions` (text) (Nullable)
+- `received_by_name` (text) (Nullable)
+- `received_by_id` (text) (Nullable)
+- `received_by_phone` (text) (Nullable)
+- `receiver_relationship` (text) (Nullable)
+- `received_at` (timestamp with time zone) (Nullable)
+- `signature_data` (text) (Nullable)
+- `subtotal` (numeric) [default: 0]
+- `tax_rate` (numeric) [default: 0]
+- `tax_amount` (numeric) [default: 0]
+- `total` (numeric) [default: 0]
+- `is_dropshipping` (boolean) [default: false]
+- `has_missing_serials` (boolean) [default: false]
+- `action_token` (text) (Nullable)
+- `pdf_url` (text) (Nullable)
+- `is_archived` (boolean) [default: false]
+- `created_at` (timestamp with time zone) [default: now()]
+- `updated_at` (timestamp with time zone) [default: now()]
+- **Triggers:**
+  - `trigger_delivery_note_status_immutability`: Si está `finalized` solo puede pasar a `cancelled` (reversión de inventario). Si está `cancelled` es estrictamente inmutable.
+  - `trigger_delivery_note_header_reservation_change`: Actualiza existencias reservadas ante cambios de estatus o vinculación de cotización.
+
+---
+
+### `delivery_note_items`
+
+Ítems de productos despachados en una nota de entrega.
+
+- `id` (uuid) [PK] [default: gen_random_uuid()]
+- `delivery_note_id` (uuid) [FK -> delivery_notes.id]
+- `product_id` (uuid) [FK -> products.id] (Nullable)
+- `name` (text)
+- `brand` (text) (Nullable)
+- `model` (text) (Nullable)
+- `uom` (text) [default: 'Ud']
+- `quantity` (numeric) [default: 1]
+- `unit_price` (numeric) [default: 0]
+- `tax_rate` (numeric) [default: 0]
+- `tax_amount` (numeric) [default: 0]
+- `total_price` (numeric) [default: 0]
+- `source_type` (text) [default: 'own']
+- `is_dropshipping` (boolean) [default: false]
+- `requires_serials` (boolean) [default: false]
+- `missing_serials_count` (integer) [default: 0]
+- `created_at` (timestamp with time zone) [default: now()]
+- `updated_at` (timestamp with time zone) [default: now()]
+- **Triggers:**
+  - `trigger_delivery_note_item_reservation_change`: Recalcula reservas de productos ante altas, bajas o modificaciones de ítems.
+
+---
+
+### `delivery_note_serials`
+
+Números de serial vinculados y despachados en la nota de entrega.
+
+- `id` (uuid) [PK] [default: gen_random_uuid()]
+- `delivery_note_item_id` (uuid) [FK -> delivery_note_items.id]
+- `product_serial_id` (uuid) [FK -> product_serials.id] (Nullable)
+- `serial_number` (text)
+- `created_at` (timestamp with time zone) [default: now()]
 
 ---
 

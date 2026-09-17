@@ -45,6 +45,7 @@ class ReportSelectionActions {
     ServiceReportSummary report,
   ) {
     final isFinalized = report.status == ServiceReportStatus.finalized;
+    final isCancelled = report.status == ServiceReportStatus.cancelled;
     final isSentOrResent = report.status == ServiceReportStatus.sent ||
         report.status == ServiceReportStatus.resent ||
         report.status == ServiceReportStatus.opened;
@@ -56,10 +57,10 @@ class ReportSelectionActions {
         BottomSheetActionItem(
           icon: Icons.edit_outlined,
           label: 'Modificar',
-          enabled: !isFinalized,
+          enabled: !isFinalized && !isCancelled,
           subtitle: isFinalized
               ? 'Reporte finalizado. No se puede editar'
-              : null,
+              : (isCancelled ? 'Reporte cancelado. No se puede editar' : null),
           onTap: () {
             context.pop();
             ref.read(reportSelectionProvider.notifier).clear();
@@ -69,10 +70,10 @@ class ReportSelectionActions {
         BottomSheetActionItem(
           icon: isSentOrResent ? Symbols.forward : Icons.send,
           label: isSentOrResent ? 'Reenviar' : 'Enviar',
-          enabled: !isFinalized,
+          enabled: !isFinalized && !isCancelled,
           subtitle: isFinalized
               ? 'Reporte finalizado. No se puede enviar'
-              : null,
+              : (isCancelled ? 'Reporte cancelado. No se puede enviar' : null),
           onTap: () {
             context.pop();
             _checkDateAndSendFromSelection(context, ref, report);
@@ -147,13 +148,18 @@ class ReportSelectionActions {
         BottomSheetActionItem(
           icon: Symbols.conversion_path,
           label: 'Cambiar estatus',
-          enabled: !isFinalized,
-          subtitle: isFinalized
-              ? 'Reporte finalizado. No se puede cambiar de estado'
+          enabled: !isCancelled,
+          subtitle: isCancelled
+              ? 'Reporte cancelado. No se puede cambiar de estado'
               : null,
           onTap: () {
             context.pop();
-            showStatusDialog(context, ref, selection);
+            handleBatchStatusChange(
+              context,
+              ref,
+              selection,
+              currentStatus: report.status,
+            );
           },
         ),
         const Divider(height: 1, indent: 16, endIndent: 16),
@@ -210,7 +216,7 @@ class ReportSelectionActions {
           label: 'Cambiar estatus',
           onTap: () {
             context.pop();
-            showStatusDialog(context, ref, selection);
+            handleBatchStatusChange(context, ref, selection);
           },
         ),
         const Divider(height: 1, indent: 16, endIndent: 16),
@@ -233,39 +239,100 @@ class ReportSelectionActions {
     );
   }
 
-  static Future<void> showStatusDialog(
-    BuildContext context,
-    WidgetRef ref,
-    ReportSelectionState selection,
-  ) async {
+  static Future<ServiceReportStatus?> showStatusDialog(
+    BuildContext context, [
+    ServiceReportStatus? currentStatus,
+  ]) async {
+    final colors = Theme.of(context).colorScheme;
+    final isFinalized = currentStatus == ServiceReportStatus.finalized;
+    final isCancelled = currentStatus == ServiceReportStatus.cancelled;
+
     final selectedStatus = await CustomDialog.show<ServiceReportStatus>(
       context: context,
       dialog: CustomDialog.vertical(
         icon: Symbols.conversion_path,
         title: 'Cambiar estatus',
-        contentWidget: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: ServiceReportStatus.values.map((status) {
-            return ListTile(
-              leading: Image.asset(status.iconPath, width: 24, height: 24),
-              title: Text(status.label),
-              onTap: () =>
-                  Navigator.of(context, rootNavigator: true).pop(status),
+        contentWidget: Builder(
+          builder: (dialogContext) {
+            return Column(
+              mainAxisSize: MainAxisSize.min,
+              children: ServiceReportStatus.values
+                  .where((status) =>
+                      status != ServiceReportStatus.opened &&
+                      status != ServiceReportStatus.resent)
+                  .map((status) {
+                    final isSelected =
+                        currentStatus != null && status == currentStatus;
+                    bool isEnabled = true;
+                    String? disabledSubtitle;
+
+                    if (isCancelled) {
+                      isEnabled = false;
+                      disabledSubtitle =
+                          'El reporte cancelado no puede cambiar de estatus';
+                    } else if (isFinalized) {
+                      if (status != ServiceReportStatus.cancelled) {
+                        isEnabled = false;
+                        disabledSubtitle =
+                            'Solo se puede anular un reporte finalizado';
+                      }
+                    }
+
+                    return ListTile(
+                      leading: Opacity(
+                        opacity: isEnabled ? 1.0 : 0.4,
+                        child: Image.asset(
+                          status.iconPath,
+                          width: 24,
+                          height: 24,
+                        ),
+                      ),
+                      title: Text(
+                        status.label,
+                        style: TextStyle(
+                          fontWeight:
+                              isSelected ? FontWeight.bold : FontWeight.normal,
+                          color: !isEnabled
+                              ? colors.outline
+                              : (isSelected ? colors.primary : colors.onSurface),
+                        ),
+                      ),
+                      subtitle: disabledSubtitle != null
+                          ? Text(
+                              disabledSubtitle,
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: colors.outline,
+                              ),
+                            )
+                          : null,
+                      trailing: isSelected
+                          ? Icon(Icons.check, color: colors.primary, size: 20)
+                          : null,
+                      onTap: isEnabled
+                          ? () => Navigator.of(dialogContext).pop(status)
+                          : null,
+                    );
+                  })
+                  .toList(),
             );
-          }).toList(),
+          },
         ),
         actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context, rootNavigator: true).pop(),
-            child: const Text('Cancelar'),
+          Builder(
+            builder: (dialogContext) => TextButton(
+              onPressed: () => Navigator.of(dialogContext).pop(),
+              child: const Text('Cancelar'),
+            ),
           ),
         ],
       ),
     );
 
-    if (!context.mounted) return;
+    if (selectedStatus == null) return null;
 
     if (selectedStatus == ServiceReportStatus.finalized) {
+      if (!context.mounted) return null;
       final confirmFinalize = await CustomDialog.show<bool>(
         context: context,
         dialog: CustomDialog.confirmation(
@@ -273,46 +340,92 @@ class ReportSelectionActions {
           iconColor: Colors.amber.shade800,
           title: 'Finalizar Reporte',
           contentText:
-              '¿Estás seguro de que deseas finalizar este reporte? Una vez finalizado, el reporte quedará cerrado permanentemente y no se podrá editar, enviar ni cambiar de estado.',
+              '¿Estás seguro de que deseas finalizar este reporte? Una vez finalizado, el reporte quedará cerrado permanentemente y solo podrá ser cancelado mediante anulación formal.',
           actions: [
-            TextButton(
-              onPressed: () =>
-                  Navigator.of(context, rootNavigator: true).pop(false),
-              child: const Text('Cancelar'),
+            Builder(
+              builder: (c) => TextButton(
+                onPressed: () => Navigator.of(c).pop(false),
+                child: const Text('Cancelar'),
+              ),
             ),
-            FilledButton(
-              onPressed: () =>
-                  Navigator.of(context, rootNavigator: true).pop(true),
-              child: const Text('Confirmar y Finalizar'),
+            Builder(
+              builder: (c) => FilledButton(
+                onPressed: () => Navigator.of(c).pop(true),
+                child: const Text('Confirmar y Finalizar'),
+              ),
             ),
           ],
         ),
       );
 
-      if (confirmFinalize != true) return;
+      if (confirmFinalize != true) return null;
     }
 
-    if (selectedStatus != null) {
-      final successfulIds = await ref
-          .read(reportsListProvider.notifier)
-          .batchUpdateStatus(
-            selection.selectedIds.toList(),
-            selectedStatus.dbValue,
-          );
-
-      ref.read(reportSelectionProvider.notifier).clear();
-      refreshAllReportProviders(ref);
-
-      if (!context.mounted) return;
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            'Estatus cambiado a "${selectedStatus.label}" en ${successfulIds.length} reporte${successfulIds.length > 1 ? 's' : ''}.',
-          ),
+    if (currentStatus == ServiceReportStatus.finalized &&
+        selectedStatus == ServiceReportStatus.cancelled) {
+      if (!context.mounted) return null;
+      final confirmCancel = await CustomDialog.show<bool>(
+        context: context,
+        dialog: CustomDialog.confirmation(
+          icon: Icons.warning_amber_rounded,
+          iconColor: Colors.amber.shade800,
+          title: 'Anular Reporte Finalizado',
+          contentText:
+              '¿Estás seguro de que deseas anular este reporte finalizado? Esta acción registrará la anulación formal del informe de servicio técnico.',
+          actions: [
+            Builder(
+              builder: (c) => TextButton(
+                onPressed: () => Navigator.of(c).pop(false),
+                child: const Text('Volver'),
+              ),
+            ),
+            Builder(
+              builder: (c) => FilledButton(
+                style: FilledButton.styleFrom(
+                  backgroundColor: Theme.of(c).colorScheme.error,
+                ),
+                onPressed: () => Navigator.of(c).pop(true),
+                child: const Text('Confirmar Anulación'),
+              ),
+            ),
+          ],
         ),
       );
+
+      if (confirmCancel != true) return null;
     }
+
+    return selectedStatus;
+  }
+
+  static Future<void> handleBatchStatusChange(
+    BuildContext context,
+    WidgetRef ref,
+    ReportSelectionState selection, {
+    ServiceReportStatus? currentStatus,
+  }) async {
+    final selectedStatus = await showStatusDialog(context, currentStatus);
+    if (!context.mounted || selectedStatus == null) return;
+
+    final successfulIds = await ref
+        .read(reportsListProvider.notifier)
+        .batchUpdateStatus(
+          selection.selectedIds.toList(),
+          selectedStatus.dbValue,
+        );
+
+    ref.read(reportSelectionProvider.notifier).clear();
+    refreshAllReportProviders(ref);
+
+    if (!context.mounted) return;
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          'Estatus cambiado a "${selectedStatus.label}" en ${successfulIds.length} reporte${successfulIds.length > 1 ? 's' : ''}.',
+        ),
+      ),
+    );
   }
 
   static Future<void> handleBatchArchive(
@@ -345,10 +458,15 @@ class ReportSelectionActions {
     WidgetRef ref,
     ServiceReportSummary report,
   ) async {
-    if (report.status == ServiceReportStatus.finalized) {
+    if (report.status == ServiceReportStatus.finalized ||
+        report.status == ServiceReportStatus.cancelled) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('El reporte está finalizado y no se puede enviar.'),
+        SnackBar(
+          content: Text(
+            report.status == ServiceReportStatus.finalized
+                ? 'El reporte está finalizado y no se puede enviar.'
+                : 'El reporte está cancelado y no se puede enviar.',
+          ),
         ),
       );
       return;
@@ -385,20 +503,23 @@ class ReportSelectionActions {
         contentText:
             'La fecha de este reporte ($formattedReportDate) es distinta a la fecha de hoy ($formattedToday). ¿Cómo deseas proceder?',
         actions: [
-          TextButton(
-            onPressed: () =>
-                Navigator.of(context, rootNavigator: true).pop('send_as_is'),
-            child: const Text('Enviar así'),
+          Builder(
+            builder: (c) => TextButton(
+              onPressed: () => Navigator.of(c).pop('send_as_is'),
+              child: const Text('Enviar así'),
+            ),
           ),
-          FilledButton(
-            onPressed: () =>
-                Navigator.of(context, rootNavigator: true).pop('update_date'),
-            child: const Text('Actualizar fecha y enviar'),
+          Builder(
+            builder: (c) => FilledButton(
+              onPressed: () => Navigator.of(c).pop('update_date'),
+              child: const Text('Actualizar fecha y enviar'),
+            ),
           ),
-          OutlinedButton(
-            onPressed: () =>
-                Navigator.of(context, rootNavigator: true).pop('modify'),
-            child: const Text('Modificar'),
+          Builder(
+            builder: (c) => OutlinedButton(
+              onPressed: () => Navigator.of(c).pop('modify'),
+              child: const Text('Modificar'),
+            ),
           ),
         ],
       ),

@@ -555,8 +555,11 @@ class _ReportSearchScreenState extends ConsumerState<ReportSearchScreen> {
         IconButton(
           icon: Icon(Symbols.conversion_path, color: colors.onSurface),
           tooltip: 'Cambiar estatus',
-          onPressed: () =>
-              ReportSelectionActions.showStatusDialog(context, ref, selection),
+          onPressed: () => ReportSelectionActions.handleBatchStatusChange(
+            context,
+            ref,
+            selection,
+          ),
         ),
         IconButton(
           icon: Icon(Icons.more_vert, color: colors.onSurface),

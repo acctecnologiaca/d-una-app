@@ -77,6 +77,13 @@ class SupplierOrderDto {
       shippingMethodLabel: shippingLabel,
       receiverName: receiverName,
       items: items,
+      isDropshipping: json['is_dropshipping'] as bool? ?? false,
+      clientId: json['client_id'] as String?,
+      recipientName: json['recipient_name'] as String?,
+      recipientContactName: json['recipient_contact_name'] as String?,
+      recipientAddress: json['recipient_address'] as String?,
+      recipientPhone: json['recipient_phone'] as String?,
+      deliveryInstructions: json['delivery_instructions'] as String?,
     );
   }
 
@@ -96,6 +103,13 @@ class SupplierOrderDto {
       'total': order.total,
       'is_archived': order.isArchived,
       'order_number': order.orderNumber,
+      'is_dropshipping': order.isDropshipping,
+      'client_id': order.clientId,
+      'recipient_name': order.recipientName,
+      'recipient_contact_name': order.recipientContactName,
+      'recipient_address': order.recipientAddress,
+      'recipient_phone': order.recipientPhone,
+      'delivery_instructions': order.deliveryInstructions,
     };
   }
 }

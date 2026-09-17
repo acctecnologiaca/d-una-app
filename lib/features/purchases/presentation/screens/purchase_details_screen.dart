@@ -2,6 +2,7 @@ import 'package:d_una_app/shared/widgets/app_toast.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:d_una_app/shared/widgets/draft_toast.dart';
 import 'package:d_una_app/shared/widgets/standard_app_bar.dart';
 import 'package:d_una_app/shared/widgets/custom_extended_fab.dart';
@@ -39,6 +40,7 @@ class _PurchaseDetailsScreenState extends ConsumerState<PurchaseDetailsScreen>
     with SingleTickerProviderStateMixin {
   late TabController _tabController;
   late final AppLifecycleListener _lifecycleListener;
+  RealtimeChannel? _singlePurchaseChannel;
   bool _isEditing = false;
   bool _dataLoadedToEditState = false;
 
@@ -65,7 +67,20 @@ class _PurchaseDetailsScreenState extends ConsumerState<PurchaseDetailsScreen>
       }
     });
 
+    _initSinglePurchaseRealtime();
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted && !_isEditing) {
+        ref.invalidate(purchaseDetailsProvider(widget.purchaseId));
+      }
+    });
+
     _lifecycleListener = AppLifecycleListener(
+      onResume: () {
+        if (mounted && !_isEditing) {
+          ref.invalidate(purchaseDetailsProvider(widget.purchaseId));
+        }
+      },
       onPause: () {
         if (_isEditing) {
           ref
@@ -89,8 +104,35 @@ class _PurchaseDetailsScreenState extends ConsumerState<PurchaseDetailsScreen>
     );
   }
 
+  void _initSinglePurchaseRealtime() {
+    _singlePurchaseChannel = Supabase.instance.client
+        .channel(
+          'public:purchase_${widget.purchaseId}_${DateTime.now().millisecondsSinceEpoch}',
+        )
+        .onPostgresChanges(
+          event: PostgresChangeEvent.all,
+          schema: 'public',
+          table: 'purchases',
+          filter: PostgresChangeFilter(
+            type: PostgresChangeFilterType.eq,
+            column: 'id',
+            value: widget.purchaseId,
+          ),
+          callback: (payload) {
+            if (mounted && !_isEditing) {
+              ref.invalidate(purchaseDetailsProvider(widget.purchaseId));
+              ref.invalidate(paginatedPurchasesListProvider);
+              ref.invalidate(paginatedPurchaseSearchProvider);
+            }
+          },
+        )
+        .subscribe();
+  }
+
   @override
   void dispose() {
+    _singlePurchaseChannel?.unsubscribe();
+    _singlePurchaseChannel = null;
     _lifecycleListener.dispose();
     _tabController.dispose();
     super.dispose();

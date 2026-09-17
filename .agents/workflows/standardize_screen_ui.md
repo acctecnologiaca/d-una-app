@@ -1,52 +1,56 @@
 ---
-description: Refactor a screen to use standardized UI components
+description: Estandarización de pantallas con componentes oficiales (Formularios, Wizards y Listados)
 ---
 
-Follow these steps to standardize the UI of an existing screen.
+# Workflow: Estandarización de Pantallas UI
 
-1.  **Analyze the Screen**
-    -   Identify manual implementations of inputs, dropdowns, and buttons.
-    -   Identify inconsistent styling (colors, fonts, padding).
+Sigue estos pasos para homologar pantallas existentes o crear nuevos pasos/formularios usando el Sistema de Diseño oficial de D'Una App.
 
-2.  **Replace Input Fields**
-    -   Replace `TextFormField` or `TextField` with **`CustomTextField`**.
-    -   **Mapping**:
-        -   `decoration: InputDecoration(labelText: 'X')` -> `label: 'X'`
-        -   `controller: _ctrl` -> `controller: _ctrl`
-        -   `validator: _val` -> `validator: _val`
-        -   `keyboardType`, `inputFormatters`, `enabled`, `readOnly` map directly.
-        -   If using `maxLines`, add `minLines` if necessary for consistency.
+---
 
-3.  **Replace Dropdowns**
-    -   Replace `DropdownButton`, `DropdownButtonFormField`, or other native pickers with **`CustomDropdown<T>`**.
-    -   **Mapping**:
-        -   `value: _val` -> `value: _val`
-        -   `items: [...]` -> `items: [...]` (List of T)
-        -   `onChanged: (val) {}` -> `onChanged: (val) {}`
-        -   `activeColor` / custom styling -> Check if `CustomDropdown` supports it or if it should adhere to the standard theme.
+## 1. Reglas Generales de Estandarización
 
-4.  **Replace Action Buttons**
-    -   **For Forms (Save/Cancel)**:
-        -   Replace `Row` or individual buttons with **`FormBottomBar`**.
-        -   **Properties**:
-            -   `onCancel`: `() => context.pop()` (usually).
-            -   `onSave`: `_submitForm`.
-            -   `isLoading`: Pass the loading state variable.
-            -   `isSaveEnabled`: Pass logic (e.g., `!_isLoading && _hasChanges`).
-    -   **For Wizards (Back/Next/Cancel)**:
-        -   Replace buttons with **`WizardButtonBar`**.
-        -   **Properties**:
-            -   `onCancel`: `() => context.pop()`.
-            -   `onBack`: `_prevStep`.
-            -   `onNext`: `_nextStep` (pass `null` if disabled).
+1. **Campos de Texto:**
+   - Reemplazar `TextFormField` o `TextField` por **`CustomTextField`**.
+   - Mapeo: `decoration: InputDecoration(labelText: 'X')` $\rightarrow$ `label: 'X'`, `controller: _ctrl`, `validator: _val`, `keyboardType`, `inputFormatters`, `enabled`, `readOnly`.
 
-5.  **Check Layout & Overflow**
-    -   Ensure the content is scrollable (`SingleChildScrollView`).
-    -   If the screen has pinned bottom buttons, verify they don't cause overflow when the keyboard opens.
-    -   **Recommendation**: Use the `LayoutBuilder` + `ConstrainedBox` pattern (see `create_wizard_step` workflow) if the screen layout is complex.
+2. **Selectores y Desplegables:**
+   - Reemplazar `DropdownButton` o `DropdownButtonFormField` por **`CustomDropdown<T>`** o **`CustomMultiDropdown<T>`**.
 
-6.  **Verify**
-    -   Run the app and navigate to the screen.
-    -   Check that all fields work as expected.
-    -   Check that validations triggers correctly.
-    -   Check that the visual style matches the design system.
+3. **Barras de Acción Inferior:**
+   - **Formularios estándar (Guardar / Cancelar):** Usar **`FormBottomBar`**.
+     - `onCancel`: `() => context.pop()`
+     - `onSave`: `_submitForm`
+     - `isLoading`: variable de estado de carga
+     - `isSaveEnabled`: validación condicional
+   - **Flujos por pasos / Wizards (Atrás / Siguiente / Cancelar):** Usar **`WizardButtonBar`**.
+     - `onCancel`: `() => context.pop()`
+     - `onBack`: `_prevStep`
+     - `onNext`: `_nextStep` (o `null` si está deshabilitado)
+
+4. **Layout y Prevención de Overflow:**
+   - Envolver el contenido con `SingleChildScrollView`.
+   - Para evitar desbordes con el teclado virtual cuando hay barras inferiores fijas, aplicar el patrón `LayoutBuilder` + `ConstrainedBox`.
+
+---
+
+## 2. Creación y Estandarización de Pasos de Wizard
+
+Cuando construyas o adaptes un paso dentro de un Wizard (Arquetipo 3):
+1. **Consulta la Skill:** Lee la skill de referencia en [.agents/skills/create_wizard_step/SKILL.md](file:///c:/Users/aleja/flutter_apps/MVP/d_una_app/.agents/skills/create_wizard_step/SKILL.md).
+2. **Definir Requisitos del Paso:**
+   - Datos a capturar (Texto, selección, fechas, imágenes).
+   - Posición en el flujo: ¿Primer paso, intermedio o confirmación final?
+3. **Estructura del Paso:**
+   - Incluir título y descripción contextual del paso.
+   - Usar `CustomTextField` y `CustomDropdown` estandarizados.
+   - Implementar validación estricta antes de permitir el avance en el callback `onNext`.
+4. **Integración con el Orquestador:**
+   - Añadir la pantalla del paso al contenedor principal (`IndexedStack` con `WizardProgressBar`).
+
+---
+
+## 3. Verificación
+- Ejecutar `flutter analyze` sobre los archivos modificados.
+- Comprobar que no existan advertencias de overflow al abrir el teclado.
+- Verificar consistencia estética con los design tokens globales.

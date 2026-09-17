@@ -55,29 +55,91 @@ class ViewSupplierOrderDetailsTab extends ConsumerWidget {
               label: 'Proveedor',
               value: supplierDisplayName,
             ),
-            if (order.branchName != null) ...[
-              const SizedBox(height: 24),
-              InfoBlock.text(
-                icon: Icons.location_on_outlined,
-                label: 'Sucursal de canalización',
-                value: order.branchName!,
-              ),
-            ],
-            if (order.shippingMethodLabel != null) ...[
-              const SizedBox(height: 24),
-              InfoBlock.text(
-                icon: Icons.local_shipping_outlined,
-                label: 'Método de envío',
-                value: order.shippingMethodLabel!,
-              ),
-            ],
-            if (order.receiverName != null) ...[
-              const SizedBox(height: 24),
-              InfoBlock.text(
-                icon: Icons.person_outline,
-                label: 'Persona que retira',
-                value: order.receiverName!,
-              ),
+            const SizedBox(height: 24),
+            InfoBlock.text(
+              icon: Icons.alt_route_outlined,
+              label: 'Destino de la orden',
+              value: order.isDropshipping ? 'Dropshipping' : 'Inventario propio',
+            ),
+            if (order.isDropshipping) ...[
+              if (order.recipientName != null &&
+                  order.recipientName!.trim().isNotEmpty) ...[
+                const SizedBox(height: 24),
+                InfoBlock.text(
+                  icon: Icons.person_outline,
+                  label: 'Cliente receptor',
+                  value: order.recipientName!,
+                ),
+              ],
+              if (order.recipientContactName != null &&
+                  order.recipientContactName!.trim().isNotEmpty) ...[
+                const SizedBox(height: 24),
+                InfoBlock.text(
+                  icon: Icons.badge_outlined,
+                  label: 'Contacto de entrega',
+                  value: order.recipientContactName!,
+                ),
+              ],
+              if (order.recipientPhone != null &&
+                  order.recipientPhone!.trim().isNotEmpty) ...[
+                const SizedBox(height: 24),
+                InfoBlock.text(
+                  icon: Icons.phone_outlined,
+                  label: 'Teléfono de contacto',
+                  value: order.recipientPhone!,
+                ),
+              ],
+              if (order.recipientAddress != null &&
+                  order.recipientAddress!.trim().isNotEmpty) ...[
+                const SizedBox(height: 24),
+                InfoBlock.text(
+                  icon: Icons.place_outlined,
+                  label: 'Dirección de entrega',
+                  value: order.recipientAddress!,
+                ),
+              ],
+              if (order.deliveryInstructions != null &&
+                  order.deliveryInstructions!.trim().isNotEmpty) ...[
+                const SizedBox(height: 24),
+                InfoBlock.text(
+                  icon: Icons.notes_outlined,
+                  label: 'Instrucciones de entrega',
+                  value: order.deliveryInstructions!,
+                ),
+              ],
+              if (order.shippingMethodLabel != null) ...[
+                const SizedBox(height: 24),
+                InfoBlock.text(
+                  icon: Icons.local_shipping_outlined,
+                  label: 'Método de envío',
+                  value: order.shippingMethodLabel!,
+                ),
+              ],
+            ] else ...[
+              if (order.branchName != null) ...[
+                const SizedBox(height: 24),
+                InfoBlock.text(
+                  icon: Icons.location_on_outlined,
+                  label: 'Sucursal de canalización',
+                  value: order.branchName!,
+                ),
+              ],
+              if (order.shippingMethodLabel != null) ...[
+                const SizedBox(height: 24),
+                InfoBlock.text(
+                  icon: Icons.local_shipping_outlined,
+                  label: 'Método de envío',
+                  value: order.shippingMethodLabel!,
+                ),
+              ],
+              if (order.receiverName != null) ...[
+                const SizedBox(height: 24),
+                InfoBlock.text(
+                  icon: Icons.person_outline,
+                  label: 'Persona que retira',
+                  value: order.receiverName!,
+                ),
+              ],
             ],
             if (order.paymentMethod != null &&
                 order.paymentMethod!.isNotEmpty) ...[

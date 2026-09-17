@@ -204,9 +204,9 @@ class _AddPurchaseScreenState extends ConsumerState<AddPurchaseScreen>
     final hasDataOrChanges = isEditing
         ? notifier.hasChanges
         : (state.products.isNotEmpty ||
-            (state.supplierId != null && state.supplierId!.isNotEmpty) ||
-            (state.documentNumber != null &&
-                state.documentNumber!.trim().isNotEmpty));
+              (state.supplierId != null && state.supplierId!.isNotEmpty) ||
+              (state.documentNumber != null &&
+                  state.documentNumber!.trim().isNotEmpty));
     final currentId = widget.purchaseId ?? state.purchaseId;
 
     if (hasDataOrChanges) {
@@ -268,10 +268,10 @@ class _AddPurchaseScreenState extends ConsumerState<AddPurchaseScreen>
     final hasChanges = isEditing
         ? notifier.hasChanges
         : (notifier.hasChanges ||
-            state.products.isNotEmpty ||
-            (state.supplierId != null && state.supplierId!.isNotEmpty) ||
-            (state.documentNumber != null &&
-                state.documentNumber!.trim().isNotEmpty));
+              state.products.isNotEmpty ||
+              (state.supplierId != null && state.supplierId!.isNotEmpty) ||
+              (state.documentNumber != null &&
+                  state.documentNumber!.trim().isNotEmpty));
 
     CustomActionSheet.show(
       context: context,
@@ -300,9 +300,7 @@ class _AddPurchaseScreenState extends ConsumerState<AddPurchaseScreen>
         ),
         BottomSheetActionItem(
           icon: Icons.delete_outline,
-          label: isEditing
-              ? 'Descartar cambios locales'
-              : 'Descartar borrador',
+          label: isEditing ? 'Descartar cambios locales' : 'Descartar borrador',
           subtitle: 'Elimina las modificaciones no guardadas',
           enabled: hasChanges,
           onTap: () async {
@@ -346,7 +344,8 @@ class _AddPurchaseScreenState extends ConsumerState<AddPurchaseScreen>
               IconButton(
                 icon: Icon(
                   state.isLoading ? Icons.hourglass_empty : Icons.save_outlined,
-                  color: (ref.watch(addPurchaseProvider.notifier).hasChanges &&
+                  color:
+                      (ref.watch(addPurchaseProvider.notifier).hasChanges &&
                           !state.isLoading)
                       ? colors.onSurfaceVariant
                       : colors.onSurfaceVariant.withValues(alpha: 0.38),
@@ -354,7 +353,8 @@ class _AddPurchaseScreenState extends ConsumerState<AddPurchaseScreen>
                 tooltip: ref.watch(addPurchaseProvider.notifier).hasChanges
                     ? 'Guardar cambios'
                     : 'Sin modificaciones',
-                onPressed: (ref.watch(addPurchaseProvider.notifier).hasChanges &&
+                onPressed:
+                    (ref.watch(addPurchaseProvider.notifier).hasChanges &&
                         !state.isLoading)
                     ? () async {
                         final currentId = widget.purchaseId ?? state.purchaseId;
@@ -375,7 +375,8 @@ class _AddPurchaseScreenState extends ConsumerState<AddPurchaseScreen>
                         } else {
                           AppToast.error(
                             context,
-                            message: state.error ?? 'Error al guardar la compra',
+                            message:
+                                state.error ?? 'Error al guardar la compra',
                           );
                         }
                       }

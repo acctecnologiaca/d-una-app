@@ -218,7 +218,7 @@ class QuoteAddedProductCard extends StatelessWidget {
             ),
       note: (hasOwnInventory && reservedStock != null && reservedStock! > 0)
           ? Text(
-              'Hay ${reservedStock!.toStringAsFixed(reservedStock!.truncateToDouble() == reservedStock ? 0 : 2)} $uom de inventario propio reservadas a cotizaciones "aprobadas".',
+              'Hay ${reservedStock!.toStringAsFixed(reservedStock!.truncateToDouble() == reservedStock ? 0 : 2)} $uom de inventario propio reservadas en cotizaciones o notas de entrega.',
               style: TextStyle(
                 color: colors.error,
                 fontSize: 12,

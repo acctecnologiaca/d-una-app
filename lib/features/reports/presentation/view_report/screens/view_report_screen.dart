@@ -13,6 +13,7 @@ import '../../../../../shared/utils/string_utils.dart';
 import '../../../../profile/presentation/providers/profile_provider.dart';
 import '../../../../../core/pdf/templates/service_report_pdf_template.dart';
 import '../../reports_list/providers/reports_provider.dart';
+import '../../reports_list/report_selection_actions.dart';
 import '../../create_report/providers/create_report_provider.dart';
 import '../providers/view_report_provider.dart';
 import '../../../data/models/models.dart';
@@ -77,7 +78,9 @@ class _ViewReportScreenState extends ConsumerState<ViewReportScreen>
           callback: (payload) {
             if (mounted) {
               ref.invalidate(viewReportProvider(widget.reportId));
-              refreshAllReportProviders(ref);
+              ref.read(paginatedReportsListProvider.notifier).refresh();
+              ref.invalidate(reportsListProvider);
+              ref.invalidate(paginatedReportSearchProvider);
             }
           },
         )
@@ -194,7 +197,8 @@ class _ViewReportScreenState extends ConsumerState<ViewReportScreen>
               ),
             ],
           ),
-          floatingActionButton: status == ServiceReportStatus.finalized
+          floatingActionButton: (status == ServiceReportStatus.finalized ||
+                  status == ServiceReportStatus.cancelled)
               ? null
               : FloatingActionButton(
                   onPressed: () async {
@@ -215,7 +219,7 @@ class _ViewReportScreenState extends ConsumerState<ViewReportScreen>
     WidgetRef ref,
     ServiceReport report,
   ) {
-    final isFinalized = report.status == ServiceReportStatus.finalized.dbValue;
+    final isCancelled = report.status == ServiceReportStatus.cancelled.dbValue;
 
     CustomActionSheet.show(
       context: context,
@@ -265,14 +269,17 @@ class _ViewReportScreenState extends ConsumerState<ViewReportScreen>
         BottomSheetActionItem(
           icon: Symbols.conversion_path,
           label: 'Cambiar estatus',
-          enabled: !isFinalized,
-          subtitle: isFinalized
-              ? 'Reporte finalizado. No se puede cambiar de estado'
+          enabled: !isCancelled,
+          subtitle: isCancelled
+              ? 'Reporte cancelado. No se puede cambiar de estado'
               : null,
           onTap: () async {
             context.pop();
             final currentEnum = ServiceReportStatus.fromDbValue(report.status);
-            final selectedStatus = await _showStatusDialog(currentEnum);
+            final selectedStatus = await ReportSelectionActions.showStatusDialog(
+              context,
+              currentEnum,
+            );
 
             if (selectedStatus != null && selectedStatus != currentEnum) {
               try {
@@ -349,77 +356,6 @@ class _ViewReportScreenState extends ConsumerState<ViewReportScreen>
         ),
       ],
     );
-  }
-
-  Future<ServiceReportStatus?> _showStatusDialog(
-    ServiceReportStatus currentStatus,
-  ) async {
-    final colors = Theme.of(context).colorScheme;
-
-    final selectedStatus = await CustomDialog.show<ServiceReportStatus>(
-      context: context,
-      dialog: CustomDialog.vertical(
-        icon: Symbols.conversion_path,
-        title: 'Cambiar estatus',
-        contentWidget: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: ServiceReportStatus.values.map((status) {
-            final isSelected = status == currentStatus;
-            return ListTile(
-              leading: Image.asset(status.iconPath, width: 24, height: 24),
-              title: Text(
-                status.label,
-                style: TextStyle(
-                  fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-                  color: isSelected ? colors.primary : colors.onSurface,
-                ),
-              ),
-              trailing: isSelected
-                  ? Icon(Icons.check, color: colors.primary, size: 20)
-                  : null,
-              onTap: () =>
-                  Navigator.of(context, rootNavigator: true).pop(status),
-            );
-          }).toList(),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context, rootNavigator: true).pop(),
-            child: const Text('Cancelar'),
-          ),
-        ],
-      ),
-    );
-
-    if (selectedStatus == ServiceReportStatus.finalized) {
-      if (!mounted) return null;
-      final confirmFinalize = await CustomDialog.show<bool>(
-        context: context,
-        dialog: CustomDialog.confirmation(
-          icon: Icons.warning_amber_rounded,
-          iconColor: Colors.amber.shade800,
-          title: 'Finalizar Reporte',
-          contentText:
-              '¿Estás seguro de que deseas finalizar este reporte? Una vez finalizado, el reporte quedará cerrado permanentemente y no se podrá editar, enviar ni cambiar de estado.',
-          actions: [
-            TextButton(
-              onPressed: () =>
-                  Navigator.of(context, rootNavigator: true).pop(false),
-              child: const Text('Cancelar'),
-            ),
-            FilledButton(
-              onPressed: () =>
-                  Navigator.of(context, rootNavigator: true).pop(true),
-              child: const Text('Confirmar y Finalizar'),
-            ),
-          ],
-        ),
-      );
-
-      if (confirmFinalize != true) return null;
-    }
-
-    return selectedStatus;
   }
 
   void _showSendOptions(

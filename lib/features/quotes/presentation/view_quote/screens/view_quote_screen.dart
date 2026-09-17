@@ -15,6 +15,7 @@ import '../../create_quote/providers/quote_validation_provider.dart';
 import '../../../../../shared/widgets/custom_action_sheet.dart';
 import '../../../../../shared/widgets/bottom_sheet_action_item.dart';
 import '../../../../../shared/widgets/custom_dialog.dart';
+import '../../quotes_list/quote_selection_actions.dart';
 import '../../../domain/models/quote_model.dart' show QuoteStatus;
 import '../../../data/models/quote.dart';
 import '../../../domain/repositories/quotes_repository.dart';
@@ -51,6 +52,7 @@ class _ViewQuoteScreenState extends ConsumerState<ViewQuoteScreen>
     with SingleTickerProviderStateMixin, WidgetsBindingObserver {
   late final TabController _tabController;
   bool _hasTriggeredSend = false;
+  RealtimeChannel? _singleQuoteChannel;
 
   @override
   void initState() {
@@ -63,6 +65,8 @@ class _ViewQuoteScreenState extends ConsumerState<ViewQuoteScreen>
       if (!_tabController.indexIsChanging) setState(() {});
     });
 
+    _initSingleQuoteRealtime();
+
     // Etapa 1: Iniciar validación de productos inmediatamente para alimentar los badges
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) {
@@ -71,6 +75,30 @@ class _ViewQuoteScreenState extends ConsumerState<ViewQuoteScreen>
             .startValidation();
       }
     });
+  }
+
+  void _initSingleQuoteRealtime() {
+    _singleQuoteChannel = Supabase.instance.client
+        .channel('public:quote_${widget.quoteId}_${DateTime.now().millisecondsSinceEpoch}')
+        .onPostgresChanges(
+          event: PostgresChangeEvent.all,
+          schema: 'public',
+          table: 'quotes',
+          filter: PostgresChangeFilter(
+            type: PostgresChangeFilterType.eq,
+            column: 'id',
+            value: widget.quoteId,
+          ),
+          callback: (payload) {
+            if (mounted) {
+              ref.invalidate(viewQuoteProvider(widget.quoteId));
+              ref.read(quoteValidationProvider(widget.quoteId).notifier).startValidation();
+              ref.read(quotesListProvider.notifier).refresh();
+              ref.invalidate(paginatedQuoteSearchProvider);
+            }
+          },
+        )
+        .subscribe();
   }
 
   @override
@@ -82,6 +110,8 @@ class _ViewQuoteScreenState extends ConsumerState<ViewQuoteScreen>
 
   @override
   void dispose() {
+    _singleQuoteChannel?.unsubscribe();
+    _singleQuoteChannel = null;
     WidgetsBinding.instance.removeObserver(this);
     _tabController.dispose();
     super.dispose();
@@ -207,19 +237,24 @@ class _ViewQuoteScreenState extends ConsumerState<ViewQuoteScreen>
                   ),
                   const Divider(height: 1, indent: 16, endIndent: 16),
                   Builder(
-                    builder: (context) {
+                    builder: (sheetContext) {
                       final isFinalized =
                           state.quote?.status == QuoteStatus.finalized.dbValue;
+                      final isCancelled =
+                          state.quote?.status == QuoteStatus.cancelled.dbValue;
+                      final isStatusChangeDisabled = isFinalized || isCancelled;
                       return BottomSheetActionItem(
                         icon: Symbols.conversion_path,
                         label: 'Cambiar estatus',
-                        enabled: !isFinalized,
-                        subtitle: isFinalized
-                            ? 'Cotización finalizada. No se puede cambiar de estado'
+                        enabled: !isStatusChangeDisabled,
+                        subtitle: isStatusChangeDisabled
+                            ? (isFinalized
+                                ? 'Cotización finalizada. No se puede cambiar de estado'
+                                : 'Cotización cancelada. No se puede cambiar de estado')
                             : null,
                         onTap: () async {
                           final messenger = ScaffoldMessenger.of(context);
-                          context.pop(); // Close the action sheet
+                          sheetContext.pop(); // Close the action sheet
 
                           final currentStatusStr = state.quote?.status;
                           if (currentStatusStr == null) return;
@@ -227,7 +262,9 @@ class _ViewQuoteScreenState extends ConsumerState<ViewQuoteScreen>
                           final currentEnum = QuoteStatus.fromDbValue(
                             currentStatusStr,
                           );
-                          final selectedStatus = await _showStatusDialog(
+                          final selectedStatus =
+                              await QuoteSelectionActions.showStatusDialog(
+                            context,
                             currentEnum,
                           );
 
@@ -482,17 +519,15 @@ class _ViewQuoteScreenState extends ConsumerState<ViewQuoteScreen>
                   Builder(
                     builder: (sheetContext) {
                       final statusStr = state.quote?.status;
-                      final isBlockedForOcNe =
-                          statusStr == QuoteStatus.rejected.dbValue ||
-                          statusStr == QuoteStatus.finalized.dbValue ||
-                          statusStr == QuoteStatus.cancelled.dbValue;
+                      final isApproved =
+                          statusStr == QuoteStatus.approved.dbValue;
 
                       return BottomSheetActionItem(
                         icon: Symbols.list_alt,
                         label: 'Generar nota de entrega',
-                        enabled: !isBlockedForOcNe,
-                        subtitle: isBlockedForOcNe
-                            ? 'No disponible para cotizaciones rechazadas, finalizadas o canceladas'
+                        enabled: isApproved,
+                        subtitle: !isApproved
+                            ? 'Disponible únicamente cuando la cotización esté aprobada'
                             : null,
                         onTap: () async {
                           final quote = state.quote;
@@ -810,79 +845,6 @@ class _ViewQuoteScreenState extends ConsumerState<ViewQuoteScreen>
     }
   }
 
-  Future<QuoteStatus?> _showStatusDialog(QuoteStatus currentStatus) async {
-    final colors = Theme.of(context).colorScheme;
-
-    final selectedStatus = await CustomDialog.show<QuoteStatus>(
-      context: context,
-      dialog: CustomDialog.vertical(
-        icon: Symbols.conversion_path,
-        title: 'Cambiar estatus',
-        contentWidget: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: QuoteStatus.values
-              .where((status) => status != QuoteStatus.expired)
-              .map((status) {
-                final isSelected = status == currentStatus;
-                return ListTile(
-                  leading: Image.asset(status.iconPath, width: 24, height: 24),
-                  title: Text(
-                    status.label,
-                    style: TextStyle(
-                      fontWeight: isSelected
-                          ? FontWeight.bold
-                          : FontWeight.normal,
-                      color: isSelected ? colors.primary : colors.onSurface,
-                    ),
-                  ),
-                  trailing: isSelected
-                      ? Icon(Icons.check, color: colors.primary, size: 20)
-                      : null,
-                  onTap: () =>
-                      Navigator.of(context, rootNavigator: true).pop(status),
-                );
-              })
-              .toList(),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context, rootNavigator: true).pop(),
-            child: const Text('Cancelar'),
-          ),
-        ],
-      ),
-    );
-
-    if (selectedStatus == QuoteStatus.finalized) {
-      if (!mounted) return null;
-      final confirmFinalize = await CustomDialog.show<bool>(
-        context: context,
-        dialog: CustomDialog.confirmation(
-          icon: Icons.warning_amber_rounded,
-          iconColor: Colors.amber.shade800,
-          title: 'Finalizar Cotización',
-          contentText:
-              '¿Estás seguro de que deseas finalizar esta cotización? Una vez finalizada, la cotización quedará cerrada permanentemente y no se podrá editar, enviar ni cambiar de estado.',
-          actions: [
-            TextButton(
-              onPressed: () =>
-                  Navigator.of(context, rootNavigator: true).pop(false),
-              child: const Text('Cancelar'),
-            ),
-            FilledButton(
-              onPressed: () =>
-                  Navigator.of(context, rootNavigator: true).pop(true),
-              child: const Text('Confirmar y Finalizar'),
-            ),
-          ],
-        ),
-      );
-
-      if (confirmFinalize != true) return null;
-    }
-
-    return selectedStatus;
-  }
 
   bool _isQuoteExpired(QuoteState state) {
     final statusStr = state.quote?.status;

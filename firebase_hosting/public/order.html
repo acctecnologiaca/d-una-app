@@ -724,19 +724,30 @@
               <!-- Tarjeta 2: Condiciones de Envío y Retiro -->
               <div class="info-card">
                 <h4>Condiciones de Entrega / Envío</h4>
-                <p><strong>Modalidad:</strong> ${esc(sh.delivery_option || 'Por definir')}</p>
-                ${!sh.is_personal_pickup ? `
-                  <p><strong>Empresa de Envío:</strong> ${esc(sh.company_name)}</p>
-                  ${sh.branch_code ? `<p><strong>Código Sucursal:</strong> ${esc(sh.branch_code)}</p>` : ''}
-                  <p><strong>Dirección de Entrega:</strong> ${esc(sh.address)}</p>
-                ` : ''}
-                ${sh.receiver_name && sh.receiver_name !== '-' ? `
-                  <div style="margin-top: 10px; padding-top: 8px; border-top: 1px dashed var(--neutral-border);">
-                    <p style="margin-bottom: 2px;"><strong>Persona Autorizada:</strong> ${esc(sh.receiver_name)}</p>
-                    ${sh.receiver_id ? `<p style="margin-bottom: 2px;"><strong>C.I. / ID:</strong> ${esc(sh.receiver_id)}</p>` : ''}
-                    ${sh.receiver_phone ? `<p style="margin-bottom: 2px;"><strong>Teléfono:</strong> ${esc(sh.receiver_phone)}</p>` : ''}
+                ${o.is_dropshipping ? `
+                  <div style="display:inline-block; background-color:#EFF6FF; color:#1D4ED8; font-size:10px; font-weight:700; padding:3px 8px; border-radius:6px; margin-bottom:8px; border:1px solid #BFDBFE;">
+                    🏷️ ENTREGA DIRECTA AL CLIENTE (DROPSHIPPING)
                   </div>
-                ` : ''}
+                  <p><strong>Destinatario Final:</strong> ${esc(o.recipient_name || 'Cliente')}</p>
+                  ${o.recipient_contact_name ? `<p><strong>Persona de Contacto:</strong> ${esc(o.recipient_contact_name)}</p>` : ''}
+                  ${o.recipient_phone ? `<p><strong>Teléfono Destinatario:</strong> ${esc(o.recipient_phone)}</p>` : ''}
+                  <p><strong>Dirección de Entrega:</strong> ${esc(o.recipient_address || sh.address || 'Por definir')}</p>
+                  ${o.delivery_instructions ? `<p><strong>Instrucciones:</strong> ${esc(o.delivery_instructions)}</p>` : ''}
+                ` : `
+                  <p><strong>Modalidad:</strong> ${esc(sh.delivery_option || 'Por definir')}</p>
+                  ${!sh.is_personal_pickup ? `
+                    <p><strong>Empresa de Envío:</strong> ${esc(sh.company_name)}</p>
+                    ${sh.branch_code ? `<p><strong>Código Sucursal:</strong> ${esc(sh.branch_code)}</p>` : ''}
+                    <p><strong>Dirección de Entrega:</strong> ${esc(sh.address)}</p>
+                  ` : ''}
+                  ${sh.receiver_name && sh.receiver_name !== '-' ? `
+                    <div style="margin-top: 10px; padding-top: 8px; border-top: 1px dashed var(--neutral-border);">
+                      <p style="margin-bottom: 2px;"><strong>Persona Autorizada:</strong> ${esc(sh.receiver_name)}</p>
+                      ${sh.receiver_id ? `<p style="margin-bottom: 2px;"><strong>C.I. / ID:</strong> ${esc(sh.receiver_id)}</p>` : ''}
+                      ${sh.receiver_phone ? `<p style="margin-bottom: 2px;"><strong>Teléfono:</strong> ${esc(sh.receiver_phone)}</p>` : ''}
+                    </div>
+                  ` : ''}
+                `}
               </div>
             </div>
 

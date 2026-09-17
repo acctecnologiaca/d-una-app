@@ -8,48 +8,47 @@ To ensure the quality, predictability, and scalability of generated code through
 a mandatory planning and validation phase, while maintaining control over
 resource consumption.
 
+## Fast Triggers (Disparadores Rápidos)
+
+El modelo debe activar automáticamente estos protocolos ante los siguientes comandos cortos o frases del usuario:
+- **Activadores de Fase 1 (Generar PDI):** `/pdi`, `Genera PDI`, `PDI:`, o cualquier planteamiento de requerimiento, corrección, nueva funcionalidad o reporte de bug.
+- **Activadores de Fase 2 (Ejecutar PDI):** `/ejecutar_pdi`, `Procede`, `Aprobado`, `Ejecuta el PDI`, `Continúa`.
+
+---
+
 ## Execution Protocol (Mandatory)
 
 The model **must** strictly follow this sequence in every interaction where
 software development is requested:
 
-### Phase 1: Planning
+### Phase 1: Planning & PDI Generation
 
-1. **Request Analysis:**
-   - Break down technical requirements, dependencies, and the scope of the
-     problem presented by the user.
-   - Identify potential critical architecture points.
+Cuando se active la fase de planificación (vía `/pdi`, `PDI:` o reporte inicial):
+1. **Sin cambios en código:** No realices cambios en el código bajo ninguna circunstancia durante esta fase.
+2. **Análisis exhaustivo:** Analiza detalladamente el contexto provisto, requerimientos técnicos, dependencias y arquitectura del problema.
+3. **Elaboración del PDI (Artifact):** Elabora un Plan Detallado de Implementación estructurado paso a paso en el artefacto `implementation_plan.md`, **optimizado para que Gemini Flash 3.8 Low (o un modelo secundario) lo ejecute con precisión**.
+4. **Código de Referencia:** Si consideras que debes dejar código de referencia en el PDI para ilustrar la implementación, snippets complejos o guías de clases/funciones, **¡hazlo explícitamente!**
+5. **Estructura clara:** Cada paso debe incluir:
+   - Rutas exactas de archivos (usando enlaces markdown con `file:///`).
+   - Lógica de clases/funciones y manejo de errores.
+   - Variables, constantes y tipos sugeridos.
+6. **Validation Pause (Auto-Stop Obligatorio):** Tras presentar el plan, el modelo **debe detenerse** y esperar el feedback del usuario. **No escribas código final** hasta que el usuario confirme explícitamente el plan.
 
-2. **Implementation Plan Design (PDI):**
-   - Create a detailed, structured plan divided into incremental steps.
-   - **Clarity for secondary models:** If the task is complex, the plan must be
-     written so that a model with less context or capacity can execute it (or
-     use it as a guide). Include:
-     - Directory or file structure.
-     - Class/function logic and error handling.
-     - Suggested variable and constant names.
-   - **PDI Format:** Use a clear numbered list for each step.
+---
 
-3. **Validation Pause (Stop):**
-   - After presenting the plan, the model **must stop** and wait for user
-     feedback.
-   - **Do not write final code** until the user explicitly confirms the plan.
+### Phase 2: Post-Approval Sequential Execution
 
-### Phase 2: Post-Approval Execution
+Una vez que el usuario apruebe el plan (vía `/ejecutar_pdi`, `Procede`, `Aprobado` o similar), actúa de forma secuencial siguiendo este estricto protocolo de 6 pasos:
 
-Once the user approves the plan, follow these steps sequentially:
+1. **Ejecución Etapa por Etapa:** Ejecuta las etapas o fases del plan una a una.
+2. **Evaluación de Código Referencial:** Dentro del PDI puedes conseguir código referencial; debes evaluarlo y corroborar que es óptimo para su aplicación en el contexto real; de lo contrario realiza los ajustes necesarios.
+3. **Análisis por Fase (`flutter analyze`):** Tras cada fase, ejecuta `flutter analyze` (o `dart analyze`) **únicamente sobre los archivos creados o modificados** y corrige inmediatamente los errores detectados.
+4. **Gestión de Dependencias:** Si quedan errores que no pueden resolverse sin avanzar a la siguiente fase, continúa con la siguiente fase notificándolo explícitamente.
+5. **Apego Exclusivo al PDI:** Apégate exclusivamente al PDI. La creación o adición de nuevas funciones o elementos dentro de la app que consideres añadir y no se hayan plasmado en el PDI, **deben ser consultadas y aprobadas previamente** por el usuario.
+6. **Checkpoint Interactivo de Pruebas:** Si hay una fase finalizada que se pueda testear antes de que continúes, **te detienes, se lo notificas al usuario, le indicas cómo probarla** y esperas a que te indique si continúas con la siguiente fase o si necesitas modificar algo de la fase que está siendo testeada.
+7. **Completion & Skill Standardization Check:** Una vez concluidas todas las etapas, notifica con un mensaje breve. Si la tarea involucró un nuevo patrón de diseño o estandarización UI/UX, pregunta proactivamente si desea integrarlo en las skills correspondientes.
 
-1. **Step-by-step execution:** Execute the plan stages one by one.
-2. **Analysis and Correction:** After each stage, execute `flutter analyze` or
-   `dart analyze`, specifically on the modified files and fix any detected
-   errors.
-3. **Dependency Management:** If errors remain that cannot be resolved without
-   advancing to the next stage, proceed to the next stage.
-4. **Completion & Skill Standardization Check:** Once all stages are finished,
-   notify the user with a brief message. Whenever a task involves a new design
-   pattern, UI/UX standardization, or architectural homologation across screens
-   or modules, the model **must** explicitly ask the user at the end if they
-   wish to document or integrate the new standard into the corresponding skill(s).
+---
 
 ## Behavioral Rules
 

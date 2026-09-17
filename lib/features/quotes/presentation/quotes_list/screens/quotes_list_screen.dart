@@ -354,7 +354,11 @@ class _QuotesListScreenState extends ConsumerState<QuotesListScreen>
     WidgetRef ref,
     QuoteSelectionState selection,
   ) async {
-    await QuoteSelectionActions.showStatusDialog(context, ref, selection);
+    await QuoteSelectionActions.handleBatchStatusChange(
+      context,
+      ref,
+      selection,
+    );
   }
 
   Future<void> _handleBatchArchive(

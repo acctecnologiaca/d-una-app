@@ -32,145 +32,215 @@ Una pantalla de detalle consta de:
 
 ---
 
-## 2. Implementación Paso a Paso
+## 2. Regla de Oro: Proveedores de Detalle con `autoDispose`
+
+> [!CAUTION]
+> **Prohibición de Proveedores de Detalle Persistentes:**
+> Todo provider de detalle individual parametrizado por ID (`productDetailProvider`, `purchaseDetailsProvider`, `clientDetailsProvider`, etc.) **DEBE** declararse obligatoriamente con `.autoDispose`:
+> ```dart
+> final myEntityDetailProvider = FutureProvider.autoDispose.family<MyEntity?, String>((ref, id) async {
+>   return ref.read(myEntityRepositoryProvider).getById(id);
+> });
+> ```
+> **Razón Arquitectónica:** Si un `FutureProvider.family` omite `autoDispose`, Riverpod retiene en memoria la instancia original indefinidamente. Si el usuario navega a la lista, realiza modificaciones en otros módulos concurrentes (por ejemplo, finalizar o cancelar una Nota de Entrega que altera el stock de un producto) y vuelve a ingresar a la pantalla de detalle, la vista mostrará valores desactualizados de la caché en lugar de reflejar el estado actual de la base de datos.
+
+---
+
+## 3. Implementación Paso a Paso
 
 ```dart
 class MyEntityDetailsScreen extends ConsumerStatefulWidget {
-  final MyEntity entity;
-  const MyEntityDetailsScreen({super.key, required this.entity});
+  final String entityId;
+  const MyEntityDetailsScreen({super.key, required this.entityId});
 
   @override
   ConsumerState<MyEntityDetailsScreen> createState() => _MyEntityDetailsScreenState();
 }
 
-class _MyEntityDetailsScreenState extends ConsumerState<MyEntityDetailsScreen> {
+class _MyEntityDetailsScreenState extends ConsumerState<MyEntityDetailsScreen>
+    with WidgetsBindingObserver {
+  RealtimeChannel? _realtimeChannel;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+
+    // 1. Garantiza invalidación de caché y datos 100% frescos al montar la pantalla
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      ref.invalidate(myEntityDetailProvider(widget.entityId));
+    });
+
+    // 2. Suscripción en tiempo real al registro individual
+    _initRealtimeSubscription();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed && mounted) {
+      ref.invalidate(myEntityDetailProvider(widget.entityId));
+    }
+  }
+
+  void _initRealtimeSubscription() {
+    _realtimeChannel = Supabase.instance.client
+        .channel('public:my_entity_${widget.entityId}_${DateTime.now().millisecondsSinceEpoch}')
+        .onPostgresChanges(
+          event: PostgresChangeEvent.all,
+          schema: 'public',
+          table: 'my_entity_table',
+          filter: PostgresChangeFilter(
+            type: PostgresChangeFilterType.eq,
+            column: 'id',
+            value: widget.entityId,
+          ),
+          callback: (payload) {
+            if (mounted) {
+              ref.invalidate(myEntityDetailProvider(widget.entityId));
+            }
+          },
+        )
+        .subscribe();
+  }
+
+  @override
+  void dispose() {
+    _realtimeChannel?.unsubscribe();
+    _realtimeChannel = null;
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
   @override
   Widget build(BuildContext context) {
     final colors = Theme.of(context).colorScheme;
     final textTheme = Theme.of(context).textTheme;
 
-    // 1. Sincronización reactiva: obtener la versión fresca de la entidad desde el provider
-    final listAsync = ref.watch(myEntityListProvider);
-    final entity = listAsync.valueOrNull?.firstWhere(
-          (e) => e.id == widget.entity.id,
-          orElse: () => widget.entity,
-        ) ?? widget.entity;
+    // Obtención asíncrona de la entidad
+    final entityAsync = ref.watch(myEntityDetailProvider(widget.entityId));
 
-    // 2. Comprobación preventiva de borrado (ejemplo: si tiene documentos asociados)
-    final hasLinkedDocsAsync = ref.watch(entityHasLinkedDocsProvider(entity.id));
-    final hasLinkedDocs = hasLinkedDocsAsync.value ?? true;
-    final canDelete = !hasLinkedDocs && !hasLinkedDocsAsync.isLoading;
+    return entityAsync.when(
+      loading: () => const Scaffold(body: Center(child: CircularProgressIndicator())),
+      error: (err, stack) => Scaffold(body: Center(child: Text('Error: $err'))),
+      data: (entity) {
+        if (entity == null) {
+          return const Scaffold(body: Center(child: Text('Registro no encontrado')));
+        }
 
-    return Scaffold(
-      appBar: AppBar(
-        title: Text('Detalles de ${entity.displayName}'),
-        centerTitle: false,
-        backgroundColor: colors.surface,
-        foregroundColor: colors.onSurface,
-        elevation: 0,
-        titleSpacing: 0,
-        titleTextStyle: textTheme.titleLarge?.copyWith(
-          fontWeight: FontWeight.w500,
-          fontSize: 20,
-          color: colors.onSurface,
-        ),
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
-          onPressed: () => context.pop(),
-        ),
-        actions: [
-          Tooltip(
-            message: canDelete
-                ? 'Eliminar registro'
-                : 'No se puede eliminar: tiene documentos asociados',
-            child: IconButton(
-              icon: Icon(
-                Icons.delete_outline,
-                color: canDelete
-                    ? colors.onSurface
-                    : colors.onSurface.withValues(alpha: 0.38),
-              ),
-              onPressed: canDelete
-                  ? () async {
-                      final confirm = await CustomDialog.show<bool>(
-                        context: context,
-                        dialog: CustomDialog.destructive(
-                          title: 'Eliminar Registro',
-                          contentText: '¿Estás seguro de que deseas eliminar este registro permanentemente?',
-                          actions: [
-                            TextButton(
-                              onPressed: () => Navigator.of(context, rootNavigator: true).pop(false),
-                              child: const Text('Cancelar'),
+        // Comprobación preventiva de borrado si tiene documentos vinculados
+        final hasLinkedDocsAsync = ref.watch(entityHasLinkedDocsProvider(entity.id));
+        final hasLinkedDocs = hasLinkedDocsAsync.value ?? true;
+        final canDelete = !hasLinkedDocs && !hasLinkedDocsAsync.isLoading;
+
+        return Scaffold(
+          appBar: AppBar(
+            title: Text('Detalles de ${entity.displayName}'),
+            centerTitle: false,
+            backgroundColor: colors.surface,
+            foregroundColor: colors.onSurface,
+            elevation: 0,
+            titleSpacing: 0,
+            titleTextStyle: textTheme.titleLarge?.copyWith(
+              fontWeight: FontWeight.w500,
+              fontSize: 20,
+              color: colors.onSurface,
+            ),
+            leading: IconButton(
+              icon: const Icon(Icons.arrow_back),
+              onPressed: () => context.pop(),
+            ),
+            actions: [
+              Tooltip(
+                message: canDelete
+                    ? 'Eliminar registro'
+                    : 'No se puede eliminar: tiene documentos asociados',
+                child: IconButton(
+                  icon: Icon(
+                    Icons.delete_outline,
+                    color: canDelete
+                        ? colors.onSurface
+                        : colors.onSurface.withValues(alpha: 0.38),
+                  ),
+                  onPressed: canDelete
+                      ? () async {
+                          final confirm = await CustomDialog.show<bool>(
+                            context: context,
+                            dialog: CustomDialog.destructive(
+                              title: 'Eliminar Registro',
+                              contentText: '¿Estás seguro de que deseas eliminar este registro permanentemente?',
+                              actions: [
+                                TextButton(
+                                  onPressed: () => Navigator.of(context, rootNavigator: true).pop(false),
+                                  child: const Text('Cancelar'),
+                                ),
+                                FilledButton(
+                                  style: FilledButton.styleFrom(backgroundColor: colors.error),
+                                  onPressed: () => Navigator.of(context, rootNavigator: true).pop(true),
+                                  child: const Text('Eliminar'),
+                                ),
+                              ],
                             ),
-                            FilledButton(
-                              style: FilledButton.styleFrom(backgroundColor: colors.error),
-                              onPressed: () => Navigator.of(context, rootNavigator: true).pop(true),
-                              child: const Text('Eliminar'),
-                            ),
-                          ],
-                        ),
-                      );
+                          );
 
-                      if (confirm == true) {
-                        await ref.read(myEntityListProvider.notifier).delete(entity.id);
-                        if (context.mounted) {
-                          AppToast.showSuccess(context, 'Registro eliminado exitosamente');
-                          context.pop();
+                          if (confirm == true) {
+                            await ref.read(myEntityListProvider.notifier).delete(entity.id);
+                            if (context.mounted) {
+                              AppToast.showSuccess(context, 'Registro eliminado exitosamente');
+                              context.pop();
+                            }
+                          }
                         }
-                      }
-                    }
-                  : null,
+                      : null,
+                ),
+              ),
+            ],
+          ),
+          body: SingleChildScrollView(
+            // Padding dinámico para evitar que el FAB tape el contenido
+            padding: const EdgeInsets.only(
+              left: 16,
+              right: 16,
+              top: 24,
+              bottom: FabScrollPadding.single, // 112.0 px (MD3 nativo con 40px de despeje)
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  entity.name,
+                  style: textTheme.headlineSmall?.copyWith(
+                    fontWeight: FontWeight.bold,
+                    color: colors.onSurface,
+                  ),
+                ),
+                const SizedBox(height: 16),
+                InfoBlock.text(
+                  icon: Symbols.category,
+                  label: 'Categoría',
+                  value: entity.categoryName,
+                ),
+                const SizedBox(height: 16),
+                InfoBlock.text(
+                  icon: Symbols.calendar_today,
+                  label: 'Fecha de registro',
+                  value: entity.formattedDate,
+                ),
+                const SizedBox(height: 16),
+                InfoBlock.text(
+                  icon: Symbols.notes,
+                  label: 'Observaciones',
+                  value: entity.notes.isEmpty ? 'Sin observaciones' : entity.notes,
+                ),
+              ],
             ),
           ),
-        ],
-      ),
-      body: SingleChildScrollView(
-        // Padding dinámico para evitar que el FAB tape el contenido
-        padding: const EdgeInsets.only(
-          left: 16,
-          right: 16,
-          top: 24,
-          bottom: FabScrollPadding.single, // 112.0 px (MD3 nativo con 40px de despeje)
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Título de la entidad
-            Text(
-              entity.name,
-              style: textTheme.headlineSmall?.copyWith(
-                fontWeight: FontWeight.bold,
-                color: colors.onSurface,
-              ),
-            ),
-            const SizedBox(height: 16),
-
-            // Campos clave-valor organizados con InfoBlock
-            InfoBlock.text(
-              icon: Symbols.category,
-              label: 'Categoría',
-              value: entity.categoryName,
-            ),
-            const SizedBox(height: 16),
-            InfoBlock.text(
-              icon: Symbols.calendar_today,
-              label: 'Fecha de registro',
-              value: entity.formattedDate,
-            ),
-            const SizedBox(height: 16),
-            InfoBlock.text(
-              icon: Symbols.notes,
-              label: 'Observaciones',
-              value: entity.notes.isEmpty ? 'Sin observaciones' : entity.notes,
-            ),
-          ],
-        ),
-      ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () => context.push('/my-entity/edit/${entity.id}', extra: entity),
-        backgroundColor: colors.primaryContainer,
-        child: Icon(Icons.edit, color: colors.onPrimaryContainer),
-      ),
+          floatingActionButton: FloatingActionButton(
+            onPressed: () => context.push('/my-entity/edit/${entity.id}', extra: entity),
+            backgroundColor: colors.primaryContainer,
+            child: Icon(Icons.edit, color: colors.onPrimaryContainer),
+          ),
+        );
+      },
     );
   }
 }
@@ -181,11 +251,17 @@ class _MyEntityDetailsScreenState extends ConsumerState<MyEntityDetailsScreen> {
 
 ---
 
-## 3. Checklist de Verificación para Detalles de Entidad
+## 4. Checklist de Verificación para Detalles de Entidad
 
+- [ ] ¿El proveedor de detalle de la entidad está definido obligatoriamente con `FutureProvider.autoDispose.family`?
+- [ ] ¿Se programó `WidgetsBinding.instance.addPostFrameCallback` en `initState` para forzar la invalidación inicial del proveedor de detalle?
+- [ ] ¿Se implementa `WidgetsBindingObserver` con invalidación en `AppLifecycleState.resumed`?
+- [ ] ¿Está implementada la suscripción Postgres Realtime para escuchar cambios en el registro individual (`column: 'id'`, `value: entityId`)?
+- [ ] ¿Se desuscribe el canal Realtime y se remueve el observer en `dispose()`?
 - [ ] ¿El AppBar tiene botón de eliminar protegido con validación preventiva de vínculos?
 - [ ] ¿La confirmación de borrado utiliza `CustomDialog.destructive` con botón rojo?
 - [ ] ¿Los campos de datos informativos utilizan `InfoBlock.text`?
 - [ ] ¿El padding inferior del scroll view aplica la constante canónica `FabScrollPadding.single` (`112.0 px`) con 1 FAB o `FabScrollPadding.doubleFab` (`184.0 px`) con 2 FABs?
 - [ ] ¿El FAB de editar reposa directamente en el `Scaffold` sin envoltorios `Padding(bottom: 40.0)`?
 - [ ] ¿El FAB de editar utiliza `colors.primaryContainer` y `colors.onPrimaryContainer`?
+

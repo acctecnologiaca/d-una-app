@@ -317,7 +317,7 @@ class _ReportsListScreenState extends ConsumerState<ReportsListScreen>
           IconButton(
             icon: const Icon(Symbols.conversion_path),
             tooltip: 'Cambiar estatus',
-            onPressed: () => ReportSelectionActions.showStatusDialog(
+            onPressed: () => ReportSelectionActions.handleBatchStatusChange(
               context,
               ref,
               selection,

@@ -19,6 +19,10 @@ import '../../../domain/models/delivery_note_model.dart';
 import '../../../domain/models/delivery_note_status.dart';
 import '../../delivery_notes_list/providers/delivery_notes_providers.dart';
 import '../../delivery_notes_list/delivery_note_selection_actions.dart';
+import 'package:d_una_app/features/portfolio/presentation/providers/products_provider.dart';
+import 'package:d_una_app/features/supplier_orders/domain/models/supplier_order_status.dart';
+import 'package:d_una_app/features/supplier_orders/presentation/supplier_orders_list/providers/supplier_orders_providers.dart';
+import '../../../../quotes/presentation/view_quote/providers/view_quote_provider.dart';
 import '../../create_delivery_note/providers/create_delivery_note_provider.dart';
 import '../tabs/view_delivery_note_details_tab.dart';
 import '../tabs/view_delivery_note_client_tab.dart';
@@ -75,6 +79,21 @@ class _ViewDeliveryNoteScreenState extends ConsumerState<ViewDeliveryNoteScreen>
             if (mounted) {
               ref.invalidate(deliveryNoteDetailProvider(widget.noteId));
               ref.read(paginatedDeliveryNotesProvider.notifier).refresh();
+              ref.read(paginatedProductsProvider.notifier).refresh();
+              ref.invalidate(productsProvider);
+              final currentDetail = ref.read(deliveryNoteDetailProvider(widget.noteId)).valueOrNull;
+              if (currentDetail != null) {
+                for (final item in currentDetail.items) {
+                  if (item.productId != null) {
+                    ref.invalidate(productDetailProvider(item.productId!));
+                  }
+                }
+              }
+              final originQuoteId = (payload.newRecord['quote_id'] ??
+                  payload.oldRecord['quote_id']) as String?;
+              if (originQuoteId != null && originQuoteId.isNotEmpty) {
+                ref.invalidate(viewQuoteProvider(originQuoteId));
+              }
             }
           },
         )
@@ -85,6 +104,9 @@ class _ViewDeliveryNoteScreenState extends ConsumerState<ViewDeliveryNoteScreen>
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.resumed && mounted) {
       ref.invalidate(deliveryNoteDetailProvider(widget.noteId));
+      ref.read(paginatedDeliveryNotesProvider.notifier).refresh();
+      ref.read(paginatedProductsProvider.notifier).refresh();
+      ref.invalidate(productsProvider);
     }
   }
 
@@ -111,30 +133,33 @@ class _ViewDeliveryNoteScreenState extends ConsumerState<ViewDeliveryNoteScreen>
       return;
     }
 
-    final isSendDisabled =
-        note.status == DeliveryNoteStatus.finalized ||
-        note.status == DeliveryNoteStatus.cancelled;
+    final isSendDisabled = note.status == DeliveryNoteStatus.cancelled;
 
     if (isSendDisabled) {
       AppToast.warning(
         context,
-        message:
-            'La nota de entrega está ${note.status.label.toLowerCase()} y no se puede enviar.',
+        message: 'La nota de entrega está cancelada y no se puede enviar.',
       );
       return;
     }
 
+    final isFinalized = note.status == DeliveryNoteStatus.finalized;
+
     CustomActionSheet.show(
       context: context,
-      title: isSentOrResent
-          ? 'Reenviar Nota de Entrega'
-          : 'Enviar Nota de Entrega',
+      title: isFinalized
+          ? 'Enviar copia de Nota de Entrega'
+          : (isSentOrResent
+              ? 'Reenviar Nota de Entrega'
+              : 'Enviar Nota de Entrega'),
       actions: [
         BottomSheetActionItem(
           icon: Icons.email_outlined,
-          label: isSentOrResent
-              ? 'Reenviar por correo electrónico'
-              : 'Enviar por correo electrónico',
+          label: isFinalized
+              ? 'Enviar copia por correo electrónico'
+              : (isSentOrResent
+                  ? 'Reenviar por correo electrónico'
+                  : 'Enviar por correo electrónico'),
           onTap: () {
             context.pop();
             SendDeliveryNoteEmailSheet.show(context, note);
@@ -142,9 +167,11 @@ class _ViewDeliveryNoteScreenState extends ConsumerState<ViewDeliveryNoteScreen>
         ),
         BottomSheetActionItem(
           icon: 'assets/icons/whatsapp_icon.png',
-          label: isSentOrResent
-              ? 'Reenviar por WhatsApp'
-              : 'Enviar por WhatsApp',
+          label: isFinalized
+              ? 'Enviar copia por WhatsApp'
+              : (isSentOrResent
+                  ? 'Reenviar por WhatsApp'
+                  : 'Enviar por WhatsApp'),
           onTap: () {
             context.pop();
             SendDeliveryNoteWhatsAppSheet.show(context, note);
@@ -159,8 +186,6 @@ class _ViewDeliveryNoteScreenState extends ConsumerState<ViewDeliveryNoteScreen>
     WidgetRef ref,
     DeliveryNoteModel note,
   ) {
-    final isFinalized = note.status == DeliveryNoteStatus.finalized;
-
     CustomActionSheet.show(
       context: context,
       title: 'Opciones',
@@ -205,9 +230,9 @@ class _ViewDeliveryNoteScreenState extends ConsumerState<ViewDeliveryNoteScreen>
         BottomSheetActionItem(
           icon: Symbols.conversion_path,
           label: 'Cambiar estatus',
-          enabled: !isFinalized,
-          subtitle: isFinalized
-              ? 'Nota de entrega finalizada. No se puede cambiar de estado'
+          enabled: note.status != DeliveryNoteStatus.cancelled,
+          subtitle: note.status == DeliveryNoteStatus.cancelled
+              ? 'Nota de entrega cancelada. No se puede cambiar de estado'
               : null,
           onTap: () async {
             context.pop();
@@ -225,6 +250,33 @@ class _ViewDeliveryNoteScreenState extends ConsumerState<ViewDeliveryNoteScreen>
 
                 ref.invalidate(deliveryNoteDetailProvider(widget.noteId));
                 ref.read(paginatedDeliveryNotesProvider.notifier).refresh();
+                if (selected == DeliveryNoteStatus.finalized ||
+                    selected == DeliveryNoteStatus.cancelled) {
+                  ref.invalidate(productsProvider);
+                  ref.read(paginatedProductsProvider.notifier).refresh();
+                  for (final item in note.items) {
+                    if (item.productId != null) {
+                      ref.invalidate(productDetailProvider(item.productId!));
+                    }
+                  }
+                }
+
+                // Cascada a OC vinculada al finalizar
+                if (selected == DeliveryNoteStatus.finalized &&
+                    note.supplierOrderId != null &&
+                    note.supplierOrderId!.isNotEmpty) {
+                  try {
+                    await ref
+                        .read(supplierOrdersRepositoryProvider)
+                        .updateSupplierOrderStatus(
+                          note.supplierOrderId!,
+                          SupplierOrderStatus.finalized.dbValue,
+                        );
+                    ref.invalidate(paginatedSupplierOrdersProvider);
+                  } catch (e) {
+                    debugPrint('Error auto-finalizando orden de compra vinculada: $e');
+                  }
+                }
 
                 if (context.mounted) {
                   AppToast.success(
@@ -340,9 +392,7 @@ class _ViewDeliveryNoteScreenState extends ConsumerState<ViewDeliveryNoteScreen>
             note.status == DeliveryNoteStatus.opened;
         final isMissingSerials = note.hasMissingSerialsEffective;
         final isSendDisabled =
-            note.status == DeliveryNoteStatus.finalized ||
-            note.status == DeliveryNoteStatus.cancelled ||
-            isMissingSerials;
+            note.status == DeliveryNoteStatus.cancelled || isMissingSerials;
 
         return Scaffold(
           appBar: StandardAppBar(
@@ -361,9 +411,11 @@ class _ViewDeliveryNoteScreenState extends ConsumerState<ViewDeliveryNoteScreen>
                 ),
                 tooltip: isMissingSerials
                     ? 'Faltan seriales por asignar. No se puede enviar'
-                    : (isSendDisabled
-                        ? 'Nota de entrega ${note.status.label.toLowerCase()}. No se puede enviar'
-                        : (isSentOrResent ? 'Reenviar' : 'Enviar')),
+                    : (note.status == DeliveryNoteStatus.cancelled
+                        ? 'Nota cancelada. No se puede enviar'
+                        : (note.status == DeliveryNoteStatus.finalized
+                            ? 'Enviar copia al cliente'
+                            : (isSentOrResent ? 'Reenviar' : 'Enviar'))),
               ),
               IconButton(
                 icon: Icon(Icons.more_vert, color: colors.onSurfaceVariant),

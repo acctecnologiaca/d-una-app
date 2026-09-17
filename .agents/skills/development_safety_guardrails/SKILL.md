@@ -81,3 +81,34 @@ To avoid "Multiple Choices / PGRST203" errors:
 
 - Present the `implementation_plan.md` and wait for explicit approval before
   executing any destructive `DROP` or schema-altering commands.
+
+## 8. Gestión Contextual de Reserva de Inventario (Cotizaciones y Notas de Entrega)
+
+Para evitar la sobreventa de inventario propio y prevenir advertencias espurias en documentos de venta y despacho:
+
+1. **Unificación de la Ecuación de Reserva en Base de Datos:**
+   - La columna `products.reserved_quantity` centraliza **dos fuentes inmutables**:
+     1. Cotizaciones con estatus `'approved'` (saldo neto pendiente: $\max(0, \text{qty} - \text{despachado\_en\_NEs\_finalizadas})$).
+     2. Notas de Entrega creadas desde cero (`quote_id IS NULL`) en estatus activos (`'draft'`, `'sent'`, `'resent'`, `'opened'`).
+   - Al pasar una Nota de Entrega a `'finalized'`, se liquida la reserva y se descuenta el inventario físico (`inventory_quantity`).
+   - Al pasar a `'cancelled'`, las unidades reservadas se liberan de inmediato retornando al stock libre disponible.
+   - El guardrail de base de datos (`validate_quote_items` y trigger de `delivery_notes`) arroja la excepción `STOCK_INSUFFICIENT` si se intenta sobreasignar inventario propio libre.
+
+2. **Acceso Contextual en Notas de Entrega:**
+   - **NE desde Cotización Aprobada (`quote_id != null`):** Tiene acceso prioritario a la cantidad reservada por esa cotización (`quoteRemainingBalance`) más cualquier stock libre de almacén (`freeStock`). En productos afiliados o externos, la cuota autorizada es el saldo cotizado.
+   - **NE desde Cero (`quote_id == null`):** Únicamente puede consumir stock libre de almacén ($\max(0, \text{inv\_qty} - \text{reserved\_qty})$).
+
+3. **Estándar Oficial de UI para Productos con Reservas:**
+   - **Producto 100% Reservado (`effectiveAvailable <= 0` con stock físico en almacén):**
+     - La tarjeta **debe bloquearse** (`hasStock = false`, `IgnorePointer`, opacidad reducida `0.5`).
+     - El badge `UomStatusBadge` muestra la cantidad física real de almacén (p. ej. `1 ud.`) en lugar de `"Sin stock"`.
+     - Subtítulo en rojo (`colors.error`, negrita):
+       `'Todo el inventario propio está reservado en cotizaciones aprobadas o notas de entrega no finalizadas.'`.
+   - **Producto con Stock Libre Disponible (`effectiveAvailable > 0` con reservas parciales):**
+     - La tarjeta **permanece activa** y seleccionable.
+     - El badge muestra la disponibilidad libre real a despachar (p. ej. `2 ud.`), y el stepper se acota a ese tope (`max: effectiveAvailable`).
+     - Subtítulo informativo neutral (`colors.onSurfaceVariant`):
+       `'Hay ${effectiveAvailable} $uom disponibles de ${physicalStock} en inventario propio.'`.
+   - **En Cotizaciones (Tarjetas de Selección y Agregado):**
+     - Si hay reserva activa, advertir con precisión:
+       `'Hay X $uom de inventario propio reservadas en cotizaciones o notas de entrega.'`.

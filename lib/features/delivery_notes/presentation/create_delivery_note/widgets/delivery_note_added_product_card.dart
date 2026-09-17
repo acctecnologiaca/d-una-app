@@ -42,7 +42,8 @@ class DeliveryNoteAddedProductCard extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 0, vertical: 8),
       isExpandable: !isReadOnly,
       onTap: onTap,
-      backgroundColor: backgroundColor ??
+      backgroundColor:
+          backgroundColor ??
           (hasMissing ? colors.errorContainer.withValues(alpha: 0.8) : null),
       overline: item.brand != null && item.brand!.isNotEmpty
           ? Text(item.brand!.toTitleCase)
@@ -126,7 +127,7 @@ class DeliveryNoteAddedProductCard extends StatelessWidget {
             onManageSerials != null)
           IconButton(
             icon: const Icon(Symbols.barcode),
-            color: hasMissing ? colors.error : colors.onSurfaceVariant,
+            color: colors.onSurfaceVariant,
             visualDensity: VisualDensity.compact,
             tooltip: 'Gestionar seriales',
             onPressed: onManageSerials,
@@ -140,9 +141,9 @@ class DeliveryNoteAddedProductCard extends StatelessWidget {
               min: 1,
               max: availableStock != null && availableStock! > 0
                   ? (availableStock! > item.quantity
-                      ? availableStock!
-                      : item.quantity)
-                  : 99999,
+                        ? availableStock!
+                        : item.quantity)
+                  : item.quantity,
               onChanged: onQuantityChanged!,
             ),
     );

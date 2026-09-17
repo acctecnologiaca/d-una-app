@@ -176,24 +176,84 @@ class SupplierOrderSelectionActions {
         const Divider(height: 1, indent: 16, endIndent: 16),
 
         // Bloque 2: Flujo Operativo y Ciclo de Vida
-        if (order.status == SupplierOrderStatus.approved)
-          BottomSheetActionItem(
-            icon: Icons.receipt_long_outlined,
-            label: 'Registrar compra',
-            onTap: () async {
-              final parentContext = context;
-              Navigator.pop(context);
-              ref
-                  .read(supplierOrderSelectionProvider.notifier)
-                  .clearSelection();
-              _finalizeOrderFlow(parentContext, ref, order);
-            },
-          ),
-        if (order.status == SupplierOrderStatus.approved ||
-            order.status == SupplierOrderStatus.finalized)
+        if (order.status == SupplierOrderStatus.approved) ...[
+          if (!order.isDropshipping)
+            BottomSheetActionItem(
+              icon: Icons.receipt_long_outlined,
+              label: 'Registrar compra',
+              onTap: () async {
+                final parentContext = context;
+                Navigator.pop(context);
+                ref
+                    .read(supplierOrderSelectionProvider.notifier)
+                    .clearSelection();
+                _finalizeOrderFlow(parentContext, ref, order);
+              },
+            )
+          else ...[
+            BottomSheetActionItem(
+              icon: Symbols.list_alt,
+              label: 'Generar nota de entrega',
+              subtitle:
+                  'Generar documento de entrega al cliente a partir de esta orden',
+              onTap: () {
+                Navigator.pop(context);
+                ref
+                    .read(supplierOrderSelectionProvider.notifier)
+                    .clearSelection();
+                context.push(
+                  '/delivery-notes/create?supplierOrderId=${order.id}',
+                );
+              },
+            ),
+            BottomSheetActionItem(
+              icon: Symbols.check_circle,
+              label: 'Finalizar orden (Entrega directa)',
+              subtitle:
+                  'Cierra la orden si la entrega fue directa al cliente (Dropshipping)',
+              onTap: () async {
+                Navigator.pop(context);
+                ref
+                    .read(supplierOrderSelectionProvider.notifier)
+                    .clearSelection();
+                final confirmed = await CustomDialog.show<bool>(
+                  context: context,
+                  dialog: CustomDialog.confirmation(
+                    icon: Symbols.check_circle,
+                    title: '¿Finalizar orden de compra?',
+                    contentText:
+                        'La orden quedará finalizada como entrega directa al cliente (Dropshipping). No se ingresará mercancía al inventario local.',
+                    actions: [
+                      TextButton(
+                        onPressed: () => Navigator.of(context, rootNavigator: true).pop(false),
+                        child: const Text('Cancelar'),
+                      ),
+                      FilledButton(
+                        onPressed: () => Navigator.of(context, rootNavigator: true).pop(true),
+                        child: const Text('Finalizar orden'),
+                      ),
+                    ],
+                  ),
+                );
+                if (confirmed == true && context.mounted) {
+                  await ref
+                      .read(paginatedSupplierOrdersProvider.notifier)
+                      .updateSupplierOrderStatus(
+                        order.id,
+                        SupplierOrderStatus.finalized.dbValue,
+                      );
+                  ref.invalidate(supplierOrderDetailProvider(order.id));
+                }
+              },
+            ),
+          ],
+        ],
+        if (order.status == SupplierOrderStatus.finalized && order.isDropshipping)
           BottomSheetActionItem(
             icon: Symbols.list_alt,
             label: 'Generar nota de entrega',
+            subtitle:
+                'Generar documento de entrega al cliente a partir de esta orden',
             onTap: () {
               Navigator.pop(context);
               ref

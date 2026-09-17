@@ -95,14 +95,15 @@ class QuoteValidationNotifier extends StateNotifier<QuoteValidationState> {
             .map((p) => p.productId!)
             .toList();
 
+        final effectiveQuoteId = quoteId ?? quoteState.quote?.id;
         debugPrint(
-          '   - Enviando a RPC: ${supplierBranchStockIds.length} proveedores, ${productIds.length} propios',
+          '   - Enviando a RPC: ${supplierBranchStockIds.length} proveedores, ${productIds.length} propios (quoteId: $effectiveQuoteId)',
         );
 
         results = await _repository.validateQuoteItems(
           supplierBranchStockIds: supplierBranchStockIds,
           productIds: productIds,
-          quoteId: quoteId,
+          quoteId: effectiveQuoteId,
         );
 
         debugPrint('   - RPC respondió con ${results.length} resultados');

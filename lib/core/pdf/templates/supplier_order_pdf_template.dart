@@ -183,39 +183,72 @@ class SupplierOrderPdfTemplate {
         // Tarjeta 2: Condiciones de Entrega / Envío
         pw.Expanded(
           child: PdfCommonSections.buildInfoCard(
-            title: 'CONDICIONES DE ENTREGA / ENVÍO',
+            title: order.isDropshipping
+                ? 'ENTREGA DIRECTA (DROPSHIPPING)'
+                : 'CONDICIONES DE ENTREGA / ENVÍO',
             children: [
-              PdfCommonSections.buildInfoRow('Modalidad:', deliveryOption),
-              if (!isPersonalPickup) ...[
-                if (companyName != '-')
-                  PdfCommonSections.buildInfoRow('Empresa de Envío:', companyName),
-                if (showBranchCode)
-                  PdfCommonSections.buildInfoRow('Código Sucursal:', shippingMethod!.branchCode!.trim()),
-                if (fullDeliveryAddress != '-')
-                  PdfCommonSections.buildInfoRow('Dirección de Entrega:', fullDeliveryAddress),
-              ],
-              if (receiverName != null && receiverName.trim().isNotEmpty && receiverName != '-') ...[
-                pw.SizedBox(height: 4),
+              if (order.isDropshipping) ...[
                 pw.Container(
                   width: double.infinity,
-                  padding: const pw.EdgeInsets.only(top: 4, bottom: 2),
-                  decoration: const pw.BoxDecoration(
-                    border: pw.Border(top: pw.BorderSide(color: PdfThemeConfig.slate200, width: 0.8)),
+                  margin: const pw.EdgeInsets.only(bottom: 6),
+                  padding: const pw.EdgeInsets.symmetric(vertical: 2, horizontal: 4),
+                  decoration: pw.BoxDecoration(
+                    color: PdfThemeConfig.slate100,
+                    borderRadius: pw.BorderRadius.circular(3),
+                    border: pw.Border.all(color: PdfThemeConfig.slate300, width: 0.5),
                   ),
                   child: pw.Text(
-                    'Persona Autorizada',
+                    'DESPACHO DIRECTO AL CLIENTE FINAL',
                     style: pw.TextStyle(
-                      fontSize: 7,
+                      fontSize: 6.5,
                       fontWeight: pw.FontWeight.bold,
                       color: PdfThemeConfig.slate700,
                     ),
                   ),
                 ),
-                PdfCommonSections.buildInfoRow('Nombre:', receiverName),
-                if (receiverId != null && receiverId.isNotEmpty && receiverId != '-')
-                  PdfCommonSections.buildInfoRow('C.I. / ID:', receiverId),
-                if (receiverPhone != null && receiverPhone.isNotEmpty && receiverPhone != '-')
-                  PdfCommonSections.buildInfoRow('Teléfono:', receiverPhone),
+                if (order.recipientName != null && order.recipientName!.trim().isNotEmpty)
+                  PdfCommonSections.buildInfoRow('Cliente Receptor:', order.recipientName!),
+                if (order.recipientContactName != null && order.recipientContactName!.trim().isNotEmpty)
+                  PdfCommonSections.buildInfoRow('Contacto / Atn:', order.recipientContactName!),
+                if (order.recipientPhone != null && order.recipientPhone!.trim().isNotEmpty)
+                  PdfCommonSections.buildInfoRow('Teléfono Receptor:', order.recipientPhone!),
+                if (order.recipientAddress != null && order.recipientAddress!.trim().isNotEmpty)
+                  PdfCommonSections.buildInfoRow('Dirección de Entrega:', order.recipientAddress!),
+                if (order.deliveryInstructions != null && order.deliveryInstructions!.trim().isNotEmpty)
+                  PdfCommonSections.buildInfoRow('Instrucciones:', order.deliveryInstructions!),
+              ] else ...[
+                PdfCommonSections.buildInfoRow('Modalidad:', deliveryOption),
+                if (!isPersonalPickup) ...[
+                  if (companyName != '-')
+                    PdfCommonSections.buildInfoRow('Empresa de Envío:', companyName),
+                  if (showBranchCode)
+                    PdfCommonSections.buildInfoRow('Código Sucursal:', shippingMethod!.branchCode!.trim()),
+                  if (fullDeliveryAddress != '-')
+                    PdfCommonSections.buildInfoRow('Dirección de Entrega:', fullDeliveryAddress),
+                ],
+                if (receiverName != null && receiverName.trim().isNotEmpty && receiverName != '-') ...[
+                  pw.SizedBox(height: 4),
+                  pw.Container(
+                    width: double.infinity,
+                    padding: const pw.EdgeInsets.only(top: 4, bottom: 2),
+                    decoration: const pw.BoxDecoration(
+                      border: pw.Border(top: pw.BorderSide(color: PdfThemeConfig.slate200, width: 0.8)),
+                    ),
+                    child: pw.Text(
+                      'Persona Autorizada',
+                      style: pw.TextStyle(
+                        fontSize: 7,
+                        fontWeight: pw.FontWeight.bold,
+                        color: PdfThemeConfig.slate700,
+                      ),
+                    ),
+                  ),
+                  PdfCommonSections.buildInfoRow('Nombre:', receiverName),
+                  if (receiverId != null && receiverId.isNotEmpty && receiverId != '-')
+                    PdfCommonSections.buildInfoRow('C.I. / ID:', receiverId),
+                  if (receiverPhone != null && receiverPhone.isNotEmpty && receiverPhone != '-')
+                    PdfCommonSections.buildInfoRow('Teléfono:', receiverPhone),
+                ],
               ],
             ],
           ),

@@ -1,7 +1,9 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:d_una_app/features/quotes/domain/models/quote_model.dart' show StockStatus;
+import 'package:d_una_app/features/quotes/presentation/view_quote/providers/view_quote_provider.dart';
 import '../../../domain/repositories/supplier_orders_repository.dart';
 import '../../../data/repositories/supabase_supplier_orders_repository.dart';
 import '../../../domain/models/supplier_order.dart';
@@ -93,6 +95,13 @@ Future<List<SupplierOrder>> _enrichOrdersWithValidation(
       items: order.items,
       stockStatus: stockStatus,
       hasPriceIncrease: hasPriceIncrease,
+      isDropshipping: order.isDropshipping,
+      clientId: order.clientId,
+      recipientName: order.recipientName,
+      recipientContactName: order.recipientContactName,
+      recipientAddress: order.recipientAddress,
+      recipientPhone: order.recipientPhone,
+      deliveryInstructions: order.deliveryInstructions,
     );
   }).toList();
 }
@@ -132,6 +141,11 @@ class PaginatedSupplierOrders extends _$PaginatedSupplierOrders {
             final updatedId = (updatedRecord['id'] ?? payload.oldRecord['id']) as String?;
             if (updatedId != null) {
               ref.invalidate(supplierOrderDetailProvider(updatedId));
+            }
+            final originQuoteId = (updatedRecord['quote_id'] ??
+                payload.oldRecord['quote_id']) as String?;
+            if (originQuoteId != null && originQuoteId.isNotEmpty) {
+              ref.invalidate(viewQuoteProvider(originQuoteId));
             }
             ref.invalidate(paginatedSupplierOrderSearchProvider);
             refresh();
@@ -335,11 +349,18 @@ Future<({SupplierOrder order, List<SupplierOrderItem> items})> supplierOrderDeta
 
 @riverpod
 Future<List<Map<String, dynamic>>> supplierBranches(Ref ref, String supplierId) async {
-  final response = await Supabase.instance.client
-      .from('supplier_branches')
-      .select('id, name')
-      .eq('supplier_id', supplierId);
-  return List<Map<String, dynamic>>.from(response);
+  final cleanId = supplierId.trim();
+  if (cleanId.isEmpty) return [];
+  try {
+    final response = await Supabase.instance.client
+        .from('supplier_branches')
+        .select('id, name')
+        .eq('supplier_id', cleanId);
+    return List<Map<String, dynamic>>.from(response);
+  } catch (e) {
+    debugPrint('Error fetching supplier branches for $cleanId: $e');
+    return [];
+  }
 }
 
 @riverpod

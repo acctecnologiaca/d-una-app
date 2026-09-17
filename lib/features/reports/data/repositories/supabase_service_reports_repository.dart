@@ -556,6 +556,24 @@ class SupabaseServiceReportsRepository implements ServiceReportsRepository {
 
   @override
   Future<void> updateReportStatus(String id, String status) async {
+    final reportData = await _client
+        .from('service_reports')
+        .select('status')
+        .eq('id', id)
+        .maybeSingle();
+
+    if (reportData != null) {
+      final currentStatus = reportData['status'] as String?;
+      if (currentStatus == 'cancelled') {
+        throw Exception('No se puede modificar un reporte de servicio cancelado.');
+      }
+      if (currentStatus == 'finalized' && status != 'cancelled') {
+        throw Exception(
+          'Un reporte de servicio finalizado solo puede anularse (pasar a cancelado).',
+        );
+      }
+    }
+
     await _client.from('service_reports').update({
       'status': status,
       'updated_at': DateTime.now().toIso8601String(),
@@ -588,15 +606,33 @@ class SupabaseServiceReportsRepository implements ServiceReportsRepository {
       List<String> ids, String status) async {
     if (ids.isEmpty) return [];
 
+    final reports = await _client
+        .from('service_reports')
+        .select('id, status')
+        .inFilter('id', ids);
+
+    final validIds = <String>[];
+    for (final r in (reports as List<dynamic>)) {
+      final rId = r['id'] as String;
+      final currentStatus = r['status'] as String?;
+
+      if (currentStatus == 'cancelled') continue;
+      if (currentStatus == 'finalized' && status != 'cancelled') continue;
+
+      validIds.add(rId);
+    }
+
+    if (validIds.isEmpty) return [];
+
     await _client
         .from('service_reports')
         .update({
           'status': status,
           'updated_at': DateTime.now().toIso8601String(),
         })
-        .inFilter('id', ids);
+        .inFilter('id', validIds);
 
-    return ids;
+    return validIds;
   }
 
   @override

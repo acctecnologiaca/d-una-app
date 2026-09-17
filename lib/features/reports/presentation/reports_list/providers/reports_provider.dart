@@ -232,19 +232,29 @@ class PaginatedReportsNotifier
 
   void _initRealtimeSubscription() {
     if (_realtimeChannel != null) return;
+    final userId = Supabase.instance.client.auth.currentUser?.id;
+    if (userId == null) return;
 
     final channel = Supabase.instance.client
         .channel('public:service_reports_changes_${DateTime.now().millisecondsSinceEpoch}')
         .onPostgresChanges(
-          event: PostgresChangeEvent.update,
+          event: PostgresChangeEvent.all,
           schema: 'public',
           table: 'service_reports',
+          filter: PostgresChangeFilter(
+            type: PostgresChangeFilterType.eq,
+            column: 'user_id',
+            value: userId,
+          ),
           callback: (payload) {
             final updatedRecord = payload.newRecord;
-            final updatedId = updatedRecord['id'] as String?;
+            final updatedId =
+                (updatedRecord['id'] ?? payload.oldRecord['id']) as String?;
             if (updatedId != null) {
               ref.invalidate(viewReportProvider(updatedId));
             }
+            ref.invalidate(reportsListProvider);
+            ref.invalidate(paginatedReportSearchProvider);
             refresh();
           },
         )

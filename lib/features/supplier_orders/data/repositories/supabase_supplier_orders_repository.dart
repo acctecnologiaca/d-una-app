@@ -149,6 +149,23 @@ class SupabaseSupplierOrdersRepository implements SupplierOrdersRepository {
     final currentUserId = _supabase.auth.currentUser?.id;
     if (currentUserId == null) throw Exception('Usuario no autenticado');
 
+    final currentOrder = await _supabase
+        .from('supplier_orders')
+        .select('status')
+        .eq('id', id)
+        .eq('user_id', currentUserId)
+        .maybeSingle();
+
+    if (currentOrder != null) {
+      final currentStatus = currentOrder['status'] as String?;
+      if (currentStatus == SupplierOrderStatus.finalized.dbValue ||
+          currentStatus == SupplierOrderStatus.cancelled.dbValue) {
+        throw Exception(
+          'No se puede modificar una orden de compra finalizada o cancelada.',
+        );
+      }
+    }
+
     final payload = <String, dynamic>{
       'status': status,
       'updated_at': DateTime.now().toUtc().toIso8601String(),
@@ -766,6 +783,20 @@ class SupabaseSupplierOrdersRepository implements SupplierOrdersRepository {
       }
     } catch (_) {}
 
+    Map<String, dynamic>? quoteClientData;
+    String? quoteClientId;
+    try {
+      final qRes = await _supabase
+          .from('quotes')
+          .select('client_id, clients(name, phone, address)')
+          .eq('id', quoteId)
+          .maybeSingle();
+      if (qRes != null) {
+        quoteClientId = qRes['client_id'] as String?;
+        quoteClientData = qRes['clients'] as Map<String, dynamic>?;
+      }
+    } catch (_) {}
+
     final quoteItemsResponse = await _supabase
         .from('quote_items_products')
         .select('''
@@ -930,25 +961,34 @@ class SupabaseSupplierOrdersRepository implements SupplierOrdersRepository {
       final orderNumber = 'OC-$userCode-$yearPrefix$seqFormatted';
       final isDropshipping = supplierDestinations?[sId] ?? false;
 
+      final orderPayload = <String, dynamic>{
+        'user_id': currentUserId,
+        'quote_id': quoteId,
+        'order_number': orderNumber,
+        'supplier_id': sId,
+        'supplier_branch_id': bId,
+        'shipping_method_id': primaryShippingId,
+        'receiver_collaborator_id':
+            isDropshipping ? null : receiverCollaboratorId,
+        'payment_method': defaultPaymentMethod,
+        'date': DateTime.now().toIso8601String().split('T')[0],
+        'status': SupplierOrderStatus.draft.dbValue,
+        'subtotal': subtotal,
+        'tax': tax,
+        'total': total,
+        'is_dropshipping': isDropshipping,
+      };
+
+      if (isDropshipping) {
+        orderPayload['client_id'] = quoteClientId;
+        orderPayload['recipient_name'] = quoteClientData?['name'] ?? '';
+        orderPayload['recipient_address'] = quoteClientData?['address'] ?? '';
+        orderPayload['recipient_phone'] = quoteClientData?['phone'] ?? '';
+      }
+
       final newOrderResponse = await _supabase
           .from('supplier_orders')
-          .insert({
-            'user_id': currentUserId,
-            'quote_id': quoteId,
-            'order_number': orderNumber,
-            'supplier_id': sId,
-            'supplier_branch_id': bId,
-            'shipping_method_id': primaryShippingId,
-            'receiver_collaborator_id':
-                isDropshipping ? null : receiverCollaboratorId,
-            'payment_method': defaultPaymentMethod,
-            'date': DateTime.now().toIso8601String().split('T')[0],
-            'status': SupplierOrderStatus.draft.dbValue,
-            'subtotal': subtotal,
-            'tax': tax,
-            'total': total,
-            'is_dropshipping': isDropshipping,
-          })
+          .insert(orderPayload)
           .select('id')
           .single();
 

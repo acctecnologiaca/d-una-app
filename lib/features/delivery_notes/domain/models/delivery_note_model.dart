@@ -188,7 +188,7 @@ class DeliveryNoteModel {
       receivedByPhone: json['received_by_phone'] as String?,
       receiverRelationship: json['receiver_relationship'] as String?,
       receivedAt: json['received_at'] != null
-          ? DateTime.tryParse(json['received_at'] as String)
+          ? DateTime.tryParse(json['received_at'] as String)?.toLocal()
           : null,
       signatureData: json['signature_data'] as String?,
       subtotal: (json['subtotal'] as num?)?.toDouble() ?? 0.0,

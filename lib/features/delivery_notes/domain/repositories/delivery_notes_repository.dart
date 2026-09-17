@@ -28,9 +28,17 @@ abstract class DeliveryNotesRepository {
 
   Future<void> archiveDeliveryNote(String id, bool isArchived);
 
-  Future<void> updateStatus(String id, DeliveryNoteStatus status);
+  Future<void> updateStatus(
+    String id,
+    DeliveryNoteStatus status, {
+    DateTime? deliveryDate,
+  });
 
-  Future<void> updateDeliveryNoteStatus(String id, DeliveryNoteStatus status);
+  Future<void> updateDeliveryNoteStatus(
+    String id,
+    DeliveryNoteStatus status, {
+    DateTime? deliveryDate,
+  });
 
   Future<void> registerPhysicalSignature(
     String id, {

@@ -127,8 +127,8 @@ class _DeliveryNotesListScreenState extends ConsumerState<DeliveryNotesListScree
                           .setSortOption(val);
                     },
                     options: const [
-                      SortOption.orderNumberDesc,
-                      SortOption.orderNumberAsc,
+                      SortOption.noteNumberDesc,
+                      SortOption.noteNumberAsc,
                       SortOption.recent,
                       SortOption.nameAZ,
                       SortOption.nameZA,

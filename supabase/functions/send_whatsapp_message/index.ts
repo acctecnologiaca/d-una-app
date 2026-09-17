@@ -60,6 +60,7 @@ Deno.serve(async (req) => {
       if (templateName === 'd_una_envio_cotizacion_formal') maxLen = 30;
       else if (templateName === 'd_una_envio_orden_compra') maxLen = 48;
       else if (templateName === 'd_una_envio_reporte_servicio') maxLen = 22;
+      else if (templateName === 'd_una_envio_nota_entrega') maxLen = 25;
 
       if (typeof item === 'object' && item !== null) {
         let textVal = String(item.text ?? item.value ?? '');

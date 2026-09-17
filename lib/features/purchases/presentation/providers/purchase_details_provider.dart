@@ -11,7 +11,7 @@ typedef PurchaseDetailsData = ({
 });
 
 final purchaseDetailsProvider =
-    FutureProvider.family<PurchaseDetailsData, String>((ref, purchaseId) async {
+    FutureProvider.autoDispose.family<PurchaseDetailsData, String>((ref, purchaseId) async {
       final repository = ref.read(purchasesRepositoryProvider);
       return repository.getPurchaseDetails(purchaseId);
     });

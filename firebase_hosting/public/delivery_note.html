@@ -237,62 +237,129 @@
       line-height: 1.6;
     }
 
-    /* 5. TARJETA DE RECEPCIÓN / FIRMA */
+    /* 5. TARJETA DE RECEPCIÓN / FIRMA (SOBRIA, HOMOLOGADA A PDF) */
     .reception-card {
       border-radius: 12px;
       border: 1px solid var(--neutral-border);
-      background: #FFFFFF;
-      overflow: hidden;
+      background: var(--neutral-bg-subtle);
+      margin-top: 20px;
+      padding: 16px 20px;
+      box-shadow: 0 4px 15px -3px rgba(15, 23, 42, 0.03);
     }
 
-    .reception-card.finalized {
-      border-color: var(--success-border);
-      background: var(--success-bg);
+    /* BLOQUE DE FIRMA INSTITUCIONAL (PARIDAD EXACTA CON PDF) */
+    .signature-block-wrapper {
+      display: flex;
+      justify-content: flex-end;
+      width: 100%;
     }
 
-    .reception-header {
-      padding: 14px 20px;
-      border-bottom: 1px solid var(--neutral-border);
-      font-size: 13px;
+    .signature-col {
+      width: 240px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      text-align: center;
+    }
+
+    .signature-slot {
+      height: 46px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-bottom: 2px;
+    }
+
+    .signature-slot img {
+      max-height: 44px;
+      max-width: 220px;
+      object-fit: contain;
+      display: block;
+    }
+
+    .signature-slot svg {
+      max-height: 44px;
+      max-width: 220px;
+      display: block;
+    }
+
+    .signature-line {
+      width: 200px;
+      height: 1px;
+      background: #CBD5E1;
+      margin: 4px auto 6px auto;
+    }
+
+    .sig-subtitle {
+      font-size: 11px;
+      color: var(--neutral-muted);
+      font-weight: 500;
+      margin-bottom: 3px;
+    }
+
+    .sig-name {
+      font-size: 12px;
       font-weight: 700;
+      color: var(--neutral-dark);
+      margin-bottom: 2px;
+    }
+
+    .sig-detail {
+      font-size: 11px;
+      color: var(--neutral-muted);
+      line-height: 1.4;
+    }
+
+    /* CONTENEDOR DEL FORMULARIO INTERACTIVO DE RECEPCIÓN */
+    .reception-form-container {
+      background: #FFFFFF;
+      border-radius: 12px;
+      border: 1px solid var(--neutral-border);
+      padding: 20px 24px;
+      margin-top: 20px;
+      box-shadow: 0 4px 15px -3px rgba(15, 23, 42, 0.03);
+    }
+
+    .reception-form-header {
       display: flex;
       align-items: center;
       justify-content: space-between;
+      margin-bottom: 16px;
+      padding-bottom: 12px;
+      border-bottom: 1px solid var(--neutral-border);
     }
 
-    .reception-card.finalized .reception-header {
-      background: #D1FAE5;
-      border-color: var(--success-border);
-      color: #065F46;
-    }
-
-    .reception-body {
-      padding: 20px;
-    }
-
-    .reception-body p {
-      font-size: 13px;
-      margin-bottom: 6px;
-    }
-
-    .reception-body p strong {
+    .reception-form-header h3 {
+      font-size: 14px;
+      font-weight: 700;
       color: var(--neutral-dark);
+      margin: 0;
     }
 
-    .signature-preview-img {
-      max-height: 90px;
-      max-width: 260px;
-      border: 1px solid var(--success-border);
-      background: #FFFFFF;
-      border-radius: 8px;
-      padding: 8px;
-      display: block;
-      margin-top: 6px;
+    .reception-form-header span {
+      font-size: 11px;
+      color: var(--neutral-muted);
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
     }
 
     /* FORMULARIO DE FIRMA */
+    .form-subtitle {
+      font-size: 13px;
+      color: var(--neutral-muted);
+      margin-bottom: 20px;
+      line-height: 1.5;
+    }
+
+    .form-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+    }
+
     .form-group {
-      margin-bottom: 14px;
+      margin-bottom: 16px;
     }
 
     .form-group label {
@@ -300,34 +367,57 @@
       font-size: 12px;
       font-weight: 600;
       color: var(--neutral-dark);
-      margin-bottom: 4px;
+      margin-bottom: 6px;
+    }
+
+    .req-star {
+      color: #DC2626;
+      font-weight: 700;
+      margin-left: 2px;
     }
 
     .form-control {
       width: 100%;
-      padding: 10px 12px;
+      padding: 10px 14px;
       border: 1px solid var(--neutral-border);
-      border-radius: 8px;
+      border-radius: 10px;
       font-size: 13px;
       font-family: inherit;
       color: var(--neutral-dark);
       background: #FFFFFF;
       outline: none;
-      transition: border-color 0.15s;
+      transition: border-color 0.15s, box-shadow 0.15s;
     }
 
     .form-control:focus {
       border-color: var(--neutral-dark);
+      box-shadow: 0 0 0 3px rgba(15, 23, 42, 0.08);
     }
 
     .canvas-container {
-      border: 1.5px dashed var(--neutral-muted);
-      border-radius: 8px;
+      border: 1.5px solid #CBD5E1;
+      border-radius: 12px;
       background: #FAFBFD;
-      height: 140px;
+      height: 150px;
       position: relative;
       touch-action: none;
       cursor: crosshair;
+    }
+
+    .canvas-placeholder {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      color: #94A3B8;
+      font-size: 13px;
+      font-weight: 500;
+      pointer-events: none;
+      user-select: none;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      transition: opacity 0.2s;
     }
 
     canvas {
@@ -340,37 +430,61 @@
       display: flex;
       justify-content: space-between;
       align-items: center;
-      margin-top: 6px;
+      margin-top: 8px;
     }
 
-    .btn-secondary {
-      background: none;
+    .btn-clear {
+      background: #FFFFFF;
       border: 1px solid var(--neutral-border);
-      padding: 4px 10px;
-      border-radius: 6px;
-      font-size: 11px;
+      padding: 6px 12px;
+      border-radius: 8px;
+      font-size: 12px;
+      font-weight: 600;
       cursor: pointer;
       color: var(--neutral-muted);
       font-family: inherit;
+      transition: all 0.15s;
     }
 
-    .btn-secondary:hover {
+    .btn-clear:hover {
       background: var(--neutral-bg-subtle);
-      color: var(--neutral-dark);
+      color: #DC2626;
+      border-color: #FCA5A5;
+    }
+
+    .form-actions {
+      display: flex;
+      justify-content: flex-end;
+      margin-top: 24px;
     }
 
     .btn-submit {
-      width: 100%;
+      width: auto;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
       background: var(--neutral-dark);
       color: #FFFFFF;
       border: none;
-      padding: 14px;
+      padding: 12px 28px;
       border-radius: 10px;
-      font-size: 14px;
+      font-size: 13px;
       font-weight: 700;
+      font-family: inherit;
       cursor: pointer;
+      box-shadow: 0 4px 12px rgba(15, 23, 42, 0.2);
       transition: background 0.15s, transform 0.1s;
-      margin-top: 16px;
+    }
+
+    .btn-submit:hover {
+      background: #1E293B;
+      transform: translateY(-1px);
+    }
+
+    .btn-submit:disabled {
+      background: var(--neutral-muted);
+      cursor: not-allowed;
+      transform: none;
     }
 
     .btn-submit:hover {
@@ -481,9 +595,13 @@
       .validity-badge,
       .disclaimer-card,
       .footer,
+      .reception-form-container,
       #reception-form,
       .no-print {
         display: none !important;
+      }
+      .print-only-signature {
+        display: block !important;
       }
       .header-banner {
         border-bottom: 2px solid #000;
@@ -513,9 +631,22 @@
       .body-content {
         padding: 20px;
       }
-      .info-grid {
+      .info-grid,
+      .form-grid {
         grid-template-columns: 1fr;
         gap: 16px;
+      }
+      .signature-block-wrapper {
+        justify-content: center;
+      }
+      .signature-col {
+        width: 100%;
+      }
+      .form-actions {
+        justify-content: stretch;
+      }
+      .btn-submit {
+        width: 100%;
       }
       .print-fab {
         bottom: 16px;
@@ -635,7 +766,7 @@
         const rawTaxId = (client.tax_id || '').trim();
         const isCompany = client.type === 'company' || (rawTaxId.length > 0 && rawTaxId.toUpperCase().startsWith('J'));
         const clientNameLabel = isCompany ? 'Razón Social' : 'Nombre';
-        const clientTaxLabel = isCompany ? 'RIF' : 'Cédula';
+        const clientTaxLabel = isCompany ? 'RIF' : 'Cédula / ID';
         const contactName = client.contact_name && client.contact_name !== '-' ? client.contact_name : (n.contact?.name || null);
         const showAttention = isCompany && contactName && contactName.trim() !== '' && contactName !== '-';
         const clientPhone = client.phone && client.phone !== '-' ? client.phone : (n.contact?.phone || null);
@@ -723,10 +854,10 @@
               <div class="info-box">
                 <h3>Detalles del Despacho</h3>
                 <p><strong>Fecha de despacho:</strong> ${formattedDeliveryDate}</p>
+                ${n.client_po_number ? `<p><strong>Orden de compra (Cliente):</strong> ${esc(n.client_po_number)}</p>` : ''}
                 <p><strong>Modalidad:</strong> ${esc(deliveryTypeLabel)}</p>
-                ${n.shipping_company_name ? `<p><strong>Encomienda:</strong> ${esc(n.shipping_company_name)}</p>` : ''}
-                ${n.tracking_number ? `<p><strong>N° de Guía:</strong> ${esc(n.tracking_number)}</p>` : ''}
-                ${n.client_po_number ? `<p><strong>Orden de Compra (Cliente):</strong> ${esc(n.client_po_number)}</p>` : ''}
+                ${n.shipping_company_name ? `<p><strong>Transporte:</strong> ${esc(n.shipping_company_name)}</p>` : ''}
+                ${n.tracking_number ? `<p><strong>Guía / Tracking:</strong> ${esc(n.tracking_number)}</p>` : ''}
                 ${n.recipient_address ? `<p><strong>Dirección de despacho:</strong> ${esc(n.recipient_address)}${n.recipient_city ? `, ${esc(n.recipient_city)}` : ''}</p>` : ''}
                 ${n.delivery_instructions ? `<p><strong>Instrucciones:</strong> ${esc(n.delivery_instructions)}</p>` : ''}
               </div>
@@ -751,7 +882,7 @@
             <!-- 4. OBSERVACIONES -->
             ${observations.length > 0 ? `
               <div class="conditions-box">
-                <h4>Observaciones y Términos de Entrega</h4>
+                <h4>Observaciones</h4>
                 <ul>
                   ${observations.map(o => `<li>${esc(o.description)}</li>`).join('')}
                 </ul>
@@ -765,69 +896,97 @@
               </div>
             ` : ''}
 
-            <!-- 5. CONFORMIDAD Y FIRMA DE RECEPCIÓN -->
-            <div class="reception-card ${isFinalized ? 'finalized' : ''}" id="reception-section">
-              <div class="reception-header">
-                <span>${isFinalized ? '✅ Mercancía Recibida Conforme' : '✍️ Conformidad de Recepción'}</span>
+            <!-- 5. CONFORMIDAD Y FIRMA DE RECEPCIÓN (SOBRIA, HOMOLOGADA A PDF) -->
+            ${isFinalized ? `
+              <div class="reception-card" id="reception-section">
+                <div class="signature-block-wrapper">
+                  <div class="signature-col">
+                    <div class="signature-slot">
+                      ${n.signature_data ? `
+                        <img src="${n.signature_data}" alt="Firma del receptor">
+                      ` : ''}
+                    </div>
+                    <div class="signature-line"></div>
+                    <div class="sig-subtitle">Recibido Conforme / Cliente</div>
+                    <div class="sig-name">${esc(n.received_by_name || 'Receptor')}</div>
+                    ${n.received_by_id ? `<div class="sig-detail">C.I. / ID: ${esc(n.received_by_id)}</div>` : ''}
+                    ${n.receiver_relationship ? `<div class="sig-detail">Cargo: ${esc(n.receiver_relationship)}</div>` : ''}
+                    ${n.received_at ? `<div class="sig-detail">Fecha: ${new Date(n.received_at).toLocaleString('es-VE')}</div>` : ''}
+                  </div>
+                </div>
               </div>
-              <div class="reception-body">
-                ${isFinalized ? `
-                  <p><strong>Recibido por:</strong> ${esc(n.received_by_name || 'Receptor')}</p>
-                  <p><strong>Cédula / Documento:</strong> ${esc(n.received_by_id || '-')}</p>
-                  ${n.received_by_phone ? `<p><strong>Teléfono:</strong> ${esc(n.received_by_phone)}</p>` : ''}
-                  ${n.receiver_relationship ? `<p><strong>Cargo:</strong> ${esc(n.receiver_relationship)}</p>` : ''}
-                  <p><strong>Fecha y hora de recepción:</strong> ${n.received_at ? new Date(n.received_at).toLocaleString('es-VE') : '-'}</p>
-                  ${n.signature_data ? `
-                    <div style="margin-top: 10px;">
-                      <p><strong>Firma Digital Registrada:</strong></p>
-                      <img src="${n.signature_data}" alt="Firma del receptor" class="signature-preview-img">
-                    </div>
-                  ` : ''}
-                ` : `
-                  <form id="reception-form" onsubmit="return false;">
-                    <p style="font-size: 13px; color: var(--neutral-muted); margin-bottom: 14px;">
-                      Por favor complete sus datos y firme a continuación para dejar constancia formal de la entrega y buen estado de los productos recibidos.
-                    </p>
-                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
-                      <div class="form-group">
-                        <label for="rec-name">Nombre y Apellido *</label>
-                        <input type="text" id="rec-name" class="form-control" placeholder="Ej. Juan Pérez" required>
-                      </div>
-                      <div class="form-group">
-                        <label for="rec-id">Cédula o Documento de Identidad *</label>
-                        <input type="text" id="rec-id" class="form-control" placeholder="Ej. V-12.345.678" required>
-                      </div>
-                    </div>
-                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
-                      <div class="form-group">
-                        <label for="rec-phone">Teléfono de Contacto</label>
-                        <input type="tel" id="rec-phone" class="form-control" placeholder="Ej. 0414-1234567">
-                      </div>
-                      <div class="form-group">
-                        <label for="rec-rel">Cargo (opcional)</label>
-                        <input type="text" id="rec-rel" class="form-control" placeholder="Ej. Gerente de Almacén, Administrador...">
-                      </div>
-                    </div>
-
+            ` : `
+              <!-- FORMULARIO INTERACTIVO DE RECEPCIÓN (PANTALLA) -->
+              <div class="reception-form-container" id="reception-form-container">
+                <div class="reception-form-header">
+                  <h3>Conformidad de Recepción</h3>
+                  <span>Paso requerido</span>
+                </div>
+                <form id="reception-form" onsubmit="return false;">
+                  <p class="form-subtitle">
+                    Por favor complete los datos de quien recibe y firme en el recuadro para dejar constancia formal de la entrega y buen estado de los productos recibidos.
+                  </p>
+                  <div class="form-grid">
                     <div class="form-group">
-                      <label>Firma Digital de Conformidad *</label>
-                      <div class="canvas-container">
-                        <canvas id="sig-canvas"></canvas>
-                      </div>
-                      <div class="canvas-actions">
-                        <span style="font-size: 11px; color: var(--neutral-muted);">Firme dentro del recuadro usando su dedo o puntero</span>
-                        <button type="button" class="btn-secondary" id="btn-clear-sig">Limpiar firma</button>
-                      </div>
+                      <label for="rec-name">Nombre y apellido<span class="req-star">*</span></label>
+                      <input type="text" id="rec-name" class="form-control" placeholder="Ej. Juan Pérez" required>
                     </div>
+                    <div class="form-group">
+                      <label for="rec-id">Cédula / ID*<span class="req-star">*</span></label>
+                      <input type="text" id="rec-id" class="form-control" placeholder="Ej. V-12.345.678" required>
+                    </div>
+                  </div>
+                  <div class="form-grid">
+                    <div class="form-group">
+                      <label for="rec-phone">Teléfono de contacto</label>
+                      <input type="tel" id="rec-phone" class="form-control" placeholder="Ej. 0414-1234567">
+                    </div>
+                    <div class="form-group">
+                      <label for="rec-rel">Cargo (opcional)</label>
+                      <input type="text" id="rec-rel" class="form-control" placeholder="Ej. Gerente de Almacén, Administrador...">
+                    </div>
+                  </div>
 
+                  <div class="form-group">
+                    <label>Firma digital<span class="req-star">*</span></label>
+                    <div class="canvas-container">
+                      <div class="canvas-placeholder" id="sig-placeholder">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                          <path d="M12 20h9"></path>
+                          <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path>
+                        </svg>
+                        <span>Trace su firma aquí</span>
+                      </div>
+                      <canvas id="sig-canvas"></canvas>
+                    </div>
+                    <div class="canvas-actions">
+                      <span style="font-size: 11px; color: var(--neutral-muted);">Firme dentro del recuadro usando su dedo o ratón</span>
+                      <button type="button" class="btn-clear" id="btn-clear-sig">Limpiar firma</button>
+                    </div>
+                  </div>
+
+                  <div id="form-error" style="color: #DC2626; background: #FEF2F2; border: 1px solid #FCA5A5; border-radius: 8px; padding: 10px 14px; font-size: 13px; margin-top: 14px; display: none;"></div>
+
+                  <div class="form-actions">
                     <button type="button" class="btn-submit" id="btn-confirm-reception">
-                      Confirmar Entrega y Registrar Firma
+                      Confirmar recepción
                     </button>
-                    <div id="form-error" style="color: #EF4444; font-size: 12px; margin-top: 8px; display: none;"></div>
-                  </form>
-                `}
+                  </div>
+                </form>
               </div>
-            </div>
+
+              <!-- BLOQUE DE FIRMA EN BLANCO EXCLUSIVO PARA IMPRESIÓN (SI NO ESTÁ FIRMADO AÚN) -->
+              <div class="reception-card print-only-signature" style="display: none;">
+                <div class="signature-block-wrapper">
+                  <div class="signature-col">
+                    <div class="signature-slot"></div>
+                    <div class="signature-line"></div>
+                    <div class="sig-subtitle">Recibido Conforme / Cliente</div>
+                    <div class="sig-detail">Firma y Cédula</div>
+                  </div>
+                </div>
+              </div>
+            `}
 
           </div>
         `;
@@ -837,14 +996,15 @@
         if (btnPrint) btnPrint.style.display = 'flex';
 
         if (!isFinalized) {
-          initSignatureCanvas();
+          initSignatureCanvas(n.delivery_note_number);
         }
       }
 
-      function initSignatureCanvas() {
+      function initSignatureCanvas(deliveryNoteNumber) {
         const canvas = document.getElementById('sig-canvas');
         if (!canvas) return;
         const ctx = canvas.getContext('2d');
+        const placeholder = document.getElementById('sig-placeholder');
         let isDrawing = false;
         let hasSigned = false;
 
@@ -875,6 +1035,7 @@
 
         function startDrawing(e) {
           isDrawing = true;
+          if (placeholder) placeholder.style.display = 'none';
           const pos = getPos(e);
           ctx.beginPath();
           ctx.moveTo(pos.x, pos.y);
@@ -909,6 +1070,7 @@
         document.getElementById('btn-clear-sig').addEventListener('click', () => {
           ctx.clearRect(0, 0, canvas.width, canvas.height);
           hasSigned = false;
+          if (placeholder) placeholder.style.display = 'flex';
         });
 
         // Submit action
@@ -925,7 +1087,7 @@
           const rel = relInput.value.trim();
 
           if (!name) {
-            showFormError('Por favor ingrese el nombre de la persona que recibe.');
+            showFormError('Por favor ingrese el nombre y apellido de la persona que recibe.');
             nameInput.focus();
             return;
           }
@@ -935,14 +1097,14 @@
             return;
           }
           if (!hasSigned) {
-            showFormError('Por favor ingrese su firma digital en el recuadro para confirmar.');
+            showFormError('Por favor estampe su firma digital en el recuadro para confirmar la recepción.');
             return;
           }
 
           errorDiv.style.display = 'none';
           const btn = document.getElementById('btn-confirm-reception');
           btn.disabled = true;
-          btn.textContent = 'Registrando conformidad...';
+          btn.textContent = 'Confirmando...';
 
           const sigData = canvas.toDataURL('image/png');
 
@@ -967,17 +1129,17 @@
 
             const resJson = await resp.json();
             if (resJson.status === 'success' || resJson.status === 'already_processed') {
-              alert('¡Recepción registrada exitosamente! Muchas gracias.');
-              location.reload();
+              const noteParam = deliveryNoteNumber ? `&note=${encodeURIComponent(deliveryNoteNumber)}` : '';
+              window.location.href = `delivery_note_response.html?token=${encodeURIComponent(token)}&status=success${noteParam}`;
             } else {
               showFormError(resJson.message || 'Ocurrió un error al registrar la entrega.');
               btn.disabled = false;
-              btn.textContent = 'Confirmar Entrega y Registrar Firma';
+              btn.textContent = 'Confirmar recepción';
             }
           } catch (e) {
             showFormError('Error de comunicación con el servidor. Intente nuevamente.');
             btn.disabled = false;
-            btn.textContent = 'Confirmar Entrega y Registrar Firma';
+            btn.textContent = 'Confirmar recepción';
           }
 
           function showFormError(msg) {

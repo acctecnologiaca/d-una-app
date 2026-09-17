@@ -366,13 +366,14 @@ class _QuoteProductSourcesScreenState
                     if (item.sourceType == ProductSourceType.own &&
                         item.reservedStock > 0) {
                       final quoteState = ref.read(createQuoteProvider);
-                      if (quoteState.quote?.status == 'approved' &&
-                          widget.groupIndex != null) {
+                      if (quoteState.quote?.status == 'approved') {
                         final originalOwnQtyInQuote =
                             quoteState.quote?.products
                                 ?.where(
                                   (p) =>
-                                      p.groupIndex == widget.groupIndex &&
+                                      (p.productId == item.id ||
+                                          (widget.groupIndex != null &&
+                                              p.groupIndex == widget.groupIndex)) &&
                                       p.sourceType == QuoteItemSourceType.own,
                                 )
                                 .fold(0.0, (sum, p) => sum + p.quantity) ??

@@ -10,7 +10,6 @@ import 'package:d_una_app/shared/widgets/sort_selector.dart';
 import 'package:d_una_app/shared/widgets/custom_extended_fab.dart';
 import 'package:d_una_app/shared/utils/fab_scroll_padding.dart';
 import 'package:d_una_app/shared/widgets/standard_app_bar.dart';
-import 'package:d_una_app/shared/utils/currency_formatter.dart';
 import 'package:d_una_app/features/purchases/data/models/purchase_item_product.dart';
 import 'package:d_una_app/features/purchases/presentation/providers/add_purchase_provider.dart';
 import 'package:d_una_app/features/purchases/presentation/widgets/purchase_product_selection_card.dart';
@@ -43,9 +42,6 @@ class _AddPurchaseSelectProductScreenState
         _selectedQuantity.truncateToDouble() == _selectedQuantity
         ? _selectedQuantity.toInt().toString()
         : _selectedQuantity.toStringAsFixed(2);
-    final totalCost =
-        (_selectedProduct?.averageCost ?? 0.0) * _selectedQuantity;
-    final formattedTotal = CurrencyFormatter.format(totalCost);
     final uom = _selectedProduct?.uomModel?.symbol ?? 'ud.';
 
     return Scaffold(
@@ -207,7 +203,7 @@ class _AddPurchaseSelectProductScreenState
       floatingActionButton: CustomExtendedFab(
         icon: Icons.check,
         label: hasSelection
-            ? 'Confirmar ($formattedQty $uom - $formattedTotal)'
+            ? 'Confirmar ($formattedQty $uom)'
             : 'Confirmar',
         isEnabled: hasSelection,
         onPressed: hasSelection

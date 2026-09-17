@@ -222,6 +222,7 @@ Deno.serve(async (req) => {
         }, 400);
       }
 
+      const todayStr = new Date().toISOString().split('T')[0];
       const updateData: Record<string, any> = {
         status: 'finalized',
         received_by_name: receivedByName.trim(),
@@ -231,6 +232,10 @@ Deno.serve(async (req) => {
         received_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
       };
+
+      if (!note.delivery_date || note.delivery_date > todayStr) {
+        updateData.delivery_date = todayStr;
+      }
 
       if (signatureData && signatureData.trim().length > 0) {
         updateData.signature_data = signatureData.trim();

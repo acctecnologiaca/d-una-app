@@ -152,14 +152,16 @@ class ViewSupplierOrderSummaryTab extends ConsumerWidget {
                       supplierDisplayName,
                       isTextValue: true,
                     ),
-                    const SizedBox(height: 12),
-                    _buildSummaryRow(
-                      context,
-                      Icons.location_on,
-                      'Sucursal',
-                      order.branchName ?? 'Ninguna',
-                      isTextValue: true,
-                    ),
+                    if (!order.isDropshipping) ...[
+                      const SizedBox(height: 12),
+                      _buildSummaryRow(
+                        context,
+                        Icons.location_on,
+                        'Sucursal',
+                        order.branchName ?? 'Ninguna',
+                        isTextValue: true,
+                      ),
+                    ],
                   ],
                 ),
               ),
@@ -295,7 +297,9 @@ class ViewSupplierOrderSummaryTab extends ConsumerWidget {
             _buildSectionHeader(
               context,
               Icons.local_shipping,
-              'Condiciones de envío',
+              order.isDropshipping
+                  ? 'Destino de entrega (Dropshipping)'
+                  : 'Condiciones de envío',
             ),
             Card(
               elevation: 0,
@@ -310,11 +314,96 @@ class ViewSupplierOrderSummaryTab extends ConsumerWidget {
                   children: [
                     _buildSummaryRow(
                       context,
-                      Icons.info_outline,
-                      'Método',
-                      order.shippingMethodLabel ?? 'No seleccionado',
+                      Icons.alt_route,
+                      'Modalidad',
+                      order.isDropshipping ? 'Dropshipping' : 'Inventario propio',
                       isTextValue: true,
                     ),
+                    if (order.isDropshipping) ...[
+                      if (order.recipientName != null &&
+                          order.recipientName!.trim().isNotEmpty) ...[
+                        const SizedBox(height: 12),
+                        _buildSummaryRow(
+                          context,
+                          Icons.person,
+                          'Cliente receptor',
+                          order.recipientName!,
+                          isTextValue: true,
+                        ),
+                      ],
+                      if (order.recipientContactName != null &&
+                          order.recipientContactName!.trim().isNotEmpty) ...[
+                        const SizedBox(height: 12),
+                        _buildSummaryRow(
+                          context,
+                          Icons.badge,
+                          'Contacto',
+                          order.recipientContactName!,
+                          isTextValue: true,
+                        ),
+                      ],
+                      if (order.recipientPhone != null &&
+                          order.recipientPhone!.trim().isNotEmpty) ...[
+                        const SizedBox(height: 12),
+                        _buildSummaryRow(
+                          context,
+                          Icons.phone,
+                          'Teléfono',
+                          order.recipientPhone!,
+                          isTextValue: true,
+                        ),
+                      ],
+                      if (order.recipientAddress != null &&
+                          order.recipientAddress!.trim().isNotEmpty) ...[
+                        const SizedBox(height: 12),
+                        _buildSummaryRow(
+                          context,
+                          Icons.place,
+                          'Dirección',
+                          order.recipientAddress!,
+                          isTextValue: true,
+                        ),
+                      ],
+                      if (order.deliveryInstructions != null &&
+                          order.deliveryInstructions!.trim().isNotEmpty) ...[
+                        const SizedBox(height: 12),
+                        _buildSummaryRow(
+                          context,
+                          Icons.notes,
+                          'Instrucciones',
+                          order.deliveryInstructions!,
+                          isTextValue: true,
+                        ),
+                      ],
+                      const SizedBox(height: 12),
+                      _buildSummaryRow(
+                        context,
+                        Icons.info_outline,
+                        'Método de envío',
+                        order.shippingMethodLabel ?? 'No seleccionado',
+                        isTextValue: true,
+                      ),
+                    ] else ...[
+                      const SizedBox(height: 12),
+                      _buildSummaryRow(
+                        context,
+                        Icons.info_outline,
+                        'Método',
+                        order.shippingMethodLabel ?? 'No seleccionado',
+                        isTextValue: true,
+                      ),
+                      if (order.receiverName != null &&
+                          order.receiverName!.trim().isNotEmpty) ...[
+                        const SizedBox(height: 12),
+                        _buildSummaryRow(
+                          context,
+                          Icons.person,
+                          'Persona que retira',
+                          order.receiverName!,
+                          isTextValue: true,
+                        ),
+                      ],
+                    ],
                   ],
                 ),
               ),

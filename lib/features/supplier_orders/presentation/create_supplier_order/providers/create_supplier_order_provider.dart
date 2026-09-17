@@ -30,6 +30,15 @@ class CreateSupplierOrderState extends Equatable {
   final SupplierOrder? initialOrder;
   final List<SupplierOrderItem>? initialItems;
 
+  // Dropshipping & Recipient fields
+  final bool isDropshipping;
+  final String? clientId;
+  final String? recipientName;
+  final String? recipientContactName;
+  final String? recipientAddress;
+  final String? recipientPhone;
+  final String? deliveryInstructions;
+
   // For UI display
   final String? supplierName;
   final String? branchName;
@@ -57,6 +66,13 @@ class CreateSupplierOrderState extends Equatable {
     this.initialOrder,
     this.initialItems,
     bool? isDirty,
+    this.isDropshipping = false,
+    this.clientId,
+    this.recipientName,
+    this.recipientContactName,
+    this.recipientAddress,
+    this.recipientPhone,
+    this.deliveryInstructions,
   }) : date = date ?? DateTime.now();
 
   double get subtotal => items.fold(0.0, (sum, item) => sum + item.total);
@@ -67,6 +83,14 @@ class CreateSupplierOrderState extends Equatable {
     final hasSupplier = supplierId != null && supplierId!.isNotEmpty;
     final hasBranch = !hasBranches ||
         (supplierBranchId != null && supplierBranchId!.isNotEmpty);
+
+    if (isDropshipping) {
+      final hasRecipient = (recipientName != null && recipientName!.trim().isNotEmpty) ||
+          (clientId != null && clientId!.isNotEmpty);
+      final hasAddress = recipientAddress != null && recipientAddress!.trim().isNotEmpty;
+      return hasSupplier && hasBranch && hasRecipient && hasAddress;
+    }
+
     final hasShipping =
         shippingMethodId != null && shippingMethodId!.isNotEmpty;
     final hasReceiver =
@@ -81,7 +105,9 @@ class CreateSupplierOrderState extends Equatable {
   bool get hasChanges {
     if (initialOrder == null || initialOrder!.id.isEmpty) {
       return items.isNotEmpty ||
-          (supplierId != null && supplierId!.isNotEmpty);
+          (supplierId != null && supplierId!.isNotEmpty) ||
+          isDropshipping ||
+          (clientId != null && clientId!.isNotEmpty);
     }
 
     if (supplierId != initialOrder!.supplierId) return true;
@@ -89,6 +115,12 @@ class CreateSupplierOrderState extends Equatable {
     if (shippingMethodId != initialOrder!.shippingMethodId) return true;
     if (receiverCollaboratorId != initialOrder!.receiverCollaboratorId) return true;
     if (paymentMethod != initialOrder!.paymentMethod) return true;
+    if (isDropshipping != initialOrder!.isDropshipping) return true;
+    if (clientId != initialOrder!.clientId) return true;
+    if (recipientName != initialOrder!.recipientName) return true;
+    if (recipientAddress != initialOrder!.recipientAddress) return true;
+    if (recipientPhone != initialOrder!.recipientPhone) return true;
+    if (deliveryInstructions != initialOrder!.deliveryInstructions) return true;
 
     if (date.year != initialOrder!.date.year ||
         date.month != initialOrder!.date.month ||
@@ -157,6 +189,13 @@ class CreateSupplierOrderState extends Equatable {
     String? shippingMethodLabel,
     String? receiverName,
     String? currentOrderNumber,
+    bool? isDropshipping,
+    String? clientId,
+    String? recipientName,
+    String? recipientContactName,
+    String? recipientAddress,
+    String? recipientPhone,
+    String? deliveryInstructions,
   }) {
     return CreateSupplierOrderState(
       id: id ?? this.id,
@@ -178,6 +217,13 @@ class CreateSupplierOrderState extends Equatable {
       shippingMethodLabel: shippingMethodLabel ?? this.shippingMethodLabel,
       receiverName: receiverName ?? this.receiverName,
       currentOrderNumber: currentOrderNumber ?? this.currentOrderNumber,
+      isDropshipping: isDropshipping ?? this.isDropshipping,
+      clientId: clientId ?? this.clientId,
+      recipientName: recipientName ?? this.recipientName,
+      recipientContactName: recipientContactName ?? this.recipientContactName,
+      recipientAddress: recipientAddress ?? this.recipientAddress,
+      recipientPhone: recipientPhone ?? this.recipientPhone,
+      deliveryInstructions: deliveryInstructions ?? this.deliveryInstructions,
     );
   }
 
@@ -197,6 +243,13 @@ class CreateSupplierOrderState extends Equatable {
       'shipping_method_label': shippingMethodLabel,
       'receiver_name': receiverName,
       'current_order_number': currentOrderNumber,
+      'is_dropshipping': isDropshipping,
+      'client_id': clientId,
+      'recipient_name': recipientName,
+      'recipient_contact_name': recipientContactName,
+      'recipient_address': recipientAddress,
+      'recipient_phone': recipientPhone,
+      'delivery_instructions': deliveryInstructions,
     };
   }
 
@@ -218,6 +271,13 @@ class CreateSupplierOrderState extends Equatable {
       shippingMethodLabel: json['shipping_method_label'] as String?,
       receiverName: json['receiver_name'] as String?,
       currentOrderNumber: json['current_order_number'] as String?,
+      isDropshipping: json['is_dropshipping'] as bool? ?? false,
+      clientId: json['client_id'] as String?,
+      recipientName: json['recipient_name'] as String?,
+      recipientContactName: json['recipient_contact_name'] as String?,
+      recipientAddress: json['recipient_address'] as String?,
+      recipientPhone: json['recipient_phone'] as String?,
+      deliveryInstructions: json['delivery_instructions'] as String?,
     );
   }
 
@@ -244,6 +304,13 @@ class CreateSupplierOrderState extends Equatable {
     shippingMethodLabel,
     receiverName,
     currentOrderNumber,
+    isDropshipping,
+    clientId,
+    recipientName,
+    recipientContactName,
+    recipientAddress,
+    recipientPhone,
+    deliveryInstructions,
   ];
 }
 
@@ -463,6 +530,13 @@ class CreateSupplierOrder extends _$CreateSupplierOrder {
       currentOrderNumber: order.orderNumber,
       initialOrder: order,
       initialItems: List<SupplierOrderItem>.from(items),
+      isDropshipping: order.isDropshipping,
+      clientId: order.clientId,
+      recipientName: order.recipientName,
+      recipientContactName: order.recipientContactName,
+      recipientAddress: order.recipientAddress,
+      recipientPhone: order.recipientPhone,
+      deliveryInstructions: order.deliveryInstructions,
     );
   }
 
@@ -505,6 +579,13 @@ class CreateSupplierOrder extends _$CreateSupplierOrder {
         shippingMethodLabel: source.order.shippingMethodLabel,
         receiverName: source.order.receiverName,
         currentOrderNumber: newNumber,
+        isDropshipping: source.order.isDropshipping,
+        clientId: source.order.clientId,
+        recipientName: source.order.recipientName,
+        recipientContactName: source.order.recipientContactName,
+        recipientAddress: source.order.recipientAddress,
+        recipientPhone: source.order.recipientPhone,
+        deliveryInstructions: source.order.deliveryInstructions,
       );
     } catch (e) {
       state = state.copyWith(isLoading: false, error: e.toString());
@@ -556,6 +637,52 @@ class CreateSupplierOrder extends _$CreateSupplierOrder {
 
   void setDate(DateTime date) {
     state = state.copyWith(date: date, isDirty: true);
+    autoSaveDraft();
+  }
+
+  void setIsDropshipping(bool value) {
+    state = state.copyWith(
+      isDropshipping: value,
+      isDirty: true,
+    );
+    autoSaveDraft();
+  }
+
+  void setRecipientClient({
+    required String? clientId,
+    required String? name,
+    String? contactName,
+    String? address,
+    String? phone,
+  }) {
+    state = state.copyWith(
+      clientId: clientId,
+      recipientName: name,
+      recipientContactName: contactName,
+      recipientAddress: address,
+      recipientPhone: phone,
+      isDirty: true,
+    );
+    autoSaveDraft();
+  }
+
+  void setRecipientContactName(String? contactName) {
+    state = state.copyWith(recipientContactName: contactName, isDirty: true);
+    autoSaveDraft();
+  }
+
+  void setRecipientAddress(String address) {
+    state = state.copyWith(recipientAddress: address, isDirty: true);
+    autoSaveDraft();
+  }
+
+  void setRecipientPhone(String phone) {
+    state = state.copyWith(recipientPhone: phone, isDirty: true);
+    autoSaveDraft();
+  }
+
+  void setDeliveryInstructions(String instructions) {
+    state = state.copyWith(deliveryInstructions: instructions, isDirty: true);
     autoSaveDraft();
   }
 
@@ -773,6 +900,13 @@ class CreateSupplierOrder extends _$CreateSupplierOrder {
         total: total,
         createdAt: DateTime.now(),
         updatedAt: DateTime.now(),
+        isDropshipping: state.isDropshipping,
+        clientId: state.clientId,
+        recipientName: state.recipientName,
+        recipientContactName: state.recipientContactName,
+        recipientAddress: state.recipientAddress,
+        recipientPhone: state.recipientPhone,
+        deliveryInstructions: state.deliveryInstructions,
       );
 
       final wasEditing = state.id != null && state.id!.isNotEmpty;

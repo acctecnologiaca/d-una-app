@@ -36,7 +36,7 @@ Scaffold (backgroundColor: colors.surface)
 ## 2. Implementación Paso a Paso
 
 ### Paso 1: Configurar el Estado Asíncrono, Selección y Ciclo de Vida
-La pantalla debe ser un `ConsumerStatefulWidget` e implementar `WidgetsBindingObserver` para refrescar los datos automáticamente cuando la app pase a primer plano (`resumed`):
+La pantalla debe ser un `ConsumerStatefulWidget` e implementar `WidgetsBindingObserver` para refrescar los datos automáticamente cuando la app pase a primer plano (`resumed`), además de suscribirse a Supabase Postgres Realtime para cambios concurrentes:
 
 ```dart
 class MyEntityListScreen extends ConsumerStatefulWidget {
@@ -50,11 +50,13 @@ class _MyEntityListScreenState extends ConsumerState<MyEntityListScreen>
     with WidgetsBindingObserver {
   SortOption _currentSort = SortOption.recent;
   final TextEditingController _searchController = TextEditingController();
+  RealtimeChannel? _realtimeChannel;
 
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
+    _initRealtimeSubscription();
   }
 
   @override
@@ -64,13 +66,50 @@ class _MyEntityListScreenState extends ConsumerState<MyEntityListScreen>
     }
   }
 
+  /// Sincronización en Tiempo Real
+  /// - Para listas estándar: suscribirse a la tabla de la entidad filtrada por user_id.
+  /// - Para listas con campos computados (ej. Inventario/Stock calculado con Compras y Notas de Entrega):
+  ///   Postgres no emite eventos sobre 'products' cuando cambia una 'delivery_note'.
+  ///   Por ende, el canal DEBE escuchar eventos en todas las tablas involucradas (multi-table subscription).
+  void _initRealtimeSubscription() {
+    final userId = Supabase.instance.client.auth.currentUser?.id;
+    if (userId == null) return;
+
+    _realtimeChannel = Supabase.instance.client
+        .channel('public:my_entity_sync_${DateTime.now().millisecondsSinceEpoch}')
+        .onPostgresChanges(
+          event: PostgresChangeEvent.all,
+          schema: 'public',
+          table: 'my_entity_table',
+          filter: PostgresChangeFilter(
+            type: PostgresChangeFilterType.eq,
+            column: 'user_id',
+            value: userId,
+          ),
+          callback: (payload) {
+            if (mounted) {
+              ref.read(paginatedMyEntityProvider.notifier).refresh();
+            }
+          },
+        )
+        // Si la lista depende de tablas secundarias o computadas (ej. delivery_notes, purchases):
+        // .onPostgresChanges(...) encadenado sobre el mismo canal
+        .subscribe();
+  }
+
   @override
   void dispose() {
+    _realtimeChannel?.unsubscribe();
+    _realtimeChannel = null;
     WidgetsBinding.instance.removeObserver(this);
     _searchController.dispose();
     super.dispose();
   }
 ```
+
+> [!TIP]
+> **Refresco Activo vs Invalidación Pasiva en Listas Paginadas:**
+> En listas administradas con `PaginatedListView`, utiliza siempre `ref.read(paginatedProvider.notifier).refresh()` en vez de `ref.invalidate(paginatedProvider)`. Esto garantiza que la lista recargue los datos desde la primera página con feedback fluido sin causar parpadeos de pantalla completa.
 
 ---
 
@@ -281,3 +320,7 @@ floatingActionButton: selection.isSelectionMode
 - [ ] ¿Los anuncios usan `placementBannersProvider` con su clave correspondiente y se silencian en modo selección (`banners: selection.isSelectionMode ? null : adBanners`)?
 - [ ] ¿Si la pantalla es standalone (sin `BottomNavigationBar`), el cuerpo está envuelto en `SafeArea(child: Column(...))`?
 - [ ] ¿Se implementa `WidgetsBindingObserver` para auto-refrescar en `resumed`?
+- [ ] ¿Se implementa suscripción Supabase Realtime filtrando por `user_id` con liberación en `dispose()`?
+- [ ] ¿Si la lista depende de columnas computadas (como inventario/stock propio), el canal Realtime escucha eventos en todas las tablas involucradas (`products`, `delivery_notes`, `purchases`)?
+- [ ] ¿Se utiliza `ref.read(paginatedProvider.notifier).refresh()` para actualizar la lista paginada con fluidez sin parpadeos de pantalla completa?
+

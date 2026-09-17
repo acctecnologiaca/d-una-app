@@ -22,8 +22,28 @@ class OwnInventoryScreen extends ConsumerStatefulWidget {
   ConsumerState<OwnInventoryScreen> createState() => _OwnInventoryScreenState();
 }
 
-class _OwnInventoryScreenState extends ConsumerState<OwnInventoryScreen> {
+class _OwnInventoryScreenState extends ConsumerState<OwnInventoryScreen>
+    with WidgetsBindingObserver {
   SortOption _currentSort = SortOption.recent;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed && mounted) {
+      ref.read(paginatedProductsProvider.notifier).refresh();
+    }
+  }
 
   @override
   Widget build(BuildContext context) {

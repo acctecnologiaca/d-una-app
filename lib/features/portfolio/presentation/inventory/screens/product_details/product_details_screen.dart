@@ -2,6 +2,7 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:d_una_app/shared/widgets/custom_dialog.dart';
 import 'package:material_symbols_icons/symbols.dart';
 import 'package:d_una_app/shared/widgets/info_block.dart';
@@ -22,21 +23,102 @@ class ProductDetailsScreen extends ConsumerStatefulWidget {
       _ProductDetailsScreenState();
 }
 
-class _ProductDetailsScreenState extends ConsumerState<ProductDetailsScreen> {
+class _ProductDetailsScreenState extends ConsumerState<ProductDetailsScreen>
+    with WidgetsBindingObserver {
   bool _showAllSpecs = false;
+  RealtimeChannel? _realtimeChannel;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+    _initRealtimeSubscription();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        ref.invalidate(productDetailProvider(widget.product.id));
+      }
+    });
+  }
+
+  void _initRealtimeSubscription() {
+    final userId = Supabase.instance.client.auth.currentUser?.id;
+    if (userId == null) return;
+
+    _realtimeChannel = Supabase.instance.client
+        .channel(
+          'public:product_detail_${widget.product.id}_${DateTime.now().millisecondsSinceEpoch}',
+        )
+        .onPostgresChanges(
+          event: PostgresChangeEvent.all,
+          schema: 'public',
+          table: 'products',
+          filter: PostgresChangeFilter(
+            type: PostgresChangeFilterType.eq,
+            column: 'id',
+            value: widget.product.id,
+          ),
+          callback: (_) {
+            if (mounted) {
+              ref.invalidate(productDetailProvider(widget.product.id));
+              ref.read(paginatedProductsProvider.notifier).refresh();
+            }
+          },
+        )
+        .onPostgresChanges(
+          event: PostgresChangeEvent.all,
+          schema: 'public',
+          table: 'delivery_notes',
+          filter: PostgresChangeFilter(
+            type: PostgresChangeFilterType.eq,
+            column: 'user_id',
+            value: userId,
+          ),
+          callback: (_) {
+            if (mounted) {
+              ref.invalidate(productDetailProvider(widget.product.id));
+              ref.read(paginatedProductsProvider.notifier).refresh();
+            }
+          },
+        )
+        .onPostgresChanges(
+          event: PostgresChangeEvent.all,
+          schema: 'public',
+          table: 'purchases',
+          filter: PostgresChangeFilter(
+            type: PostgresChangeFilterType.eq,
+            column: 'user_id',
+            value: userId,
+          ),
+          callback: (_) {
+            if (mounted) {
+              ref.invalidate(productDetailProvider(widget.product.id));
+              ref.read(paginatedProductsProvider.notifier).refresh();
+            }
+          },
+        )
+        .subscribe();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed && mounted) {
+      ref.invalidate(productDetailProvider(widget.product.id));
+      ref.read(paginatedProductsProvider.notifier).refresh();
+    }
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    _realtimeChannel?.unsubscribe();
+    _realtimeChannel = null;
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
-    final productsAsync = ref.watch(productsProvider);
-
-    // Attempt to find the updated product from the provider list
-    // If not found (e.g. loading, error, or not in list), fallback to widget.product
-    final currentProduct =
-        productsAsync.valueOrNull?.firstWhere(
-          (element) => element.id == widget.product.id,
-          orElse: () => widget.product,
-        ) ??
-        widget.product;
+    final productDetailAsync = ref.watch(productDetailProvider(widget.product.id));
+    final currentProduct = productDetailAsync.valueOrNull ?? widget.product;
 
     final colors = Theme.of(context).colorScheme;
     final textTheme = Theme.of(context).textTheme;
@@ -114,6 +196,7 @@ class _ProductDetailsScreenState extends ConsumerState<ProductDetailsScreen> {
                             .deleteProduct(currentProduct.id);
                         ref.invalidate(paginatedProductsProvider);
                         ref.invalidate(paginatedProductSearchProvider);
+                        ref.invalidate(productDetailProvider(currentProduct.id));
                         if (context.mounted) {
                           context.pop(); // Pop details screen
                         }

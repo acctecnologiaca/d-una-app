@@ -4,6 +4,7 @@ import '../../../data/repositories/quote_product_selection_repository.dart';
 import '../../../domain/models/quote_aggregated_product.dart';
 import '../../../domain/models/quote_product_source.dart';
 import '../../../../portfolio/presentation/providers/product_search_provider.dart';
+import 'create_quote_provider.dart';
 
 // Repository Provider
 final quoteProductSelectionRepositoryProvider =
@@ -22,11 +23,13 @@ final quoteProductSuggestionsProvider = FutureProvider.autoDispose
 final quoteProductSourcesProvider = FutureProvider.autoDispose
     .family<List<QuoteProductSource>, QuoteAggregatedProduct>((ref, product) {
       final repository = ref.watch(quoteProductSelectionRepositoryProvider);
+      final quoteState = ref.watch(createQuoteProvider);
       return repository.getProductSources(
         name: product.name,
         brand: product.brand,
         model: product.model,
         uom: product.uom,
+        quoteId: quoteState.quote?.id,
       );
     });
 

@@ -521,6 +521,21 @@ class SupabaseQuotesRepository implements QuotesRepository {
 
   @override
   Future<void> updateQuoteStatus(String id, String status) async {
+    final currentQuote = await _client
+        .from('quotes')
+        .select('status')
+        .eq('id', id)
+        .maybeSingle();
+
+    if (currentQuote != null) {
+      final currentStatus = currentQuote['status'] as String?;
+      if (currentStatus == 'finalized' || currentStatus == 'cancelled') {
+        throw Exception(
+          'No se puede modificar una cotización finalizada o cancelada.',
+        );
+      }
+    }
+
     if (status == 'approved') {
       final List<dynamic> insufficient = await _client.rpc(
         'check_quote_insufficient_stock',

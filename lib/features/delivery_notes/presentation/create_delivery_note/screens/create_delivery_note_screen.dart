@@ -10,6 +10,8 @@ import 'package:d_una_app/shared/widgets/custom_action_sheet.dart';
 import 'package:d_una_app/shared/widgets/bottom_sheet_action_item.dart';
 import 'package:d_una_app/shared/widgets/custom_dialog.dart';
 import 'package:d_una_app/features/quotes/presentation/quotes_list/providers/quotes_provider.dart';
+import 'package:d_una_app/features/quotes/presentation/view_quote/providers/view_quote_provider.dart';
+import 'package:d_una_app/features/portfolio/presentation/providers/products_provider.dart';
 import 'package:d_una_app/features/supplier_orders/presentation/supplier_orders_list/providers/supplier_orders_providers.dart';
 import '../../delivery_notes_list/providers/delivery_notes_providers.dart'
     show deliveryNoteDetailProvider, paginatedDeliveryNotesProvider;
@@ -312,6 +314,12 @@ class _CreateDeliveryNoteScreenState
       if (mounted) {
         ref.invalidate(deliveryNoteDetailProvider(savedNote.id));
         ref.invalidate(paginatedDeliveryNotesProvider);
+        ref.invalidate(productsProvider);
+        ref.read(paginatedProductsProvider.notifier).refresh();
+        ref.invalidate(paginatedProductSearchProvider);
+        if (savedNote.quoteId != null && savedNote.quoteId!.isNotEmpty) {
+          ref.invalidate(viewQuoteProvider(savedNote.quoteId!));
+        }
         AppToast.success(
           context,
           message: 'Nota de entrega actualizada exitosamente.',
@@ -355,6 +363,12 @@ class _CreateDeliveryNoteScreenState
       if (mounted) {
         ref.invalidate(deliveryNoteDetailProvider(savedNote.id));
         ref.invalidate(paginatedDeliveryNotesProvider);
+        ref.invalidate(productsProvider);
+        ref.read(paginatedProductsProvider.notifier).refresh();
+        ref.invalidate(paginatedProductSearchProvider);
+        if (savedNote.quoteId != null && savedNote.quoteId!.isNotEmpty) {
+          ref.invalidate(viewQuoteProvider(savedNote.quoteId!));
+        }
         AppToast.success(
           context,
           message: widget.noteId != null

@@ -177,6 +177,22 @@ class ClientDetailsScreen extends ConsumerWidget {
                   ),
                   onPressed: canDelete
                       ? () async {
+                          final hasDocs = await ref.refresh(
+                            clientHasLinkedDocumentsProvider(client.id).future,
+                          );
+                          if (hasDocs) {
+                            if (context.mounted) {
+                              AppToast.error(
+                                context,
+                                message:
+                                    'No se puede eliminar: tiene documentos asociados',
+                              );
+                            }
+                            return;
+                          }
+
+                          if (!context.mounted) return;
+
                           final confirm = await CustomDialog.show<bool>(
                             context: context,
                             dialog: CustomDialog.destructive(
@@ -209,6 +225,8 @@ class ClientDetailsScreen extends ConsumerWidget {
                             await ref
                                 .read(clientsProvider.notifier)
                                 .deleteClient(client.id);
+                            ref.invalidate(paginatedClientsProvider);
+                            ref.invalidate(paginatedClientSearchProvider);
                             if (context.mounted) context.pop();
                           }
                         }

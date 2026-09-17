@@ -54,9 +54,10 @@ class PurchaseListItem extends StatelessWidget {
                   children: [
                     Text(
                       formattedDate,
-                      style: textTheme.bodySmall?.copyWith(
+                      style: TextStyle(
+                        fontSize: 14,
                         color: colors.onSurfaceVariant,
-                        fontWeight: FontWeight.w500,
+                        fontWeight: FontWeight.w400,
                       ),
                     ),
                     const SizedBox(height: 2),
@@ -72,8 +73,10 @@ class PurchaseListItem extends StatelessWidget {
                     const SizedBox(height: 2),
                     Text(
                       purchase.documentNumber,
-                      style: textTheme.bodySmall?.copyWith(
+                      style: TextStyle(
+                        fontSize: 14,
                         color: colors.onSurfaceVariant,
+                        fontWeight: FontWeight.w400,
                       ),
                     ),
                   ],
@@ -97,7 +100,8 @@ class PurchaseListItem extends StatelessWidget {
                     children: [
                       if (isSupportRejected) ...[
                         Tooltip(
-                          message: 'Soporte digital rechazado (créditos revocados)',
+                          message:
+                              'Soporte digital rechazado (créditos revocados)',
                           child: Icon(
                             Icons.error_outline,
                             size: 20,

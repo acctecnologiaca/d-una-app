@@ -37,6 +37,14 @@ class SupplierOrder extends Equatable {
   // Live stock & price alert validation fields
   final StockStatus stockStatus;
   final bool hasPriceIncrease;
+  // Dropshipping & Recipient fields
+  final bool isDropshipping;
+  final String? clientId;
+  final String? recipientName;
+  final String? recipientContactName;
+  final String? recipientAddress;
+  final String? recipientPhone;
+  final String? deliveryInstructions;
 
   const SupplierOrder({
     required this.id,
@@ -68,6 +76,13 @@ class SupplierOrder extends Equatable {
     this.items,
     this.stockStatus = StockStatus.available,
     this.hasPriceIncrease = false,
+    this.isDropshipping = false,
+    this.clientId,
+    this.recipientName,
+    this.recipientContactName,
+    this.recipientAddress,
+    this.recipientPhone,
+    this.deliveryInstructions,
   });
 
   bool get canShowAlerts =>
@@ -80,6 +95,84 @@ class SupplierOrder extends Equatable {
       return parts.last;
     }
     return orderNumber;
+  }
+
+  SupplierOrder copyWith({
+    String? id,
+    String? userId,
+    String? supplierId,
+    String? supplierBranchId,
+    String? shippingMethodId,
+    String? receiverCollaboratorId,
+    String? quoteId,
+    String? parentOrderId,
+    String? orderNumber,
+    DateTime? date,
+    String? paymentMethod,
+    SupplierOrderStatus? status,
+    double? subtotal,
+    double? tax,
+    double? total,
+    String? invoicePhotoUrl,
+    bool? isArchived,
+    String? verificationStatus,
+    String? supplierFeedback,
+    DateTime? supplierFeedbackAt,
+    DateTime? createdAt,
+    DateTime? updatedAt,
+    String? supplierName,
+    String? branchName,
+    String? shippingMethodLabel,
+    String? receiverName,
+    List<SupplierOrderItem>? items,
+    StockStatus? stockStatus,
+    bool? hasPriceIncrease,
+    bool? isDropshipping,
+    String? clientId,
+    String? recipientName,
+    String? recipientContactName,
+    String? recipientAddress,
+    String? recipientPhone,
+    String? deliveryInstructions,
+  }) {
+    return SupplierOrder(
+      id: id ?? this.id,
+      userId: userId ?? this.userId,
+      supplierId: supplierId ?? this.supplierId,
+      supplierBranchId: supplierBranchId ?? this.supplierBranchId,
+      shippingMethodId: shippingMethodId ?? this.shippingMethodId,
+      receiverCollaboratorId: receiverCollaboratorId ?? this.receiverCollaboratorId,
+      quoteId: quoteId ?? this.quoteId,
+      parentOrderId: parentOrderId ?? this.parentOrderId,
+      orderNumber: orderNumber ?? this.orderNumber,
+      date: date ?? this.date,
+      paymentMethod: paymentMethod ?? this.paymentMethod,
+      status: status ?? this.status,
+      subtotal: subtotal ?? this.subtotal,
+      tax: tax ?? this.tax,
+      total: total ?? this.total,
+      invoicePhotoUrl: invoicePhotoUrl ?? this.invoicePhotoUrl,
+      isArchived: isArchived ?? this.isArchived,
+      verificationStatus: verificationStatus ?? this.verificationStatus,
+      supplierFeedback: supplierFeedback ?? this.supplierFeedback,
+      supplierFeedbackAt: supplierFeedbackAt ?? this.supplierFeedbackAt,
+      createdAt: createdAt ?? this.createdAt,
+      updatedAt: updatedAt ?? this.updatedAt,
+      supplierName: supplierName ?? this.supplierName,
+      branchName: branchName ?? this.branchName,
+      shippingMethodLabel: shippingMethodLabel ?? this.shippingMethodLabel,
+      receiverName: receiverName ?? this.receiverName,
+      items: items ?? this.items,
+      stockStatus: stockStatus ?? this.stockStatus,
+      hasPriceIncrease: hasPriceIncrease ?? this.hasPriceIncrease,
+      isDropshipping: isDropshipping ?? this.isDropshipping,
+      clientId: clientId ?? this.clientId,
+      recipientName: recipientName ?? this.recipientName,
+      recipientContactName: recipientContactName ?? this.recipientContactName,
+      recipientAddress: recipientAddress ?? this.recipientAddress,
+      recipientPhone: recipientPhone ?? this.recipientPhone,
+      deliveryInstructions: deliveryInstructions ?? this.deliveryInstructions,
+    );
   }
 
   @override
@@ -113,5 +206,12 @@ class SupplierOrder extends Equatable {
     items,
     stockStatus,
     hasPriceIncrease,
+    isDropshipping,
+    clientId,
+    recipientName,
+    recipientContactName,
+    recipientAddress,
+    recipientPhone,
+    deliveryInstructions,
   ];
 }

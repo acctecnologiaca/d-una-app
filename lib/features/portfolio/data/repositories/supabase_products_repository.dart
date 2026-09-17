@@ -81,9 +81,18 @@ class SupabaseProductsRepository {
 
   Future<Product?> getProduct(String id) async {
     try {
+      const selectQuery = '''
+      *,
+      brands (*),
+      categories (*),
+      uoms (*),
+      inventory_quantity,
+      average_cost,
+      purchase_count
+    ''';
       final response = await _supabase
           .from('products')
-          .select('*, categories(*), brands(*), uoms(*)')
+          .select(selectQuery)
           .eq('id', id)
           .maybeSingle();
 

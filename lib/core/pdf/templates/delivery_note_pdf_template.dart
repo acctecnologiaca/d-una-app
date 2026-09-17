@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
+import 'package:intl/intl.dart';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import '../pdf_theme.dart';
@@ -28,8 +29,10 @@ class DeliveryNotePdfTemplate {
       final pdf = pw.Document(theme: PdfThemeConfig.buildTheme());
 
       // Resolver info del emisor
-      final senderInfo =
-          PdfHelpers.resolvePdfSenderInfo(userProfile, userEmail);
+      final senderInfo = PdfHelpers.resolvePdfSenderInfo(
+        userProfile,
+        userEmail,
+      );
 
       // Cargar logo si existe (con timeout de seguridad)
       final logoImage = await PdfHelpers.loadNetworkImage(senderInfo.logoUrl);
@@ -131,37 +134,41 @@ class DeliveryNotePdfTemplate {
   /// Grilla de 2 columnas: Datos del Cliente y Detalles del Despacho
   pw.Widget _buildInfoGrid() {
     final rawTaxId = (note.clientTaxId ?? '').trim();
-    final isCompany = note.clientType == 'company' ||
+    final isCompany =
+        note.clientType == 'company' ||
         (rawTaxId.isNotEmpty && rawTaxId.toUpperCase().startsWith('J'));
     final clientNameLabel = isCompany ? 'Razón Social:' : 'Nombre:';
     final clientTaxLabel = isCompany ? 'RIF:' : 'Cédula:';
 
-    final contactName = (note.contactName != null &&
+    final contactName =
+        (note.contactName != null &&
             note.contactName!.trim() != '-' &&
             note.contactName!.trim().isNotEmpty)
         ? note.contactName!.trim()
         : null;
     final showAttention = isCompany && contactName != null;
 
-    final phone = (note.clientPhone != null &&
+    final phone =
+        (note.clientPhone != null &&
             note.clientPhone!.trim().isNotEmpty &&
             note.clientPhone!.trim() != '-')
         ? note.clientPhone!.trim()
         : ((note.contactPhone != null &&
-                note.contactPhone!.trim().isNotEmpty &&
-                note.contactPhone!.trim() != '-')
-            ? note.contactPhone!.trim()
-            : null);
+                  note.contactPhone!.trim().isNotEmpty &&
+                  note.contactPhone!.trim() != '-')
+              ? note.contactPhone!.trim()
+              : null);
 
-    final email = (note.clientEmail != null &&
+    final email =
+        (note.clientEmail != null &&
             note.clientEmail!.trim().isNotEmpty &&
             note.clientEmail!.trim() != '-')
         ? note.clientEmail!.trim()
         : ((note.contactEmail != null &&
-                note.contactEmail!.trim().isNotEmpty &&
-                note.contactEmail!.trim() != '-')
-            ? note.contactEmail!.trim()
-            : null);
+                  note.contactEmail!.trim().isNotEmpty &&
+                  note.contactEmail!.trim() != '-')
+              ? note.contactEmail!.trim()
+              : null);
 
     // Dirección fiscal del cliente
     final clientAddressParts = <String>[
@@ -178,8 +185,9 @@ class DeliveryNotePdfTemplate {
           note.clientState!.trim() != '-')
         note.clientState!.trim(),
     ];
-    final fullClientAddress =
-        clientAddressParts.isNotEmpty ? clientAddressParts.join(', ') : null;
+    final fullClientAddress = clientAddressParts.isNotEmpty
+        ? clientAddressParts.join(', ')
+        : null;
 
     // Dirección de destino / despacho
     final deliveryAddressParts = <String>[
@@ -200,12 +208,12 @@ class DeliveryNotePdfTemplate {
         ? deliveryAddressParts.join(', ')
         : null;
 
-    final deliveryTypeLabel = note.deliveryType == 'store_pickup' ||
-            note.deliveryType == 'pickup'
+    final deliveryTypeLabel =
+        note.deliveryType == 'store_pickup' || note.deliveryType == 'pickup'
         ? 'Retiro en tienda / almacén'
         : (note.deliveryType == 'carrier' || note.deliveryType == 'courier'
-            ? 'Envío por encomienda / transportista'
-            : 'Despacho propio');
+              ? 'Envío por encomienda / transportista'
+              : 'Despacho propio');
 
     final dispatchDate = note.deliveryDate ?? note.date;
 
@@ -232,10 +240,7 @@ class DeliveryNotePdfTemplate {
               if (email != null)
                 PdfCommonSections.buildInfoRow('Email:', email),
               if (fullClientAddress != null)
-                PdfCommonSections.buildInfoRow(
-                  'Dirección:',
-                  fullClientAddress,
-                ),
+                PdfCommonSections.buildInfoRow('Dirección:', fullClientAddress),
             ],
           ),
         ),
@@ -246,9 +251,17 @@ class DeliveryNotePdfTemplate {
             title: 'DETALLES DEL DESPACHO',
             children: [
               PdfCommonSections.buildInfoRow(
-                'Modalidad:',
-                deliveryTypeLabel,
+                'Fecha de despacho:',
+                PdfHelpers.formatDate(dispatchDate),
               ),
+              if (note.clientPoNumber != null &&
+                  note.clientPoNumber!.trim().isNotEmpty &&
+                  note.clientPoNumber!.trim() != '-')
+                PdfCommonSections.buildInfoRow(
+                  'Orden de compra (Cliente):',
+                  note.clientPoNumber!.trim(),
+                ),
+              PdfCommonSections.buildInfoRow('Modalidad:', deliveryTypeLabel),
               if (note.shippingCompanyName != null &&
                   note.shippingCompanyName!.trim().isNotEmpty &&
                   note.shippingCompanyName!.trim() != '-')
@@ -263,17 +276,7 @@ class DeliveryNotePdfTemplate {
                   'Guía / Tracking:',
                   note.trackingNumber!.trim(),
                 ),
-              PdfCommonSections.buildInfoRow(
-                'Fecha de Despacho:',
-                PdfHelpers.formatDate(dispatchDate),
-              ),
-              if (note.clientPoNumber != null &&
-                  note.clientPoNumber!.trim().isNotEmpty &&
-                  note.clientPoNumber!.trim() != '-')
-                PdfCommonSections.buildInfoRow(
-                  'O/C Cliente:',
-                  note.clientPoNumber!.trim(),
-                ),
+
               if (fullDeliveryAddress != null)
                 PdfCommonSections.buildInfoRow(
                   'Dirección de despacho:',
@@ -477,8 +480,10 @@ class DeliveryNotePdfTemplate {
             margin: const pw.EdgeInsets.only(bottom: 6),
             decoration: const pw.BoxDecoration(
               border: pw.Border(
-                bottom:
-                    pw.BorderSide(color: PdfThemeConfig.slate300, width: 1.5),
+                bottom: pw.BorderSide(
+                  color: PdfThemeConfig.slate300,
+                  width: 1.5,
+                ),
               ),
             ),
             child: pw.Text(
@@ -574,7 +579,17 @@ class DeliveryNotePdfTemplate {
                   if (note.receivedById != null &&
                       note.receivedById!.trim().isNotEmpty)
                     pw.Text(
-                      'C.I. / DNI: ${note.receivedById!.trim()}',
+                      'C.I. / ID: ${note.receivedById!.trim()}',
+                      style: const pw.TextStyle(
+                        fontSize: 7,
+                        color: PdfThemeConfig.slate500,
+                      ),
+                    ),
+                  if (note.receiverRelationship != null &&
+                      note.receiverRelationship!.trim().isNotEmpty &&
+                      note.receiverRelationship!.trim() != '-')
+                    pw.Text(
+                      'Cargo: ${note.receiverRelationship!.trim()}',
                       style: const pw.TextStyle(
                         fontSize: 7,
                         color: PdfThemeConfig.slate500,
@@ -582,7 +597,7 @@ class DeliveryNotePdfTemplate {
                     ),
                   if (note.receivedAt != null)
                     pw.Text(
-                      'Fecha: ${PdfHelpers.formatDate(note.receivedAt!)}',
+                      'Fecha: ${DateFormat('dd/MM/yyyy - hh:mm a').format(note.receivedAt!.toLocal())}',
                       style: const pw.TextStyle(
                         fontSize: 7,
                         color: PdfThemeConfig.slate500,

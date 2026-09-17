@@ -1,0 +1,282 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Respuesta de Nota de Entrega - D-UNA</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #F1F5F9;
+      --card: #FFFFFF;
+      --text: #0F172A;
+      --muted: #64748B;
+      --border: #E2E8F0;
+      --primary: #0F172A;
+      --success-green: #059669;
+      --success-bg: #ECFDF5;
+      --success-border: #A7F3D0;
+    }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+      padding: 24px 16px;
+      -webkit-font-smoothing: antialiased;
+    }
+    .card {
+      background: var(--card);
+      border-radius: 20px;
+      box-shadow: 0 10px 30px rgba(15, 23, 42, 0.06);
+      border: 1px solid var(--border);
+      max-width: 480px;
+      width: 100%;
+      padding: 40px 32px 32px;
+      text-align: center;
+    }
+    .badge-icon {
+      width: 80px;
+      height: 80px;
+      border-radius: 50%;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      margin-bottom: 24px;
+    }
+    .badge-success {
+      background-color: var(--success-bg);
+      border: 2px solid var(--success-border);
+      color: var(--success-green);
+    }
+    .badge-error {
+      background-color: #FEF2F2;
+      border: 2px solid #FCA5A5;
+      color: #DC2626;
+    }
+    .badge-warning {
+      background-color: #FFFBEB;
+      border: 2px solid #FDE68A;
+      color: #D97706;
+    }
+    h1 {
+      font-size: 20px;
+      font-weight: 800;
+      color: var(--text);
+      margin-bottom: 12px;
+      line-height: 1.3;
+      letter-spacing: -0.3px;
+    }
+    .msg {
+      font-size: 14px;
+      line-height: 1.6;
+      color: var(--muted);
+      margin-bottom: 28px;
+    }
+    .msg strong {
+      color: var(--text);
+      font-weight: 600;
+    }
+    .actions-row {
+      display: flex;
+      gap: 12px;
+      justify-content: center;
+      margin-top: 20px;
+    }
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      padding: 12px 24px;
+      font-size: 13px;
+      font-weight: 700;
+      font-family: inherit;
+      border-radius: 10px;
+      border: none;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      text-decoration: none;
+    }
+    .btn-primary {
+      background-color: var(--primary);
+      color: #FFFFFF;
+      box-shadow: 0 4px 12px rgba(15, 23, 42, 0.2);
+    }
+    .btn-primary:hover {
+      background-color: #1E293B;
+      transform: translateY(-1px);
+    }
+    .footer {
+      border-top: 1px solid var(--border);
+      margin-top: 32px;
+      padding-top: 20px;
+      font-size: 11px;
+      color: var(--muted);
+      line-height: 1.5;
+    }
+    .spinner {
+      width: 40px;
+      height: 40px;
+      border: 4px solid var(--border);
+      border-top-color: var(--primary);
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+      margin: 20px auto;
+    }
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+  </style>
+</head>
+<body>
+
+  <div class="card" id="card">
+    <div class="spinner" id="spinner"></div>
+    <div id="content" style="display: none;">
+      <div class="badge-icon" id="badge-container"></div>
+      <h1 id="heading">Procesando información...</h1>
+      <p class="msg" id="message">Verificando el estado de la nota de entrega.</p>
+      <div class="actions-row" id="actions-container"></div>
+    </div>
+    
+    <div class="footer">
+      <img src="https://fdkswvzrozijbizdthge.supabase.co/storage/v1/object/public/app_images/logo_d_una.png" alt="D-UNA Logo" style="height: 22px; margin-bottom: 6px; vertical-align: middle; object-fit: contain;"><br>
+      Tecnología D-UNA &bull; Plataforma de Gestión Transaccional &bull; &copy; 2026
+    </div>
+  </div>
+
+  <script>
+    (async function() {
+      const params = new URLSearchParams(window.location.search);
+      const token = params.get('token');
+      const statusParam = params.get('status');
+      const noteParam = params.get('note');
+
+      const spinner = document.getElementById('spinner');
+      const content = document.getElementById('content');
+      const badgeContainer = document.getElementById('badge-container');
+      const heading = document.getElementById('heading');
+      const message = document.getElementById('message');
+      const actionsContainer = document.getElementById('actions-container');
+
+      const apiUrl = 'https://fdkswvzrozijbizdthge.supabase.co/functions/v1/delivery_notes_action';
+      const anonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZka3N3dnpyb3ppamJpemR0aGdlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njc0NzQ2MzMsImV4cCI6MjA4MzA1MDYzM30.ZENEwSy2E8iSHuy4Y4uTd7CBd32iaE-tJmSww6cw0TY';
+
+      // 1. Si viene con status=success directo tras registrar la recepción
+      if (statusParam === 'success') {
+        renderSuccess(noteParam, token);
+        return;
+      }
+
+      // 2. Si no hay token, enlace inválido
+      if (!token) {
+        renderError('Enlace Inválido', 'Faltan parámetros de seguridad en la solicitud.');
+        return;
+      }
+
+      // 3. Consultar estado en API
+      try {
+        const res = await fetch(`${apiUrl}?token=${encodeURIComponent(token)}&action=get_details`, {
+          headers: {
+            'apikey': anonKey,
+            'Authorization': `Bearer ${anonKey}`,
+          },
+        });
+        const data = await res.json();
+
+        if (data.status !== 'success' || !data.delivery_note) {
+          renderError('Nota de Entrega no encontrada', data.message || 'El enlace no es válido o ha caducado.');
+          return;
+        }
+
+        const note = data.delivery_note;
+
+        if (note.status === 'finalized') {
+          renderSuccess(note.delivery_note_number, token, note.received_by_name);
+        } else if (data.is_expired) {
+          renderWarning('Enlace Expirado', `El plazo para confirmar la nota ${esc(note.delivery_note_number)} ha expirado.`);
+        } else {
+          // Si aún no está firmada, redirigir a ver la nota de entrega
+          window.location.href = `delivery_note.html?token=${encodeURIComponent(token)}`;
+        }
+      } catch (err) {
+        renderError('Error de Conexión', 'No se pudo conectar con el servidor. Intente nuevamente más tarde.');
+      }
+
+      function renderSuccess(noteNumber, noteToken, receiverName) {
+        spinner.style.display = 'none';
+        content.style.display = 'block';
+
+        badgeContainer.className = 'badge-icon badge-success';
+        badgeContainer.innerHTML = `
+          <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="20 6 9 17 4 12"></polyline>
+          </svg>
+        `;
+
+        heading.textContent = '¡Recepción Registrada con Éxito!';
+        document.title = 'Recepción Confirmada - D-UNA';
+
+        const noteLabel = noteNumber ? `<strong>${esc(noteNumber)}</strong>` : 'la nota de entrega';
+        const receiverText = receiverName ? ` por <strong>${esc(receiverName)}</strong>` : '';
+
+        message.innerHTML = `Se ha registrado formalmente la conformidad de entrega para ${noteLabel}${receiverText}. La constancia y firma digital han quedado almacenadas en el sistema.`;
+
+        if (noteToken) {
+          actionsContainer.innerHTML = `
+            <a href="delivery_note.html?token=${encodeURIComponent(noteToken)}" class="btn btn-primary">
+              Ver nota de entrega
+            </a>
+          `;
+        }
+      }
+
+      function renderWarning(titleText, msgText) {
+        spinner.style.display = 'none';
+        content.style.display = 'block';
+
+        badgeContainer.className = 'badge-icon badge-warning';
+        badgeContainer.innerHTML = `
+          <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="10"></circle>
+            <line x1="12" y1="8" x2="12" y2="12"></line>
+            <line x1="12" y1="16" x2="12.01" y2="16"></line>
+          </svg>
+        `;
+
+        heading.textContent = titleText;
+        message.innerHTML = msgText;
+      }
+
+      function renderError(titleText, msgText) {
+        spinner.style.display = 'none';
+        content.style.display = 'block';
+
+        badgeContainer.className = 'badge-icon badge-error';
+        badgeContainer.innerHTML = `
+          <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="18" y1="6" x2="6" y2="18"></line>
+            <line x1="6" y1="6" x2="18" y2="18"></line>
+          </svg>
+        `;
+
+        heading.textContent = titleText;
+        message.innerHTML = msgText;
+      }
+
+      function esc(str) {
+        const d = document.createElement('div');
+        d.textContent = str || '';
+        return d.innerHTML;
+      }
+    })();
+  </script>
+</body>
+</html>

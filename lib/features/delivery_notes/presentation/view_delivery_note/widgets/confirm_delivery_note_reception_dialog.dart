@@ -1,19 +1,26 @@
 import 'dart:convert';
 import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:material_symbols_icons/symbols.dart';
-import 'package:go_router/go_router.dart';
 import 'package:d_una_app/shared/widgets/custom_action_sheet.dart';
 import 'package:d_una_app/shared/widgets/custom_text_field.dart';
 import 'package:d_una_app/shared/widgets/custom_dropdown.dart';
 import 'package:d_una_app/shared/widgets/custom_button.dart';
 import 'package:d_una_app/shared/widgets/custom_dialog.dart';
 import 'package:d_una_app/shared/widgets/app_toast.dart';
+import 'package:d_una_app/shared/widgets/info_disclaimer_card.dart';
 import 'package:d_una_app/features/portfolio/presentation/providers/products_provider.dart';
 import '../../../domain/models/delivery_note_model.dart';
 import '../../../domain/models/delivery_note_status.dart';
 import '../../delivery_notes_list/providers/delivery_notes_providers.dart';
+import 'package:d_una_app/shared/widgets/bottom_sheet_action_item.dart';
+import 'package:d_una_app/features/supplier_orders/domain/models/supplier_order_status.dart';
+import 'package:d_una_app/features/supplier_orders/presentation/supplier_orders_list/providers/supplier_orders_providers.dart';
+import 'send_delivery_note_whatsapp_sheet.dart';
+import 'send_delivery_note_email_sheet.dart';
+import 'package:d_una_app/features/quotes/presentation/view_quote/providers/view_quote_provider.dart';
 
 class ConfirmDeliveryNoteReceptionDialog extends ConsumerStatefulWidget {
   final DeliveryNoteModel note;
@@ -24,9 +31,9 @@ class ConfirmDeliveryNoteReceptionDialog extends ConsumerStatefulWidget {
     BuildContext context,
     WidgetRef ref,
     DeliveryNoteModel note,
-  ) {
+  ) async {
     if (note.hasMissingSerialsEffective) {
-      return CustomDialog.show(
+      await CustomDialog.show(
         context: context,
         dialog: CustomDialog.confirmation(
           icon: Symbols.warning,
@@ -36,24 +43,80 @@ class ConfirmDeliveryNoteReceptionDialog extends ConsumerStatefulWidget {
               'No se puede confirmar la recepción porque faltan seriales por asignar a uno o más productos.',
           actions: [
             TextButton(
-              onPressed: () =>
-                  Navigator.of(context, rootNavigator: true).pop(),
+              onPressed: () => Navigator.of(context, rootNavigator: true).pop(),
               child: const Text('Entendido'),
             ),
           ],
         ),
       );
+      return;
     }
 
-    return showModalBottomSheet(
+    final updatedNote = await showModalBottomSheet<DeliveryNoteModel>(
       context: context,
       isScrollControlled: true,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
       ),
       backgroundColor: Theme.of(context).colorScheme.surfaceContainer,
-      builder: (context) => ConfirmDeliveryNoteReceptionDialog(note: note),
+      builder: (sheetContext) => ConfirmDeliveryNoteReceptionDialog(note: note),
     );
+
+    if (updatedNote != null && context.mounted) {
+      AppToast.success(
+        context,
+        message: 'Recepción y entrega confirmada exitosamente',
+      );
+
+      CustomActionSheet.show(
+        context: context,
+        title: 'Recepción confirmada (${updatedNote.deliveryNoteNumber})',
+        actions: [
+          BottomSheetActionItem(
+            icon: Icons.send_outlined,
+            label: 'Enviar copia ahora',
+            subtitle:
+                'Enviar constancia de entrega digital por WhatsApp o Correo',
+            onTap: () {
+              Navigator.of(context).pop();
+              CustomActionSheet.show(
+                context: context,
+                title: 'Enviar copia de Nota de Entrega',
+                actions: [
+                  BottomSheetActionItem(
+                    icon: Icons.email_outlined,
+                    label: 'Enviar por correo electrónico',
+                    onTap: () {
+                      Navigator.of(context).pop();
+                      SendDeliveryNoteEmailSheet.show(
+                        context,
+                        updatedNote,
+                      );
+                    },
+                  ),
+                  BottomSheetActionItem(
+                    icon: 'assets/icons/whatsapp_icon.png',
+                    label: 'Enviar por WhatsApp',
+                    onTap: () {
+                      Navigator.of(context).pop();
+                      SendDeliveryNoteWhatsAppSheet.show(
+                        context,
+                        updatedNote,
+                      );
+                    },
+                  ),
+                ],
+              );
+            },
+          ),
+          BottomSheetActionItem(
+            icon: Icons.history_outlined,
+            label: 'Más tarde',
+            onTap: () => Navigator.of(context).pop(),
+          ),
+        ],
+      );
+    }
   }
 
   @override
@@ -71,12 +134,22 @@ class _ConfirmDeliveryNoteReceptionDialogState
     'Otro',
   ];
 
+  static const _phoneCodes = [
+    '0412',
+    '0422',
+    '0414',
+    '0424',
+    '0416',
+    '0426',
+  ];
+
   final _formKey = GlobalKey<FormState>();
   late TextEditingController _nameController;
   late TextEditingController _idController;
   late TextEditingController _phoneController;
   late TextEditingController _relationshipController;
 
+  String? _selectedPhoneCode;
   String? _selectedRelationship;
   final List<Offset?> _points = [];
   bool _isSaving = false;
@@ -88,9 +161,25 @@ class _ConfirmDeliveryNoteReceptionDialogState
       text: widget.note.receivedByName ?? widget.note.contactName ?? '',
     );
     _idController = TextEditingController(text: widget.note.receivedById ?? '');
-    _phoneController = TextEditingController(
-      text: widget.note.receivedByPhone ?? widget.note.contactPhone ?? '',
-    );
+
+    final rawPhone = widget.note.receivedByPhone ??
+        widget.note.contactPhone ??
+        widget.note.clientPhone ??
+        '';
+    final digits = rawPhone.replaceAll(RegExp(r'[^0-9]'), '');
+    if (digits.length >= 4) {
+      final code = digits.substring(0, 4);
+      if (_phoneCodes.contains(code)) {
+        _selectedPhoneCode = code;
+        _phoneController = TextEditingController(text: digits.substring(4));
+      } else {
+        _selectedPhoneCode = '0412';
+        _phoneController = TextEditingController(text: digits);
+      }
+    } else {
+      _selectedPhoneCode = '0412';
+      _phoneController = TextEditingController(text: digits);
+    }
 
     final initialRel = widget.note.receiverRelationship ?? 'Titular';
     if (_defaultRelationships.contains(initialRel)) {
@@ -115,29 +204,72 @@ class _ConfirmDeliveryNoteReceptionDialogState
   }
 
   Future<String?> _exportSignatureAsBase64() async {
-    final validPoints = _points.where((p) => p != null).toList();
+    final validPoints = _points.whereType<Offset>().toList();
     if (validPoints.isEmpty) return null;
 
     try {
+      // 1. Determinar el bounding box de los trazos reales
+      double minX = double.infinity;
+      double maxX = double.negativeInfinity;
+      double minY = double.infinity;
+      double maxY = double.negativeInfinity;
+
+      for (final p in validPoints) {
+        if (p.dx < minX) minX = p.dx;
+        if (p.dx > maxX) maxX = p.dx;
+        if (p.dy < minY) minY = p.dy;
+        if (p.dy > maxY) maxY = p.dy;
+      }
+
+      final signatureWidth = maxX - minX;
+      final signatureHeight = maxY - minY;
+
+      // 2. Margen perimetral uniforme
+      const padding = 20.0;
+      final targetWidth = (signatureWidth + padding * 2).clamp(160.0, 1200.0);
+      final targetHeight = (signatureHeight + padding * 2).clamp(80.0, 600.0);
+
       final recorder = ui.PictureRecorder();
       final canvas = Canvas(
         recorder,
-        Rect.fromPoints(const Offset(0, 0), const Offset(300, 150)),
+        Rect.fromLTWH(0, 0, targetWidth, targetHeight),
+      );
+
+      // 3. Centrar matemáticamente la firma en el canvas resultante
+      final signatureCenterX = (minX + maxX) / 2;
+      final signatureCenterY = (minY + maxY) / 2;
+      final canvasCenterX = targetWidth / 2;
+      final canvasCenterY = targetHeight / 2;
+
+      canvas.translate(
+        canvasCenterX - signatureCenterX,
+        canvasCenterY - signatureCenterY,
       );
 
       final paint = Paint()
         ..color = Colors.black
         ..strokeCap = StrokeCap.round
-        ..strokeWidth = 3.0;
+        ..strokeJoin = StrokeJoin.round
+        ..strokeWidth = 3.5;
 
-      for (int i = 0; i < _points.length - 1; i++) {
-        if (_points[i] != null && _points[i + 1] != null) {
-          canvas.drawLine(_points[i]!, _points[i + 1]!, paint);
+      for (int i = 0; i < _points.length; i++) {
+        final current = _points[i];
+        if (current != null) {
+          final next = (i < _points.length - 1) ? _points[i + 1] : null;
+          if (next != null) {
+            canvas.drawLine(current, next, paint);
+          } else {
+            final prev = (i > 0) ? _points[i - 1] : null;
+            if (prev == null) {
+              canvas.drawCircle(current, paint.strokeWidth / 2, paint);
+            }
+          }
         }
       }
 
       final picture = recorder.endRecording();
-      final img = await picture.toImage(300, 150);
+      final img =
+          await picture.toImage(targetWidth.round(), targetHeight.round());
       final byteData = await img.toByteData(format: ui.ImageByteFormat.png);
       if (byteData == null) return null;
 
@@ -177,14 +309,20 @@ class _ConfirmDeliveryNoteReceptionDialogState
           ? _relationshipController.text.trim()
           : (_selectedRelationship ?? _relationshipController.text.trim());
 
-      await ref.read(deliveryNotesRepositoryProvider).confirmReception(
+      final finalPhone = _phoneController.text.trim().isEmpty
+          ? null
+          : '$_selectedPhoneCode${_phoneController.text.trim()}';
+
+      await ref
+          .read(deliveryNotesRepositoryProvider)
+          .confirmReception(
             widget.note.id,
             receivedByName: _nameController.text.trim(),
             receivedById: _idController.text.trim(),
-            receivedByPhone: _phoneController.text.trim().isEmpty
+            receivedByPhone: finalPhone,
+            receiverRelationship: finalRelationship.isEmpty
                 ? null
-                : _phoneController.text.trim(),
-            receiverRelationship: finalRelationship.isEmpty ? null : finalRelationship,
+                : finalRelationship,
             signatureData: signature,
             status: DeliveryNoteStatus.delivered,
           );
@@ -192,92 +330,57 @@ class _ConfirmDeliveryNoteReceptionDialogState
       ref.invalidate(deliveryNoteDetailProvider(widget.note.id));
       ref.read(paginatedDeliveryNotesProvider.notifier).refresh();
       ref.invalidate(productsProvider);
-      ref.invalidate(paginatedProductsProvider);
+      ref.read(paginatedProductsProvider.notifier).refresh();
+      ref.invalidate(paginatedProductSearchProvider);
+
+      if (widget.note.quoteId != null && widget.note.quoteId!.isNotEmpty) {
+        ref.invalidate(viewQuoteProvider(widget.note.quoteId!));
+      }
+
+      if (widget.note.supplierOrderId != null &&
+          widget.note.supplierOrderId!.isNotEmpty) {
+        try {
+          await ref
+              .read(supplierOrdersRepositoryProvider)
+              .updateSupplierOrderStatus(
+                widget.note.supplierOrderId!,
+                SupplierOrderStatus.finalized.dbValue,
+              );
+          ref.invalidate(paginatedSupplierOrdersProvider);
+        } catch (e) {
+          debugPrint('Error auto-finalizando orden de compra vinculada: $e');
+        }
+      }
 
       if (mounted) {
-        context.pop();
-        AppToast.success(
-          context,
-          message: 'Recepción y entrega confirmada exitosamente',
+        final updatedNote = widget.note.copyWith(
+          status: DeliveryNoteStatus.finalized,
+          receivedByName: _nameController.text.trim(),
+          receivedById: _idController.text.trim(),
+          receivedByPhone: finalPhone,
+          receiverRelationship:
+              finalRelationship.isEmpty ? null : finalRelationship,
+          signatureData: signature,
+          receivedAt: DateTime.now(),
         );
+
+        Navigator.of(context).pop(updatedNote);
       }
     } catch (e) {
       if (mounted) {
-        AppToast.error(
-          context,
-          message: 'Error al confirmar recepción: $e',
-        );
+        AppToast.error(context, message: 'Error al confirmar recepción: $e');
       }
     } finally {
       if (mounted) setState(() => _isSaving = false);
     }
   }
 
-  Widget _buildSummaryCard(BuildContext context, ColorScheme colors, TextTheme textTheme) {
-    final serialsCount =
-        widget.note.items.fold(0, (sum, i) => sum + i.serials.length);
-    final itemsCount = widget.note.items.length;
 
-    return Container(
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: colors.surfaceContainerLow,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: colors.outlineVariant.withValues(alpha: 0.5)),
-      ),
-      child: Row(
-        children: [
-          Container(
-            padding: const EdgeInsets.all(10),
-            decoration: BoxDecoration(
-              color: colors.primaryContainer,
-              shape: BoxShape.circle,
-            ),
-            child: Icon(
-              Symbols.local_shipping,
-              size: 20,
-              color: colors.onPrimaryContainer,
-            ),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  widget.note.deliveryNoteNumber,
-                  style: textTheme.titleSmall?.copyWith(
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  widget.note.clientName.isEmpty
-                      ? 'Sin cliente asignado'
-                      : widget.note.clientName,
-                  style: textTheme.bodySmall?.copyWith(
-                    color: colors.onSurfaceVariant,
-                  ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  '$itemsCount ${itemsCount == 1 ? "producto" : "productos"} · $serialsCount ${serialsCount == 1 ? "serial" : "seriales"}',
-                  style: textTheme.labelSmall?.copyWith(
-                    color: colors.onSurfaceVariant,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildSignatureArea(BuildContext context, ColorScheme colors, TextTheme textTheme) {
+  Widget _buildSignatureArea(
+    BuildContext context,
+    ColorScheme colors,
+    TextTheme textTheme,
+  ) {
     final hasPoints = _points.any((p) => p != null);
     final strokeColor = colors.onSurface;
 
@@ -301,11 +404,7 @@ class _ConfirmDeliveryNoteReceptionDialogState
             ),
             if (hasPoints)
               IconButton(
-                icon: Icon(
-                  Symbols.ink_eraser,
-                  size: 20,
-                  color: colors.error,
-                ),
+                icon: Icon(Symbols.ink_eraser, size: 20, color: colors.error),
                 tooltip: 'Borrar firma',
                 visualDensity: VisualDensity.compact,
                 onPressed: () => setState(() => _points.clear()),
@@ -316,7 +415,7 @@ class _ConfirmDeliveryNoteReceptionDialogState
         LayoutBuilder(
           builder: (context, constraints) {
             final boxWidth = constraints.maxWidth;
-            const boxHeight = 140.0;
+            const boxHeight = 150.0;
 
             return Container(
               height: boxHeight,
@@ -340,13 +439,17 @@ class _ConfirmDeliveryNoteReceptionDialogState
                             Icon(
                               Symbols.gesture,
                               size: 32,
-                              color: colors.onSurfaceVariant.withValues(alpha: 0.4),
+                              color: colors.onSurfaceVariant.withValues(
+                                alpha: 0.4,
+                              ),
                             ),
                             const SizedBox(height: 6),
                             Text(
                               'Dibuje la firma aquí con su dedo',
                               style: textTheme.bodySmall?.copyWith(
-                                color: colors.onSurfaceVariant.withValues(alpha: 0.7),
+                                color: colors.onSurfaceVariant.withValues(
+                                  alpha: 0.7,
+                                ),
                               ),
                             ),
                           ],
@@ -403,35 +506,6 @@ class _ConfirmDeliveryNoteReceptionDialogState
     );
   }
 
-  Widget _buildNoticeCard(ColorScheme colors, TextTheme textTheme) {
-    return Container(
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: colors.primaryContainer.withValues(alpha: 0.2),
-        borderRadius: BorderRadius.circular(10),
-        border: Border.all(
-          color: colors.primary.withValues(alpha: 0.25),
-        ),
-      ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Icon(Symbols.info, size: 18, color: colors.primary),
-          const SizedBox(width: 10),
-          Expanded(
-            child: Text(
-              'Al confirmar la recepción, la nota de entrega pasará a estatus "Entregada", se registrarán los datos del receptor y se actualizará el inventario correspondiente.',
-              style: textTheme.bodySmall?.copyWith(
-                color: colors.onSurfaceVariant,
-                height: 1.35,
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
     final colors = Theme.of(context).colorScheme;
@@ -446,38 +520,60 @@ class _ConfirmDeliveryNoteReceptionDialogState
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            _buildSummaryCard(context, colors, textTheme),
-            const SizedBox(height: 20),
             CustomTextField(
               controller: _nameController,
               label: 'Nombre de quien recibe *',
-              hintText: 'Ej. Juan Pérez',
+              helperText: 'Ej: Juan Pérez',
               prefixIcon: const Icon(Symbols.person),
-              validator: (val) =>
-                  val == null || val.trim().isEmpty ? 'Este campo es requerido' : null,
+              validator: (val) => val == null || val.trim().isEmpty
+                  ? 'Este campo es requerido'
+                  : null,
             ),
             const SizedBox(height: 16),
             CustomTextField(
               controller: _idController,
               label: 'Cédula / Documento de identidad *',
-              hintText: 'Ej. V-12345678',
+              helperText: 'Ej: V12345678',
               prefixIcon: const Icon(Symbols.badge),
-              validator: (val) =>
-                  val == null || val.trim().isEmpty ? 'Este campo es requerido' : null,
+              validator: (val) => val == null || val.trim().isEmpty
+                  ? 'Este campo es requerido'
+                  : null,
             ),
             const SizedBox(height: 16),
-            CustomTextField(
-              controller: _phoneController,
-              label: 'Teléfono de contacto',
-              hintText: 'Ej. 0412-1234567',
-              prefixIcon: const Icon(Symbols.call),
-              keyboardType: TextInputType.phone,
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                SizedBox(
+                  width: 110,
+                  child: CustomDropdown<String>(
+                    value: _selectedPhoneCode,
+                    label: 'Código',
+                    isRequired: false,
+                    items: _phoneCodes,
+                    itemLabelBuilder: (item) => item,
+                    onChanged: (val) {
+                      setState(() => _selectedPhoneCode = val);
+                    },
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: CustomTextField(
+                    controller: _phoneController,
+                    label: 'Teléfono',
+                    helperText: 'Ej: 1234567',
+                    prefixIcon: const Icon(Symbols.call),
+                    keyboardType: TextInputType.phone,
+                    inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                  ),
+                ),
+              ],
             ),
             const SizedBox(height: 16),
             CustomDropdown<String>(
               value: _selectedRelationship,
               items: _defaultRelationships,
-              label: 'Relación o cargo con el cliente',
+              label: 'Cargo o relación con el cliente',
               isRequired: false,
               itemLabelBuilder: (item) => item,
               onChanged: (val) {
@@ -495,8 +591,8 @@ class _ConfirmDeliveryNoteReceptionDialogState
               const SizedBox(height: 16),
               CustomTextField(
                 controller: _relationshipController,
-                label: 'Especificar relación o cargo *',
-                hintText: 'Ej. Administrador, Almacenista, etc.',
+                label: 'Especificar cargo o relación*',
+                helperText: 'Ej: Administrador, Almacenista, etc.',
                 prefixIcon: const Icon(Symbols.work),
                 validator: (val) {
                   if (_selectedRelationship == 'Otro' &&
@@ -510,7 +606,10 @@ class _ConfirmDeliveryNoteReceptionDialogState
             const SizedBox(height: 20),
             _buildSignatureArea(context, colors, textTheme),
             const SizedBox(height: 20),
-            _buildNoticeCard(colors, textTheme),
+            const InfoDisclaimerCard(
+              text:
+                  'Al confirmar la recepción, la nota de entrega pasará a estatus "Finalizada", se registrarán los datos del receptor y se descontará el inventario correspondiente.',
+            ),
             const SizedBox(height: 8),
           ],
         ),
@@ -518,12 +617,16 @@ class _ConfirmDeliveryNoteReceptionDialogState
       actions: [
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16),
-          child: CustomButton(
-            text: _isSaving ? 'Confirmando...' : 'Confirmar entrega',
-            icon: Symbols.check_circle,
-            isFullWidth: true,
-            isLoading: _isSaving,
-            onPressed: _isSaving ? null : _handleConfirm,
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.end,
+            children: [
+              CustomButton(
+                text: _isSaving ? 'Confirmando...' : 'Confirmar entrega',
+                isFullWidth: false,
+                isLoading: _isSaving,
+                onPressed: _isSaving ? null : _handleConfirm,
+              ),
+            ],
           ),
         ),
       ],
@@ -542,11 +645,21 @@ class _SignaturePainter extends CustomPainter {
     final paint = Paint()
       ..color = strokeColor
       ..strokeCap = StrokeCap.round
+      ..strokeJoin = StrokeJoin.round
       ..strokeWidth = 2.5;
 
-    for (int i = 0; i < points.length - 1; i++) {
-      if (points[i] != null && points[i + 1] != null) {
-        canvas.drawLine(points[i]!, points[i + 1]!, paint);
+    for (int i = 0; i < points.length; i++) {
+      final current = points[i];
+      if (current != null) {
+        final next = (i < points.length - 1) ? points[i + 1] : null;
+        if (next != null) {
+          canvas.drawLine(current, next, paint);
+        } else {
+          final prev = (i > 0) ? points[i - 1] : null;
+          if (prev == null) {
+            canvas.drawCircle(current, paint.strokeWidth / 2, paint);
+          }
+        }
       }
     }
   }

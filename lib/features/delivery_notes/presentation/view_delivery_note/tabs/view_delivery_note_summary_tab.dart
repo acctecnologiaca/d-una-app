@@ -289,7 +289,7 @@ class ViewDeliveryNoteSummaryTab extends ConsumerWidget {
               'Fecha de Despacho',
               note.deliveryDate != null
                   ? dateFormat.format(note.deliveryDate!)
-                  : 'No establecida',
+                  : dateFormat.format(note.date),
               isTextValue: true,
             ),
             const SizedBox(height: 12),
@@ -542,7 +542,7 @@ class ViewDeliveryNoteSummaryTab extends ConsumerWidget {
               _buildSummaryRow(
                 context,
                 Icons.work_outline,
-                'Relación / Cargo',
+                'Cargo',
                 note.receiverRelationship!,
                 isTextValue: true,
               ),
@@ -553,7 +553,7 @@ class ViewDeliveryNoteSummaryTab extends ConsumerWidget {
                 context,
                 Icons.access_time,
                 'Fecha de recepción',
-                DateFormat('dd/MM/yyyy HH:mm').format(note.receivedAt!),
+                DateFormat('dd/MM/yyyy - hh:mm a').format(note.receivedAt!.toLocal()),
                 isTextValue: true,
               ),
             ],
@@ -570,20 +570,21 @@ class ViewDeliveryNoteSummaryTab extends ConsumerWidget {
               const SizedBox(height: 8),
               Container(
                 height: 130,
+                width: double.infinity,
                 decoration: BoxDecoration(
                   color: Colors.white,
-                  borderRadius: BorderRadius.circular(8),
+                  borderRadius: BorderRadius.circular(12),
                   border: Border.all(color: colors.outlineVariant),
                 ),
-                padding: const EdgeInsets.all(8),
-                child: Center(
-                  child: note.signatureData!.startsWith('data:image')
-                      ? Image.memory(
-                          base64Decode(note.signatureData!.split(',').last),
-                          fit: BoxFit.contain,
-                        )
-                      : const Text('Firma en formato digital registrada'),
-                ),
+                padding: const EdgeInsets.all(12),
+                clipBehavior: Clip.antiAlias,
+                alignment: Alignment.center,
+                child: note.signatureData!.startsWith('data:image')
+                    ? Image.memory(
+                        base64Decode(note.signatureData!.split(',').last),
+                        fit: BoxFit.contain,
+                      )
+                    : const Text('Firma en formato digital registrada'),
               ),
             ],
           ],

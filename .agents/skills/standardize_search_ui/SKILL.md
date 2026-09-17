@@ -141,10 +141,21 @@ En pantallas de búsqueda que muestren anuncios contextuales basados en el texto
 
 ---
 
-## 4. Checklist de Verificación para Búsqueda
+## 4. Búsqueda y Selección de Productos (Ventas vs Compras/Abastecimiento)
+
+Al implementar `GenericSearchScreen` para seleccionar productos que se agregarán a un documento o registro:
+- **Flujos de Salida / Cotizaciones / Ventas:** La tarjeta de producto en `itemBuilder` muestra el precio de venta unitario y el botón flotante inferior muestra el estimado calculado: `Confirmar ($formattedQty $uom - $formattedTotal)`.
+- **Flujos de Entrada / Registros de Compra / Abastecimiento:**
+  - En la tarjeta del producto ([`PurchaseProductSelectionCard`](file:///c:/Users/aleja/flutter_apps/MVP/d_una_app/lib/features/purchases/presentation/widgets/purchase_product_selection_card.dart)) queda **estrictamente prohibido** mostrar precios o costos promedio en el slot `trailing`; solo se muestra [`UomStatusBadge`](file:///c:/Users/aleja/flutter_apps/MVP/d_una_app/lib/shared/widgets/uom_status_badge.dart).
+  - El botón flotante inferior (`CustomExtendedFab`) debe indicar exclusivamente la cantidad y unidad: `Confirmar ($formattedQty $uom)`, ya que el costo se ingresa en el modal de factura del proveedor.
+
+---
+
+## 5. Checklist de Verificación para Búsqueda
 
 - [ ] ¿Se utiliza `GenericSearchScreen` con una clave `historyKey` única?
 - [ ] ¿Los filtros usan `FilterBottomSheet.showMulti` o `FilterBottomSheet.showSingle`?
 - [ ] ¿La búsqueda normaliza el texto (`toLowerCase()` o `.normalized`) para ignorar mayúsculas y acentos?
 - [ ] ¿Se proporciona la función `onResetFilters` para limpiar todos los chips?
 - [ ] ¿Si la pantalla incluye anuncios, se vinculan `banners`, `screenContext` y `onQueryChanged` con `placementBannersProvider`?
+- [ ] ¿Si es una búsqueda para compras/abastecimiento, las tarjetas y el FAB omiten precios y muestran únicamente cantidad y UOM?
