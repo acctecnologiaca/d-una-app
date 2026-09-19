@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:d_una_app/shared/widgets/app_toast.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:d_una_app/shared/widgets/custom_action_sheet.dart';
 import 'package:d_una_app/shared/widgets/custom_dialog.dart';
@@ -125,7 +126,6 @@ class _AddEditBrandSheetState extends ConsumerState<AddEditBrandSheet> {
 
     setState(() => _isLoading = true);
 
-    final scaffoldMessenger = ScaffoldMessenger.of(context);
     final navigator = Navigator.of(context);
 
     try {
@@ -145,24 +145,22 @@ class _AddEditBrandSheetState extends ConsumerState<AddEditBrandSheet> {
       // Refresh the provider
       ref.invalidate(brandsProvider);
       navigator.pop(resultBrand);
-      scaffoldMessenger.showSnackBar(
-        SnackBar(
-          behavior: SnackBarBehavior.floating,
-          content: Text(
-            isEditing
-                ? 'Marca actualizada a "$name"'
-                : 'Marca "$name" agregada',
-          ),
-        ),
-      );
+      if (mounted) {
+        AppToast.success(
+          context,
+          message: isEditing
+              ? 'Marca actualizada a "$name"'
+              : 'Marca "$name" agregada',
+        );
+      }
     } catch (e) {
       setState(() => _isLoading = false);
-      scaffoldMessenger.showSnackBar(
-        SnackBar(
-          behavior: SnackBarBehavior.floating,
-          content: Text('Error: $e'),
-        ),
-      );
+      if (mounted) {
+        AppToast.error(
+          context,
+          message: 'Error: $e',
+        );
+      }
     }
   }
 
@@ -190,26 +188,25 @@ class _AddEditBrandSheetState extends ConsumerState<AddEditBrandSheet> {
 
     if (confirm != true || !mounted) return;
 
-    final scaffoldMessenger = ScaffoldMessenger.of(context);
     final navigator = Navigator.of(context);
 
     try {
       await ref.read(lookupRepositoryProvider).deleteBrand(widget.brand!.id);
       ref.invalidate(brandsProvider);
       navigator.pop();
-      scaffoldMessenger.showSnackBar(
-        SnackBar(
-          behavior: SnackBarBehavior.floating,
-          content: Text('Marca "${widget.brand!.name}" eliminada'),
-        ),
-      );
+      if (mounted) {
+        AppToast.success(
+          context,
+          message: 'Marca "${widget.brand!.name}" eliminada',
+        );
+      }
     } catch (e) {
-      scaffoldMessenger.showSnackBar(
-        SnackBar(
-          behavior: SnackBarBehavior.floating,
-          content: Text('Error: $e'),
-        ),
-      );
+      if (mounted) {
+        AppToast.error(
+          context,
+          message: 'Error: $e',
+        );
+      }
     }
   }
 

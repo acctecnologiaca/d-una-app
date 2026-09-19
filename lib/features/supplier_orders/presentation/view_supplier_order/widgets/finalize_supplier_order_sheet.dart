@@ -6,6 +6,7 @@ import 'package:file_picker/file_picker.dart';
 import 'package:material_symbols_icons/symbols.dart';
 import '../../../../../shared/widgets/custom_text_field.dart';
 import '../../../../../shared/widgets/custom_button.dart';
+import '../../../../../shared/widgets/app_toast.dart';
 
 class FinalizeSupplierOrderSheet extends StatefulWidget {
   final String orderId;
@@ -93,9 +94,10 @@ class _FinalizeSupplierOrderSheetState
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(
+        AppToast.error(
           context,
-        ).showSnackBar(SnackBar(content: Text('Error al capturar imagen: $e')));
+          message: 'Error al capturar imagen: $e',
+        );
       }
     }
   }
@@ -114,9 +116,10 @@ class _FinalizeSupplierOrderSheetState
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(
+        AppToast.error(
           context,
-        ).showSnackBar(SnackBar(content: Text('Error al seleccionar PDF: $e')));
+          message: 'Error al seleccionar PDF: $e',
+        );
       }
     }
   }

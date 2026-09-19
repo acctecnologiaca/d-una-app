@@ -8,6 +8,7 @@ import 'package:pdf/pdf.dart';
 import 'package:d_una_app/shared/widgets/custom_action_sheet.dart';
 import 'package:d_una_app/shared/widgets/bottom_sheet_action_item.dart';
 import 'package:d_una_app/shared/widgets/custom_dialog.dart';
+import 'package:d_una_app/shared/widgets/app_toast.dart';
 import 'package:d_una_app/shared/utils/string_utils.dart';
 import 'package:d_una_app/core/pdf/templates/supplier_order_pdf_template.dart';
 import 'package:d_una_app/features/profile/presentation/providers/profile_provider.dart';
@@ -117,21 +118,17 @@ class SupplierOrderSelectionActions {
             final userEmail = Supabase.instance.client.auth.currentUser?.email;
 
             if (userProfile == null) {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text(
-                    'Cargando perfil de usuario... Por favor espere.',
-                  ),
-                ),
+              AppToast.info(
+                context,
+                message: 'Cargando perfil de usuario... Por favor espere.',
               );
               return;
             }
 
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                content: Text('Preparando documento...'),
-                duration: Duration(seconds: 1),
-              ),
+            AppToast.info(
+              context,
+              message: 'Preparando documento...',
+              duration: const Duration(seconds: 1),
             );
 
             try {
@@ -164,10 +161,9 @@ class SupplierOrderSelectionActions {
               }
             } catch (e) {
               if (context.mounted) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text('Error al generar PDF de la orden: $e'),
-                  ),
+                AppToast.error(
+                  context,
+                  message: 'Error al generar PDF de la orden: $e',
                 );
               }
             }
@@ -450,12 +446,10 @@ class SupplierOrderSelectionActions {
     );
 
     if (confirm == true && context.mounted) {
-      final messenger = ScaffoldMessenger.of(context);
-      messenger.showSnackBar(
-        const SnackBar(
-          content: Text('Consolidando órdenes de compra...'),
-          duration: Duration(seconds: 1),
-        ),
+      AppToast.info(
+        context,
+        message: 'Consolidando órdenes de compra...',
+        duration: const Duration(seconds: 1),
       );
 
       try {
@@ -468,21 +462,17 @@ class SupplierOrderSelectionActions {
         ref.read(supplierOrderSelectionProvider.notifier).clearSelection();
 
         if (context.mounted) {
-          messenger.showSnackBar(
-            SnackBar(
-              content: Text(
+          AppToast.success(
+            context,
+            message:
                 'Órdenes consolidadas exitosamente en ${primaryOrder.orderNumber}.',
-              ),
-            ),
           );
         }
       } catch (e) {
         if (context.mounted) {
-          messenger.showSnackBar(
-            SnackBar(
-              content: Text('Error al consolidar órdenes: $e'),
-              backgroundColor: Colors.red,
-            ),
+          AppToast.error(
+            context,
+            message: 'Error al consolidar órdenes: $e',
           );
         }
       }
@@ -504,14 +494,11 @@ class SupplierOrderSelectionActions {
     ref.invalidate(paginatedSupplierOrderSearchProvider);
     ref.read(supplierOrderSelectionProvider.notifier).clearSelection();
     if (context.mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            archive
-                ? 'Órdenes de compra archivadas.'
-                : 'Órdenes de compra desarchivadas.',
-          ),
-        ),
+      AppToast.success(
+        context,
+        message: archive
+            ? 'Órdenes de compra archivadas.'
+            : 'Órdenes de compra desarchivadas.',
       );
     }
   }
@@ -608,7 +595,6 @@ class SupplierOrderSelectionActions {
         builder: (context) => const Center(child: CircularProgressIndicator()),
       );
 
-      final messenger = ScaffoldMessenger.of(context);
       try {
         final profile = ref.read(userProfileProvider).value;
         final userEmail = Supabase.instance.client.auth.currentUser?.email;
@@ -682,16 +668,20 @@ class SupplierOrderSelectionActions {
 
         ref.invalidate(paginatedSupplierOrderSearchProvider);
         ref.read(supplierOrderSelectionProvider.notifier).clearSelection();
-        messenger.showSnackBar(
-          const SnackBar(
-            content: Text('Órdenes enviadas por correo con éxito.'),
-          ),
-        );
+        if (context.mounted) {
+          AppToast.success(
+            context,
+            message: 'Órdenes enviadas por correo con éxito.',
+          );
+        }
       } catch (e) {
         if (context.mounted) Navigator.pop(context); // Dismiss loading
-        messenger.showSnackBar(
-          SnackBar(content: Text('Error al enviar órdenes: $e')),
-        );
+        if (context.mounted) {
+          AppToast.error(
+            context,
+            message: 'Error al enviar órdenes: $e',
+          );
+        }
       }
     }
   }
@@ -859,11 +849,10 @@ class SupplierOrderSelectionActions {
 
     if (confirm == true) {
       if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Procesando...'),
-            duration: Duration(seconds: 1),
-          ),
+        AppToast.info(
+          context,
+          message: 'Procesando...',
+          duration: const Duration(seconds: 1),
         );
       }
 
@@ -877,23 +866,18 @@ class SupplierOrderSelectionActions {
         ref.read(supplierOrderSelectionProvider.notifier).clearSelection();
 
         if (context.mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(
-                orderIds.length == 1
-                    ? 'Consolidación deshecha. La orden volvió a Borrador.'
-                    : 'Consolidación deshecha. Las ${orderIds.length} órdenes volvieron a Borrador.',
-              ),
-            ),
+          AppToast.success(
+            context,
+            message: orderIds.length == 1
+                ? 'Consolidación deshecha. La orden volvió a Borrador.'
+                : 'Consolidación deshecha. Las ${orderIds.length} órdenes volvieron a Borrador.',
           );
         }
       } catch (e) {
         if (context.mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('Error al deshacer consolidación: $e'),
-              backgroundColor: Colors.red,
-            ),
+          AppToast.error(
+            context,
+            message: 'Error al deshacer consolidación: $e',
           );
         }
       }

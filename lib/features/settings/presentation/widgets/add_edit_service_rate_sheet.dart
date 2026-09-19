@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:d_una_app/shared/widgets/app_toast.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:d_una_app/shared/widgets/custom_action_sheet.dart';
 import 'package:d_una_app/shared/widgets/custom_dialog.dart';
@@ -80,15 +81,11 @@ class _AddEditServiceRateSheetState
 
       if (mounted) {
         Navigator.pop(context, result);
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            behavior: SnackBarBehavior.floating,
-            content: Text(
-              isEditing
-                  ? 'Tarifa actualizada a "$name"'
-                  : 'Tarifa "$name" agregada',
-            ),
-          ),
+        AppToast.success(
+          context,
+          message: isEditing
+              ? 'Tarifa actualizada a "$name"'
+              : 'Tarifa "$name" agregada',
         );
       }
     } catch (e) {
@@ -131,11 +128,9 @@ class _AddEditServiceRateSheetState
 
       if (mounted) {
         Navigator.pop(context);
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            behavior: SnackBarBehavior.floating,
-            content: Text('Tarifa "${widget.rate!.name}" eliminada'),
-          ),
+        AppToast.success(
+          context,
+          message: 'Tarifa "${widget.rate!.name}" eliminada',
         );
       }
     } catch (e) {

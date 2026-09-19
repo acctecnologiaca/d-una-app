@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:uuid/uuid.dart';
 import 'package:d_una_app/shared/widgets/standard_app_bar.dart';
+import 'package:d_una_app/shared/widgets/app_toast.dart';
 import 'package:d_una_app/shared/widgets/custom_search_bar.dart';
 import 'package:d_una_app/shared/widgets/sort_selector.dart';
 import 'package:d_una_app/shared/widgets/paginated_list_view.dart';
@@ -213,12 +214,10 @@ class _SelectDeliveryNoteProductScreenState
                       .getAvailableStockForProduct(_selectedProduct!);
 
                   if (_selectedQuantity > availableStock) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: Text(
+                    AppToast.warning(
+                      context,
+                      message:
                           'La cantidad excede el stock disponible ($availableStock $uom).',
-                        ),
-                      ),
                     );
                     return;
                   }
@@ -290,12 +289,10 @@ class _SelectDeliveryNoteProductScreenState
                         ref.read(createDeliveryNoteProvider).items;
                     if (currentItems.any((i) => i.productId == item.productId)) {
                       if (context.mounted) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(
-                            content: Text(
+                        AppToast.warning(
+                          context,
+                          message:
                               'El producto "${_selectedProduct!.name}" ya está agregado.',
-                            ),
-                          ),
                         );
                       }
                       return;
@@ -345,12 +342,10 @@ class _SelectDeliveryNoteProductScreenState
                     } else {
                       if (context.mounted) {
                         Navigator.of(context).pop(); // Return to wizard
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(
-                            content: Text(
+                        AppToast.success(
+                          context,
+                          message:
                               'Producto agregado: ${_selectedProduct!.name}',
-                            ),
-                          ),
                         );
                       }
                     }

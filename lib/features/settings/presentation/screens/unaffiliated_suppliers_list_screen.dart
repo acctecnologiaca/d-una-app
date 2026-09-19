@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:d_una_app/shared/widgets/app_toast.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:d_una_app/shared/widgets/generic_list_screen.dart';
 import 'package:d_una_app/shared/widgets/standard_list_item.dart';
@@ -93,34 +94,12 @@ class UnaffiliatedSuppliersListScreen extends ConsumerWidget {
             onTap: canEdit
                 ? () => _showEditSupplierSheet(context, supplier)
                 : () {
-                    ScaffoldMessenger.of(context)
-                      ..hideCurrentSnackBar()
-                      ..showSnackBar(
-                        SnackBar(
-                          duration: const Duration(seconds: 5),
-                          content: Row(
-                            children: [
-                              const Expanded(
-                                child: Text(
-                                  'Este proveedor ha sido verificado y ya no puede ser modificado ni eliminado.',
-                                  style: TextStyle(fontSize: 13),
-                                ),
-                              ),
-                              IconButton(
-                                icon: const Icon(
-                                  Icons.close,
-                                  color: Colors.white,
-                                ),
-                                padding: EdgeInsets.zero,
-                                constraints: const BoxConstraints(),
-                                onPressed: () => ScaffoldMessenger.of(
-                                  context,
-                                ).hideCurrentSnackBar(),
-                              ),
-                            ],
-                          ),
-                        ),
-                      );
+                    AppToast.warning(
+                      context,
+                      message:
+                          'Este proveedor ha sido verificado y ya no puede ser modificado ni eliminado.',
+                      duration: const Duration(seconds: 5),
+                    );
                   },
           ),
         );

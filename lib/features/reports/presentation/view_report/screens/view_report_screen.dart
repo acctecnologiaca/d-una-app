@@ -9,6 +9,7 @@ import '../../../../../shared/widgets/custom_action_sheet.dart';
 import '../../../../../shared/widgets/bottom_sheet_action_item.dart';
 import '../../../../../shared/widgets/friendly_error_widget.dart';
 import '../../../../../shared/widgets/custom_dialog.dart';
+import '../../../../../shared/widgets/app_toast.dart';
 import '../../../../../shared/utils/string_utils.dart';
 import '../../../../profile/presentation/providers/profile_provider.dart';
 import '../../../../../core/pdf/templates/service_report_pdf_template.dart';
@@ -232,12 +233,9 @@ class _ViewReportScreenState extends ConsumerState<ViewReportScreen>
             final userEmail = Supabase.instance.client.auth.currentUser?.email;
 
             if (userProfile == null) {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text(
-                    'Cargando perfil de usuario... Por favor espere.',
-                  ),
-                ),
+              AppToast.info(
+                context,
+                message: 'Cargando perfil de usuario... Por favor espere.',
               );
               return;
             }
@@ -291,12 +289,9 @@ class _ViewReportScreenState extends ConsumerState<ViewReportScreen>
                 refreshAllReportProviders(ref);
 
                 if (context.mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text(
-                        'Estatus cambiado a "${selectedStatus.label}"',
-                      ),
-                    ),
+                  AppToast.success(
+                    context,
+                    message: 'Estatus cambiado a "${selectedStatus.label}"',
                   );
                 }
               } on InsufficientStockException catch (e) {
@@ -321,8 +316,9 @@ class _ViewReportScreenState extends ConsumerState<ViewReportScreen>
                 }
               } catch (e) {
                 if (context.mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text('Error al cambiar estatus: $e')),
+                  AppToast.error(
+                    context,
+                    message: 'Error al cambiar estatus: $e',
                   );
                 }
               }
@@ -350,7 +346,6 @@ class _ViewReportScreenState extends ConsumerState<ViewReportScreen>
               : Icons.archive_outlined,
           label: report.isArchived ? 'Desarchivar' : 'Archivar',
           onTap: () async {
-            final messenger = ScaffoldMessenger.of(context);
             final router = GoRouter.of(context);
             context.pop();
 
@@ -358,15 +353,12 @@ class _ViewReportScreenState extends ConsumerState<ViewReportScreen>
                 .read(reportsListProvider.notifier)
                 .archiveReport(widget.reportId, archive: !report.isArchived);
 
-            if (mounted) {
-              messenger.showSnackBar(
-                SnackBar(
-                  content: Text(
-                    report.isArchived
-                        ? 'Reporte desarchivado exitosamente'
-                        : 'Reporte archivado exitosamente',
-                  ),
-                ),
+            if (context.mounted) {
+              AppToast.success(
+                context,
+                message: report.isArchived
+                    ? 'Reporte desarchivado exitosamente'
+                    : 'Reporte archivado exitosamente',
               );
               router.pop();
             }
@@ -387,12 +379,10 @@ class _ViewReportScreenState extends ConsumerState<ViewReportScreen>
         status == ServiceReportStatus.cancelled;
 
     if (isSendDisabled) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
+      AppToast.warning(
+        context,
+        message:
             'El reporte está ${status.label.toLowerCase()} y no se puede enviar.',
-          ),
-        ),
       );
       return;
     }
@@ -490,8 +480,9 @@ class _ViewReportScreenState extends ConsumerState<ViewReportScreen>
         onSend(updatedReport);
       } catch (e) {
         if (context.mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Error al actualizar fecha: $e')),
+          AppToast.error(
+            context,
+            message: 'Error al actualizar fecha: $e',
           );
         }
       }

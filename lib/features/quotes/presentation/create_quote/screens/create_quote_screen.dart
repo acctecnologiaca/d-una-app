@@ -195,12 +195,9 @@ class _CreateQuoteScreenState extends ConsumerState<CreateQuoteScreen>
       if (widget.quoteId != null &&
           currentState.quote?.status == QuoteStatus.finalized.dbValue) {
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text(
-                'La cotización está finalizada y no se puede editar.',
-              ),
-            ),
+          AppToast.warning(
+            context,
+            message: 'La cotización está finalizada y no se puede editar.',
           );
           context.pop();
         }
@@ -346,78 +343,39 @@ class _CreateQuoteScreenState extends ConsumerState<CreateQuoteScreen>
     if (_tabController.index == 4) {
       return CustomExtendedFab(
         label: state.isLoading ? 'Guardando...' : 'Guardar',
-          icon: state.isLoading ? Icons.hourglass_empty : Icons.save_outlined,
-          isEnabled:
-              state.isReadyToFinalize && state.hasChanges && !state.isLoading,
-          onPressed: () async {
-            if (widget.quoteId != null) {
-              try {
-                final repo = ref.read(supplierOrdersRepositoryProvider);
-                final linked = await repo.getSupplierOrdersByQuoteId(
-                  widget.quoteId!,
-                );
-                final draftOrders = linked
-                    .where((o) => o.status == SupplierOrderStatus.draft)
-                    .toList();
+        icon: state.isLoading ? Icons.hourglass_empty : Icons.save_outlined,
+        isEnabled:
+            state.isReadyToFinalize && state.hasChanges && !state.isLoading,
+        onPressed: () async {
+          if (widget.quoteId != null) {
+            await _handleSaveInEditMode(ref);
+            return;
+          }
 
-                if (draftOrders.isNotEmpty) {
-                  if (!mounted) return;
-                  final confirm = await CustomDialog.show<bool>(
-                    context: context,
-                    dialog: CustomDialog.confirmation(
-                      icon: Icons.warning_amber_rounded,
-                      iconColor: Colors.amber.shade800,
-                      title: 'Actualizar Cotización',
-                      contentText:
-                          'Al guardar las modificaciones, las Órdenes de Compra en borrador previas (${draftOrders.map((e) => e.orderNumber).join(', ')}) cambiarán a estatus "Cancelada" para permitir generar órdenes actualizadas. ¿Deseas continuar?',
-                      actions: [
-                        TextButton(
-                          onPressed: () => Navigator.pop(context, false),
-                          child: const Text('Cancelar'),
-                        ),
-                        FilledButton(
-                          onPressed: () => Navigator.pop(context, true),
-                          child: const Text('Continuar'),
-                        ),
-                      ],
-                    ),
-                  );
+          final success = await ref
+              .read(createQuoteProvider.notifier)
+              .createQuote();
 
-                  if (confirm != true) return;
+          if (!mounted) return;
 
-                  await repo.cancelDraftOrdersByQuoteId(widget.quoteId!);
-                  ref.invalidate(linkedSupplierOrdersProvider(widget.quoteId!));
-                }
-              } catch (_) {}
+          if (success) {
+            final quote = ref.read(createQuoteProvider).quote;
+            if (quote != null) {
+              ref.invalidate(viewQuoteProvider(quote.id));
+              ref.invalidate(linkedSupplierOrdersProvider(quote.id));
             }
-
-            final success = await ref
-                .read(createQuoteProvider.notifier)
-                .createQuote();
-
-            if (!mounted) return;
-
-            if (success) {
-              final quote = ref.read(createQuoteProvider).quote;
-              if (quote != null) {
-                ref.invalidate(viewQuoteProvider(quote.id));
-                ref.invalidate(linkedSupplierOrdersProvider(quote.id));
-              }
-              final savedQuoteNumber =
-                  ref.read(createQuoteProvider).quote?.quoteNumber ?? '';
-              _showPostSaveOptions(ref, savedQuoteNumber);
-            } else {
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text(
-                    ref.read(createQuoteProvider).error ?? 'Error al guardar',
-                  ),
-                  backgroundColor: Colors.red,
-                ),
-              );
-            }
-          },
-        );
+            final savedQuoteNumber =
+                ref.read(createQuoteProvider).quote?.quoteNumber ?? '';
+            _showPostSaveOptions(ref, savedQuoteNumber);
+          } else {
+            AppToast.error(
+              context,
+              message:
+                  ref.read(createQuoteProvider).error ?? 'Error al guardar',
+            );
+          }
+        },
+      );
     }
 
     return CustomExtendedFab(
@@ -569,6 +527,49 @@ class _CreateQuoteScreenState extends ConsumerState<CreateQuoteScreen>
     final state = ref.read(createQuoteProvider);
     final currentStatus = state.quote?.status;
 
+    // 1. Verificación preventiva de OCs vinculadas en borrador
+    if (widget.quoteId != null) {
+      try {
+        final repo = ref.read(supplierOrdersRepositoryProvider);
+        final linked = await repo.getSupplierOrdersByQuoteId(widget.quoteId!);
+        final draftOrders = linked
+            .where((o) => o.status == SupplierOrderStatus.draft)
+            .toList();
+
+        if (draftOrders.isNotEmpty) {
+          if (!mounted) return;
+          final confirmOc = await CustomDialog.show<bool>(
+            context: context,
+            dialog: CustomDialog.confirmation(
+              icon: Icons.warning_amber_rounded,
+              iconColor: Colors.amber.shade800,
+              title: 'Actualizar Cotización',
+              contentText:
+                  'Al guardar las modificaciones, las Órdenes de Compra en borrador previas (${draftOrders.map((e) => e.orderNumber).join(', ')}) cambiarán a estatus "Cancelada" para permitir generar órdenes actualizadas. ¿Deseas continuar?',
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(context, false),
+                  child: const Text('Cancelar'),
+                ),
+                FilledButton(
+                  onPressed: () => Navigator.pop(context, true),
+                  child: const Text('Continuar'),
+                ),
+              ],
+            ),
+          );
+
+          if (confirmOc != true) return;
+
+          await repo.cancelDraftOrdersByQuoteId(widget.quoteId!);
+          ref.invalidate(linkedSupplierOrdersProvider(widget.quoteId!));
+        }
+      } catch (_) {}
+    }
+
+    if (!mounted) return;
+
+    // 2. Diálogo preventivo si la cotización no está en borrador
     if (currentStatus != null && currentStatus != QuoteStatus.draft.dbValue) {
       final confirm =
           await CustomDialog.show<bool>(
@@ -607,8 +608,9 @@ class _CreateQuoteScreenState extends ConsumerState<CreateQuoteScreen>
       ref.invalidate(paginatedQuotesListProvider);
       ref.invalidate(paginatedQuoteSearchProvider);
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Cotización guardada como Borrador')),
+      AppToast.info(
+        context,
+        message: 'Cotización guardada como Borrador',
       );
 
       if (quoteId != null) {

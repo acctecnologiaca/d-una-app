@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:d_una_app/shared/widgets/app_toast.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:d_una_app/shared/widgets/custom_action_sheet.dart';
 import 'package:d_una_app/shared/widgets/custom_dialog.dart';
@@ -59,7 +60,6 @@ class _AddEditUomSheetState extends ConsumerState<AddEditUomSheet> {
 
     setState(() => _isLoading = true);
 
-    final scaffoldMessenger = ScaffoldMessenger.of(context);
     final navigator = Navigator.of(context);
 
     try {
@@ -81,15 +81,11 @@ class _AddEditUomSheetState extends ConsumerState<AddEditUomSheet> {
 
       if (mounted) {
         navigator.pop(result);
-        scaffoldMessenger.showSnackBar(
-          SnackBar(
-            behavior: SnackBarBehavior.floating,
-            content: Text(
-              isEditing
-                  ? 'Unidad actualizada a "$name"'
-                  : 'Unidad "$name" agregada',
-            ),
-          ),
+        AppToast.success(
+          context,
+          message: isEditing
+              ? 'Unidad actualizada a "$name"'
+              : 'Unidad "$name" agregada',
         );
       }
     } catch (e) {
@@ -124,7 +120,6 @@ class _AddEditUomSheetState extends ConsumerState<AddEditUomSheet> {
 
     if (confirm != true || !mounted) return;
 
-    final scaffoldMessenger = ScaffoldMessenger.of(context);
     final navigator = Navigator.of(context);
 
     try {
@@ -133,11 +128,9 @@ class _AddEditUomSheetState extends ConsumerState<AddEditUomSheet> {
 
       if (mounted) {
         navigator.pop();
-        scaffoldMessenger.showSnackBar(
-          SnackBar(
-            behavior: SnackBarBehavior.floating,
-            content: Text('Unidad "${widget.uom!.name}" eliminada'),
-          ),
+        AppToast.success(
+          context,
+          message: 'Unidad "${widget.uom!.name}" eliminada',
         );
       }
     } catch (e) {

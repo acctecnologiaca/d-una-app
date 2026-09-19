@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:d_una_app/shared/widgets/app_toast.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:d_una_app/shared/widgets/custom_action_sheet.dart';
 import 'package:d_una_app/shared/widgets/custom_dialog.dart';
@@ -72,11 +73,9 @@ class _AddEditShippingCompanySheetState
         : _nameController.text.trim();
 
     if (legalName.isEmpty || taxId.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          behavior: SnackBarBehavior.floating,
-          content: Text('La Razón Social y el RIF son obligatorios.'),
-        ),
+      AppToast.warning(
+        context,
+        message: 'La Razón Social y el RIF son obligatorios.',
       );
       return;
     }
@@ -112,15 +111,11 @@ class _AddEditShippingCompanySheetState
 
       if (mounted) {
         Navigator.pop(context, result);
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            behavior: SnackBarBehavior.floating,
-            content: Text(
-              isEditing
-                  ? 'Empresa actualizada a "$legalName"'
-                  : 'Empresa "$legalName" agregada',
-            ),
-          ),
+        AppToast.success(
+          context,
+          message: isEditing
+              ? 'Empresa actualizada a "$legalName"'
+              : 'Empresa "$legalName" agregada',
         );
       }
     } catch (e) {
@@ -163,11 +158,9 @@ class _AddEditShippingCompanySheetState
 
       if (mounted) {
         Navigator.pop(context);
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            behavior: SnackBarBehavior.floating,
-            content: Text('Empresa "${widget.company!.displayName}" eliminada'),
-          ),
+        AppToast.success(
+          context,
+          message: 'Empresa "${widget.company!.displayName}" eliminada',
         );
       }
     } catch (e) {

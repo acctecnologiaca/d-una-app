@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../../../shared/widgets/standard_app_bar.dart';
+import '../../../../../shared/widgets/app_toast.dart';
 import '../../../../../shared/widgets/custom_search_bar.dart';
 import '../../../../../shared/widgets/sort_selector.dart';
 import '../../../../../shared/widgets/aggregated_product_card.dart';
@@ -162,12 +163,10 @@ class _SelectSupplierOrderProductScreenState
                       isAlreadyAdded: isAlreadyInOrder,
                       onTap: () {
                         if (isAlreadyInOrder) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                              content: Text(
+                          AppToast.warning(
+                            context,
+                            message:
                                 'Este producto ya se encuentra en la orden de compra',
-                              ),
-                            ),
                           );
                           return;
                         }

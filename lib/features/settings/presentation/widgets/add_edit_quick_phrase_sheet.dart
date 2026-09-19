@@ -8,6 +8,7 @@ import 'package:d_una_app/shared/widgets/custom_button.dart';
 import 'package:d_una_app/features/portfolio/data/models/category_model.dart';
 import 'package:d_una_app/features/portfolio/presentation/providers/lookup_providers.dart';
 import 'package:d_una_app/core/utils/error_handler.dart';
+import 'package:d_una_app/shared/widgets/app_toast.dart';
 import '../../data/models/quick_phrase.dart';
 import '../providers/quick_phrases_provider.dart';
 
@@ -124,13 +125,10 @@ class _AddEditQuickPhraseSheetState
 
       if (mounted) {
         Navigator.pop(context);
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            behavior: SnackBarBehavior.floating,
-            content: Text(
+        AppToast.success(
+          context,
+          message:
               isEditing ? 'Frase actualizada' : 'Frase agregada exitosamente',
-            ),
-          ),
         );
       }
     } catch (e) {
@@ -173,11 +171,9 @@ class _AddEditQuickPhraseSheetState
 
       if (mounted) {
         Navigator.pop(context);
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            behavior: SnackBarBehavior.floating,
-            content: Text('Frase eliminada'),
-          ),
+        AppToast.success(
+          context,
+          message: 'Frase eliminada',
         );
       }
     } catch (e) {

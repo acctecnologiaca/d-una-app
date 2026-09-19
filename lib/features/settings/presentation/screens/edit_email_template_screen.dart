@@ -1,4 +1,5 @@
 import 'package:d_una_app/shared/widgets/standard_app_bar.dart';
+import 'package:d_una_app/shared/widgets/app_toast.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -119,16 +120,18 @@ class _EditEmailTemplateScreenState
           .saveTemplate(template);
 
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Plantilla guardada correctamente')),
-        );
         context.pop();
+        AppToast.success(
+          context,
+          message: 'Plantilla guardada correctamente',
+        );
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(
+        AppToast.error(
           context,
-        ).showSnackBar(SnackBar(content: Text('Error al guardar: $e')));
+          message: 'Error al guardar: $e',
+        );
       }
     } finally {
       if (mounted) setState(() => _isLoading = false);

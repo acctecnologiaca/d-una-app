@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:d_una_app/shared/widgets/app_toast.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../../../shared/widgets/generic_search_screen.dart';
@@ -399,12 +400,9 @@ class _QuoteProductSearchScreenState
             isAlreadyAdded: isAlreadyInQuote,
             onTap: () {
               if (isAlreadyInQuote) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text(
-                      'Este producto ya se encuentra en la cotización',
-                    ),
-                  ),
+                AppToast.warning(
+                  context,
+                  message: 'Este producto ya se encuentra en la cotización',
                 );
                 return;
               }

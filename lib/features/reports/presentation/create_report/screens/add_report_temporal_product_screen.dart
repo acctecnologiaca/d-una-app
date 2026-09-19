@@ -10,6 +10,7 @@ import '../../../../../shared/widgets/standard_app_bar.dart';
 import '../../../../../shared/widgets/custom_text_field.dart';
 import '../../../../../shared/widgets/custom_dropdown.dart';
 import '../../../../../shared/widgets/custom_dialog.dart';
+import '../../../../../shared/widgets/app_toast.dart';
 import '../../../../../shared/widgets/form_bottom_bar.dart';
 import '../../../../../shared/widgets/custom_stepper.dart';
 import '../../../../../shared/widgets/collapsible_card_block.dart';
@@ -728,14 +729,10 @@ class _AddReportTemporalProductScreenState
       } catch (e) {
         debugPrint('Failed to add to inventory: $e');
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: const Text(
+          AppToast.error(
+            context,
+            message:
                 'Se agregó al reporte, pero no se pudo guardar en tu inventario por un problema de conexión.',
-              ),
-              backgroundColor: Theme.of(context).colorScheme.error,
-              behavior: SnackBarBehavior.floating,
-            ),
           );
         }
       }

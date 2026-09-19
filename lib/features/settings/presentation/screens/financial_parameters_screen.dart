@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:d_una_app/shared/widgets/app_toast.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:d_una_app/shared/widgets/standard_app_bar.dart';
@@ -110,7 +111,6 @@ class _FinancialParametersScreenState
   Future<void> _save() async {
     setState(() => _isSaving = true);
 
-    final scaffoldMessenger = ScaffoldMessenger.of(context);
     final navigator = Navigator.of(context);
 
     try {
@@ -131,11 +131,9 @@ class _FinancialParametersScreenState
 
       if (mounted) {
         navigator.pop(true);
-        scaffoldMessenger.showSnackBar(
-          const SnackBar(
-            behavior: SnackBarBehavior.floating,
-            content: Text('Parámetros financieros actualizados'),
-          ),
+        AppToast.success(
+          context,
+          message: 'Parámetros financieros actualizados',
         );
       }
     } catch (e) {

@@ -1,6 +1,7 @@
 import 'dart:ui';
 
 import 'package:flutter/material.dart';
+import 'package:d_una_app/shared/widgets/app_toast.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:material_symbols_icons/symbols.dart';
@@ -176,48 +177,20 @@ class _QuoteProductSourceCardState
           InkWell(
             onTap: () {
               if (shouldShowSnackBar) {
-                ScaffoldMessenger.of(context).hideCurrentSnackBar();
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    duration: const Duration(seconds: 5),
-                    content: Row(
-                      children: [
-                        const Expanded(
-                          child: Text(
-                            'Requiere que estés verificado con una compañía o firma personal',
-                            style: TextStyle(fontSize: 13),
-                          ),
-                        ),
-                        TextButton(
-                          onPressed: () {
-                            ScaffoldMessenger.of(context).hideCurrentSnackBar();
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (context) =>
-                                    const VerificationScreen(),
-                              ),
-                            );
-                          },
-                          child: const Text(
-                            'Verificar',
-                            style: TextStyle(
-                              color: Colors.blueAccent,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                        ),
-                        IconButton(
-                          icon: const Icon(Icons.close, color: Colors.white),
-                          padding: EdgeInsets.zero,
-                          constraints: const BoxConstraints(),
-                          onPressed: () {
-                            ScaffoldMessenger.of(context).hideCurrentSnackBar();
-                          },
-                        ),
-                      ],
-                    ),
-                  ),
+                AppToast.warning(
+                  context,
+                  message:
+                      'Requiere que estés verificado con una compañía o firma personal',
+                  actionLabel: 'Verificar',
+                  onAction: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => const VerificationScreen(),
+                      ),
+                    );
+                  },
+                  duration: const Duration(seconds: 5),
                 );
                 return;
               }

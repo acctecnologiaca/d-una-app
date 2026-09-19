@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:material_symbols_icons/symbols.dart';
+import 'app_toast.dart';
 
 class MainNavigationDrawer extends StatelessWidget {
   const MainNavigationDrawer({super.key});
@@ -169,8 +170,9 @@ class MainNavigationDrawer extends StatelessWidget {
         } else {
           // Disable navigation if route is placeholder and doesn't exist yet,
           // to prevent GoRouter exceptions.
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Navegando a $label (Próximamente)')),
+          AppToast.info(
+            context,
+            message: 'Navegando a $label (Próximamente)',
           );
         }
       },

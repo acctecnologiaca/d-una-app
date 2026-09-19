@@ -8,6 +8,7 @@ import 'package:flutter_file_dialog/flutter_file_dialog.dart';
 import 'package:open_filex/open_filex.dart';
 import 'package:path_provider/path_provider.dart';
 import '../widgets/standard_app_bar.dart';
+import '../widgets/app_toast.dart';
 
 class PdfPreviewScreen extends StatelessWidget {
   final String title;
@@ -51,11 +52,10 @@ class PdfPreviewScreen extends StatelessWidget {
             icon: const Icon(Symbols.download, size: 36),
             onPressed: (context, buildPdf, pageFormat) async {
               // Feedback visual inmediato
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text('Generando documento...'),
-                  duration: Duration(seconds: 1),
-                ),
+              AppToast.info(
+                context,
+                message: 'Generando documento...',
+                duration: const Duration(seconds: 1),
               );
 
               // Generar los bytes del PDF
@@ -82,73 +82,25 @@ class PdfPreviewScreen extends StatelessWidget {
                     await tempFile.writeAsBytes(bytes);
 
                     if (context.mounted) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                          duration: const Duration(seconds: 8),
-                          behavior: SnackBarBehavior.fixed,
-                          content: Row(
-                            children: [
-                              Expanded(
-                                child: Column(
-                                  mainAxisSize: MainAxisSize.min,
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    const Text(
-                                      'Archivo guardado exitosamente',
-                                      style: TextStyle(
-                                        fontWeight: FontWeight.bold,
-                                      ),
-                                    ),
-                                    /*Text(
-                                      filePath,
-                                      style: const TextStyle(
-                                        fontSize: 10,
-                                        color: Colors.white70,
-                                      ),
-                                    ),*/
-                                  ],
-                                ),
-                              ),
-                              TextButton(
-                                onPressed: () async {
-                                  // Abrimos el archivo temporal que tiene garantizado el acceso
-                                  await OpenFilex.open(
-                                    tempPath,
-                                    type: "application/pdf",
-                                  );
-                                },
-                                child: Text(
-                                  'Abrir',
-                                  style: TextStyle(
-                                    color: colors.inversePrimary,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                              ),
-                              IconButton(
-                                icon: const Icon(
-                                  Icons.close,
-                                  color: Colors.white54,
-                                  size: 20,
-                                ),
-                                onPressed: () {
-                                  ScaffoldMessenger.of(
-                                    context,
-                                  ).hideCurrentSnackBar();
-                                },
-                              ),
-                            ],
-                          ),
-                        ),
+                      AppToast.success(
+                        context,
+                        message: 'Archivo guardado exitosamente',
+                        actionLabel: 'Abrir',
+                        onAction: () async {
+                          await OpenFilex.open(
+                            tempPath,
+                            type: 'application/pdf',
+                          );
+                        },
+                        duration: const Duration(seconds: 8),
                       );
                     }
                   }
                 } catch (e) {
                   if (context.mounted) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: Text('Error al guardar el archivo: $e'),
-                      ),
+                    AppToast.error(
+                      context,
+                      message: 'Error al guardar el archivo: $e',
                     );
                   }
                 }

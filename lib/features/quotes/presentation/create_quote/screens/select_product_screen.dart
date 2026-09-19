@@ -1,3 +1,4 @@
+import 'package:d_una_app/shared/widgets/app_toast.dart';
 import 'package:d_una_app/shared/widgets/info_disclaimer_card.dart';
 import 'package:flutter/material.dart';
 import 'package:d_una_app/shared/widgets/friendly_error_widget.dart';
@@ -200,12 +201,10 @@ class _SelectProductScreenState extends ConsumerState<SelectProductScreen> {
                       isAlreadyAdded: isAlreadyInQuote,
                       onTap: () {
                         if (isAlreadyInQuote) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                              content: Text(
+                          AppToast.warning(
+                            context,
+                            message:
                                 'Este producto ya se encuentra en la cotización',
-                              ),
-                            ),
                           );
                           return;
                         }

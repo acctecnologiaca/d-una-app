@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:d_una_app/shared/widgets/app_toast.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../../shared/widgets/custom_text_field.dart';
 import '../../../../../shared/widgets/custom_button.dart';
@@ -210,12 +211,10 @@ class _SendWhatsAppBottomSheetState
       ref.invalidate(creditTransactionsHistoryProvider);
 
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
+        AppToast.success(
+          context,
+          message:
               'Cotización enviada exitosamente (créditos restantes: ${freshCreditStatus.remainingCredits})',
-            ),
-          ),
         );
         Navigator.of(context).pop();
       }

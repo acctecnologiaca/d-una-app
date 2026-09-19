@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:d_una_app/shared/widgets/app_toast.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:d_una_app/shared/widgets/custom_action_sheet.dart';
 import 'package:d_una_app/shared/widgets/custom_dialog.dart';
@@ -111,7 +112,6 @@ class _AddEditCategorySheetState extends ConsumerState<AddEditCategorySheet> {
 
     setState(() => _isLoading = true);
 
-    final scaffoldMessenger = ScaffoldMessenger.of(context);
     final navigator = Navigator.of(context);
 
     try {
@@ -129,16 +129,14 @@ class _AddEditCategorySheetState extends ConsumerState<AddEditCategorySheet> {
       }
       ref.invalidate(categoriesProvider);
       navigator.pop(resultCategory);
-      scaffoldMessenger.showSnackBar(
-        SnackBar(
-          behavior: SnackBarBehavior.floating,
-          content: Text(
-            isEditing
-                ? 'Categoría actualizada a "$name"'
-                : 'Categoría "$name" agregada',
-          ),
-        ),
-      );
+      if (mounted) {
+        AppToast.success(
+          context,
+          message: isEditing
+              ? 'Categoría actualizada a "$name"'
+              : 'Categoría "$name" agregada',
+        );
+      }
     } catch (e) {
       setState(() => _isLoading = false);
 
@@ -156,12 +154,12 @@ class _AddEditCategorySheetState extends ConsumerState<AddEditCategorySheet> {
               : 'El nombre es muy similar a una categoría oficial.';
         });
       } else {
-        scaffoldMessenger.showSnackBar(
-          SnackBar(
-            behavior: SnackBarBehavior.floating,
-            content: Text('Error: $e'),
-          ),
-        );
+        if (mounted) {
+          AppToast.error(
+            context,
+            message: 'Error: $e',
+          );
+        }
       }
     }
   }
@@ -190,7 +188,6 @@ class _AddEditCategorySheetState extends ConsumerState<AddEditCategorySheet> {
 
     if (confirm != true || !mounted) return;
 
-    final scaffoldMessenger = ScaffoldMessenger.of(context);
     final navigator = Navigator.of(context);
 
     try {
@@ -199,19 +196,19 @@ class _AddEditCategorySheetState extends ConsumerState<AddEditCategorySheet> {
           .deleteCategory(widget.category!.id);
       ref.invalidate(categoriesProvider);
       navigator.pop();
-      scaffoldMessenger.showSnackBar(
-        SnackBar(
-          behavior: SnackBarBehavior.floating,
-          content: Text('Categoría "${widget.category!.name}" eliminada'),
-        ),
-      );
+      if (mounted) {
+        AppToast.success(
+          context,
+          message: 'Categoría "${widget.category!.name}" eliminada',
+        );
+      }
     } catch (e) {
-      scaffoldMessenger.showSnackBar(
-        SnackBar(
-          behavior: SnackBarBehavior.floating,
-          content: Text('Error: $e'),
-        ),
-      );
+      if (mounted) {
+        AppToast.error(
+          context,
+          message: 'Error: $e',
+        );
+      }
     }
   }
 

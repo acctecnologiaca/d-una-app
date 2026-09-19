@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:d_una_app/shared/widgets/app_toast.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../../../shared/widgets/standard_app_bar.dart';
@@ -200,12 +201,10 @@ class _ViewQuoteScreenState extends ConsumerState<ViewQuoteScreen>
                           Supabase.instance.client.auth.currentUser?.email;
 
                       if (userProfile == null) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: Text(
+                        AppToast.info(
+                          context,
+                          message:
                               'Cargando perfil de usuario... Por favor espere.',
-                            ),
-                          ),
                         );
                         return;
                       }
@@ -252,7 +251,6 @@ class _ViewQuoteScreenState extends ConsumerState<ViewQuoteScreen>
                                 : 'Cotización cancelada. No se puede cambiar de estado')
                             : null,
                         onTap: () async {
-                          final messenger = ScaffoldMessenger.of(context);
                           sheetContext.pop(); // Close the action sheet
 
                           final currentStatusStr = state.quote?.status;
@@ -285,13 +283,13 @@ class _ViewQuoteScreenState extends ConsumerState<ViewQuoteScreen>
 
                               refreshAllQuoteProviders(ref);
 
-                              messenger.showSnackBar(
-                                SnackBar(
-                                  content: Text(
-                                    'Estatus cambiado a "${selectedStatus.label}"',
-                                  ),
-                                ),
-                              );
+                              if (context.mounted) {
+                                AppToast.success(
+                                  context,
+                                  message:
+                                      'Estatus cambiado a "${selectedStatus.label}"',
+                                );
+                              }
                             } on InsufficientStockException catch (e) {
                               if (!context.mounted) return;
                               CustomDialog.show(
@@ -315,10 +313,9 @@ class _ViewQuoteScreenState extends ConsumerState<ViewQuoteScreen>
                               );
                             } catch (e) {
                               if (!context.mounted) return;
-                              messenger.showSnackBar(
-                                SnackBar(
-                                  content: Text('Error al cambiar estatus: $e'),
-                                ),
+                              AppToast.error(
+                                context,
+                                message: 'Error al cambiar estatus: $e',
                               );
                             }
                           }
@@ -381,7 +378,6 @@ class _ViewQuoteScreenState extends ConsumerState<ViewQuoteScreen>
                         subtitle: subtitleText,
                         onTap: () async {
                           final router = GoRouter.of(context);
-                          final messenger = ScaffoldMessenger.of(context);
 
                           final quote = state.quote;
                           if (quote == null) return;
@@ -437,12 +433,13 @@ class _ViewQuoteScreenState extends ConsumerState<ViewQuoteScreen>
                               return;
                             }
 
-                            messenger.showSnackBar(
-                              const SnackBar(
-                                content: Text('Generando órdenes de compra...'),
-                                duration: Duration(seconds: 1),
-                              ),
-                            );
+                            if (context.mounted) {
+                              AppToast.info(
+                                context,
+                                message: 'Generando órdenes de compra...',
+                                duration: const Duration(seconds: 1),
+                              );
+                            }
 
                             final result = await repo.batchGenerateFromQuote(
                               quote.id,
@@ -486,13 +483,13 @@ class _ViewQuoteScreenState extends ConsumerState<ViewQuoteScreen>
                                 );
                               }
                             } else {
-                              messenger.showSnackBar(
-                                SnackBar(
-                                  content: Text(
-                                    'Se generaron $generatedCount órdenes de compra exitosamente.',
-                                  ),
-                                ),
-                              );
+                              if (context.mounted) {
+                                AppToast.success(
+                                  context,
+                                  message:
+                                      'Se generaron $generatedCount órdenes de compra exitosamente.',
+                                );
+                              }
                             }
 
                             final query =
@@ -504,12 +501,12 @@ class _ViewQuoteScreenState extends ConsumerState<ViewQuoteScreen>
                               extra: {'initialQuery': query, 'readOnly': true},
                             );
                           } catch (e) {
-                            messenger.showSnackBar(
-                              SnackBar(
-                                content: Text('Error al generar órdenes: $e'),
-                                backgroundColor: Colors.red,
-                              ),
-                            );
+                            if (context.mounted) {
+                              AppToast.error(
+                                context,
+                                message: 'Error al generar órdenes: $e',
+                              );
+                            }
                           }
                         },
                       );
@@ -533,7 +530,6 @@ class _ViewQuoteScreenState extends ConsumerState<ViewQuoteScreen>
                           if (quote == null) return;
 
                           final router = GoRouter.of(sheetContext);
-                          final messenger = ScaffoldMessenger.of(sheetContext);
                           Navigator.of(sheetContext).pop(); // Close action sheet
 
                           try {
@@ -598,12 +594,11 @@ class _ViewQuoteScreenState extends ConsumerState<ViewQuoteScreen>
                               );
                             }
                           } catch (e) {
-                            if (mounted) {
-                              messenger.showSnackBar(
-                                SnackBar(
-                                  content: Text('Error al preparar nota de entrega: $e'),
-                                  backgroundColor: Colors.red,
-                                ),
+                            if (context.mounted) {
+                              AppToast.error(
+                                context,
+                                message:
+                                    'Error al preparar nota de entrega: $e',
                               );
                             }
                           }
@@ -638,7 +633,6 @@ class _ViewQuoteScreenState extends ConsumerState<ViewQuoteScreen>
                             : Icons.archive_outlined,
                         label: isArchived ? 'Desarchivar' : 'Archivar',
                         onTap: () async {
-                          final messenger = ScaffoldMessenger.of(context);
                           final router = GoRouter.of(context);
 
                           sheetContext.pop(); // Close the action sheet
@@ -649,15 +643,12 @@ class _ViewQuoteScreenState extends ConsumerState<ViewQuoteScreen>
                                 archive: !isArchived,
                               );
 
-                          if (mounted) {
-                            messenger.showSnackBar(
-                              SnackBar(
-                                content: Text(
-                                  isArchived
-                                      ? 'Cotización desarchivada exitosamente'
-                                      : 'Cotización archivada exitosamente',
-                                ),
-                              ),
+                          if (context.mounted) {
+                            AppToast.success(
+                              context,
+                              message: isArchived
+                                  ? 'Cotización desarchivada exitosamente'
+                                  : 'Cotización archivada exitosamente',
                             );
                             router.pop(); // Return to quotes list
                           }
@@ -835,8 +826,9 @@ class _ViewQuoteScreenState extends ConsumerState<ViewQuoteScreen>
       await ContactUtils.launchWhatsApp(phone.trim(), message: msg);
     } catch (e) {
       if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('No se pudo abrir WhatsApp: $e')),
+        AppToast.error(
+          context,
+          message: 'No se pudo abrir WhatsApp: $e',
         );
       }
     }
@@ -885,12 +877,10 @@ class _ViewQuoteScreenState extends ConsumerState<ViewQuoteScreen>
         currentQuote.status == QuoteStatus.finalized.dbValue;
 
     if (isSendDisabled) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
+      AppToast.warning(
+        context,
+        message:
             'La cotización está ${QuoteStatus.fromDbValue(currentQuote.status).label.toLowerCase()} y no se puede enviar.',
-          ),
-        ),
       );
       return;
     }
@@ -988,8 +978,9 @@ class _ViewQuoteScreenState extends ConsumerState<ViewQuoteScreen>
         onSend(updatedQuote);
       } catch (e) {
         if (context.mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Error al actualizar fecha: $e')),
+          AppToast.error(
+            context,
+            message: 'Error al actualizar fecha: $e',
           );
         }
       }

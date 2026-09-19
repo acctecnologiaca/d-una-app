@@ -7,6 +7,7 @@ import 'package:d_una_app/shared/widgets/custom_button.dart';
 import 'package:d_una_app/features/settings/data/models/observation.dart';
 import 'package:d_una_app/features/portfolio/presentation/providers/lookup_providers.dart';
 import 'package:d_una_app/core/utils/error_handler.dart';
+import 'package:d_una_app/shared/widgets/app_toast.dart';
 
 class AddEditObservationSheet extends ConsumerStatefulWidget {
   final Observation? observation;
@@ -81,13 +82,10 @@ class _AddEditObservationSheetState
 
       if (mounted) {
         Navigator.pop(context);
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            behavior: SnackBarBehavior.floating,
-            content: Text(
+        AppToast.success(
+          context,
+          message:
               isEditing ? 'Observación actualizada' : 'Observación agregada',
-            ),
-          ),
         );
       }
     } catch (e) {
@@ -129,11 +127,9 @@ class _AddEditObservationSheetState
 
       if (mounted) {
         Navigator.pop(context);
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            behavior: SnackBarBehavior.floating,
-            content: Text('Observación eliminada'),
-          ),
+        AppToast.success(
+          context,
+          message: 'Observación eliminada',
         );
       }
     } catch (e) {

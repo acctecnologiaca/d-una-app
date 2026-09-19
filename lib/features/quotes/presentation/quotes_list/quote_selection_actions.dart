@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:d_una_app/shared/widgets/app_toast.dart';
 import 'package:go_router/go_router.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:material_symbols_icons/symbols.dart';
@@ -109,22 +110,18 @@ class QuoteSelectionActions {
             final userEmail = Supabase.instance.client.auth.currentUser?.email;
 
             if (userProfile == null) {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text(
-                    'Cargando perfil de usuario... Por favor espere.',
-                  ),
-                ),
+              AppToast.info(
+                context,
+                message: 'Cargando perfil de usuario... Por favor espere.',
               );
               return;
             }
 
             // Mostramos feedback de carga
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                content: Text('Preparando documento...'),
-                duration: Duration(seconds: 1),
-              ),
+            AppToast.info(
+              context,
+              message: 'Preparando documento...',
+              duration: const Duration(seconds: 1),
             );
 
             try {
@@ -156,10 +153,9 @@ class QuoteSelectionActions {
               }
             } catch (e) {
               if (context.mounted) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text('Error al cargar detalles de cotización: $e'),
-                  ),
+                AppToast.error(
+                  context,
+                  message: 'Error al cargar detalles de cotización: $e',
                 );
               }
             }
@@ -226,7 +222,6 @@ class QuoteSelectionActions {
               subtitle: ocSubtitle,
               onTap: () async {
                 final router = GoRouter.of(context);
-                final messenger = ScaffoldMessenger.of(context);
 
                 try {
                   final repo = ref.read(supplierOrdersRepositoryProvider);
@@ -276,12 +271,13 @@ class QuoteSelectionActions {
                     return;
                   }
 
-                  messenger.showSnackBar(
-                    const SnackBar(
-                      content: Text('Generando órdenes de compra...'),
-                      duration: Duration(seconds: 1),
-                    ),
-                  );
+                  if (context.mounted) {
+                    AppToast.info(
+                      context,
+                      message: 'Generando órdenes de compra...',
+                      duration: const Duration(seconds: 1),
+                    );
+                  }
 
                   final result = await repo.batchGenerateFromQuote(
                     quote.id,
@@ -321,13 +317,13 @@ class QuoteSelectionActions {
                       );
                     }
                   } else {
-                    messenger.showSnackBar(
-                      SnackBar(
-                        content: Text(
-                          'Se generaron $generatedCount órdenes de compra exitosamente.',
-                        ),
-                      ),
-                    );
+                    if (context.mounted) {
+                      AppToast.success(
+                        context,
+                        message:
+                            'Se generaron $generatedCount órdenes de compra exitosamente.',
+                      );
+                    }
                   }
 
                   final query = quote.quoteNumber;
@@ -336,12 +332,12 @@ class QuoteSelectionActions {
                     extra: {'initialQuery': query, 'readOnly': true},
                   );
                 } catch (e) {
-                  messenger.showSnackBar(
-                    SnackBar(
-                      content: Text('Error al generar órdenes: $e'),
-                      backgroundColor: Colors.red,
-                    ),
-                  );
+                  if (context.mounted) {
+                    AppToast.error(
+                      context,
+                      message: 'Error al generar órdenes: $e',
+                    );
+                  }
                 }
               },
             );
@@ -408,11 +404,9 @@ class QuoteSelectionActions {
               }
             } catch (e) {
               if (context.mounted) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text('Error al preparar nota de entrega: $e'),
-                    backgroundColor: Colors.red,
-                  ),
+                AppToast.error(
+                  context,
+                  message: 'Error al preparar nota de entrega: $e',
                 );
               }
             }
@@ -511,6 +505,7 @@ class QuoteSelectionActions {
               mainAxisSize: MainAxisSize.min,
               children: QuoteStatus.values
                   .where((status) =>
+                      status != QuoteStatus.draft &&
                       status != QuoteStatus.expired &&
                       status != QuoteStatus.opened &&
                       status != QuoteStatus.resent)
@@ -637,12 +632,10 @@ class QuoteSelectionActions {
         ),
       );
     } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
+      AppToast.success(
+        context,
+        message:
             'Estatus cambiado a "${selectedStatus.label}" en ${result.successfulIds.length} cotizaciones.',
-          ),
-        ),
       );
     }
   }
@@ -660,20 +653,16 @@ class QuoteSelectionActions {
     if (context.mounted) {
       final statusWord = archive ? 'archivada' : 'desarchivada';
       final statusWordPlural = archive ? 'archivadas' : 'desarchivadas';
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
+      AppToast.success(
+        context,
+        message:
             '${selection.count} cotización${selection.count > 1 ? 'es' : ''} ${selection.count > 1 ? statusWordPlural : statusWord}',
-          ),
-        ),
       );
     }
   }
 
   static void showComingSoon(BuildContext context, String action) {
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(SnackBar(content: Text('$action — Próximamente')));
+    AppToast.info(context, message: '$action — Próximamente');
   }
 
   static Future<void> _checkDateAndSendFromSelection(
@@ -682,10 +671,9 @@ class QuoteSelectionActions {
     Quote quote,
   ) async {
     if (quote.status == QuoteStatus.finalized) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('La cotización está finalizada y no se puede enviar.'),
-        ),
+      AppToast.warning(
+        context,
+        message: 'La cotización está finalizada y no se puede enviar.',
       );
       return;
     }
@@ -752,8 +740,9 @@ class QuoteSelectionActions {
         onProceedSend(updatedQuote);
       } catch (e) {
         if (context.mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Error al actualizar fecha: $e')),
+          AppToast.error(
+            context,
+            message: 'Error al actualizar fecha: $e',
           );
         }
       }

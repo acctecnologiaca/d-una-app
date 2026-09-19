@@ -20,6 +20,7 @@ import 'package:d_una_app/features/portfolio/domain/models/supplier_model.dart';
 import '../../../../../shared/widgets/custom_action_sheet.dart';
 import '../../../../../shared/widgets/bottom_sheet_action_item.dart';
 import '../../../../../shared/widgets/custom_dialog.dart';
+import '../../../../../shared/widgets/app_toast.dart';
 import 'package:material_symbols_icons/symbols.dart';
 import 'package:d_una_app/features/profile/presentation/providers/profile_provider.dart';
 import 'package:d_una_app/features/supplier_orders/domain/utils/oc_email_template_builder.dart';
@@ -210,12 +211,10 @@ class _SupplierOrderDetailsScreenState
                               Supabase.instance.client.auth.currentUser?.email;
 
                           if (userProfile == null) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(
-                                content: Text(
+                            AppToast.info(
+                              context,
+                              message:
                                   'Cargando perfil de usuario... Por favor espere.',
-                                ),
-                              ),
                             );
                             return;
                           }
@@ -373,20 +372,17 @@ class _SupplierOrderDetailsScreenState
                                 );
 
                                 if (context.mounted) {
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    const SnackBar(
-                                      content: Text(
+                                  AppToast.success(
+                                    context,
+                                    message:
                                         'Consolidación deshecha exitosamente',
-                                      ),
-                                    ),
                                   );
                                 }
                               } catch (e) {
                                 if (context.mounted) {
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    SnackBar(
-                                      content: Text('Error al deshacer: $e'),
-                                    ),
+                                  AppToast.error(
+                                    context,
+                                    message: 'Error al deshacer: $e',
                                   );
                                 }
                               }
@@ -398,7 +394,6 @@ class _SupplierOrderDetailsScreenState
                           icon: Icons.cancel_outlined,
                           label: 'Cancelar',
                           onTap: () async {
-                            final messenger = ScaffoldMessenger.of(context);
                             context.pop();
                             final confirm = await CustomDialog.show<bool>(
                               context: context,
@@ -436,19 +431,19 @@ class _SupplierOrderDetailsScreenState
                                   supplierOrderDetailProvider(order.id),
                                 );
 
-                                messenger.showSnackBar(
-                                  const SnackBar(
-                                    content: Text('Orden de compra cancelada.'),
-                                  ),
-                                );
+                                if (context.mounted) {
+                                  AppToast.success(
+                                    context,
+                                    message: 'Orden de compra cancelada.',
+                                  );
+                                }
                               } catch (e) {
-                                messenger.showSnackBar(
-                                  SnackBar(
-                                    content: Text(
-                                      'Error al cancelar orden: $e',
-                                    ),
-                                  ),
-                                );
+                                if (context.mounted) {
+                                  AppToast.error(
+                                    context,
+                                    message: 'Error al cancelar orden: $e',
+                                  );
+                                }
                               }
                             }
                           },
@@ -475,7 +470,6 @@ class _SupplierOrderDetailsScreenState
                             : Icons.archive_outlined,
                         label: order.isArchived ? 'Desarchivar' : 'Archivar',
                         onTap: () async {
-                          final messenger = ScaffoldMessenger.of(context);
                           final router = GoRouter.of(context);
                           context.pop(); // Close action sheet
 
@@ -486,16 +480,15 @@ class _SupplierOrderDetailsScreenState
                                 archive: !order.isArchived,
                               );
 
-                          messenger.showSnackBar(
-                            SnackBar(
-                              content: Text(
-                                order.isArchived
-                                    ? 'Orden desarchivada exitosamente'
-                                    : 'Orden archivada exitosamente',
-                              ),
-                            ),
-                          );
-                          router.pop(); // Return to supplier orders list
+                          if (context.mounted) {
+                            AppToast.success(
+                              context,
+                              message: order.isArchived
+                                  ? 'Orden desarchivada exitosamente'
+                                  : 'Orden archivada exitosamente',
+                            );
+                            router.pop();
+                          }
                         },
                       ),
                     ],
@@ -1328,7 +1321,6 @@ class _SupplierOrderDetailsScreenState
       return;
     }
 
-    final messenger = ScaffoldMessenger.of(context);
     final result = await showModalBottomSheet<Map<String, dynamic>>(
       context: context,
       isScrollControlled: true,
@@ -1425,17 +1417,19 @@ class _SupplierOrderDetailsScreenState
             ref.invalidate(supplierOrderDetailProvider(order.id));
             ref.invalidate(linkedPurchaseProvider(order.id));
 
-            messenger.showSnackBar(
-              const SnackBar(
-                content: Text('Orden de compra finalizada con éxito.'),
-              ),
-            );
+            if (mounted) {
+              AppToast.success(
+                context,
+                message: 'Orden de compra finalizada con éxito.',
+              );
+            }
           }
         } catch (e) {
           navigator.pop(); // Dismiss loading dialog cleanly on error
           if (mounted) {
-            messenger.showSnackBar(
-              SnackBar(content: Text('Error al finalizar orden: $e')),
+            AppToast.error(
+              context,
+              message: 'Error al finalizar orden: $e',
             );
           }
         }

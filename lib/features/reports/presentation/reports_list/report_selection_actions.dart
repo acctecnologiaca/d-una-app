@@ -9,6 +9,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../../../../shared/widgets/custom_action_sheet.dart';
 import '../../../../../shared/widgets/bottom_sheet_action_item.dart';
 import '../../../../../shared/widgets/custom_dialog.dart';
+import '../../../../../shared/widgets/app_toast.dart';
 import '../../../../../shared/utils/string_utils.dart';
 import '../../../../../features/profile/presentation/providers/profile_provider.dart';
 import '../../../../../core/pdf/templates/service_report_pdf_template.dart';
@@ -89,21 +90,17 @@ class ReportSelectionActions {
             final userEmail = Supabase.instance.client.auth.currentUser?.email;
 
             if (userProfile == null) {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text(
-                    'Cargando perfil de usuario... Por favor espere.',
-                  ),
-                ),
+              AppToast.info(
+                context,
+                message: 'Cargando perfil de usuario... Por favor espere.',
               );
               return;
             }
 
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                content: Text('Preparando documento...'),
-                duration: Duration(seconds: 1),
-              ),
+            AppToast.info(
+              context,
+              message: 'Preparando documento...',
+              duration: const Duration(seconds: 1),
             );
 
             try {
@@ -135,10 +132,9 @@ class ReportSelectionActions {
               }
             } catch (e) {
               if (context.mounted) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text('Error al cargar detalles del reporte: $e'),
-                  ),
+                AppToast.error(
+                  context,
+                  message: 'Error al cargar detalles del reporte: $e',
                 );
               }
             }
@@ -444,23 +440,18 @@ class ReportSelectionActions {
           ),
         );
       } else if (result.generalErrors.isNotEmpty) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text(
-              'Ocurrieron errores al actualizar algunos reportes.',
-            ),
-          ),
+        AppToast.error(
+          context,
+          message: 'Ocurrieron errores al actualizar algunos reportes.',
         );
       }
     }
 
     if (result.successfulIds.isNotEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
+      AppToast.success(
+        context,
+        message:
             'Estatus cambiado a "${selectedStatus.label}" en ${result.successfulIds.length} reporte${result.successfulIds.length > 1 ? 's' : ''}.',
-          ),
-        ),
       );
     }
   }
@@ -480,12 +471,10 @@ class ReportSelectionActions {
     if (context.mounted) {
       final statusWord = archive ? 'archivado' : 'desarchivado';
       final statusWordPlural = archive ? 'archivados' : 'desarchivados';
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
+      AppToast.success(
+        context,
+        message:
             '${selection.count} reporte${selection.count > 1 ? 's' : ''} ${selection.count > 1 ? statusWordPlural : statusWord}',
-          ),
-        ),
       );
     }
   }
@@ -497,14 +486,11 @@ class ReportSelectionActions {
   ) async {
     if (report.status == ServiceReportStatus.finalized ||
         report.status == ServiceReportStatus.cancelled) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            report.status == ServiceReportStatus.finalized
-                ? 'El reporte está finalizado y no se puede enviar.'
-                : 'El reporte está cancelado y no se puede enviar.',
-          ),
-        ),
+      AppToast.warning(
+        context,
+        message: report.status == ServiceReportStatus.finalized
+            ? 'El reporte está finalizado y no se puede enviar.'
+            : 'El reporte está cancelado y no se puede enviar.',
       );
       return;
     }
@@ -574,8 +560,9 @@ class ReportSelectionActions {
         onProceedSend(report);
       } catch (e) {
         if (context.mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Error al actualizar fecha: $e')),
+          AppToast.error(
+            context,
+            message: 'Error al actualizar fecha: $e',
           );
         }
       }

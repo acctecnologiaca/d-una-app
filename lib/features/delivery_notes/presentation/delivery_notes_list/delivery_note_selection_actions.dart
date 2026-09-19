@@ -7,6 +7,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:d_una_app/shared/widgets/custom_action_sheet.dart';
 import 'package:d_una_app/shared/widgets/bottom_sheet_action_item.dart';
 import 'package:d_una_app/shared/widgets/custom_dialog.dart';
+import 'package:d_una_app/shared/widgets/app_toast.dart';
 import 'package:d_una_app/shared/utils/string_utils.dart';
 import 'package:d_una_app/features/profile/presentation/providers/profile_provider.dart';
 import 'package:d_una_app/core/pdf/templates/delivery_note_pdf_template.dart';
@@ -123,10 +124,9 @@ class DeliveryNoteSelectionActions {
             final userEmail = Supabase.instance.client.auth.currentUser?.email;
 
             if (userProfile == null) {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text('Cargando perfil... Por favor espere.'),
-                ),
+              AppToast.info(
+                context,
+                message: 'Cargando perfil... Por favor espere.',
               );
               return;
             }
@@ -206,10 +206,9 @@ class DeliveryNoteSelectionActions {
                   .read(deliveryNotesSelectionProvider.notifier)
                   .clearSelection();
               if (context.mounted) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text('Estatus cambiado a "${selected.label}"'),
-                  ),
+                AppToast.success(
+                  context,
+                  message: 'Estatus cambiado a "${selected.label}"',
                 );
               }
             }
@@ -334,12 +333,10 @@ class DeliveryNoteSelectionActions {
                   .read(deliveryNotesSelectionProvider.notifier)
                   .clearSelection();
               if (context.mounted) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text(
+                AppToast.success(
+                  context,
+                  message:
                       'Se actualizó el estatus de ${selectedIds.length} notas a "${selectedStatus.label}"',
-                    ),
-                  ),
                 );
               }
             }
@@ -361,10 +358,9 @@ class DeliveryNoteSelectionActions {
               final actionWord = !isAllArchived
                   ? 'archivaron'
                   : 'desarchivaron';
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text('Se $actionWord ${selectedIds.length} notas'),
-                ),
+              AppToast.success(
+                context,
+                message: 'Se $actionWord ${selectedIds.length} notas',
               );
             }
           },
@@ -528,12 +524,10 @@ class DeliveryNoteSelectionActions {
 
   static void _showSendOptions(BuildContext context, DeliveryNoteModel note) {
     if (note.hasMissingSerialsEffective) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text(
+      AppToast.warning(
+        context,
+        message:
             'No se puede enviar la nota de entrega porque faltan seriales por asignar.',
-          ),
-        ),
       );
       return;
     }

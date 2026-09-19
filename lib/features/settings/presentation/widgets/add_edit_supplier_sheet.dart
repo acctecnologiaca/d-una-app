@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:d_una_app/shared/widgets/app_toast.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:d_una_app/shared/widgets/custom_action_sheet.dart';
 import 'package:d_una_app/shared/widgets/custom_dialog.dart';
@@ -87,11 +88,9 @@ class _AddEditSupplierSheetState extends ConsumerState<AddEditSupplierSheet> {
         : _nameController.text.trim();
 
     if (legalName.isEmpty || taxId.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          behavior: SnackBarBehavior.floating,
-          content: Text('La Razón Social y el RIF son obligatorios.'),
-        ),
+      AppToast.warning(
+        context,
+        message: 'La Razón Social y el RIF son obligatorios.',
       );
       return;
     }
@@ -148,15 +147,11 @@ class _AddEditSupplierSheetState extends ConsumerState<AddEditSupplierSheet> {
 
       if (mounted) {
         Navigator.pop(context, result);
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            behavior: SnackBarBehavior.floating,
-            content: Text(
-              isEditing
-                  ? 'Proveedor actualizado a "$legalName"'
-                  : 'Proveedor "$legalName" agregado',
-            ),
-          ),
+        AppToast.success(
+          context,
+          message: isEditing
+              ? 'Proveedor actualizado a "$legalName"'
+              : 'Proveedor "$legalName" agregado',
         );
       }
     } catch (e) {
@@ -199,13 +194,10 @@ class _AddEditSupplierSheetState extends ConsumerState<AddEditSupplierSheet> {
 
       if (mounted) {
         Navigator.pop(context);
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            behavior: SnackBarBehavior.floating,
-            content: Text(
+        AppToast.success(
+          context,
+          message:
               'Proveedor "${widget.supplier!.legalName ?? widget.supplier!.name}" eliminado',
-            ),
-          ),
         );
       }
     } catch (e) {

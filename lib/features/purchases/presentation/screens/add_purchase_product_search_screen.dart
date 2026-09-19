@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:d_una_app/shared/widgets/generic_search_screen.dart';
+import 'package:d_una_app/shared/widgets/app_toast.dart';
 import 'package:d_una_app/shared/widgets/horizontal_filter_bar.dart';
 import 'package:d_una_app/shared/widgets/filter_bottom_sheet.dart';
 import 'package:d_una_app/shared/widgets/custom_extended_fab.dart';
@@ -286,12 +287,10 @@ class _AddPurchaseProductSearchScreenState
 
                     if (!added) {
                       if (context.mounted) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(
-                            content: Text(
+                        AppToast.warning(
+                          context,
+                          message:
                               'El producto "${_selectedProduct!.name}" ya está agregado.',
-                            ),
-                          ),
                         );
                       }
                       return;
@@ -316,12 +315,10 @@ class _AddPurchaseProductSearchScreenState
                       if (context.mounted) {
                         context.pop(); // Pop back from search
                         context.pop(); // Pop back to Add Purchase screen
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(
-                            content: Text(
+                        AppToast.success(
+                          context,
+                          message:
                               'Producto agregado: ${_selectedProduct!.name}',
-                            ),
-                          ),
                         );
                       }
                     }

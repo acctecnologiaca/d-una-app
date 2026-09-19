@@ -1,4 +1,5 @@
 import 'package:d_una_app/core/utils/string_extensions.dart';
+import 'package:d_una_app/shared/widgets/app_toast.dart';
 import 'package:d_una_app/features/portfolio/domain/utils/product_validators.dart';
 import 'package:d_una_app/features/portfolio/presentation/providers/product_search_provider.dart';
 import 'package:d_una_app/shared/widgets/friendly_error_widget.dart';
@@ -556,14 +557,10 @@ class _AddTemporalProductScreenState
       } catch (e) {
         debugPrint('Failed to add to inventory: $e');
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: const Text(
+          AppToast.warning(
+            context,
+            message:
                 'Se agregó a la cotización, pero no se pudo guardar en tu inventario por un problema de conexión.',
-              ),
-              backgroundColor: Theme.of(context).colorScheme.error,
-              behavior: SnackBarBehavior.floating,
-            ),
           );
         }
       }

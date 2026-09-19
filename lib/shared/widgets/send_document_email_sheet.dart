@@ -6,6 +6,7 @@ import 'custom_text_field.dart';
 import 'custom_button.dart';
 import 'custom_action_sheet.dart';
 import 'custom_dialog.dart';
+import 'app_toast.dart';
 import '../../features/settings/presentation/providers/email_templates_provider.dart';
 import '../../core/utils/email_content_generator.dart';
 import '../../features/profile/presentation/providers/profile_provider.dart';
@@ -333,12 +334,10 @@ class _SendDocumentEmailSheetState
       ref.invalidate(creditTransactionsHistoryProvider);
 
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
+        AppToast.success(
+          context,
+          message:
               'Correo enviado exitosamente (créditos restantes: ${freshCreditStatus.remainingCredits})',
-            ),
-          ),
         );
         Navigator.of(context).pop();
       }

@@ -20,6 +20,7 @@ class AppToast {
     IconData? icon,
     String? actionLabel,
     VoidCallback? onAction,
+    bool showCloseButton = true,
     Duration duration = const Duration(seconds: 4),
   }) {
     // 1. Limpiar toast previo si existe
@@ -38,10 +39,12 @@ class AppToast {
         type: type,
         customIcon: icon,
         actionLabel: actionLabel,
+        showCloseButton: showCloseButton,
         onAction: () {
           dismiss();
           onAction?.call();
         },
+        onDismiss: dismiss,
       ),
     );
 
@@ -59,6 +62,7 @@ class AppToast {
     required String message,
     String? actionLabel,
     VoidCallback? onAction,
+    bool showCloseButton = true,
     Duration duration = const Duration(seconds: 4),
   }) {
     show(
@@ -67,6 +71,7 @@ class AppToast {
       type: AppToastType.success,
       actionLabel: actionLabel,
       onAction: onAction,
+      showCloseButton: showCloseButton,
       duration: duration,
     );
   }
@@ -77,6 +82,7 @@ class AppToast {
     required String message,
     String? actionLabel,
     VoidCallback? onAction,
+    bool showCloseButton = true,
     Duration duration = const Duration(seconds: 4),
   }) {
     show(
@@ -85,6 +91,7 @@ class AppToast {
       type: AppToastType.error,
       actionLabel: actionLabel,
       onAction: onAction,
+      showCloseButton: showCloseButton,
       duration: duration,
     );
   }
@@ -96,6 +103,7 @@ class AppToast {
     IconData? icon,
     String? actionLabel,
     VoidCallback? onAction,
+    bool showCloseButton = true,
     Duration duration = const Duration(seconds: 4),
   }) {
     show(
@@ -105,6 +113,7 @@ class AppToast {
       icon: icon,
       actionLabel: actionLabel,
       onAction: onAction,
+      showCloseButton: showCloseButton,
       duration: duration,
     );
   }
@@ -115,6 +124,7 @@ class AppToast {
     required String message,
     String? actionLabel,
     VoidCallback? onAction,
+    bool showCloseButton = true,
     Duration duration = const Duration(seconds: 4),
   }) {
     show(
@@ -123,6 +133,7 @@ class AppToast {
       type: AppToastType.warning,
       actionLabel: actionLabel,
       onAction: onAction,
+      showCloseButton: showCloseButton,
       duration: duration,
     );
   }
@@ -146,6 +157,8 @@ class _AppToastWidget extends StatefulWidget {
   final IconData? customIcon;
   final String? actionLabel;
   final VoidCallback? onAction;
+  final bool showCloseButton;
+  final VoidCallback? onDismiss;
 
   const _AppToastWidget({
     required this.message,
@@ -153,6 +166,8 @@ class _AppToastWidget extends StatefulWidget {
     this.customIcon,
     this.actionLabel,
     this.onAction,
+    this.showCloseButton = true,
+    this.onDismiss,
   });
 
   @override
@@ -288,6 +303,21 @@ class _AppToastWidgetState extends State<_AppToastWidget>
                           style: TextStyle(
                             color: colors.inversePrimary,
                             fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                    ],
+                    if (widget.showCloseButton) ...[
+                      const SizedBox(width: 6),
+                      InkWell(
+                        onTap: widget.onDismiss,
+                        borderRadius: BorderRadius.circular(16),
+                        child: Padding(
+                          padding: const EdgeInsets.all(4.0),
+                          child: Icon(
+                            Icons.close_rounded,
+                            size: 18,
+                            color: colors.onInverseSurface.withValues(alpha: 0.7),
                           ),
                         ),
                       ),

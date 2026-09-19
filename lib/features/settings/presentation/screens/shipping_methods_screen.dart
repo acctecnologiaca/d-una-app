@@ -107,29 +107,12 @@ class _ShippingMethodsScreenState extends ConsumerState<ShippingMethodsScreen> {
               child: StandardListItem(
                 onTap: isSystemMethod
                     ? () {
-                        ScaffoldMessenger.of(context)
-                          ..hideCurrentSnackBar()
-                          ..showSnackBar(
-                            SnackBar(
-                              duration: const Duration(seconds: 5),
-                              content: Row(
-                                children: [
-                                  const Expanded(
-                                    child: Text(
-                                      'Este es un método del sistema y no puede ser modificado ni eliminado.',
-                                      style: TextStyle(fontSize: 13),
-                                    ),
-                                  ),
-                                  IconButton(
-                                    icon: const Icon(Icons.close, color: Colors.white),
-                                    padding: EdgeInsets.zero,
-                                    constraints: const BoxConstraints(),
-                                    onPressed: () => ScaffoldMessenger.of(context).hideCurrentSnackBar(),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          );
+                        AppToast.warning(
+                          context,
+                          message:
+                              'Este es un método del sistema y no puede ser modificado ni eliminado.',
+                          duration: const Duration(seconds: 5),
+                        );
                       }
                     : () async {
                         await context.push(

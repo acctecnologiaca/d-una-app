@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:material_symbols_icons/symbols.dart';
 import 'package:intl/intl.dart';
 import '../../../../../shared/utils/currency_formatter.dart';
+import '../../../../../shared/widgets/app_toast.dart';
 import '../../../domain/models/supplier_order.dart';
 import '../../../domain/models/supplier_order_item.dart';
 import '../../../domain/models/supplier_order_status.dart';
@@ -498,10 +499,9 @@ class ViewSupplierOrderSummaryTab extends ConsumerWidget {
                   color: colors.primary,
                   onPressed: () {
                     Clipboard.setData(ClipboardData(text: order.orderNumber));
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text('ID de orden copiado al portapapeles'),
-                      ),
+                    AppToast.success(
+                      context,
+                      message: 'ID de orden copiado al portapapeles',
                     );
                   },
                 ),

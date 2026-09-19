@@ -6,6 +6,7 @@ import 'package:d_una_app/shared/widgets/standard_app_bar.dart';
 import 'package:d_una_app/shared/widgets/custom_text_field.dart';
 import 'package:d_una_app/shared/widgets/custom_extended_fab.dart';
 import 'package:d_una_app/shared/widgets/custom_dialog.dart';
+import 'package:d_una_app/shared/widgets/app_toast.dart';
 import 'package:d_una_app/shared/widgets/barcode_scanner_screen.dart';
 import 'package:d_una_app/features/portfolio/data/models/product_model.dart';
 import 'package:d_una_app/features/purchases/domain/models/models.dart';
@@ -90,25 +91,20 @@ class _ManageProductSerialsScreenState
     if (code.isEmpty) return;
 
     if (_serials.any((s) => s.toLowerCase() == code.toLowerCase())) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('El serial "$code" ya está en la lista.'),
-          backgroundColor: Theme.of(context).colorScheme.error,
-          duration: const Duration(seconds: 2),
-        ),
+      AppToast.error(
+        context,
+        message: 'El serial "$code" ya está en la lista.',
+        duration: const Duration(seconds: 2),
       );
       return;
     }
 
     if (_serials.length >= widget.quantity) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
+      AppToast.error(
+        context,
+        message:
             'Ya se han registrado todos los seriales (${widget.quantity}) correspondientes a este producto.',
-          ),
-          backgroundColor: Theme.of(context).colorScheme.error,
-          duration: const Duration(seconds: 2),
-        ),
+        duration: const Duration(seconds: 2),
       );
       return;
     }
@@ -121,14 +117,11 @@ class _ManageProductSerialsScreenState
 
   Future<void> _openScanner() async {
     if (_serials.length >= widget.quantity) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
+      AppToast.error(
+        context,
+        message:
             'Ya se han registrado todos los seriales (${widget.quantity}) correspondientes a este producto.',
-          ),
-          backgroundColor: Theme.of(context).colorScheme.error,
-          duration: const Duration(seconds: 2),
-        ),
+        duration: const Duration(seconds: 2),
       );
       return;
     }

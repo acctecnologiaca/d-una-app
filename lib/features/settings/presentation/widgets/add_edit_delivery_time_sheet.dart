@@ -1,4 +1,5 @@
 import 'package:d_una_app/core/utils/error_handler.dart';
+import 'package:d_una_app/shared/widgets/app_toast.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -119,22 +120,18 @@ class _AddEditDeliveryTimeSheetState
 
       if (minVal == null || maxVal == null) {
         if (context.mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              behavior: SnackBarBehavior.floating,
-              content: Text('Debes ingresar valores válidos de tiempo.'),
-            ),
+          AppToast.warning(
+            context,
+            message: 'Debes ingresar valores válidos de tiempo.',
           );
         }
         return;
       }
       if (minVal > maxVal) {
         if (context.mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              behavior: SnackBarBehavior.floating,
-              content: Text('El valor mínimo no puede ser mayor al máximo.'),
-            ),
+          AppToast.warning(
+            context,
+            message: 'El valor mínimo no puede ser mayor al máximo.',
           );
         }
         return;
@@ -185,13 +182,10 @@ class _AddEditDeliveryTimeSheetState
 
       if (mounted) {
         Navigator.pop(context, result);
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            behavior: SnackBarBehavior.floating,
-            content: Text(
+        AppToast.success(
+          context,
+          message:
               isEditing ? 'Tiempo actualizado' : 'Tiempo agregado exitosamente',
-            ),
-          ),
         );
       }
     } catch (e) {
@@ -226,8 +220,6 @@ class _AddEditDeliveryTimeSheetState
                 icon: const Icon(Icons.delete_outline),
                 color: Theme.of(context).colorScheme.onSurfaceVariant,
                 onPressed: () async {
-                  final scaffoldMessenger = ScaffoldMessenger.of(context);
-
                   final confirm = await CustomDialog.show<bool>(
                     context: context,
                     dialog: CustomDialog.destructive(
@@ -263,11 +255,9 @@ class _AddEditDeliveryTimeSheetState
                       ref.invalidate(deliveryTimesProvider);
                       Navigator.pop(context); // Close sheet ONLY after success
 
-                      scaffoldMessenger.showSnackBar(
-                        const SnackBar(
-                          behavior: SnackBarBehavior.floating,
-                          content: Text('Tiempo eliminado'),
-                        ),
+                      AppToast.success(
+                        context,
+                        message: 'Tiempo eliminado',
                       );
                     }
                   } catch (e) {

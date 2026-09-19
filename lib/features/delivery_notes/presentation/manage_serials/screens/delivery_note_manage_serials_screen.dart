@@ -4,6 +4,7 @@ import 'package:d_una_app/shared/widgets/standard_app_bar.dart';
 import 'package:d_una_app/shared/widgets/custom_text_field.dart';
 import 'package:d_una_app/shared/widgets/custom_extended_fab.dart';
 import 'package:d_una_app/shared/widgets/custom_dialog.dart';
+import 'package:d_una_app/shared/widgets/app_toast.dart';
 import 'package:d_una_app/shared/widgets/barcode_scanner_screen.dart';
 import '../../../domain/models/delivery_note_item_model.dart';
 import '../../../domain/models/delivery_note_serial_model.dart';
@@ -72,24 +73,20 @@ class _DeliveryNoteManageSerialsScreenState
     if (_serials.any(
       (s) => s.serialNumber.toLowerCase() == code.toLowerCase(),
     )) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('El serial "$code" ya está en la lista.'),
-          backgroundColor: Theme.of(context).colorScheme.error,
-          duration: const Duration(seconds: 2),
-        ),
+      AppToast.error(
+        context,
+        message: 'El serial "$code" ya está en la lista.',
+        duration: const Duration(seconds: 2),
       );
       return;
     }
 
     final needed = widget.item.quantity.round();
     if (_serials.length >= needed) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Ya se alcanzaron los $needed seriales requeridos.'),
-          backgroundColor: Theme.of(context).colorScheme.error,
-          duration: const Duration(seconds: 2),
-        ),
+      AppToast.error(
+        context,
+        message: 'Ya se alcanzaron los $needed seriales requeridos.',
+        duration: const Duration(seconds: 2),
       );
       return;
     }
@@ -111,12 +108,10 @@ class _DeliveryNoteManageSerialsScreenState
   Future<void> _openScanner() async {
     final needed = widget.item.quantity.round();
     if (_serials.length >= needed) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Ya se alcanzaron los $needed seriales requeridos.'),
-          backgroundColor: Theme.of(context).colorScheme.error,
-          duration: const Duration(seconds: 2),
-        ),
+      AppToast.error(
+        context,
+        message: 'Ya se alcanzaron los $needed seriales requeridos.',
+        duration: const Duration(seconds: 2),
       );
       return;
     }

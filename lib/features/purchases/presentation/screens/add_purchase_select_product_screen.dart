@@ -1,6 +1,7 @@
 import 'package:d_una_app/features/portfolio/data/models/product_model.dart';
 import 'package:flutter/material.dart';
 import 'package:d_una_app/shared/widgets/friendly_error_widget.dart';
+import 'package:d_una_app/shared/widgets/app_toast.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:d_una_app/features/portfolio/presentation/providers/products_provider.dart';
@@ -275,12 +276,10 @@ class _AddPurchaseSelectProductScreenState
 
                     if (!added) {
                       if (context.mounted) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(
-                            content: Text(
+                        AppToast.warning(
+                          context,
+                          message:
                               'El producto "${_selectedProduct!.name}" ya está agregado.',
-                            ),
-                          ),
                         );
                       }
                       return;
@@ -303,12 +302,10 @@ class _AddPurchaseSelectProductScreenState
                     } else {
                       if (context.mounted) {
                         context.pop(); // Pop back to Add Purchase screen
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(
-                            content: Text(
+                        AppToast.success(
+                          context,
+                          message:
                               'Producto agregado: ${_selectedProduct!.name}',
-                            ),
-                          ),
                         );
                       }
                     }

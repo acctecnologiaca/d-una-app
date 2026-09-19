@@ -5,6 +5,7 @@ import '../../../../../shared/widgets/custom_text_field.dart';
 import '../../../../../shared/widgets/custom_button.dart';
 import '../../../../../shared/widgets/custom_dialog.dart';
 import '../../../../../shared/widgets/custom_action_sheet.dart';
+import '../../../../../shared/widgets/app_toast.dart';
 import '../../../../profile/presentation/providers/profile_provider.dart';
 import '../../../../../core/utils/phone_utils.dart';
 import '../../../../../core/services/whatsapp_repository.dart';
@@ -191,12 +192,10 @@ class _SendReportWhatsAppSheetState
       ref.invalidate(creditTransactionsHistoryProvider);
 
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
+        AppToast.success(
+          context,
+          message:
               'Reporte enviado por WhatsApp exitosamente (créditos restantes: ${freshCreditStatus.remainingCredits})',
-            ),
-          ),
         );
         Navigator.of(context).pop();
       }

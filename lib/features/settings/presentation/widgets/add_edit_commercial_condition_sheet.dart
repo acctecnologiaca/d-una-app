@@ -7,6 +7,7 @@ import 'package:d_una_app/shared/widgets/custom_button.dart';
 import 'package:d_una_app/features/quotes/data/models/commercial_condition.dart';
 import 'package:d_una_app/features/portfolio/presentation/providers/lookup_providers.dart';
 import 'package:d_una_app/core/utils/error_handler.dart';
+import 'package:d_una_app/shared/widgets/app_toast.dart';
 
 class AddEditCommercialConditionSheet extends ConsumerStatefulWidget {
   final CommercialCondition? condition;
@@ -86,15 +87,11 @@ class _AddEditCommercialConditionSheetState
 
       if (mounted) {
         Navigator.pop(context);
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            behavior: SnackBarBehavior.floating,
-            content: Text(
-              isEditing
-                  ? 'Condición actualizada'
-                  : 'Condición "$description" agregada',
-            ),
-          ),
+        AppToast.success(
+          context,
+          message: isEditing
+              ? 'Condición actualizada'
+              : 'Condición "$description" agregada',
         );
       }
     } catch (e) {
@@ -137,11 +134,9 @@ class _AddEditCommercialConditionSheetState
 
       if (mounted) {
         Navigator.pop(context);
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            behavior: SnackBarBehavior.floating,
-            content: Text('Condición eliminada'),
-          ),
+        AppToast.success(
+          context,
+          message: 'Condición eliminada',
         );
       }
     } catch (e) {

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:d_una_app/shared/widgets/app_toast.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:d_una_app/shared/widgets/generic_list_screen.dart';
 import 'package:d_una_app/shared/widgets/standard_list_item.dart';
@@ -71,34 +72,12 @@ class CategoriesListScreen extends ConsumerWidget {
             onTap: canEdit
                 ? () => _showEditCategorySheet(context, category)
                 : () {
-                    ScaffoldMessenger.of(context)
-                      ..hideCurrentSnackBar()
-                      ..showSnackBar(
-                        SnackBar(
-                          duration: const Duration(seconds: 5),
-                          content: Row(
-                            children: [
-                              const Expanded(
-                                child: Text(
-                                  'Esta categoría ha sido verificada y ya no puede ser modificada ni eliminada.',
-                                  style: TextStyle(fontSize: 13),
-                                ),
-                              ),
-                              IconButton(
-                                icon: const Icon(
-                                  Icons.close,
-                                  color: Colors.white,
-                                ),
-                                padding: EdgeInsets.zero,
-                                constraints: const BoxConstraints(),
-                                onPressed: () => ScaffoldMessenger.of(
-                                  context,
-                                ).hideCurrentSnackBar(),
-                              ),
-                            ],
-                          ),
-                        ),
-                      );
+                    AppToast.warning(
+                      context,
+                      message:
+                          'Esta categoría ha sido verificada y ya no puede ser modificada ni eliminada.',
+                      duration: const Duration(seconds: 5),
+                    );
                   },
           ),
         );
