@@ -12,7 +12,6 @@ import '../providers/create_report_provider.dart';
 import '../../view_report/providers/view_report_provider.dart';
 import '../../reports_list/providers/reports_provider.dart';
 import '../tabs/report_details_tab.dart';
-import '../tabs/report_client_tab.dart';
 import '../tabs/report_services_tab.dart';
 import '../tabs/report_products_tab.dart';
 import '../tabs/report_conditions_tab.dart';
@@ -36,7 +35,7 @@ class _CreateReportScreenState extends ConsumerState<CreateReportScreen>
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 6, vsync: this);
+    _tabController = TabController(length: 5, vsync: this);
 
     _tabController.addListener(() {
       if (!_tabController.indexIsChanging) {
@@ -71,7 +70,7 @@ class _CreateReportScreenState extends ConsumerState<CreateReportScreen>
               .checkAndRestoreDraft(reportId: widget.reportId);
           if (draft != null && mounted) {
             setState(() {
-              if (draft.tabIndex >= 0 && draft.tabIndex < 6) {
+              if (draft.tabIndex >= 0 && draft.tabIndex < 5) {
                 _tabController.index = draft.tabIndex;
               }
             });
@@ -90,7 +89,7 @@ class _CreateReportScreenState extends ConsumerState<CreateReportScreen>
 
           if (draft != null && mounted) {
             setState(() {
-              if (draft.tabIndex >= 0 && draft.tabIndex < 6) {
+              if (draft.tabIndex >= 0 && draft.tabIndex < 5) {
                 _tabController.index = draft.tabIndex;
               }
             });
@@ -129,7 +128,7 @@ class _CreateReportScreenState extends ConsumerState<CreateReportScreen>
             .checkAndRestoreDraft();
         if (draft != null && mounted) {
           setState(() {
-            if (draft.tabIndex >= 0 && draft.tabIndex < 6) {
+            if (draft.tabIndex >= 0 && draft.tabIndex < 5) {
               _tabController.index = draft.tabIndex;
             }
           });
@@ -180,7 +179,7 @@ class _CreateReportScreenState extends ConsumerState<CreateReportScreen>
       final tabStr = GoRouterState.of(context).uri.queryParameters['tab'];
       if (tabStr != null) {
         final initialTab = int.tryParse(tabStr);
-        if (initialTab != null && initialTab >= 0 && initialTab < 6) {
+        if (initialTab != null && initialTab >= 0 && initialTab < 5) {
           _tabController.index = initialTab;
         }
       }
@@ -270,10 +269,9 @@ class _CreateReportScreenState extends ConsumerState<CreateReportScreen>
             indicatorColor: colors.primary,
             labelStyle: const TextStyle(fontWeight: FontWeight.bold),
             tabs: const [
-              Tab(text: 'Informe'),
+              Tab(text: 'General'),
               Tab(text: 'Productos'),
               Tab(text: 'Servicios'),
-              Tab(text: 'Cliente'),
               Tab(text: 'Condiciones'),
               Tab(text: 'Resumen'),
             ],
@@ -286,7 +284,6 @@ class _CreateReportScreenState extends ConsumerState<CreateReportScreen>
               const ReportDetailsTab(),
               const ReportProductsTab(),
               const ReportServicesTab(),
-              const ReportClientTab(),
               const ReportConditionsTab(),
               ReportSummaryTab(
                 onNavigateToTab: (index) {
@@ -305,15 +302,15 @@ class _CreateReportScreenState extends ConsumerState<CreateReportScreen>
     final state = ref.watch(createReportProvider);
 
     // Botón flotante según la pestaña activa
-    // 1: Productos, 2: Servicios, 4: Condiciones, 5: Resumen
+    // 1: Productos, 2: Servicios, 3: Condiciones, 4: Resumen
     if (_tabController.index != 1 &&
         _tabController.index != 2 &&
-        _tabController.index != 4 &&
-        _tabController.index != 5) {
+        _tabController.index != 3 &&
+        _tabController.index != 4) {
       return null;
     }
 
-    if (_tabController.index == 5) {
+    if (_tabController.index == 4) {
       return CustomExtendedFab(
         label: state.isLoading ? 'Guardando...' : 'Guardar',
           icon: state.isLoading ? Icons.hourglass_empty : Icons.save_outlined,
@@ -352,7 +349,7 @@ class _CreateReportScreenState extends ConsumerState<CreateReportScreen>
             context.push('/reports/create/select-product');
           } else if (_tabController.index == 2) {
             context.push('/reports/create/select-service');
-          } else if (_tabController.index == 4) {
+          } else if (_tabController.index == 3) {
             context.push('/reports/create/select-condition');
           }
         },

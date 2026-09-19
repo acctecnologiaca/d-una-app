@@ -12,6 +12,8 @@ import 'package:go_router/go_router.dart';
 import '../../../../supplier_orders/domain/models/supplier_order.dart';
 import '../../../../supplier_orders/domain/models/supplier_order_status.dart';
 import '../../../../../shared/utils/fab_scroll_padding.dart';
+import 'package:d_una_app/features/delivery_notes/domain/models/delivery_note_model.dart';
+import 'package:d_una_app/features/delivery_notes/domain/models/delivery_note_status.dart';
 
 class ViewQuoteSummaryTab extends ConsumerWidget {
   final String quoteId;
@@ -149,6 +151,30 @@ class ViewQuoteSummaryTab extends ConsumerWidget {
                     'Órdenes de compra',
                   ),
                   _buildLinkedSupplierOrdersCard(context, orders),
+                ],
+              );
+            },
+          ),
+
+          // 6. Notas de Entrega vinculadas Section
+          Builder(
+            builder: (context) {
+              final linkedNotesAsync = ref.watch(
+                linkedDeliveryNotesProvider(quoteId),
+              );
+              final notes = linkedNotesAsync.value ?? [];
+              if (notes.isEmpty) return const SizedBox.shrink();
+
+              return Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const SizedBox(height: 16),
+                  _buildSectionHeader(
+                    context,
+                    Symbols.local_shipping,
+                    'Notas de entrega',
+                  ),
+                  _buildLinkedDeliveryNotesCard(context, notes),
                 ],
               );
             },
@@ -530,6 +556,21 @@ class ViewQuoteSummaryTab extends ConsumerWidget {
                 isTextValue: true,
               ),
             ],
+            const SizedBox(height: 8),
+            Align(
+              alignment: Alignment.centerRight,
+              child: TextButton.icon(
+                onPressed: () => onNavigateToTab(0),
+                icon: const Icon(Icons.arrow_forward_ios, size: 14),
+                label: const Text(
+                  'Ir a General',
+                  style: TextStyle(fontWeight: FontWeight.bold),
+                ),
+                style: TextButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(horizontal: 8),
+                ),
+              ),
+            ),
           ],
         ),
       ),
@@ -603,7 +644,7 @@ class ViewQuoteSummaryTab extends ConsumerWidget {
               Align(
                 alignment: Alignment.centerRight,
                 child: TextButton.icon(
-                  onPressed: () => onNavigateToTab(0),
+                  onPressed: () => onNavigateToTab(1),
                   icon: const Icon(Icons.arrow_forward_ios, size: 14),
                   label: const Text(
                     'Ir a productos',
@@ -649,7 +690,7 @@ class ViewQuoteSummaryTab extends ConsumerWidget {
               Align(
                 alignment: Alignment.centerRight,
                 child: TextButton.icon(
-                  onPressed: () => onNavigateToTab(1),
+                  onPressed: () => onNavigateToTab(2),
                   icon: const Icon(Icons.arrow_forward_ios, size: 14),
                   label: const Text(
                     'Ir a servicios',
@@ -886,6 +927,85 @@ class ViewQuoteSummaryTab extends ConsumerWidget {
             ),
             onTap: () {
               context.push('/supplier-orders/view/${order.id}');
+            },
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _buildLinkedDeliveryNotesCard(
+    BuildContext context,
+    List<DeliveryNoteModel> deliveryNotes,
+  ) {
+    final colors = Theme.of(context).colorScheme;
+
+    return Card(
+      elevation: 0,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(8),
+        side: BorderSide(color: colors.outlineVariant),
+      ),
+      color: colors.surface,
+      child: ListView.separated(
+        shrinkWrap: true,
+        physics: const NeverScrollableScrollPhysics(),
+        itemCount: deliveryNotes.length,
+        separatorBuilder: (context, index) => Divider(
+          height: 1,
+          color: colors.outlineVariant.withValues(alpha: 0.5),
+        ),
+        itemBuilder: (context, index) {
+          final note = deliveryNotes[index];
+          final isCancelled = note.status == DeliveryNoteStatus.cancelled;
+
+          return ListTile(
+            contentPadding: const EdgeInsets.symmetric(
+              horizontal: 16,
+              vertical: 4,
+            ),
+            title: Text(
+              note.deliveryNoteNumber,
+              style: TextStyle(
+                fontWeight: FontWeight.bold,
+                fontSize: 14,
+                color: isCancelled
+                    ? colors.onSurfaceVariant.withValues(alpha: 0.7)
+                    : colors.onSurface,
+                decoration: isCancelled ? TextDecoration.lineThrough : null,
+              ),
+            ),
+            subtitle: Text(
+              DateFormat('dd/MM/yyyy').format(note.createdAt),
+              style: TextStyle(
+                fontSize: 12,
+                color: colors.onSurfaceVariant,
+              ),
+            ),
+            trailing: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Tooltip(
+                  message: note.status.label,
+                  child: Image.asset(
+                    note.status.iconPath,
+                    width: 18,
+                    height: 18,
+                    errorBuilder: (context, error, stackTrace) {
+                      return const Icon(
+                        Icons.help_outline,
+                        size: 24,
+                        color: Colors.grey,
+                      );
+                    },
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Icon(Icons.chevron_right, color: colors.onSurfaceVariant),
+              ],
+            ),
+            onTap: () {
+              context.push('/delivery-notes/view/${note.id}');
             },
           );
         },

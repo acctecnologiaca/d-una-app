@@ -103,7 +103,7 @@ class SupabaseProductsRepository {
     }
   }
 
-  Future<void> createProduct(
+  Future<Product> createProduct(
     Product product, {
     Uint8List? imageBytes,
     String? imageExtension,
@@ -133,7 +133,13 @@ class SupabaseProductsRepository {
         productJson.remove('id');
       }
 
-      await _supabase.from('products').insert(productJson);
+      final response = await _supabase
+          .from('products')
+          .insert(productJson)
+          .select('*, brands(name), categories(name), uoms(symbol)')
+          .single();
+
+      return Product.fromJson(response);
     } catch (e) {
       throw Exception('Error creating product: $e');
     }

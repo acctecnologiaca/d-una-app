@@ -112,3 +112,20 @@ Para evitar la sobreventa de inventario propio y prevenir advertencias espurias 
    - **En Cotizaciones (Tarjetas de Selección y Agregado):**
      - Si hay reserva activa, advertir con precisión:
        `'Hay X $uom de inventario propio reservadas en cotizaciones o notas de entrega.'`.
+
+## 9. Homologación Simétrica, Salvaguarda de Monetización y Cierre en Cascada
+
+1. **Aprobación Guiada y Salvaguarda de Proveedores Afiliados en Notas de Entrega:**
+   - Vincular una cotización en `draft` o `sent` desde una Nota de Entrega nunca debe auto-aprobarse de forma silenciosa.
+   - Si la cotización incluye productos de proveedores afiliados (`QuoteSuppliersOcStatus`), el sistema **debe validar** que todas las Órdenes de Compra correspondientes se encuentren en estatus `approved` o `finalized` antes de permitir la aprobación para despacho.
+   - Si existen OCs de afiliados pendientes o no emitidas, la vinculación se bloquea de inmediato mostrando el diálogo de salvaguarda (`Symbols.lock`, "Orden de Compra Requerida").
+   - Si la validación pasa, se solicita aprobación explícita y consentida del usuario antes de precargar los ítems y reservar formalmente el inventario.
+
+2. **Detección Asistiva y Vinculación Homologada de Órdenes de Compra en Compras:**
+   - En el registro de compras (`AddPurchaseDetailsTab`), la vinculación de Órdenes de Compra utiliza el componente oficial `CustomDropdown<SupplierOrder>` con la lista de órdenes aprobadas de almacén propio del proveedor seleccionado (`pendingApprovedOrdersBySupplierProvider`).
+   - El selector soporta tanto la vinculación directa como el reemplazo preventivo mediante `CustomDialog.confirmation` (`[Solo vincular]` / `[Reemplazar]`).
+   - Al guardar la compra (`savePurchase`), si existe una orden de compra vinculada, ésta pasa automáticamente a estatus `finalized`, erradicando el riesgo de duplicidad de stock local.
+
+3. **Cierre en Cascada en Lote para Dropshipping Multimarca:**
+   - Al confirmar la recepción y estampación de firma del cliente en una Nota de Entrega (`ConfirmDeliveryNoteReceptionDialog`), si la nota proviene de una cotización (`note.quoteId != null`), el sistema ejecuta `finalizeDropshippingOrdersByQuoteId(quoteId)` para cerrar en lote todas las órdenes de compra Dropshipping aprobadas vinculadas a esa cotización.
+   - Esto garantiza que órdenes de compra con múltiples proveedores afiliados para un mismo despacho queden conciliadas y finalizadas simultáneamente.

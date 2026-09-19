@@ -2,6 +2,7 @@ import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../domain/repositories/service_reports_repository.dart';
+import '../../domain/models/batch_report_update_result.dart';
 import '../../data/models/models.dart';
 import '../../../portfolio/data/models/category_model.dart';
 import '../../../quotes/data/models/commercial_condition.dart';
@@ -574,6 +575,40 @@ class SupabaseServiceReportsRepository implements ServiceReportsRepository {
       }
     }
 
+    if (status == 'finalized') {
+      final List<dynamic> insufficient = await _client.rpc(
+        'check_service_report_insufficient_stock',
+        params: {'p_report_id': id},
+      );
+
+      if (insufficient.isNotEmpty) {
+        final productIds = insufficient
+            .map((item) => item['product_id'] as String)
+            .toList();
+
+        final itemsData = await _client
+            .from('service_report_items_products')
+            .select('product_id, name, model')
+            .eq('report_id', id)
+            .inFilter('product_id', productIds);
+
+        final names = (itemsData as List<dynamic>).map((item) {
+          final name = item['name'] as String? ?? 'Producto';
+          final model = item['model'] as String?;
+          if (model != null && model.isNotEmpty) {
+            return '$name ($model)';
+          }
+          return name;
+        }).toList();
+
+        throw InsufficientStockException(names.isEmpty
+            ? insufficient
+                .map((i) => i['product_name'] as String? ?? 'Producto')
+                .toList()
+            : names);
+      }
+    }
+
     await _client.from('service_reports').update({
       'status': status,
       'updated_at': DateTime.now().toIso8601String(),
@@ -602,37 +637,36 @@ class SupabaseServiceReportsRepository implements ServiceReportsRepository {
   }
 
   @override
-  Future<List<String>> batchUpdateStatus(
+  Future<BatchReportUpdateResult> batchUpdateStatus(
       List<String> ids, String status) async {
-    if (ids.isEmpty) return [];
-
-    final reports = await _client
-        .from('service_reports')
-        .select('id, status')
-        .inFilter('id', ids);
-
-    final validIds = <String>[];
-    for (final r in (reports as List<dynamic>)) {
-      final rId = r['id'] as String;
-      final currentStatus = r['status'] as String?;
-
-      if (currentStatus == 'cancelled') continue;
-      if (currentStatus == 'finalized' && status != 'cancelled') continue;
-
-      validIds.add(rId);
+    if (ids.isEmpty) {
+      return BatchReportUpdateResult(
+        successfulIds: [],
+        stockErrors: {},
+        generalErrors: {},
+      );
     }
 
-    if (validIds.isEmpty) return [];
+    final successfulIds = <String>[];
+    final stockErrors = <String, InsufficientStockException>{};
+    final generalErrors = <String, Exception>{};
 
-    await _client
-        .from('service_reports')
-        .update({
-          'status': status,
-          'updated_at': DateTime.now().toIso8601String(),
-        })
-        .inFilter('id', validIds);
+    for (final id in ids) {
+      try {
+        await updateReportStatus(id, status);
+        successfulIds.add(id);
+      } on InsufficientStockException catch (e) {
+        stockErrors[id] = e;
+      } catch (e) {
+        generalErrors[id] = e is Exception ? e : Exception(e.toString());
+      }
+    }
 
-    return validIds;
+    return BatchReportUpdateResult(
+      successfulIds: successfulIds,
+      stockErrors: stockErrors,
+      generalErrors: generalErrors,
+    );
   }
 
   @override

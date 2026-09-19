@@ -66,6 +66,12 @@ abstract class SupplierOrdersRepository {
 
   Future<Map<String, dynamic>?> getLinkedPurchase(String supplierOrderId);
   Future<String> createPurchaseFromOrder(String orderId);
+
+  /// Consulta órdenes de compra aprobadas pendientes de almacén propio para un proveedor específico
+  Future<List<SupplierOrder>> getPendingApprovedOrdersBySupplierId(String supplierId);
+
+  /// Finaliza en lote todas las órdenes de compra dropshipping aprobadas vinculadas a una cotización
+  Future<void> finalizeDropshippingOrdersByQuoteId(String quoteId);
 }
 
 

@@ -510,7 +510,7 @@ class _SupplierOrderDetailsScreenState
               indicatorColor: colors.primary,
               labelStyle: TextStyle(fontWeight: FontWeight.bold),
               tabs: [
-                const Tab(text: 'Detalles'),
+                const Tab(text: 'General'),
                 Tab(
                   child: Consumer(
                     builder: (context, ref, _) {

@@ -1,6 +1,7 @@
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../domain/models/models.dart';
 import '../models/purchase_item_product.dart';
+import 'package:d_una_app/features/portfolio/data/models/product_model.dart';
 
 class PurchasesRepository {
   final SupabaseClient _supabase;
@@ -33,6 +34,8 @@ class PurchasesRepository {
         supplierName =
             (supplier['legal_name'] as String?) ??
             (supplier['name'] as String?);
+      } else if (json['document_type'] == 'initial_inventory') {
+        supplierName = 'Inventario Inicial';
       }
 
       json['supplier_name'] = supplierName ?? 'Desconocido';
@@ -112,8 +115,8 @@ class PurchasesRepository {
     }
 
     var orderedQuery = query.order(orderBy, ascending: ascending);
-    if (orderBy != 'created_at') {
-      orderedQuery = orderedQuery.order('created_at', ascending: ascending);
+    if (orderBy == 'date') {
+      orderedQuery = orderedQuery.order('created_at', ascending: false);
     }
 
     final response = await orderedQuery.range(offset, offset + limit - 1);
@@ -125,6 +128,8 @@ class PurchasesRepository {
         supplierName =
             (supplier['legal_name'] as String?) ??
             (supplier['name'] as String?);
+      } else if (json['document_type'] == 'initial_inventory') {
+        supplierName = 'Inventario Inicial';
       }
 
       json['supplier_name'] = supplierName ?? 'Desconocido';
@@ -237,6 +242,8 @@ class PurchasesRepository {
       supplierName =
           (supplier['legal_name'] as String?) ?? (supplier['name'] as String?);
       supplierTaxId = (supplier['tax_id'] as String?)?.trim();
+    } else if (headerResponse['document_type'] == 'initial_inventory') {
+      supplierName = 'Inventario Inicial';
     }
 
     final purchaseMap = Map<String, dynamic>.from(headerResponse);
@@ -304,5 +311,75 @@ class PurchasesRepository {
         .delete()
         .eq('id', id)
         .eq('user_id', currentUserId);
+  }
+
+  Future<void> addInitialInventoryItem({
+    required Product product,
+    required double quantity,
+    required double unitPrice,
+  }) async {
+    final currentUserId = _supabase.auth.currentUser?.id;
+    if (currentUserId == null) throw Exception('User not authenticated');
+
+    final currentYear = DateTime.now().year;
+    final startOfYear = '$currentYear-01-01';
+    final endOfYear = '$currentYear-12-31';
+
+    // 1. Buscar si ya existe un acta de inventario inicial abierta en el año
+    final existingResponse = await _supabase
+        .from('purchases')
+        .select('id, subtotal, total')
+        .eq('user_id', currentUserId)
+        .eq('document_type', 'initial_inventory')
+        .gte('date', startOfYear)
+        .lte('date', endOfYear)
+        .order('created_at', ascending: false)
+        .limit(1)
+        .maybeSingle();
+
+    String purchaseId;
+    double currentSubtotal = 0.0;
+
+    if (existingResponse != null) {
+      purchaseId = existingResponse['id'] as String;
+      currentSubtotal =
+          (existingResponse['subtotal'] as num?)?.toDouble() ?? 0.0;
+    } else {
+      // 2. Crear nueva compra de inventario inicial
+      final newDocNumber = 'ACTA-INICIAL-$currentYear';
+      final headerResponse = await _supabase
+          .from('purchases')
+          .insert({
+            'user_id': currentUserId,
+            'document_type': 'initial_inventory',
+            'document_number': newDocNumber,
+            'date': DateTime.now().toIso8601String().split('T')[0],
+            'subtotal': 0.0,
+            'tax': 0.0,
+            'total': 0.0,
+            'has_missing_serials': false,
+          })
+          .select('id')
+          .single();
+      purchaseId = headerResponse['id'] as String;
+    }
+
+    // 3. Insertar el ítem en purchase_items
+    final itemTotal = quantity * unitPrice;
+    await _supabase.from('purchase_items').insert({
+      'purchase_id': purchaseId,
+      'product_id': product.id,
+      'quantity': quantity,
+      'unit_price': unitPrice,
+      'requires_serials': product.requiresSerials,
+    });
+
+    // 4. Actualizar totales del encabezado
+    final newTotal = currentSubtotal + itemTotal;
+    await _supabase.from('purchases').update({
+      'subtotal': newTotal,
+      'total': newTotal,
+      'updated_at': DateTime.now().toIso8601String(),
+    }).eq('id', purchaseId);
   }
 }

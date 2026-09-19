@@ -47,7 +47,7 @@ class _ReportSearchScreenState extends ConsumerState<ReportSearchScreen> {
   final Set<String> _selectedAdvisors = {};
   DateTimeRange? _selectedDateRange;
   String _searchQuery = '';
-  SortOption _currentSort = SortOption.recent;
+  SortOption _currentSort = SortOption.reportNumberDesc;
 
   ReportSearchArgs get _searchArgs =>
       ReportSearchArgs(productId: widget.productId, clientId: widget.clientId);
@@ -298,7 +298,7 @@ class _ReportSearchScreenState extends ConsumerState<ReportSearchScreen> {
           _selectedClients.clear();
           _selectedAdvisors.clear();
           _selectedDateRange = null;
-          _currentSort = SortOption.recent;
+          _currentSort = SortOption.reportNumberDesc;
         });
         ref
             .read(paginatedReportSearchProvider(_searchArgs).notifier)
@@ -308,7 +308,7 @@ class _ReportSearchScreenState extends ConsumerState<ReportSearchScreen> {
             .updateFilters(status: null, categoryId: null);
         ref
             .read(paginatedReportSearchProvider(_searchArgs).notifier)
-            .updateSort('service_date', false);
+            .updateSort('report_number', false);
       },
       onServerSearch: (query) {
         ref
@@ -332,27 +332,35 @@ class _ReportSearchScreenState extends ConsumerState<ReportSearchScreen> {
           child: SortSelector(
             currentSort: _currentSort,
             options: const [
+              SortOption.reportNumberDesc,
+              SortOption.reportNumberAsc,
               SortOption.recent,
-              SortOption.oldest,
-              SortOption.highestPrice,
-              SortOption.lowestPrice,
+              SortOption.dateIssued,
+              SortOption.nameAZ,
+              SortOption.nameZA,
             ],
             onSortChanged: (val) {
               setState(() => _currentSort = val);
-              String orderBy = 'service_date';
+              String orderBy = 'report_number';
               bool ascending = false;
-              if (val == SortOption.recent) {
+              if (val == SortOption.reportNumberDesc) {
+                orderBy = 'report_number';
+                ascending = false;
+              } else if (val == SortOption.reportNumberAsc) {
+                orderBy = 'report_number';
+                ascending = true;
+              } else if (val == SortOption.recent) {
+                orderBy = 'created_at';
+                ascending = false;
+              } else if (val == SortOption.dateIssued) {
                 orderBy = 'service_date';
                 ascending = false;
-              } else if (val == SortOption.oldest) {
-                orderBy = 'service_date';
+              } else if (val == SortOption.nameAZ) {
+                orderBy = 'clients(name)';
                 ascending = true;
-              } else if (val == SortOption.highestPrice) {
-                orderBy = 'total';
+              } else if (val == SortOption.nameZA) {
+                orderBy = 'clients(name)';
                 ascending = false;
-              } else if (val == SortOption.lowestPrice) {
-                orderBy = 'total';
-                ascending = true;
               }
               ref
                   .read(paginatedReportSearchProvider(_searchArgs).notifier)

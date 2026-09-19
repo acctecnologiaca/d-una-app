@@ -46,8 +46,11 @@ class CreateSupplierOrderState extends Equatable {
   final String? receiverName;
   final String? currentOrderNumber;
 
+  final String? quoteId;
+
   CreateSupplierOrderState({
     this.id,
+    this.quoteId,
     this.supplierId,
     this.supplierBranchId,
     this.shippingMethodId,
@@ -115,6 +118,7 @@ class CreateSupplierOrderState extends Equatable {
     if (shippingMethodId != initialOrder!.shippingMethodId) return true;
     if (receiverCollaboratorId != initialOrder!.receiverCollaboratorId) return true;
     if (paymentMethod != initialOrder!.paymentMethod) return true;
+    if (quoteId != initialOrder!.quoteId) return true;
     if (isDropshipping != initialOrder!.isDropshipping) return true;
     if (clientId != initialOrder!.clientId) return true;
     if (recipientName != initialOrder!.recipientName) return true;
@@ -171,6 +175,8 @@ class CreateSupplierOrderState extends Equatable {
 
   CreateSupplierOrderState copyWith({
     String? id,
+    String? quoteId,
+    bool clearQuoteId = false,
     String? supplierId,
     String? supplierBranchId,
     String? shippingMethodId,
@@ -199,6 +205,7 @@ class CreateSupplierOrderState extends Equatable {
   }) {
     return CreateSupplierOrderState(
       id: id ?? this.id,
+      quoteId: clearQuoteId ? null : (quoteId ?? this.quoteId),
       supplierId: supplierId ?? this.supplierId,
       supplierBranchId: supplierBranchId ?? this.supplierBranchId,
       shippingMethodId: shippingMethodId ?? this.shippingMethodId,
@@ -230,6 +237,7 @@ class CreateSupplierOrderState extends Equatable {
   Map<String, dynamic> toDraftJson() {
     return {
       'id': id,
+      'quote_id': quoteId,
       'supplier_id': supplierId,
       'supplier_branch_id': supplierBranchId,
       'shipping_method_id': shippingMethodId,
@@ -256,6 +264,7 @@ class CreateSupplierOrderState extends Equatable {
   factory CreateSupplierOrderState.fromDraftJson(Map<String, dynamic> json) {
     return CreateSupplierOrderState(
       id: json['id'] as String?,
+      quoteId: json['quote_id'] as String?,
       supplierId: json['supplier_id'] as String?,
       supplierBranchId: json['supplier_branch_id'] as String?,
       shippingMethodId: json['shipping_method_id'] as String?,
@@ -284,6 +293,7 @@ class CreateSupplierOrderState extends Equatable {
   @override
   List<Object?> get props => [
     id,
+    quoteId,
     supplierId,
     supplierBranchId,
     shippingMethodId,
@@ -513,6 +523,7 @@ class CreateSupplierOrder extends _$CreateSupplierOrder {
   void loadFromExisting(SupplierOrder order, List<SupplierOrderItem> items) {
     state = CreateSupplierOrderState(
       id: order.id,
+      quoteId: order.quoteId,
       supplierId: order.supplierId,
       supplierBranchId: order.supplierBranchId,
       shippingMethodId: order.shippingMethodId,
@@ -540,6 +551,15 @@ class CreateSupplierOrder extends _$CreateSupplierOrder {
     );
   }
 
+  void setQuoteId(String? quoteId) {
+    if (quoteId == null) {
+      state = state.copyWith(clearQuoteId: true);
+    } else {
+      state = state.copyWith(quoteId: quoteId);
+    }
+    autoSaveDraft();
+  }
+
   Future<void> loadSupplierOrderAsCopy(String sourceOrderId) async {
     try {
       state = state.copyWith(isLoading: true, error: null);
@@ -553,6 +573,7 @@ class CreateSupplierOrder extends _$CreateSupplierOrder {
 
       state = CreateSupplierOrderState(
         id: null, // New order copy
+        quoteId: source.order.quoteId,
         supplierId: source.order.supplierId,
         supplierBranchId: source.order.supplierBranchId,
         shippingMethodId: source.order.shippingMethodId,
@@ -891,6 +912,7 @@ class CreateSupplierOrder extends _$CreateSupplierOrder {
         supplierBranchId: state.supplierBranchId,
         shippingMethodId: state.shippingMethodId,
         receiverCollaboratorId: state.receiverCollaboratorId,
+        quoteId: state.quoteId,
         orderNumber: state.currentOrderNumber ?? '',
         date: state.date,
         paymentMethod: state.paymentMethod,

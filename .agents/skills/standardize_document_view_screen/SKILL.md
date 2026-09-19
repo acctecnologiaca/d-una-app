@@ -18,15 +18,26 @@ Referencias canónicas en el proyecto:
 
 ### A. Estructura de Pestañas y TabController
 1. **Replicación 1:1:** Las pestañas de visualización deben replicar exactamente la estructura del creador del documento.
-2. **Resumen Inicial Obligatorio:** La última pestaña siempre es **Resumen**, y el `TabController` debe inicializarse obligatoriamente en ella:
+2. **Estándar Universal de la Pestaña `[0] General`:**
+   Todo documento transaccional en D'Una App inicia obligatoriamente en la pestaña `[0] General`, unificando al sujeto de la transacción (Cliente o Proveedor) con los metadatos operativos y comerciales:
+
+   | Documento | Pestaña [0] | Pestaña [1] | Pestaña [2] | Pestaña [3] | Pestaña [4] | Total Pestañas | initialIndex |
+   | :--- | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
+   | **Cotización** | **General** *(Cliente + Datos)* | Productos | Servicios | Condiciones | Resúmen | **5** | **4** |
+   | **Reporte de Servicio** | **General** *(Cliente + Servicio)* | Productos | Servicios | Condiciones | Resumen | **5** | **4** |
+   | **Nota de Entrega** | **General** *(Cliente + Despacho)* | Productos | Despacho | Observaciones | Resumen | **5** | **4** |
+   | **Orden de Compra** | **General** *(Proveedor + Datos)* | Productos | Resumen | — | — | **3** | **2** |
+   | **Registro de Compra** | **General** *(Proveedor + Factura)* | Productos | Resumen | — | — | **3** | **2** |
+
+3. **Resumen Inicial Obligatorio:** La última pestaña siempre es **Resumen**, y el `TabController` debe inicializarse obligatoriamente en ella:
    ```dart
    _tabController = TabController(
      length: totalTabs,
      vsync: this,
-     initialIndex: totalTabs - 1, // Siempre arranca en Resumen
+     initialIndex: totalTabs - 1, // Siempre arranca en Resumen (índice 4 en 5 pestañas, índice 2 en 3 pestañas)
    );
    ```
-3. **Títulos de Pestañas Limpios:**
+4. **Títulos de Pestañas Limpios:**
    - **PROHIBIDO:** No colocar números entre paréntesis en los títulos (ejemplo prohibido: `Productos (3)`).
    - **Badges de Alerta:** Si una sección tiene incidencias o campos incompletos, se muestra un punto circular rojo sin números:
      ```dart
@@ -145,17 +156,63 @@ Cada sección se compone de:
    )
    ```
 
+### C. Sección de Trazabilidad Cruzada y Mapa de Relaciones (Relationship Map)
+En la parte inferior del scroll de la pestaña `Resumen`, deben mostrarse las tarjetas interactivas de los documentos vinculados en el ciclo de vida:
+1. **Cotizaciones (`ViewQuoteSummaryTab`):**
+   - **Órdenes de compra vinculadas:** Listado de órdenes generadas a proveedores con número, nombre del proveedor, estatus con icono oficial y navegación a `/supplier-orders/view/:id`.
+   - **Notas de entrega vinculadas:** Listado de notas emitidas con número de nota, fecha de emisión, badge de estatus oficial y navegación a `/delivery-notes/view/:id`.
+2. **Órdenes de Compra (`ViewSupplierOrderSummaryTab`):**
+   - **Cotización vinculada:** Si `order.quoteId != null`, tarjeta con número de cotización, cliente destinatario, badge de estatus oficial y navegación a `/quotes/view/:id`.
+   - **Registro de compra vinculado:** Si `linkedPurchase != null`, tarjeta con tipo de documento (Factura / Nota de entrega), número de documento y navegación a `/my-purchases/view/:id`.
+   - **Órdenes consolidadas / Orden principal:** Si la orden proviene o forma parte de una consolidación (`merged`).
+3. **Notas de Entrega:**
+   - Visualización de la cotización u orden de compra de origen.
+
 ---
 
-## 3. Pestaña de Cliente (`ViewDocumentClientTab`) y `ContactListTile`
+## 3. Pestaña `[0] General` (`ViewDocumentDetailsTab`) y Unificación de Sujeto
 
-1. **Espaciado Canónico:** Separación vertical entre bloques informativos `const SizedBox(height: 24)`.
-2. **Contacto Receptor / Contacto Principal:**
-   - Si el cliente es una empresa y posee contacto registrado, usar obligatoriamente **`ContactListTile`** ([`contact_list_tile.dart`](file:///c:/Users/aleja/flutter_apps/MVP/d_una_app/lib/features/clients/presentation/widgets/contact_list_tile.dart)):
-     - Avatar circular con iniciales.
-     - Nombre completo y cargo/rol.
-     - Botones integrados para llamada telefónica y WhatsApp directo usando `ContactUtils.makePhoneCall` y `ContactUtils.launchWhatsApp`.
-   - Si el cliente es una persona natural, presentar sus datos con `InfoBlock.text(icon: Symbols.phone, label: 'Teléfono', value: ...)`.
+La pestaña `[0] General` unifica de manera ordenada los datos fiscales del sujeto (Cliente o Proveedor) y los parámetros comerciales u operativos del documento:
+
+1. **Sección 1: Cliente / Proveedor y Contacto:**
+   - **Espaciado Canónico:** Separación vertical entre bloques informativos `const SizedBox(height: 24)`.
+   - **Empresas (`company`):**
+     - Razón Social, Identificación Fiscal (RIF/NIF/RUT), Dirección Fiscal con `InfoBlock.text`.
+     - Si posee contacto registrado, usar obligatoriamente **`ContactListTile`** ([`contact_list_tile.dart`](file:///c:/Users/aleja/flutter_apps/MVP/d_una_app/lib/features/clients/presentation/widgets/contact_list_tile.dart)):
+       - Avatar circular con iniciales.
+       - Nombre completo y cargo/rol.
+       - Botones integrados para llamada telefónica y WhatsApp directo usando `ContactUtils.makePhoneCall` y `ContactUtils.launchWhatsApp`.
+       - Navegación al detalle del contacto al pulsar en la tarjeta.
+   - **Personas Naturales:**
+     - Nombre y Apellido, Cédula / Identificación, Dirección, Teléfono y Correo en `InfoBlock.text`.
+
+2. **Sección 2: Parámetros del Documento:**
+   - Fechas de emisión y vencimiento (con badge si expirada).
+   - Asesor comercial o técnico responsable.
+   - Categoría comercial.
+   - Etiqueta identificadora del documento.
+   - Documentos de origen vinculados (Cotización u Orden de Compra asociada).
+
+3. **Renderizado Condicional de Notas Internas o Comentarios:**
+   - **Regla Estricta:** Las notas solo se renderizan si el documento cuenta con texto registrado (`notes != null && notes.trim().isNotEmpty`). Si no hay notas, el contenedor no debe mostrarse ni ocupar espacio.
+   - **Estilo Estándar del Contenedor de Notas:**
+     ```dart
+     Container(
+       width: double.infinity,
+       padding: const EdgeInsets.all(16),
+       decoration: BoxDecoration(
+         color: colors.surfaceContainerHighest.withValues(alpha: 0.3),
+         borderRadius: BorderRadius.circular(12),
+         border: Border.all(color: colors.outlineVariant),
+       ),
+       child: Text(
+         document.notes!,
+         style: textTheme.bodyLarge?.copyWith(
+           color: colors.onSurface,
+         ),
+       ),
+     )
+     ```
 
 ---
 
@@ -441,7 +498,51 @@ En documentos logísticos o de despacho (como Notas de Entrega), intervienen 3 c
 
 ---
 
-## 8. Checklist de Verificación para Document View Screens
+## 8. Ciclo de Vida de Descuento de Inventario Físico y Validación Preventiva RPC (Notas de Entrega y Reportes de Servicio)
+
+Para documentos que consumen productos de inventario propio (`sourceType == 'own'`), el ciclo de descuento y validación opera bajo las siguientes reglas arquitectónicas:
+
+### A. Descuento Automático en Base de Datos (PostgreSQL)
+1. **Fórmula de Stock Físico:** La función calculada `public.inventory_quantity(product public.products)` deduce automáticamente las cantidades consumidas en documentos con estatus `finalized`:
+   $$\text{inventory\_quantity} = \sum(\text{purchase\_items}) - \sum(\text{finalized delivery\_note\_items}) - \sum(\text{finalized service\_report\_items\_products})$$
+2. **Reversión Automática:** Si un documento finalizado es anulado (`cancelled`), la condición `status = 'finalized'` deja de cumplirse y las unidades retornan automáticamente al inventario disponible.
+3. **Inmutabilidad:** El trigger en base de datos (`check_*_status_immutability`) bloquea cualquier modificación o eliminación de ítems en documentos finalizados o cancelados.
+
+### B. Validación Preventiva de Stock mediante RPC
+1. **Verificación Previa a la Persistencia:** Antes de guardar el estatus `finalized` (tanto en cambios individuales como en lote), el repositorio debe invocar la función RPC preventiva:
+   - Para Notas de Entrega: `check_delivery_note_insufficient_stock(p_delivery_note_id)`
+   - Para Reportes de Servicio: `check_service_report_insufficient_stock(p_report_id)`
+2. **Excepción de Dominio:** Si la RPC detecta que la cantidad requerida supera el stock físico neto disponible $(\text{inventory\_quantity} - \text{reserved\_quantity})$, el repositorio lanza `InsufficientStockException(productNames)`.
+
+### C. Manejo en la Interfaz de Usuario (UI) y Feedback
+1. **Diálogo de Advertencia Estándar:** Al capturar `InsufficientStockException`, la pantalla (`ViewDocumentScreen` o `SelectionActions`) presenta un [`CustomDialog.confirmation`](file:///c:/Users/aleja/flutter_apps/MVP/d_una_app/lib/shared/widgets/custom_dialog.dart):
+   ```dart
+   CustomDialog.show(
+     context: context,
+     dialog: CustomDialog.confirmation(
+       icon: Symbols.warning,
+       iconColor: Colors.amber.shade800,
+       title: 'Stock Insuficiente',
+       contentText:
+           'No se puede finalizar el documento porque no hay suficiente stock disponible en el inventario propio de los siguientes productos:\n\n${e.productNames.map((name) => '• $name').join('\n')}\n\nPor favor, reponga el stock en almacén para poder finalizarlo.',
+       actions: [
+         TextButton(
+           onPressed: () => Navigator.of(context, rootNavigator: true).pop(),
+           child: const Text('Entendido'),
+         ),
+       ],
+     ),
+   );
+   ```
+2. **Sincronización Reactiva de Estado:** Tras cualquier cambio exitoso a `finalized` o `cancelled`, es mandatorio ejecutar:
+   ```dart
+   ref.invalidate(productsProvider);
+   ```
+   para refrescar el catálogo y portafolio en tiempo real.
+
+---
+
+## 9. Checklist de Verificación para Document View Screens
 
 - [ ] ¿El `TabController` arranca en la pestaña Resumen (`initialIndex: totalTabs - 1`)?
 - [ ] ¿Los nombres de las pestañas carecen de números entre paréntesis?
@@ -463,7 +564,7 @@ En documentos logísticos o de despacho (como Notas de Entrega), intervienen 3 c
 - [ ] ¿El modal de recepción física utiliza `CustomActionSheet`, campos con `helperText` (sin `hintText`), teléfono modular, lienzo con `ClipRRect` y botón `'Confirmar entrega'` alineado a la derecha?
 - [ ] ¿Se programó `WidgetsBinding.instance.addPostFrameCallback` en `initState` para forzar la invalidación inicial del documento y evitar datos de caché obsoletos?
 - [ ] ¿Se implementa `WidgetsBindingObserver` con invalidación en `AppLifecycleState.resumed` para capturar interacciones ocurridas en el visor web externo?
-- [ ] ¿Al transicionar el estatus a `finalized` o `cancelled`, además de `paginatedProductsProvider.refresh()`, se invalidan iterativamente los `productDetailProvider(item.productId!)` de todos los ítems asociados?
+- [ ] ¿Al transicionar el estatus a `finalized` o `cancelled`, se ejecuta la validación RPC previa (`check_*_insufficient_stock`) y se invalida `productsProvider` para actualizar el stock en toda la aplicación?
 - [ ] ¿La fecha de despacho (`delivery_date`) aplica el modelo híbrido con fallback automático a la fecha actual si está vacía o vencida al enviar/firmar, respetando fechas futuras programadas y evitando textos como `"No especificada"`?
 - [ ] ¿El visor web utiliza el botón `"Confirmar recepción"` con ancho auto alineado a la derecha en escritorio y 100% en pantallas móviles?
 - [ ] ¿El lienzo de firma digital en la web incluye placeholder interactivo centrado que se oculta al trazar y se restaura al limpiar?
@@ -471,4 +572,5 @@ En documentos logísticos o de despacho (como Notas de Entrega), intervienen 3 c
 - [ ] ¿El área de firma en la web finalizada carece por completo de fondos o cabeceras verdes y replica el bloque de firma sobrio del PDF (`slate50`/`slate200`) alineado a la derecha sobre la línea `#CBD5E1`?
 - [ ] ¿La impresión desde la web (`@media print` / guardar en PDF) es visualmente indistinguible del PDF nativo exportado en la app?
 - [ ] ¿Los timestamps de recepción (`receivedAt`) se convierten explícitamente a hora local (`.toLocal()`) en el modelo y se formatean en 12h con AM/PM (`DateFormat('dd/MM/yyyy - hh:mm a')`) tanto en la app como en el PDF?
+
 

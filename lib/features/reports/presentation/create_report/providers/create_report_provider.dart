@@ -766,35 +766,14 @@ class CreateServiceReportNotifier
 
   // --- Field updates ---
   void setInterventionType(InterventionType type) {
-    String? newTag = state.reportTag;
-    final currentCat = state.categoryName;
-    final oldAutoTag = currentCat != null && currentCat.isNotEmpty
-        ? '${state.interventionType.label} - $currentCat'
-        : state.interventionType.label;
-    if (newTag == null || newTag.isEmpty || newTag == oldAutoTag) {
-      newTag = currentCat != null && currentCat.isNotEmpty
-          ? '${type.label} - $currentCat'
-          : type.label;
-    }
-    state = state.copyWith(interventionType: type, reportTag: newTag);
+    state = state.copyWith(interventionType: type);
     autoSaveDraft();
   }
 
   void setCategory(String? id, String? name) {
-    String? newTag = state.reportTag;
-    final oldCat = state.categoryName;
-    final oldAutoTag = oldCat != null && oldCat.isNotEmpty
-        ? '${state.interventionType.label} - $oldCat'
-        : state.interventionType.label;
-    if (newTag == null || newTag.isEmpty || newTag == oldAutoTag) {
-      newTag = name != null && name.isNotEmpty
-          ? '${state.interventionType.label} - $name'
-          : state.interventionType.label;
-    }
     state = state.copyWith(
       categoryId: id,
       categoryName: name,
-      reportTag: newTag,
     );
     autoSaveDraft();
   }

@@ -1,5 +1,6 @@
 import 'package:d_una_app/shared/widgets/info_disclaimer_card.dart';
 import 'package:flutter/material.dart';
+import 'package:material_symbols_icons/symbols.dart';
 import 'package:d_una_app/shared/widgets/friendly_error_widget.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -12,6 +13,9 @@ import '../../../../../shared/widgets/sort_selector.dart';
 import '../../../../../shared/widgets/custom_extended_fab.dart';
 import '../../../../../shared/utils/fab_scroll_padding.dart';
 import '../../../../../shared/widgets/empty_list_state.dart';
+import '../../../../../shared/widgets/custom_button.dart';
+import '../../../../../shared/widgets/custom_action_sheet.dart';
+import '../../../../../shared/widgets/bottom_sheet_action_item.dart';
 import '../../../../../shared/widgets/paginated_list_view.dart';
 import '../../../../ads/presentation/providers/ads_provider.dart';
 
@@ -70,6 +74,30 @@ class _OwnInventoryScreenState extends ConsumerState<OwnInventoryScreen>
           icon: Icon(Icons.arrow_back, color: colors.onSurface),
           onPressed: () => context.pop(),
         ),
+        actions: [
+          IconButton(
+            icon: Icon(Icons.more_vert, color: colors.onSurface),
+            tooltip: 'Opciones de inventario',
+            onPressed: () {
+              CustomActionSheet.show(
+                context: context,
+                title: 'Opciones de inventario',
+                actions: [
+                  BottomSheetActionItem(
+                    icon: Symbols.fact_check,
+                    label: 'Toma física de inventario',
+                    subtitle:
+                        'Registrar apertura de existencias o arqueo en almacén',
+                    onTap: () {
+                      context.pop();
+                      context.push('/my-purchases/add?type=initial_inventory');
+                    },
+                  ),
+                ],
+              );
+            },
+          ),
+        ],
       ),
       body: SafeArea(
         child: Column(
@@ -187,10 +215,27 @@ class _OwnInventoryScreenState extends ConsumerState<OwnInventoryScreen>
                     return SingleChildScrollView(
                       physics: const AlwaysScrollableScrollPhysics(),
                       child: SizedBox(
-                        height: MediaQuery.of(context).size.height * 0.5,
-                        child: EmptyListState(
-                          icon: Icons.inventory_2_outlined,
-                          message: 'No hay productos agregados a tu inventario',
+                        height: MediaQuery.of(context).size.height * 0.55,
+                        child: Center(
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              const EmptyListState(
+                                icon: Icons.inventory_2_outlined,
+                                message:
+                                    'No hay productos agregados a tu inventario',
+                              ),
+                              const SizedBox(height: 20),
+                              CustomButton(
+                                text: 'Registrar inventario inicial',
+                                icon: Symbols.fact_check,
+                                isFullWidth: false,
+                                onPressed: () => context.push(
+                                  '/my-purchases/add?type=initial_inventory',
+                                ),
+                              ),
+                            ],
+                          ),
                         ),
                       ),
                     );

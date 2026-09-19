@@ -9,7 +9,6 @@ import '../../../../../shared/widgets/standard_app_bar.dart';
 import '../../../../../shared/widgets/custom_extended_fab.dart';
 import '../tabs/quote_products_tab.dart';
 import '../tabs/quote_services_tab.dart';
-import '../tabs/quote_client_tab.dart';
 import '../tabs/quote_details_tab.dart';
 import '../tabs/quote_conditions_tab.dart';
 import '../tabs/quote_summary_tab.dart';
@@ -38,7 +37,7 @@ class _CreateQuoteScreenState extends ConsumerState<CreateQuoteScreen>
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 6, vsync: this);
+    _tabController = TabController(length: 5, vsync: this);
 
     _tabController.addListener(() {
       if (!_tabController.indexIsChanging) {
@@ -85,7 +84,7 @@ class _CreateQuoteScreenState extends ConsumerState<CreateQuoteScreen>
               .checkAndRestoreDraft(quoteId: widget.quoteId);
           if (draft != null && mounted) {
             setState(() {
-              if (draft.tabIndex >= 0 && draft.tabIndex < 6) {
+              if (draft.tabIndex >= 0 && draft.tabIndex < 5) {
                 _tabController.index = draft.tabIndex;
               }
             });
@@ -99,7 +98,7 @@ class _CreateQuoteScreenState extends ConsumerState<CreateQuoteScreen>
 
           if (draft != null && mounted) {
             setState(() {
-              if (draft.tabIndex >= 0 && draft.tabIndex < 6) {
+              if (draft.tabIndex >= 0 && draft.tabIndex < 5) {
                 _tabController.index = draft.tabIndex;
               }
             });
@@ -216,7 +215,7 @@ class _CreateQuoteScreenState extends ConsumerState<CreateQuoteScreen>
       final tabStr = GoRouterState.of(context).uri.queryParameters['tab'];
       if (tabStr != null) {
         final initialTab = int.tryParse(tabStr);
-        if (initialTab != null && initialTab >= 0 && initialTab < 6) {
+        if (initialTab != null && initialTab >= 0 && initialTab < 5) {
           _tabController.index = initialTab;
         }
       }
@@ -304,10 +303,9 @@ class _CreateQuoteScreenState extends ConsumerState<CreateQuoteScreen>
             indicatorColor: colors.primary,
             labelStyle: const TextStyle(fontWeight: FontWeight.bold),
             tabs: const [
+              Tab(text: 'General'),
               Tab(text: 'Productos'),
               Tab(text: 'Servicios'),
-              Tab(text: 'Cliente'),
-              Tab(text: 'Detalles'),
               Tab(text: 'Condiciones'),
               Tab(text: 'Resúmen'),
             ],
@@ -317,10 +315,9 @@ class _CreateQuoteScreenState extends ConsumerState<CreateQuoteScreen>
           child: TabBarView(
             controller: _tabController,
             children: [
+              const QuoteDetailsTab(),
               const QuoteProductsTab(),
               const QuoteServicesTab(),
-              const QuoteClientTab(),
-              const QuoteDetailsTab(),
               const QuoteConditionsTab(),
               QuoteSummaryTab(
                 onNavigateToTab: (index) {
@@ -338,15 +335,15 @@ class _CreateQuoteScreenState extends ConsumerState<CreateQuoteScreen>
   Widget? _buildFab() {
     final state = ref.watch(createQuoteProvider);
 
-    // Only show FAB on Products (0), Services (1), Conditions (4), and Summary (5) tabs
-    if (_tabController.index != 0 &&
-        _tabController.index != 1 &&
-        _tabController.index != 4 &&
-        _tabController.index != 5) {
+    // Only show FAB on Products (1), Services (2), Conditions (3), and Summary (4) tabs
+    if (_tabController.index != 1 &&
+        _tabController.index != 2 &&
+        _tabController.index != 3 &&
+        _tabController.index != 4) {
       return null;
     }
 
-    if (_tabController.index == 5) {
+    if (_tabController.index == 4) {
       return CustomExtendedFab(
         label: state.isLoading ? 'Guardando...' : 'Guardar',
           icon: state.isLoading ? Icons.hourglass_empty : Icons.save_outlined,
@@ -425,14 +422,14 @@ class _CreateQuoteScreenState extends ConsumerState<CreateQuoteScreen>
 
     return CustomExtendedFab(
       onPressed: () {
-          if (_tabController.index == 0) {
+          if (_tabController.index == 1) {
             context.push('/quotes/create/select-product');
-          } else if (_tabController.index == 1) {
+          } else if (_tabController.index == 2) {
             context.push('/quotes/create/select-service');
-          } else if (_tabController.index == 4) {
+          } else if (_tabController.index == 3) {
             final currentUri = GoRouterState.of(
               context,
-            ).uri.replace(queryParameters: {'tab': '4'});
+            ).uri.replace(queryParameters: {'tab': '3'});
             final encodedUri = Uri.encodeComponent(currentUri.toString());
             context.push('/quotes/create/conditions?returnTo=$encodedUri');
           }

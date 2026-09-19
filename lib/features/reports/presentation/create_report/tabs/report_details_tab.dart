@@ -2,11 +2,16 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
+import 'package:material_symbols_icons/symbols.dart';
 import 'package:d_una_app/shared/widgets/friendly_error_widget.dart';
 import 'package:d_una_app/shared/widgets/custom_dropdown.dart';
 import 'package:d_una_app/shared/widgets/custom_multi_dropdown.dart';
 import 'package:d_una_app/shared/widgets/custom_text_field.dart';
 import 'package:d_una_app/shared/widgets/filter_bottom_sheet.dart';
+import 'package:d_una_app/shared/widgets/info_block.dart';
+import 'package:d_una_app/shared/widgets/collapsible_card_block.dart';
+import 'package:d_una_app/features/clients/presentation/providers/clients_provider.dart';
+import 'package:d_una_app/features/clients/data/models/client_model.dart';
 import 'package:d_una_app/features/portfolio/data/models/category_model.dart';
 import 'package:d_una_app/features/portfolio/presentation/providers/lookup_providers.dart';
 import 'package:d_una_app/features/collaborators/domain/models/collaborator.dart';
@@ -18,7 +23,6 @@ import 'package:d_una_app/features/settings/presentation/providers/quick_phrases
 import '../providers/create_report_provider.dart';
 import '../widgets/intervention_type_chips.dart';
 import '../../../domain/models/service_report_model.dart';
-import 'package:d_una_app/shared/widgets/collapsible_card_block.dart';
 
 class ReportDetailsTab extends ConsumerStatefulWidget {
   const ReportDetailsTab({super.key});
@@ -37,6 +41,7 @@ class _ReportDetailsTabState extends ConsumerState<ReportDetailsTab> {
 
   final DateFormat _dateFormat = DateFormat('dd/MM/yyyy');
 
+  final ExpansibleController _controllerClient = ExpansibleController();
   final ExpansibleController _controller1 = ExpansibleController();
   final ExpansibleController _controller2 = ExpansibleController();
   final ExpansibleController _controller3 = ExpansibleController();
@@ -45,16 +50,19 @@ class _ReportDetailsTabState extends ConsumerState<ReportDetailsTab> {
 
   void _onExpandBlock(int index) {
     if (_expandedIndex != index) {
-      if (_expandedIndex == 0 && _controller1.isExpanded) {
+      if (_expandedIndex == 0 && _controllerClient.isExpanded) {
+        _controllerClient.collapse();
+      }
+      if (_expandedIndex == 1 && _controller1.isExpanded) {
         _controller1.collapse();
       }
-      if (_expandedIndex == 1 && _controller2.isExpanded) {
+      if (_expandedIndex == 2 && _controller2.isExpanded) {
         _controller2.collapse();
       }
-      if (_expandedIndex == 2 && _controller3.isExpanded) {
+      if (_expandedIndex == 3 && _controller3.isExpanded) {
         _controller3.collapse();
       }
-      if (_expandedIndex == 3 && _controller4.isExpanded) {
+      if (_expandedIndex == 4 && _controller4.isExpanded) {
         _controller4.collapse();
       }
       setState(() {
@@ -95,6 +103,7 @@ class _ReportDetailsTabState extends ConsumerState<ReportDetailsTab> {
     _recommendationsController.dispose();
     _notesController.dispose();
     _reportTagController.dispose();
+    _controllerClient.dispose();
     _controller1.dispose();
     _controller2.dispose();
     _controller3.dispose();
@@ -152,6 +161,20 @@ class _ReportDetailsTabState extends ConsumerState<ReportDetailsTab> {
   }
 
   // --- Subtítulos dinámicos de resumen para bloques colapsados ---
+  String _getBlock0Subtitle(Client? selectedClient, Contact? selectedContact) {
+    if (selectedClient != null) {
+      final taxIdStr = selectedClient.taxId ?? 'Sin RIF';
+      final contactStr = selectedContact != null
+          ? ' • ${selectedContact.name}'
+          : '';
+      return '${selectedClient.name} • $taxIdStr$contactStr';
+    }
+    return 'Pendiente de seleccionar cliente';
+  }
+
+  bool _isBlock0Complete(ServiceReportCreateState state) =>
+      state.clientId != null && state.clientId!.isNotEmpty;
+
   String _getBlock1Subtitle(ServiceReportCreateState state) {
     final cat = state.categoryName;
     if (cat != null && cat.isNotEmpty) {
@@ -255,6 +278,36 @@ class _ReportDetailsTabState extends ConsumerState<ReportDetailsTab> {
 
     final state = ref.watch(createReportProvider);
     final notifier = ref.read(createReportProvider.notifier);
+    final clientsAsync = ref.watch(clientsProvider);
+    final activeClients = clientsAsync.value ?? [];
+
+    final selectedClient =
+        activeClients.where((c) => c.id == state.clientId).firstOrNull ??
+        (state.report?.clientId == state.clientId && state.clientId != null
+            ? Client(
+                id: state.clientId!,
+                name: state.clientName ?? '',
+                userId: '',
+                type: state.clientType ?? 'company',
+                createdAt: DateTime.now(),
+                isArchived: true,
+              )
+            : null);
+
+    final clients = [
+      ...activeClients,
+      if (selectedClient != null &&
+          !activeClients.any((c) => c.id == selectedClient.id))
+        selectedClient,
+    ];
+
+    final contacts = selectedClient?.contacts ?? [];
+    final selectedContact = contacts
+        .where((c) => c.id == state.contactId)
+        .firstOrNull;
+    final isCompany =
+        selectedClient != null && selectedClient.type == 'company';
+
     final categoriesAsync = ref.watch(categoriesProvider);
     final collaboratorsAsync = ref.watch(collaboratorsProvider);
     final colors = Theme.of(context).colorScheme;
@@ -292,18 +345,208 @@ class _ReportDetailsTabState extends ConsumerState<ReportDetailsTab> {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           // ==========================================
+          // BLOQUE 0: Cliente y Contacto
+          // ==========================================
+          CollapsibleCardBlock(
+            controller: _controllerClient,
+            initiallyExpanded: _expandedIndex == 0,
+            onExpansionChanged: (expanded) =>
+                expanded ? _onExpandBlock(0) : _onCollapseBlock(0),
+            leading: const Icon(Symbols.person, size: 22),
+            title: 'Cliente y Contacto',
+            subtitle: _getBlock0Subtitle(selectedClient, selectedContact),
+            isComplete: _isBlock0Complete(state),
+            children: [
+              CustomDropdown<Client>(
+                value: selectedClient,
+                items: clients,
+                label: 'Nombre o razón social',
+                searchable: true,
+                itemLabelBuilder: (c) => c.alias != null && c.alias!.isNotEmpty
+                    ? '${c.name} (${c.alias})'
+                    : c.name,
+                showAddOption: true,
+                addOptionValue: Client(
+                  id: '___ADD___',
+                  name: '___ADD___',
+                  userId: 'dummy',
+                  type: 'company',
+                  createdAt: DateTime.now(),
+                ),
+                addOptionLabel: 'Agregar cliente',
+                onAddPressed: () async {
+                  final previousClients = clientsAsync.value ?? [];
+                  final reportId = state.report?.id;
+                  final returnPath = reportId != null
+                      ? '/reports/edit/$reportId?tab=0'
+                      : '/reports/create?tab=0';
+                  final returnToParam = Uri.encodeComponent(returnPath);
+                  await context.push('/clients/add?returnTo=$returnToParam');
+                  final newClientsResult = await ref.refresh(
+                    clientsProvider.future,
+                  );
+                  if (mounted &&
+                      newClientsResult.length > previousClients.length) {
+                    final oldIds = previousClients.map((c) => c.id).toSet();
+                    final newClient = newClientsResult.firstWhere(
+                      (c) => !oldIds.contains(c.id),
+                      orElse: () => newClientsResult.last,
+                    );
+                    notifier.setClient(newClient);
+                  }
+                },
+                onChanged: (client) {
+                  if (client != null && client.id != '___ADD___') {
+                    if (state.clientId != client.id) {
+                      notifier.setClient(client);
+                    }
+                  } else {
+                    notifier.clearClient();
+                  }
+                },
+              ),
+              if (selectedClient != null) ...[
+                const SizedBox(height: 16),
+                InfoBlock.text(
+                  icon: Icons.badge_outlined,
+                  label: 'Identificación Fiscal',
+                  value: selectedClient.taxId ?? 'No especificada',
+                ),
+                const SizedBox(height: 16),
+                InfoBlock.text(
+                  icon: Icons.location_on_outlined,
+                  label: 'Dirección Fiscal',
+                  value: [
+                    selectedClient.address,
+                    selectedClient.city,
+                    selectedClient.state,
+                    selectedClient.country,
+                  ].where((e) => e != null && e.isNotEmpty).join(', '),
+                ),
+                if (selectedClient.phone != null &&
+                    selectedClient.phone!.isNotEmpty) ...[
+                  const SizedBox(height: 16),
+                  InfoBlock.text(
+                    icon: Icons.phone_outlined,
+                    label: 'Teléfono',
+                    value: selectedClient.phone!,
+                  ),
+                ],
+                if (selectedClient.email != null &&
+                    selectedClient.email!.isNotEmpty) ...[
+                  const SizedBox(height: 16),
+                  InfoBlock.text(
+                    icon: Icons.email_outlined,
+                    label: 'Correo Electrónico',
+                    value: selectedClient.email!,
+                  ),
+                  const SizedBox(height: 8),
+                ],
+              ],
+              if (selectedClient == null ||
+                  selectedClient.type == 'company') ...[
+                const SizedBox(height: 8),
+                CustomDropdown<Contact>(
+                  value: isCompany ? selectedContact : null,
+                  items: isCompany ? contacts : const [],
+                  label: 'Persona de contacto',
+                  searchable: true,
+                  itemLabelBuilder: (c) => c.role != null && c.role!.isNotEmpty
+                      ? '${c.name} — ${c.role}'
+                      : c.name,
+                  enabled: isCompany,
+                  showAddOption: isCompany,
+                  addOptionValue: Contact(
+                    id: '___ADD___',
+                    name: '___ADD___',
+                    clientId: selectedClient?.id ?? '',
+                    isPrimary: false,
+                    createdAt: DateTime.now(),
+                  ),
+                  addOptionLabel: 'Agregar contacto',
+                  onAddPressed: !isCompany
+                      ? null
+                      : () async {
+                          final previousContacts = selectedClient.contacts;
+                          final reportId = state.report?.id;
+                          final returnPath = reportId != null
+                              ? '/reports/edit/$reportId?tab=0'
+                              : '/reports/create?tab=0';
+                          final returnToParam = Uri.encodeComponent(returnPath);
+                          await context.push(
+                            '/clients/${selectedClient.id}/contacts/add?returnTo=$returnToParam',
+                            extra: selectedClient.name,
+                          );
+                          final newClientsResult = await ref.refresh(
+                            clientsProvider.future,
+                          );
+                          if (mounted) {
+                            final updatedClient = newClientsResult.firstWhere(
+                              (c) => c.id == selectedClient.id,
+                              orElse: () => selectedClient,
+                            );
+                            if (updatedClient.contacts.length >
+                                previousContacts.length) {
+                              final oldIds = previousContacts
+                                  .map((c) => c.id)
+                                  .toSet();
+                              final newContact = updatedClient.contacts
+                                  .firstWhere(
+                                    (c) => !oldIds.contains(c.id),
+                                    orElse: () => updatedClient.contacts.last,
+                                  );
+                              notifier.setContact(
+                                newContact.id,
+                                newContact.name,
+                              );
+                            }
+                          }
+                        },
+                  onChanged: (contact) {
+                    if (contact != null && contact.id != '___ADD___') {
+                      notifier.setContact(contact.id, contact.name);
+                    } else {
+                      notifier.clearContact();
+                    }
+                  },
+                ),
+                const SizedBox(height: 8),
+              ],
+              if (isCompany && selectedContact != null) ...[
+                if (selectedContact.phone != null &&
+                    selectedContact.phone!.isNotEmpty) ...[
+                  const SizedBox(height: 8),
+                  InfoBlock.text(
+                    icon: Icons.phone_outlined,
+                    label: 'Teléfono Contacto',
+                    value: selectedContact.phone!,
+                  ),
+                ],
+                if (selectedContact.email != null &&
+                    selectedContact.email!.isNotEmpty) ...[
+                  const SizedBox(height: 16),
+                  InfoBlock.text(
+                    icon: Icons.email_outlined,
+                    label: 'Correo Contacto',
+                    value: selectedContact.email!,
+                  ),
+                ],
+                const SizedBox(height: 8),
+              ],
+              const SizedBox(height: 8),
+            ],
+          ),
+
+          const SizedBox(height: 12),
+
+          // ==========================================
           // BLOQUE 1: Tipo de servicio (Clasificación)
           // ==========================================
           CollapsibleCardBlock(
             controller: _controller1,
-            initiallyExpanded: true,
-            onExpansionChanged: (expanded) {
-              if (expanded) {
-                _onExpandBlock(0);
-              } else {
-                _onCollapseBlock(0);
-              }
-            },
+            initiallyExpanded: _expandedIndex == 1,
+            onExpansionChanged: (expanded) =>
+                expanded ? _onExpandBlock(1) : _onCollapseBlock(1),
             leading: Icon(
               Icons.category_outlined,
               size: 28,
@@ -381,14 +624,9 @@ class _ReportDetailsTabState extends ConsumerState<ReportDetailsTab> {
           // ==========================================
           CollapsibleCardBlock(
             controller: _controller2,
-            initiallyExpanded: false,
-            onExpansionChanged: (expanded) {
-              if (expanded) {
-                _onExpandBlock(1);
-              } else {
-                _onCollapseBlock(1);
-              }
-            },
+            initiallyExpanded: _expandedIndex == 2,
+            onExpansionChanged: (expanded) =>
+                expanded ? _onExpandBlock(2) : _onCollapseBlock(2),
             leading: Icon(
               Icons.schedule,
               size: 28,
@@ -627,14 +865,9 @@ class _ReportDetailsTabState extends ConsumerState<ReportDetailsTab> {
           // =========================================================================
           CollapsibleCardBlock(
             controller: _controller3,
-            initiallyExpanded: false,
-            onExpansionChanged: (expanded) {
-              if (expanded) {
-                _onExpandBlock(2);
-              } else {
-                _onCollapseBlock(2);
-              }
-            },
+            initiallyExpanded: _expandedIndex == 3,
+            onExpansionChanged: (expanded) =>
+                expanded ? _onExpandBlock(3) : _onCollapseBlock(3),
             leading: Icon(
               Icons.assignment_outlined,
               size: 28,
@@ -771,14 +1004,9 @@ class _ReportDetailsTabState extends ConsumerState<ReportDetailsTab> {
           // =========================================================================
           CollapsibleCardBlock(
             controller: _controller4,
-            initiallyExpanded: false,
-            onExpansionChanged: (expanded) {
-              if (expanded) {
-                _onExpandBlock(3);
-              } else {
-                _onCollapseBlock(3);
-              }
-            },
+            initiallyExpanded: _expandedIndex == 4,
+            onExpansionChanged: (expanded) =>
+                expanded ? _onExpandBlock(4) : _onCollapseBlock(4),
             leading: Icon(
               Icons.tune_outlined,
               size: 28,
@@ -789,20 +1017,20 @@ class _ReportDetailsTabState extends ConsumerState<ReportDetailsTab> {
             isComplete: _isBlock4Complete(state),
             children: [
               CustomTextField(
+                label: 'Etiqueta*',
+                controller: _reportTagController,
+                helperText: 'Descripción corta que identifique al reporte.',
+                maxLength: 35,
+                onChanged: (val) => notifier.setDetails(reportTag: val),
+              ),
+              const SizedBox(height: 16),
+              CustomTextField(
                 label: 'Notas internas (opcional)',
                 controller: _notesController,
                 helperText: 'Notas confidenciales para uso interno.',
                 maxLines: 2,
                 maxLength: 250,
                 onChanged: (val) => notifier.setDetails(notes: val),
-              ),
-              const SizedBox(height: 16),
-              CustomTextField(
-                label: 'Etiqueta*',
-                controller: _reportTagController,
-                helperText: 'Descripción corta que identifique al reporte.',
-                maxLength: 35,
-                onChanged: (val) => notifier.setDetails(reportTag: val),
               ),
               const SizedBox(height: 8),
             ],

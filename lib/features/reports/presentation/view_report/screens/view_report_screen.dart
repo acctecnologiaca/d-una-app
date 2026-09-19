@@ -18,7 +18,6 @@ import '../../create_report/providers/create_report_provider.dart';
 import '../providers/view_report_provider.dart';
 import '../../../data/models/models.dart';
 import '../tabs/view_report_details_tab.dart';
-import '../tabs/view_report_client_tab.dart';
 import '../tabs/view_report_services_tab.dart';
 import '../tabs/view_report_products_tab.dart';
 import '../tabs/view_report_conditions_tab.dart';
@@ -26,6 +25,7 @@ import '../tabs/view_report_summary_tab.dart';
 import '../widgets/send_report_email_sheet.dart';
 import '../widgets/send_report_whatsapp_sheet.dart';
 import 'package:intl/intl.dart';
+import '../../../domain/repositories/service_reports_repository.dart';
 
 class ViewReportScreen extends ConsumerStatefulWidget {
   final String reportId;
@@ -51,8 +51,8 @@ class _ViewReportScreenState extends ConsumerState<ViewReportScreen>
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
-    // 6 pestañas, empezando en Resumen (índice 5) igual que en cotizaciones
-    _tabController = TabController(length: 6, vsync: this, initialIndex: 5);
+    // 5 pestañas, empezando en Resumen (índice 4) igual que en cotizaciones
+    _tabController = TabController(length: 5, vsync: this, initialIndex: 4);
 
     _tabController.addListener(() {
       if (!_tabController.indexIsChanging) setState(() {});
@@ -174,10 +174,9 @@ class _ViewReportScreenState extends ConsumerState<ViewReportScreen>
               indicatorColor: colors.primary,
               labelStyle: const TextStyle(fontWeight: FontWeight.bold),
               tabs: const [
-                Tab(text: 'Informe'),
+                Tab(text: 'General'),
                 Tab(text: 'Productos'),
                 Tab(text: 'Servicios'),
-                Tab(text: 'Cliente'),
                 Tab(text: 'Condiciones'),
                 Tab(text: 'Resumen'),
               ],
@@ -189,7 +188,6 @@ class _ViewReportScreenState extends ConsumerState<ViewReportScreen>
               ViewReportDetailsTab(reportId: widget.reportId),
               ViewReportProductsTab(reportId: widget.reportId),
               ViewReportServicesTab(reportId: widget.reportId),
-              ViewReportClientTab(reportId: widget.reportId),
               ViewReportConditionsTab(reportId: widget.reportId),
               ViewReportSummaryTab(
                 reportId: widget.reportId,
@@ -298,6 +296,26 @@ class _ViewReportScreenState extends ConsumerState<ViewReportScreen>
                       content: Text(
                         'Estatus cambiado a "${selectedStatus.label}"',
                       ),
+                    ),
+                  );
+                }
+              } on InsufficientStockException catch (e) {
+                if (context.mounted) {
+                  CustomDialog.show(
+                    context: context,
+                    dialog: CustomDialog.confirmation(
+                      icon: Symbols.warning,
+                      iconColor: Colors.amber.shade800,
+                      title: 'Stock Insuficiente',
+                      contentText:
+                          'No se puede finalizar el reporte de servicio porque no hay suficiente stock disponible en el inventario propio de los siguientes productos:\n\n${e.productNames.map((name) => '• $name').join('\n')}\n\nPor favor, reponga el stock en almacén para poder finalizarlo.',
+                      actions: [
+                        TextButton(
+                          onPressed: () =>
+                              Navigator.of(context, rootNavigator: true).pop(),
+                          child: const Text('Entendido'),
+                        ),
+                      ],
                     ),
                   );
                 }

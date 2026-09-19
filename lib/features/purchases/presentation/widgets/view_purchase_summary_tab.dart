@@ -25,6 +25,7 @@ class ViewPurchaseSummaryTab extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final colors = Theme.of(context).colorScheme;
     final purchase = data.purchase;
+    final isInitialInventory = purchase.documentType == 'initial_inventory';
 
     final subtotal = purchase.subtotal;
     // Assuming tax is calculated in purchase object or we can compute it from total - subtotal
@@ -48,24 +49,37 @@ class ViewPurchaseSummaryTab extends ConsumerWidget {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             // 1. Proveedor Section
-            _buildSectionHeader(context, Icons.warehouse, 'Proveedor'),
+            _buildSectionHeader(
+              context,
+              isInitialInventory ? Symbols.fact_check : Icons.warehouse,
+              isInitialInventory ? 'Origen del inventario' : 'Proveedor',
+            ),
             _buildSupplierCard(
               context,
               colors,
-              purchase.supplierName,
-              data.supplierTaxId,
+              isInitialInventory
+                  ? 'Inventario Propio / Saldo Inicial'
+                  : purchase.supplierName,
+              isInitialInventory
+                  ? 'Toma física en almacén'
+                  : data.supplierTaxId,
+              isInitialInventory: isInitialInventory,
             ),
             const SizedBox(height: 16),
 
             // 2. Factura Section
             _buildSectionHeader(
               context,
-              purchase.documentType == 'invoice'
-                  ? Icons.receipt_long
-                  : Icons.receipt,
-              purchase.documentType == 'invoice'
-                  ? 'Factura'
-                  : 'Nota de entrega',
+              isInitialInventory
+                  ? Symbols.fact_check
+                  : (purchase.documentType == 'invoice'
+                      ? Icons.receipt_long
+                      : Icons.receipt),
+              isInitialInventory
+                  ? 'Acta de Inventario Inicial'
+                  : (purchase.documentType == 'invoice'
+                      ? 'Factura'
+                      : 'Nota de entrega'),
             ),
             _buildInvoiceCard(
               context,
@@ -83,7 +97,9 @@ class ViewPurchaseSummaryTab extends ConsumerWidget {
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 8.0),
               child: Text(
-                'Los montos y/o los productos reflejados acá, deben ser iguales a los del documento de compra.',
+                isInitialInventory
+                    ? 'Los productos reflejados corresponden al conteo inicial de existencias en almacén.'
+                    : 'Los montos y/o los productos reflejados acá, deben ser iguales a los del documento de compra.',
                 style: TextStyle(
                   fontSize: 13,
                   color: colors.onSurfaceVariant.withValues(alpha: 0.6),
@@ -579,8 +595,9 @@ class ViewPurchaseSummaryTab extends ConsumerWidget {
     BuildContext context,
     ColorScheme colors,
     String? supplierName,
-    String? taxId,
-  ) {
+    String? taxId, {
+    bool isInitialInventory = false,
+  }) {
     return Card(
       elevation: 0,
       shape: RoundedRectangleBorder(
@@ -594,8 +611,8 @@ class ViewPurchaseSummaryTab extends ConsumerWidget {
           children: [
             _buildSummaryRow(
               context,
-              Icons.domain,
-              'Razón social',
+              isInitialInventory ? Symbols.fact_check : Icons.domain,
+              isInitialInventory ? 'Tipo de ingreso' : 'Razón social',
               supplierName ?? 'No seleccionado',
               colors,
               isTextValue: true,
@@ -603,8 +620,8 @@ class ViewPurchaseSummaryTab extends ConsumerWidget {
             const SizedBox(height: 12),
             _buildSummaryRow(
               context,
-              Icons.badge_outlined,
-              'RIF/NIF/RUT',
+              isInitialInventory ? Symbols.shelves : Icons.badge_outlined,
+              isInitialInventory ? 'Modalidad' : 'RIF/NIF/RUT',
               taxId ?? 'N/A',
               colors,
               isTextValue: true,

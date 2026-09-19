@@ -28,7 +28,7 @@ class _DeliveryNotesSearchScreenState
     extends ConsumerState<DeliveryNotesSearchScreen> {
   final Set<String> _selectedStatuses = {};
   DateTimeRange? _dateRange;
-  SortOption _currentSort = SortOption.recent;
+  SortOption _currentSort = SortOption.noteNumberDesc;
   String _searchQuery = '';
 
   @override

@@ -259,6 +259,7 @@ class _QuotesSearchScreenState extends ConsumerState<QuotesSearchScreen> {
               SortOption.quoteNumberDesc,
               SortOption.quoteNumberAsc,
               SortOption.recent,
+              SortOption.dateIssued,
               SortOption.nameAZ,
               SortOption.nameZA,
             ],
@@ -274,6 +275,9 @@ class _QuotesSearchScreenState extends ConsumerState<QuotesSearchScreen> {
                 ascending = true;
               } else if (val == SortOption.recent) {
                 orderBy = 'created_at';
+                ascending = false;
+              } else if (val == SortOption.dateIssued) {
+                orderBy = 'date_issued';
                 ascending = false;
               } else if (val == SortOption.nameAZ) {
                 orderBy = 'clients(name)';

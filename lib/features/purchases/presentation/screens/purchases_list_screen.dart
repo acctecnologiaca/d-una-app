@@ -85,8 +85,12 @@ class _PurchasesListScreenState extends ConsumerState<PurchasesListScreen> {
                     setState(() => _currentSort = val);
                     String orderBy = 'date';
                     bool ascending = false;
-                    if (val == SortOption.oldest) {
+                    if (val == SortOption.nameAZ) {
+                      orderBy = 'suppliers(name)';
                       ascending = true;
+                    } else if (val == SortOption.nameZA) {
+                      orderBy = 'suppliers(name)';
+                      ascending = false;
                     } else if (val == SortOption.highestPrice) {
                       orderBy = 'subtotal';
                       ascending = false;
@@ -100,7 +104,8 @@ class _PurchasesListScreenState extends ConsumerState<PurchasesListScreen> {
                   },
                   options: const [
                     SortOption.recent,
-                    SortOption.oldest,
+                    SortOption.nameAZ,
+                    SortOption.nameZA,
                     SortOption.highestPrice,
                     SortOption.lowestPrice,
                   ],

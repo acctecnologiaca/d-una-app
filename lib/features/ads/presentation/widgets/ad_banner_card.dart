@@ -41,57 +41,92 @@ class AdBannerCard extends ConsumerWidget {
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 Row(
-                  crossAxisAlignment: CrossAxisAlignment.center,
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // 1. Logo / Imagen Cuadrada
-                    Container(
-                      width: 56,
-                      height: 56,
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                      clipBehavior: Clip.antiAlias,
-                      child:
-                          (banner.imageUrl != null &&
-                              banner.imageUrl!.isNotEmpty)
-                          ? Image.network(
-                              banner.imageUrl!,
-                              fit: BoxFit.contain,
-                              loadingBuilder:
-                                  (context, child, loadingProgress) {
-                                    if (loadingProgress == null) return child;
-                                    return Center(
-                                      child: SizedBox(
-                                        width: 18,
-                                        height: 18,
-                                        child: CircularProgressIndicator(
-                                          strokeWidth: 2,
-                                          value:
-                                              loadingProgress
-                                                      .expectedTotalBytes !=
-                                                  null
-                                              ? loadingProgress
-                                                        .cumulativeBytesLoaded /
-                                                    loadingProgress
-                                                        .expectedTotalBytes!
-                                              : null,
-                                        ),
+                    // 1. Logo / Imagen Cuadrada + Badge PUBLICIDAD
+                    Column(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.center,
+                      children: [
+                        Container(
+                          width: 56,
+                          height: 56,
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          clipBehavior: Clip.antiAlias,
+                          child:
+                              (banner.imageUrl != null &&
+                                  banner.imageUrl!.isNotEmpty)
+                              ? Image.network(
+                                  banner.imageUrl!,
+                                  fit: BoxFit.contain,
+                                  loadingBuilder:
+                                      (context, child, loadingProgress) {
+                                        if (loadingProgress == null) {
+                                          return child;
+                                        }
+                                        return Center(
+                                          child: SizedBox(
+                                            width: 18,
+                                            height: 18,
+                                            child: CircularProgressIndicator(
+                                              strokeWidth: 2,
+                                              value:
+                                                  loadingProgress
+                                                          .expectedTotalBytes !=
+                                                      null
+                                                  ? loadingProgress
+                                                            .cumulativeBytesLoaded /
+                                                        loadingProgress
+                                                            .expectedTotalBytes!
+                                                  : null,
+                                            ),
+                                          ),
+                                        );
+                                      },
+                                  errorBuilder: (context, error, stackTrace) =>
+                                      Icon(
+                                        Icons.storefront_outlined,
+                                        color: colors.outline,
+                                        size: 28,
                                       ),
-                                    );
-                                  },
-                              errorBuilder: (context, error, stackTrace) =>
-                                  Icon(
-                                    Icons.storefront_outlined,
-                                    color: colors.outline,
-                                    size: 28,
-                                  ),
-                            )
-                          : Icon(
-                              Icons.storefront_outlined,
-                              color: colors.outline,
-                              size: 28,
+                                )
+                              : Icon(
+                                  Icons.storefront_outlined,
+                                  color: colors.outline,
+                                  size: 28,
+                                ),
+                        ),
+                        const SizedBox(height: 5),
+
+                        // Badge PUBLICIDAD compacto centrado bajo el logo
+                        Container(
+                          width: 58,
+                          alignment: Alignment.center,
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 2,
+                            vertical: 1.5,
+                          ),
+                          decoration: BoxDecoration(
+                            color: colors.tertiaryContainer.withValues(
+                              alpha: 0.7,
                             ),
+                            borderRadius: BorderRadius.circular(4),
+                          ),
+                          child: Text(
+                            'PUBLICIDAD',
+                            maxLines: 1,
+                            style: TextStyle(
+                              fontSize: 8.5,
+                              fontWeight: FontWeight.bold,
+                              color: colors.onTertiaryContainer,
+                              letterSpacing: 0.3,
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
                     const SizedBox(width: 14),
 
@@ -144,53 +179,26 @@ class AdBannerCard extends ConsumerWidget {
                     ),
                     const SizedBox(width: 8),
 
-                    // 3. Columna Derecha: Botón Cerrar (✕) + Badge PUBLICIDAD
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.end,
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        // Botón de Cerrar (✕)
-                        GestureDetector(
-                          behavior: HitTestBehavior.opaque,
-                          onTap: () {
-                            ref
-                                .read(dismissedBannerIdsProvider.notifier)
-                                .update((state) => {...state, banner.id});
-                          },
-                          child: Padding(
-                            padding: const EdgeInsets.only(bottom: 8.0),
-                            child: Icon(
-                              Icons.close,
-                              size: 20,
-                              color: colors.onSurfaceVariant,
-                            ),
-                          ),
+                    // 3. Botón de Descarte / Cerrar (✕) alineado arriba a la derecha
+                    GestureDetector(
+                      behavior: HitTestBehavior.opaque,
+                      onTap: () {
+                        ref
+                            .read(dismissedBannerIdsProvider.notifier)
+                            .update((state) => {...state, banner.id});
+                      },
+                      child: Padding(
+                        padding: const EdgeInsets.only(
+                          top: 2.0,
+                          left: 4.0,
+                          bottom: 4.0,
                         ),
-                        const SizedBox(height: 28),
-
-                        // Badge PUBLICIDAD alineado al borde derecho
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 6,
-                            vertical: 2,
-                          ),
-                          decoration: BoxDecoration(
-                            color: colors.tertiaryContainer.withValues(
-                              alpha: 0.7,
-                            ),
-                            borderRadius: BorderRadius.circular(4),
-                          ),
-                          child: Text(
-                            'PUBLICIDAD',
-                            style: TextStyle(
-                              fontSize: 9,
-                              fontWeight: FontWeight.bold,
-                              color: colors.onTertiaryContainer,
-                              letterSpacing: 0.5,
-                            ),
-                          ),
+                        child: Icon(
+                          Icons.close,
+                          size: 20,
+                          color: colors.onSurfaceVariant,
                         ),
-                      ],
+                      ),
                     ),
                   ],
                 ),

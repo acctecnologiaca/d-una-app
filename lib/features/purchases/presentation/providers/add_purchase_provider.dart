@@ -12,6 +12,9 @@ import 'package:d_una_app/features/purchases/data/models/purchase_item_product.d
 import 'package:d_una_app/features/quotes/presentation/quotes_list/providers/quotes_provider.dart';
 import 'package:d_una_app/features/portfolio/presentation/providers/products_provider.dart';
 import 'package:d_una_app/features/supplier_orders/presentation/supplier_orders_list/providers/supplier_orders_providers.dart';
+import 'package:d_una_app/features/supplier_orders/domain/models/supplier_order_status.dart';
+import 'package:d_una_app/features/supplier_orders/domain/models/supplier_order.dart';
+import 'package:uuid/uuid.dart';
 
 import 'package:equatable/equatable.dart';
 
@@ -21,6 +24,7 @@ class AddPurchaseState extends Equatable {
   final String? supplierName;
   final String? supplierTaxId;
   final String? supplierOrderId;
+  final SupplierOrder? linkedSupplierOrder;
   final String documentType; // 'Factura' or 'Nota de entrega'
   final String? documentNumber;
   final String? invoicePhotoUrl;
@@ -39,6 +43,7 @@ class AddPurchaseState extends Equatable {
     this.supplierName,
     this.supplierTaxId,
     this.supplierOrderId,
+    this.linkedSupplierOrder,
     this.documentType = 'invoice',
     this.documentNumber,
     this.invoicePhotoUrl,
@@ -57,6 +62,7 @@ class AddPurchaseState extends Equatable {
     supplierName,
     supplierTaxId,
     supplierOrderId,
+    linkedSupplierOrder,
     documentType,
     documentNumber,
     invoicePhotoUrl,
@@ -94,6 +100,9 @@ class AddPurchaseState extends Equatable {
     String? supplierName,
     String? supplierTaxId,
     String? supplierOrderId,
+    bool clearSupplierOrderId = false,
+    SupplierOrder? linkedSupplierOrder,
+    bool clearLinkedSupplierOrder = false,
     String? documentType,
     String? documentNumber,
     String? invoicePhotoUrl,
@@ -109,7 +118,12 @@ class AddPurchaseState extends Equatable {
       supplierId: supplierId ?? this.supplierId,
       supplierName: supplierName ?? this.supplierName,
       supplierTaxId: supplierTaxId ?? this.supplierTaxId,
-      supplierOrderId: supplierOrderId ?? this.supplierOrderId,
+      supplierOrderId: clearSupplierOrderId
+          ? null
+          : (supplierOrderId ?? this.supplierOrderId),
+      linkedSupplierOrder: clearLinkedSupplierOrder
+          ? null
+          : (linkedSupplierOrder ?? this.linkedSupplierOrder),
       documentType: documentType ?? this.documentType,
       documentNumber: documentNumber ?? this.documentNumber,
       invoicePhotoUrl: invoicePhotoUrl ?? this.invoicePhotoUrl,
@@ -309,6 +323,8 @@ class AddPurchaseNotifier extends StateNotifier<AddPurchaseState> {
       supplierId: id,
       supplierName: name,
       supplierTaxId: taxId,
+      clearSupplierOrderId: true,
+      clearLinkedSupplierOrder: true,
     );
     autoSaveDraft();
   }
@@ -426,15 +442,101 @@ class AddPurchaseNotifier extends StateNotifier<AddPurchaseState> {
     autoSaveDraft();
   }
 
+  Future<void> loadFromSupplierOrder(String orderId) async {
+    try {
+      state = state.copyWith(isLoading: true);
+      final orderData = await _ref
+          .read(supplierOrdersRepositoryProvider)
+          .getSupplierOrderDetails(orderId);
+
+      final order = orderData.order;
+      final items = orderData.items;
+
+      final allProducts = _ref.read(productsProvider).valueOrNull ?? [];
+      final purchaseProducts = items.map((item) {
+        final matched =
+            allProducts.where((p) => p.id == item.productId).firstOrNull;
+        return PurchaseItemProduct(
+          id: const Uuid().v4(),
+          productId: item.productId ?? '',
+          name: item.name,
+          brand: item.brand,
+          model: item.model,
+          uom: item.uom.isNotEmpty ? item.uom : 'UND',
+          quantity: item.quantity,
+          unitPrice: item.unitPrice,
+          warrantyTime: null,
+          warrantyUnit: null,
+          requiresSerials: matched?.requiresSerials ?? false,
+        );
+      }).toList();
+
+      state = state.copyWith(
+        isLoading: false,
+        supplierId: order.supplierId,
+        supplierName: order.supplierName,
+        supplierOrderId: order.id,
+        linkedSupplierOrder: order,
+        documentNumber: order.orderNumber,
+        products: purchaseProducts,
+      );
+      autoSaveDraft();
+    } catch (e) {
+      state = state.copyWith(
+        isLoading: false,
+        error: 'Error al importar orden de compra: $e',
+      );
+    }
+  }
+
+  void setLinkedSupplierOrder(SupplierOrder? order) {
+    if (order == null) {
+      state = state.copyWith(
+        clearSupplierOrderId: true,
+        clearLinkedSupplierOrder: true,
+      );
+    } else {
+      state = state.copyWith(
+        supplierOrderId: order.id,
+        linkedSupplierOrder: order,
+        documentNumber:
+            (state.documentNumber == null || state.documentNumber!.isEmpty)
+                ? order.orderNumber
+                : state.documentNumber,
+      );
+    }
+    autoSaveDraft();
+  }
+
+  void detachSupplierOrder() {
+    state = state.copyWith(
+      clearSupplierOrderId: true,
+      clearLinkedSupplierOrder: true,
+    );
+    autoSaveDraft();
+  }
+
   Future<bool> createPurchase() async {
-    if (state.supplierId == null) {
+    final isInitialInventory = state.documentType == 'initial_inventory';
+
+    if (!isInitialInventory && state.supplierId == null) {
       state = state.copyWith(error: "Selecciona un proveedor");
       return false;
     }
-    if (state.documentNumber == null || state.documentNumber!.isEmpty) {
-      state = state.copyWith(error: "Ingresa el número de documento");
-      return false;
+
+    String docNumber = state.documentNumber?.trim() ?? '';
+    if (docNumber.isEmpty) {
+      if (isInitialInventory) {
+        final formattedDate =
+            '${state.date.year}${state.date.month.toString().padLeft(2, '0')}${state.date.day.toString().padLeft(2, '0')}';
+        docNumber = 'ACTA-$formattedDate';
+        state = state.copyWith(documentNumber: docNumber);
+      } else {
+        state = state.copyWith(error: "Ingresa el número de documento");
+        return false;
+      }
     }
+
     if (state.products.isEmpty) {
       state = state.copyWith(error: "Agrega al menos un producto");
       return false;
@@ -446,15 +548,15 @@ class AddPurchaseNotifier extends StateNotifier<AddPurchaseState> {
       final purchase = Purchase(
         id: state.purchaseId ?? '', // Generated by Supabase DDL if empty
         userId: '', // Ignored/Handled by Supabase Auth
-        supplierId: state.supplierId,
-        supplierOrderId: state.supplierOrderId,
+        supplierId: isInitialInventory ? null : state.supplierId,
+        supplierOrderId: isInitialInventory ? null : state.supplierOrderId,
         documentType: state.documentType,
-        documentNumber: state.documentNumber!,
-        invoicePhotoUrl: state.invoicePhotoUrl,
+        documentNumber: docNumber,
+        invoicePhotoUrl: isInitialInventory ? null : state.invoicePhotoUrl,
         date: state.date,
         subtotal: state.subtotal,
-        tax: state.tax,
-        total: state.total,
+        tax: isInitialInventory ? 0.0 : state.tax,
+        total: isInitialInventory ? state.subtotal : state.total,
         hasMissingSerials: state.hasMissingSerials,
         createdAt: DateTime.now(),
         updatedAt: DateTime.now(),
@@ -509,10 +611,21 @@ class AddPurchaseNotifier extends StateNotifier<AddPurchaseState> {
         }
       }
 
-      // Si proviene de una Orden de Compra a Proveedor, refrescar estado de la OC
+      // Si proviene de una Orden de Compra a Proveedor, finalizar la OC y refrescar proveedores
       if (state.supplierOrderId != null && state.supplierOrderId!.isNotEmpty) {
-        _ref.invalidate(supplierOrderDetailProvider(state.supplierOrderId!));
-        _ref.invalidate(linkedPurchaseProvider(state.supplierOrderId!));
+        try {
+          await _ref
+              .read(supplierOrdersRepositoryProvider)
+              .updateSupplierOrderStatus(
+                state.supplierOrderId!,
+                SupplierOrderStatus.finalized.dbValue,
+              );
+          _ref.invalidate(supplierOrderDetailProvider(state.supplierOrderId!));
+          _ref.invalidate(linkedPurchaseProvider(state.supplierOrderId!));
+          _ref.invalidate(paginatedSupplierOrdersProvider);
+        } catch (e) {
+          debugPrint('Error finalizando OC vinculada al registrar compra: $e');
+        }
       }
 
       state = state.copyWith(isLoading: false);

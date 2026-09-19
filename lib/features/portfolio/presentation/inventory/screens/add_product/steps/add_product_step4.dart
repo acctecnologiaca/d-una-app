@@ -13,6 +13,10 @@ class AddProductStep4 extends StatelessWidget {
   final String specs;
   final String? category;
   final File? image;
+  final bool hasInitialStock;
+  final double initialQuantity;
+  final double initialCost;
+  final String? uomSymbol;
   final Future<void> Function(ImageSource) onPickImage;
   final VoidCallback onBack;
   final VoidCallback onCancel;
@@ -26,6 +30,10 @@ class AddProductStep4 extends StatelessWidget {
     required this.specs,
     required this.category,
     required this.image,
+    this.hasInitialStock = false,
+    this.initialQuantity = 0.0,
+    this.initialCost = 0.0,
+    this.uomSymbol,
     required this.onPickImage,
     required this.onBack,
     required this.onCancel,
@@ -196,6 +204,15 @@ class AddProductStep4 extends StatelessWidget {
                   label: 'Características',
                   value: specs.isNotEmpty ? specs : 'Sin especificaciones',
                 ),
+                if (hasInitialStock && initialQuantity > 0) ...[
+                  const SizedBox(height: 24),
+                  InfoBlock.text(
+                    icon: Symbols.shelves,
+                    label: 'Inventario inicial',
+                    value:
+                        '$initialQuantity ${uomSymbol ?? "Und"} a \$${initialCost.toStringAsFixed(2)} USD c/u',
+                  ),
+                ],
               ],
             ),
           ),

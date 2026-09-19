@@ -7,7 +7,6 @@ import '../../quotes_list/providers/quotes_provider.dart';
 import '../../create_quote/providers/create_quote_provider.dart';
 import '../tabs/view_quote_products_tab.dart';
 import '../tabs/view_quote_services_tab.dart';
-import '../tabs/view_quote_client_tab.dart';
 import '../tabs/view_quote_details_tab.dart';
 import '../tabs/view_quote_conditions_tab.dart';
 import '../tabs/view_quote_summary_tab.dart';
@@ -58,8 +57,8 @@ class _ViewQuoteScreenState extends ConsumerState<ViewQuoteScreen>
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
-    // Inicializamos con 6 pestañas, empezando en la última (Resúmen = índice 5)
-    _tabController = TabController(length: 6, vsync: this, initialIndex: 5);
+    // Inicializamos con 5 pestañas, empezando en la última (Resúmen = índice 4)
+    _tabController = TabController(length: 5, vsync: this, initialIndex: 4);
 
     _tabController.addListener(() {
       if (!_tabController.indexIsChanging) setState(() {});
@@ -681,6 +680,18 @@ class _ViewQuoteScreenState extends ConsumerState<ViewQuoteScreen>
           labelStyle: const TextStyle(fontWeight: FontWeight.bold),
           tabs: [
             Tab(
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Text('General'),
+                  if (_isQuoteExpired(state)) ...[
+                    const SizedBox(width: 6),
+                    Badge(backgroundColor: colors.error, smallSize: 8),
+                  ],
+                ],
+              ),
+            ),
+            Tab(
               child: Consumer(
                 builder: (context, ref, _) {
                   final validationState = ref.watch(
@@ -703,19 +714,6 @@ class _ViewQuoteScreenState extends ConsumerState<ViewQuoteScreen>
               ),
             ),
             const Tab(text: 'Servicios'),
-            const Tab(text: 'Cliente'),
-            Tab(
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  const Text('Detalles'),
-                  if (_isQuoteExpired(state)) ...[
-                    const SizedBox(width: 6),
-                    Badge(backgroundColor: colors.error, smallSize: 8),
-                  ],
-                ],
-              ),
-            ),
             const Tab(text: 'Condiciones'),
             const Tab(text: 'Resúmen'),
           ],
@@ -726,10 +724,9 @@ class _ViewQuoteScreenState extends ConsumerState<ViewQuoteScreen>
           : TabBarView(
               controller: _tabController,
               children: [
+                ViewQuoteDetailsTab(quoteId: widget.quoteId),
                 ViewQuoteProductsTab(quoteId: widget.quoteId),
                 ViewQuoteServicesTab(quoteId: widget.quoteId),
-                ViewQuoteClientTab(quoteId: widget.quoteId),
-                ViewQuoteDetailsTab(quoteId: widget.quoteId),
                 ViewQuoteConditionsTab(quoteId: widget.quoteId),
                 ViewQuoteSummaryTab(
                   quoteId: widget.quoteId,

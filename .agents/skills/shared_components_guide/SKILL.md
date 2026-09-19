@@ -111,6 +111,20 @@ PaginatedListView<Entity>(
    - **Flujos de Entrada/Abastecimiento (Registros de Compra, Recepción de Mercancía):** El costo unitario **NO** se toma ni se fija desde el catálogo, sino que se define en la factura física o real de compra provista por el proveedor (ingresada en el modal de detalles del producto).
      - **Tarjeta de Selección ([`PurchaseProductSelectionCard`](file:///c:/Users/aleja/flutter_apps/MVP/d_una_app/lib/features/purchases/presentation/widgets/purchase_product_selection_card.dart)):** Queda **estrictamente prohibido** mostrar precios o costos promedio de catálogo en el slot `trailing`. El slot `trailing` debe contener exclusivamente el [`UomStatusBadge`](file:///c:/Users/aleja/flutter_apps/MVP/d_una_app/lib/shared/widgets/uom_status_badge.dart) indicando la unidad de medida y la cantidad seleccionada.
      - **EFAB de Confirmación:** El texto debe reflejar únicamente la cantidad y la unidad de medida a agregar (`Confirmar ($formattedQty $uom)`), sin montos calculados o precios ficticios.
+6. **Estándar de Advertencias de Stock Reservado en Selección de Productos (Notas de Entrega, Reportes de Servicio):**
+   - Toda tarjeta de selección de productos de inventario propio ([`DeliveryNoteProductSelectionCard`](file:///c:/Users/aleja/flutter_apps/MVP/d_una_app/lib/features/delivery_notes/presentation/create_delivery_note/widgets/delivery_note_product_selection_card.dart) y [`ReportProductSelectionCard`](file:///c:/Users/aleja/flutter_apps/MVP/d_una_app/lib/features/reports/presentation/create_report/widgets/report_product_selection_card.dart)) **DEBE** evaluar y reflejar el stock reservado:
+     - `physicalStock = widget.product.inventoryQuantity;` (Stock físico en almacén).
+     - `effectiveAvailable = widget.product.availableQuantity;` (Stock disponible neto tras restar reservas de cotizaciones aprobadas y notas de entrega activas).
+     - `isReservedByOthers = physicalStock > 0 && effectiveAvailable <= 0;`
+   - **Comportamiento en el Subtítulo de la Tarjeta:**
+     - **Caso A (Todo Reservado):** Si `isReservedByOthers`, se renderiza una advertencia en `colors.error` (12px, negrita):
+       > *"Todo el inventario propio está reservado en cotizaciones aprobadas o notas de entrega no finalizadas."*
+       La tarjeta pasa a estado inactivo (`isInactive = true`), con opacidad reducida (`0.5`) e `IgnorePointer`.
+     - **Caso B (Reserva Parcial):** Si `widget.product.reservedQuantity > 0 && effectiveAvailable > 0`, se muestra un subtítulo informativo en `colors.onSurfaceVariant` (12px, w500):
+       > *"Hay X [uom] disponibles de Y en inventario propio."*
+   - **Insignia [`UomStatusBadge`](file:///c:/Users/aleja/flutter_apps/MVP/d_una_app/lib/shared/widgets/uom_status_badge.dart):**
+     - Muestra `quantity: widget.selectedQty > 0 ? widget.selectedQty : (isReservedByOthers ? physicalStock : effectiveAvailable)`.
+     - Configura `maxStock: widget.selectedQty > 0 ? effectiveAvailable : null`.
 
 ### E. 📐 Regla Canónica para Barras de Botones Fijas Inferiores y Hojas Modales
 

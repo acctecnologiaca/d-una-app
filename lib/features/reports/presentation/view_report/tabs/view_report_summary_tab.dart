@@ -86,8 +86,9 @@ class ViewReportSummaryTab extends ConsumerWidget {
         final displayServices = sortedServices.take(3).toList();
 
         final isFinalized = status == ServiceReportStatus.finalized;
-        final bottomPadding =
-            isFinalized ? FabScrollPadding.none : FabScrollPadding.single;
+        final bottomPadding = isFinalized
+            ? FabScrollPadding.none
+            : FabScrollPadding.single;
 
         return SingleChildScrollView(
           padding: EdgeInsets.fromLTRB(16, 16, 16, bottomPadding),
@@ -104,11 +105,7 @@ class ViewReportSummaryTab extends ConsumerWidget {
               const SizedBox(height: 16),
 
               // 2. Informe
-              _buildSectionHeader(
-                context,
-                Icons.assignment_outlined,
-                'Informe',
-              ),
+              _buildSectionHeader(context, Icons.assignment, 'Informe'),
               _buildTechnicalCard(context, report, intervention),
               const SizedBox(height: 16),
 
@@ -319,10 +316,10 @@ class ViewReportSummaryTab extends ConsumerWidget {
             Align(
               alignment: Alignment.centerRight,
               child: TextButton.icon(
-                onPressed: () => onNavigateToTab(0), // Informe Tab
+                onPressed: () => onNavigateToTab(0), // General Tab
                 icon: const Icon(Icons.arrow_forward_ios, size: 14),
                 label: const Text(
-                  'Ir a informe',
+                  'Ir a General',
                   style: TextStyle(fontWeight: FontWeight.bold),
                 ),
                 style: TextButton.styleFrom(
@@ -376,6 +373,25 @@ class ViewReportSummaryTab extends ConsumerWidget {
                 isTextValue: true,
               ),
             ],
+            const SizedBox(height: 8),
+            Align(
+              alignment: Alignment.centerRight,
+              child: TextButton.icon(
+                onPressed: () => onNavigateToTab(0), // General Tab
+                icon: const Icon(Icons.arrow_forward_ios, size: 14),
+                label: const Text(
+                  'Ir a General',
+                  style: TextStyle(fontWeight: FontWeight.bold),
+                ),
+                style: TextButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 4,
+                  ),
+                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                ),
+              ),
+            ),
           ],
         ),
       ),

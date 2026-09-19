@@ -43,7 +43,7 @@ class ServiceActionSheet {
             
             // 4. Navigate to the create quote screen on the Services tab (tab=1)
             if (context.mounted) {
-              context.push('/quotes/create?tab=1');
+              context.push('/quotes/create?tab=2');
             }
           },
         ),
@@ -133,9 +133,9 @@ class ServiceActionSheet {
 
         final quoteId = quoteState.quote?.id;
         if (quoteId != null) {
-          context.push('/quotes/edit/$quoteId?tab=1');
+          context.push('/quotes/edit/$quoteId?tab=2');
         } else {
-          context.push('/quotes/create?tab=1');
+          context.push('/quotes/create?tab=2');
         }
       }
       return;
@@ -163,15 +163,15 @@ class ServiceActionSheet {
     if (finalQuoteId != null) {
       await ref
           .read(createQuoteProvider.notifier)
-          .saveDraftNow(quoteId: finalQuoteId, tabIndex: 1);
+          .saveDraftNow(quoteId: finalQuoteId, tabIndex: 2);
     }
 
     if (context.mounted) {
       final quoteId = ref.read(createQuoteProvider).quote?.id;
       if (quoteId != null) {
-        context.push('/quotes/edit/$quoteId?tab=1');
+        context.push('/quotes/edit/$quoteId?tab=2');
       } else {
-        context.push('/quotes/create?tab=1');
+        context.push('/quotes/create?tab=2');
       }
     }
   }

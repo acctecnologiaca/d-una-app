@@ -3,6 +3,16 @@ import '../../data/models/models.dart';
 import '../../../portfolio/data/models/category_model.dart';
 import '../../../quotes/data/models/commercial_condition.dart';
 import '../../../quotes/data/models/financial_parameter.dart';
+import '../models/batch_report_update_result.dart';
+
+class InsufficientStockException implements Exception {
+  final List<String> productNames;
+  InsufficientStockException(this.productNames);
+
+  @override
+  String toString() =>
+      'Stock insuficiente para los siguientes productos: ${productNames.join(', ')}';
+}
 
 abstract class ServiceReportsRepository {
   // Auxiliary Data
@@ -57,7 +67,7 @@ abstract class ServiceReportsRepository {
   Future<void> deleteReport(String id);
 
   // Batch Operations
-  Future<List<String>> batchUpdateStatus(List<String> ids, String status);
+  Future<BatchReportUpdateResult> batchUpdateStatus(List<String> ids, String status);
   Future<void> batchArchive(List<String> ids, bool isArchived);
 
   // PDF Storage & WebViewer Actions
@@ -68,3 +78,4 @@ abstract class ServiceReportsRepository {
   });
   Future<String> generateActionToken(String reportId);
 }
+

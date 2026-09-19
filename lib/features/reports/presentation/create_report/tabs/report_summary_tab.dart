@@ -296,10 +296,10 @@ class ReportSummaryTab extends ConsumerWidget {
             Align(
               alignment: Alignment.centerRight,
               child: TextButton.icon(
-                onPressed: () => onNavigateToTab(0), // Informe Tab
+                onPressed: () => onNavigateToTab(0), // General Tab
                 icon: const Icon(Icons.arrow_forward_ios, size: 14),
                 label: const Text(
-                  'Ir a informe',
+                  'Ir a General',
                   style: TextStyle(fontWeight: FontWeight.bold),
                 ),
                 style: TextButton.styleFrom(
@@ -352,6 +352,25 @@ class ReportSummaryTab extends ConsumerWidget {
                 isTextValue: true,
               ),
             ],
+            const SizedBox(height: 8),
+            Align(
+              alignment: Alignment.centerRight,
+              child: TextButton.icon(
+                onPressed: () => onNavigateToTab(0), // General Tab
+                icon: const Icon(Icons.arrow_forward_ios, size: 14),
+                label: const Text(
+                  'Ir a General',
+                  style: TextStyle(fontWeight: FontWeight.bold),
+                ),
+                style: TextButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 4,
+                  ),
+                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                ),
+              ),
+            ),
           ],
         ),
       ),

@@ -394,7 +394,7 @@ class _AddPurchaseScreenState extends ConsumerState<AddPurchaseScreen>
             indicatorColor: colors.primary,
             labelStyle: const TextStyle(fontWeight: FontWeight.bold),
             tabs: [
-              const Tab(text: 'Detalles'),
+              const Tab(text: 'General'),
               Tab(
                 child: Row(
                   mainAxisSize: MainAxisSize.min,

@@ -55,11 +55,21 @@ class ViewSupplierOrderDetailsTab extends ConsumerWidget {
               label: 'Proveedor',
               value: supplierDisplayName,
             ),
+            if (order.branchName != null) ...[
+              const SizedBox(height: 24),
+              InfoBlock.text(
+                icon: Icons.location_on_outlined,
+                label: 'Sucursal de canalización',
+                value: order.branchName!,
+              ),
+            ],
             const SizedBox(height: 24),
             InfoBlock.text(
               icon: Icons.alt_route_outlined,
               label: 'Destino de la orden',
-              value: order.isDropshipping ? 'Dropshipping' : 'Inventario propio',
+              value: order.isDropshipping
+                  ? 'Dropshipping'
+                  : 'Inventario propio',
             ),
             if (order.isDropshipping) ...[
               if (order.recipientName != null &&
@@ -116,14 +126,6 @@ class ViewSupplierOrderDetailsTab extends ConsumerWidget {
                 ),
               ],
             ] else ...[
-              if (order.branchName != null) ...[
-                const SizedBox(height: 24),
-                InfoBlock.text(
-                  icon: Icons.location_on_outlined,
-                  label: 'Sucursal de canalización',
-                  value: order.branchName!,
-                ),
-              ],
               if (order.shippingMethodLabel != null) ...[
                 const SizedBox(height: 24),
                 InfoBlock.text(

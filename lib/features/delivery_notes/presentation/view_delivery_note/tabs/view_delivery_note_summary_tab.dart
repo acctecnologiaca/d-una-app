@@ -258,6 +258,25 @@ class ViewDeliveryNoteSummaryTab extends ConsumerWidget {
                 isTextValue: true,
               ),
             ],
+            const SizedBox(height: 8),
+            Align(
+              alignment: Alignment.centerRight,
+              child: TextButton.icon(
+                onPressed: () => onNavigateToTab(0),
+                icon: const Icon(Icons.arrow_forward_ios, size: 14),
+                label: const Text(
+                  'Ir a General',
+                  style: TextStyle(fontWeight: FontWeight.bold),
+                ),
+                style: TextButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 4,
+                  ),
+                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                ),
+              ),
+            ),
           ],
         ),
       ),
@@ -435,7 +454,7 @@ class ViewDeliveryNoteSummaryTab extends ConsumerWidget {
             Align(
               alignment: Alignment.centerRight,
               child: TextButton.icon(
-                onPressed: () => onNavigateToTab(2), // Productos Tab
+                onPressed: () => onNavigateToTab(1), // Productos Tab
                 icon: const Icon(Icons.arrow_forward_ios, size: 14),
                 label: const Text(
                   'Ir a productos',

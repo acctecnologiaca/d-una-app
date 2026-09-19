@@ -219,14 +219,23 @@ class _PurchasesSearchScreenState extends ConsumerState<PurchasesSearchScreen> {
               currentSort: _currentSort,
               onSortChanged: (val) {
                 setState(() => _currentSort = val);
-                final isAscending = val == SortOption.oldest;
+                String orderBy = 'date';
+                bool ascending = false;
+                if (val == SortOption.nameAZ) {
+                  orderBy = 'suppliers(name)';
+                  ascending = true;
+                } else if (val == SortOption.nameZA) {
+                  orderBy = 'suppliers(name)';
+                  ascending = false;
+                }
                 ref
                     .read(paginatedPurchaseSearchProvider(widget.productId).notifier)
-                    .updateSort('date', isAscending);
+                    .updateSort(orderBy, ascending);
               },
               options: const [
                 SortOption.recent,
-                SortOption.oldest,
+                SortOption.nameAZ,
+                SortOption.nameZA,
               ],
             ),
           ],

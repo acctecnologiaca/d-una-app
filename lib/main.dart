@@ -9,7 +9,6 @@ import 'core/services/reconnection_sync_service.dart';
 import 'core/providers/network_status_provider.dart';
 import 'package:d_una_app/shared/providers/pdf_preview_provider.dart';
 import 'core/widgets/connectivity_gate.dart';
-
 import 'package:shared_preferences/shared_preferences.dart';
 import 'core/providers/draft_providers.dart';
 

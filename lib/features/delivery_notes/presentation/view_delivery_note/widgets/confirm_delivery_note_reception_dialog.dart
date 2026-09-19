@@ -335,6 +335,17 @@ class _ConfirmDeliveryNoteReceptionDialogState
 
       if (widget.note.quoteId != null && widget.note.quoteId!.isNotEmpty) {
         ref.invalidate(viewQuoteProvider(widget.note.quoteId!));
+        ref.invalidate(linkedSupplierOrdersProvider(widget.note.quoteId!));
+        try {
+          await ref
+              .read(supplierOrdersRepositoryProvider)
+              .finalizeDropshippingOrdersByQuoteId(widget.note.quoteId!);
+          ref.invalidate(paginatedSupplierOrdersProvider);
+        } catch (e) {
+          debugPrint(
+            'Error auto-finalizando órdenes dropshipping vinculadas a la cotización: $e',
+          );
+        }
       }
 
       if (widget.note.supplierOrderId != null &&

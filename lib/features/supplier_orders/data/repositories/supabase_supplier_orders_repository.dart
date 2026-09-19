@@ -1573,4 +1573,50 @@ class SupabaseSupplierOrdersRepository implements SupplierOrdersRepository {
 
     return purchaseId;
   }
+
+  @override
+  Future<List<SupplierOrder>> getPendingApprovedOrdersBySupplierId(
+    String supplierId,
+  ) async {
+    final currentUserId = _supabase.auth.currentUser?.id;
+    if (currentUserId == null) throw Exception('Usuario no autenticado');
+
+    final response = await _supabase
+        .from('supplier_orders')
+        .select('''
+      *,
+      suppliers(name, legal_name),
+      supplier_branches(name),
+      shipping_methods(label),
+      collaborators(full_name),
+      purchases(verification_status),
+      supplier_order_items(*, supplier_branch_stock(supplier_branches(name)))
+    ''')
+        .eq('user_id', currentUserId)
+        .eq('supplier_id', supplierId)
+        .eq('status', SupplierOrderStatus.approved.dbValue)
+        .eq('is_dropshipping', false)
+        .order('created_at', ascending: false);
+
+    return (response as List)
+        .map((json) => SupplierOrderDto.fromJson(json))
+        .toList();
+  }
+
+  @override
+  Future<void> finalizeDropshippingOrdersByQuoteId(String quoteId) async {
+    final currentUserId = _supabase.auth.currentUser?.id;
+    if (currentUserId == null) throw Exception('Usuario no autenticado');
+
+    await _supabase
+        .from('supplier_orders')
+        .update({
+          'status': SupplierOrderStatus.finalized.dbValue,
+          'updated_at': DateTime.now().toIso8601String(),
+        })
+        .eq('user_id', currentUserId)
+        .eq('quote_id', quoteId)
+        .eq('is_dropshipping', true)
+        .eq('status', SupplierOrderStatus.approved.dbValue);
+  }
 }

@@ -94,7 +94,7 @@ class PaginatedDeliveryNotesNotifier
   String? _searchQuery;
   String? _statusFilter;
   bool _includeArchived = false;
-  SortOption _sortOption = SortOption.recent;
+  SortOption _sortOption = SortOption.noteNumberDesc;
   RealtimeChannel? _realtimeChannel;
 
   PaginatedDeliveryNotesNotifier(this._ref) : super(const AsyncValue.loading()) {

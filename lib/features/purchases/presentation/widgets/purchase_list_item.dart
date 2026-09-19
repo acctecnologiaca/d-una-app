@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:material_symbols_icons/symbols.dart';
 import '../../domain/models/purchase_model.dart';
 import 'package:d_una_app/shared/utils/currency_formatter.dart';
 import 'package:d_una_app/shared/widgets/document_draft_icon.dart';
@@ -27,10 +28,14 @@ class PurchaseListItem extends StatelessWidget {
 
     final formattedAmount = CurrencyFormatter.format(purchase.subtotal);
 
+    final isInitialInventory = purchase.documentType == 'initial_inventory';
+
     // Document Icon
-    final docIcon = purchase.documentType == 'invoice'
-        ? Icons.receipt_long
-        : Icons.list_alt;
+    final docIcon = isInitialInventory
+        ? Symbols.fact_check
+        : (purchase.documentType == 'invoice'
+            ? Icons.receipt_long
+            : Icons.list_alt);
 
     // Background Color logic - red tint if missing serials or support rejected
     final isSupportRejected = purchase.verificationStatus == 'rejected';
@@ -62,7 +67,9 @@ class PurchaseListItem extends StatelessWidget {
                     ),
                     const SizedBox(height: 2),
                     Text(
-                      purchase.supplierName ?? 'Desconocido',
+                      isInitialInventory
+                          ? 'Inventario Inicial'
+                          : (purchase.supplierName ?? 'Desconocido'),
                       style: const TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.w600,
@@ -127,9 +134,11 @@ class PurchaseListItem extends StatelessWidget {
                         const SizedBox(width: 4),
                       ],
                       Tooltip(
-                        message: purchase.documentType == 'invoice'
-                            ? 'Factura'
-                            : 'Nota de Entrega',
+                        message: isInitialInventory
+                            ? 'Inventario Inicial'
+                            : (purchase.documentType == 'invoice'
+                                ? 'Factura'
+                                : 'Nota de Entrega'),
                         child: Icon(
                           docIcon,
                           size: 20,

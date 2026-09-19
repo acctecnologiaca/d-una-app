@@ -29,7 +29,7 @@ class ReportsListScreen extends ConsumerStatefulWidget {
 
 class _ReportsListScreenState extends ConsumerState<ReportsListScreen>
     with WidgetsBindingObserver {
-  SortOption _currentSort = SortOption.recent;
+  SortOption _currentSort = SortOption.reportNumberDesc;
 
   @override
   void initState() {
@@ -56,14 +56,16 @@ class _ReportsListScreenState extends ConsumerState<ReportsListScreen>
     final selection = ref.watch(reportSelectionProvider);
     final paginatedStateAsync = ref.watch(paginatedReportsListProvider);
     final draftService = ref.watch(draftStorageServiceProvider);
-    final hasNewReportDraft =
-        draftService.hasDraft(DraftConstants.reportsModule);
+    final hasNewReportDraft = draftService.hasDraft(
+      DraftConstants.reportsModule,
+    );
 
     final allReports = paginatedStateAsync.valueOrNull?.items ?? [];
     final adBanners = ref.watch(
-      placementBannersProvider(
-        (placementKey: 'reports_list', searchQuery: null),
-      ),
+      placementBannersProvider((
+        placementKey: 'reports_list',
+        searchQuery: null,
+      )),
     );
 
     return Scaffold(
@@ -106,20 +108,20 @@ class _ReportsListScreenState extends ConsumerState<ReportsListScreen>
                     currentSort: _currentSort,
                     onSortChanged: (val) {
                       setState(() => _currentSort = val);
-                      String orderBy = 'service_date';
+                      String orderBy = 'report_number';
                       bool ascending = false;
-                      if (val == SortOption.recent) {
+                      if (val == SortOption.reportNumberDesc) {
+                        orderBy = 'report_number';
+                        ascending = false;
+                      } else if (val == SortOption.reportNumberAsc) {
+                        orderBy = 'report_number';
+                        ascending = true;
+                      } else if (val == SortOption.recent) {
+                        orderBy = 'created_at';
+                        ascending = false;
+                      } else if (val == SortOption.dateIssued) {
                         orderBy = 'service_date';
                         ascending = false;
-                      } else if (val == SortOption.oldest) {
-                        orderBy = 'service_date';
-                        ascending = true;
-                      } else if (val == SortOption.highestPrice) {
-                        orderBy = 'total';
-                        ascending = false;
-                      } else if (val == SortOption.lowestPrice) {
-                        orderBy = 'total';
-                        ascending = true;
                       } else if (val == SortOption.nameAZ) {
                         orderBy = 'clients(name)';
                         ascending = true;
@@ -132,10 +134,10 @@ class _ReportsListScreenState extends ConsumerState<ReportsListScreen>
                           .updateSort(orderBy, ascending);
                     },
                     options: const [
+                      SortOption.reportNumberDesc,
+                      SortOption.reportNumberAsc,
                       SortOption.recent,
-                      SortOption.oldest,
-                      SortOption.highestPrice,
-                      SortOption.lowestPrice,
+                      SortOption.dateIssued,
                       SortOption.nameAZ,
                       SortOption.nameZA,
                     ],
@@ -177,7 +179,7 @@ class _ReportsListScreenState extends ConsumerState<ReportsListScreen>
                         child: SizedBox(
                           height: MediaQuery.of(context).size.height * 0.5,
                           child: const EmptyListState(
-                            icon: Icons.assignment_outlined,
+                            icon: Symbols.contract,
                             message: 'No hay reportes de servicio registrados.',
                           ),
                         ),
@@ -241,8 +243,7 @@ class _ReportsListScreenState extends ConsumerState<ReportsListScreen>
               },
               icon: Icons.add,
               label: 'Nuevo',
-              trailingIcon:
-                  hasNewReportDraft ? DraftConstants.draftIcon : null,
+              trailingIcon: hasNewReportDraft ? DraftConstants.draftIcon : null,
               trailingTooltip: 'Borrador en proceso',
             ),
     );

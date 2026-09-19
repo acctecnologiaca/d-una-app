@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:material_symbols_icons/symbols.dart';
+import '../../../../../../../shared/widgets/custom_text_field.dart';
 import '../../../../../../../shared/widgets/custom_dropdown.dart';
 import '../../../../../../../shared/widgets/wizard_bottom_bar.dart';
 import '../../../../../data/models/category_model.dart';
@@ -20,6 +22,11 @@ class AddProductStep3 extends StatefulWidget {
   final bool hasWarranty;
   final ValueChanged<bool> onHasWarrantyChanged;
 
+  final bool hasInitialStock;
+  final ValueChanged<bool> onHasInitialStockChanged;
+  final TextEditingController initialQuantityController;
+  final TextEditingController initialCostController;
+
   final VoidCallback onNext;
   final VoidCallback onBack;
   final VoidCallback onCancel;
@@ -38,6 +45,10 @@ class AddProductStep3 extends StatefulWidget {
     required this.onRequiresSerialsChanged,
     required this.hasWarranty,
     required this.onHasWarrantyChanged,
+    required this.hasInitialStock,
+    required this.onHasInitialStockChanged,
+    required this.initialQuantityController,
+    required this.initialCostController,
     required this.onNext,
     required this.onBack,
     required this.onCancel,
@@ -172,6 +183,70 @@ class _AddProductStep3State extends State<AddProductStep3> {
                     contentPadding: EdgeInsets.zero,
                     activeThumbColor: colors.primary,
                   ),
+
+                  const Divider(height: 32),
+
+                  // Switch para existencia física en anaquel
+                  SwitchListTile(
+                    title: const Text(
+                      'Existencia física en anaquel',
+                      style: TextStyle(fontWeight: FontWeight.w600),
+                    ),
+                    subtitle: const Text(
+                      'Declarar inventario inicial para este producto',
+                    ),
+                    secondary: Icon(Symbols.shelves, color: colors.primary),
+                    value: widget.hasInitialStock,
+                    onChanged: widget.onHasInitialStockChanged,
+                    contentPadding: EdgeInsets.zero,
+                    activeThumbColor: colors.primary,
+                  ),
+
+                  if (widget.hasInitialStock) ...[
+                    const SizedBox(height: 12),
+                    CustomTextField(
+                      label: 'Cantidad inicial en stock*',
+                      controller: widget.initialQuantityController,
+                      prefixIcon: const Icon(Symbols.tag),
+                      keyboardType: const TextInputType.numberWithOptions(
+                        decimal: true,
+                      ),
+                      helperText: 'Unidades físicas contadas en almacén',
+                      validator: (val) {
+                        if (!widget.hasInitialStock) return null;
+                        if (val == null || val.trim().isEmpty) {
+                          return 'La cantidad es obligatoria';
+                        }
+                        final n = double.tryParse(val.replaceAll(',', '.'));
+                        if (n == null || n <= 0) {
+                          return 'Ingresa una cantidad mayor a 0';
+                        }
+                        return null;
+                      },
+                    ),
+                    const SizedBox(height: 16),
+                    CustomTextField(
+                      label: 'Costo unitario del producto*',
+                      controller: widget.initialCostController,
+                      prefixIcon: const Icon(Icons.attach_money),
+                      keyboardType: const TextInputType.numberWithOptions(
+                        decimal: true,
+                      ),
+                      helperText:
+                          'Costo estimado de adquisición por unidad en USD',
+                      validator: (val) {
+                        if (!widget.hasInitialStock) return null;
+                        if (val == null || val.trim().isEmpty) {
+                          return 'El costo unitario es obligatorio';
+                        }
+                        final n = double.tryParse(val.replaceAll(',', '.'));
+                        if (n == null || n < 0) {
+                          return 'Ingresa un costo válido';
+                        }
+                        return null;
+                      },
+                    ),
+                  ],
                 ],
               ),
             ),
@@ -182,10 +257,14 @@ class _AddProductStep3State extends State<AddProductStep3> {
           onBack: widget.onBack,
           onNext:
               widget.selectedCategory != null &&
-                  widget.selectedCategory!.id != 'ADD_NEW' &&
-                  widget.selectedUom != null
-              ? widget.onNext
-              : null,
+                      widget.selectedCategory!.id != 'ADD_NEW' &&
+                      widget.selectedUom != null
+                  ? () {
+                      if (_formKey.currentState!.validate()) {
+                        widget.onNext();
+                      }
+                    }
+                  : null,
         ),
       ],
     );

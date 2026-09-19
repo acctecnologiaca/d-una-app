@@ -23,6 +23,7 @@ import '../../../providers/products_provider.dart';
 import '../../../providers/lookup_providers.dart';
 import '../../../../../settings/presentation/widgets/add_edit_category_sheet.dart';
 import '../../../../../settings/presentation/widgets/add_edit_uom_sheet.dart';
+import '../../../../../purchases/presentation/providers/purchases_providers.dart';
 
 class AddProductScreen extends ConsumerStatefulWidget {
   const AddProductScreen({super.key});
@@ -51,6 +52,10 @@ class _AddProductScreenState extends ConsumerState<AddProductScreen> {
   Uom? _selectedUom;
   bool _requiresSerials = false;
   bool _hasWarranty = false;
+  bool _hasInitialStock = false;
+  final TextEditingController _initialQuantityController =
+      TextEditingController();
+  final TextEditingController _initialCostController = TextEditingController();
 
   // Step 4
   File? _productImage;
@@ -71,6 +76,8 @@ class _AddProductScreenState extends ConsumerState<AddProductScreen> {
     _modelController.dispose();
     _nameController.dispose();
     _specsController.dispose();
+    _initialQuantityController.dispose();
+    _initialCostController.dispose();
     super.dispose();
   }
 
@@ -250,6 +257,7 @@ class _AddProductScreenState extends ConsumerState<AddProductScreen> {
         _specsController.text.isNotEmpty ||
         _selectedCategory != null ||
         _selectedUom != null ||
+        _hasInitialStock ||
         _productImage != null;
   }
 
@@ -339,13 +347,41 @@ class _AddProductScreenState extends ConsumerState<AddProductScreen> {
         imageExtension = _productImage!.path.split('.').last;
       }
 
-      await ref
+      final createdProduct = await ref
           .read(productsProvider.notifier)
           .createProduct(
             product,
             imageBytes: imageBytes,
             imageExtension: imageExtension,
           );
+
+      if (_hasInitialStock) {
+        final qty =
+            double.tryParse(
+              _initialQuantityController.text.replaceAll(',', '.'),
+            ) ??
+            0.0;
+        final cost =
+            double.tryParse(_initialCostController.text.replaceAll(',', '.')) ??
+            0.0;
+
+        if (qty > 0) {
+          try {
+            await ref
+                .read(purchasesRepositoryProvider)
+                .addInitialInventoryItem(
+                  product: createdProduct,
+                  quantity: qty,
+                  unitPrice: cost,
+                );
+            ref.invalidate(paginatedPurchasesListProvider);
+            ref.invalidate(purchasesProvider);
+            ref.read(paginatedProductsProvider.notifier).refresh();
+          } catch (e) {
+            debugPrint('Error vinculando inventario inicial al producto: $e');
+          }
+        }
+      }
 
       if (mounted) {
         context.pop();
@@ -592,6 +628,15 @@ class _AddProductScreenState extends ConsumerState<AddProductScreen> {
                 });
               },
 
+              hasInitialStock: _hasInitialStock,
+              onHasInitialStockChanged: (val) {
+                setState(() {
+                  _hasInitialStock = val;
+                });
+              },
+              initialQuantityController: _initialQuantityController,
+              initialCostController: _initialCostController,
+
               onNext: nextStep,
               onBack: prevStep,
               onCancel: _handleBackNavigation,
@@ -605,6 +650,18 @@ class _AddProductScreenState extends ConsumerState<AddProductScreen> {
               specs: _specsController.text,
               category: _selectedCategory?.name,
               image: _productImage,
+              hasInitialStock: _hasInitialStock,
+              initialQuantity:
+                  double.tryParse(
+                    _initialQuantityController.text.replaceAll(',', '.'),
+                  ) ??
+                  0.0,
+              initialCost:
+                  double.tryParse(
+                    _initialCostController.text.replaceAll(',', '.'),
+                  ) ??
+                  0.0,
+              uomSymbol: _selectedUom?.symbol,
               onPickImage: (source) => _pickImageFromSource(source),
               onBack: prevStep,
               onCancel: _handleBackNavigation,

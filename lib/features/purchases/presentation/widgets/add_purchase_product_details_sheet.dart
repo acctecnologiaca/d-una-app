@@ -200,16 +200,16 @@ class _AddPurchaseProductDetailsSheetState
 
           // Cost per unit
           CustomTextField(
-            label: 'Costo unitario*',
+            label: 'Costo unitario del producto*',
             controller: _costController,
             keyboardType: const TextInputType.numberWithOptions(decimal: true),
             prefixText: '\$   ',
-            helperText: 'Sin impuesto',
+            helperText: 'Valor estimado de adquisición por unidad (sin impuesto)',
             inputFormatters: [CurrencyInputFormatter()],
             enabled: !widget.isLinkedToOrder,
             validator: (value) {
               if (value == null || value.isEmpty) {
-                return 'El costo es obligatorio';
+                return 'El costo unitario es obligatorio';
               }
               final price = CurrencyFormatter.parse(value);
               if (price == null || price <= 0) {

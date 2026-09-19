@@ -22,14 +22,15 @@ class ProductsNotifier extends AsyncNotifier<List<Product>> {
     return ref.read(productsRepositoryProvider).getProducts();
   }
 
-  Future<void> createProduct(
+  Future<Product> createProduct(
     Product product, {
     Uint8List? imageBytes,
     String? imageExtension,
   }) async {
     state = const AsyncValue.loading();
+    Product? createdProduct;
     state = await AsyncValue.guard(() async {
-      await ref
+      createdProduct = await ref
           .read(productsRepositoryProvider)
           .createProduct(
             product,
@@ -41,6 +42,7 @@ class ProductsNotifier extends AsyncNotifier<List<Product>> {
       return ref.read(productsRepositoryProvider).getProducts();
     });
     if (state.hasError) throw state.error!;
+    return createdProduct!;
   }
 
   Future<void> updateProduct(

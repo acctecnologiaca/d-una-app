@@ -378,7 +378,7 @@ class _CreateSupplierOrderScreenState
             indicatorColor: colors.primary,
             labelStyle: const TextStyle(fontWeight: FontWeight.bold),
             tabs: const [
-              Tab(text: 'Detalles'),
+              Tab(text: 'General'),
               Tab(text: 'Productos'),
               Tab(text: 'Resumen'),
             ],

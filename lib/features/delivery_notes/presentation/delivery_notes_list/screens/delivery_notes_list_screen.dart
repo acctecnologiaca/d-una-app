@@ -29,7 +29,7 @@ class DeliveryNotesListScreen extends ConsumerStatefulWidget {
 
 class _DeliveryNotesListScreenState extends ConsumerState<DeliveryNotesListScreen>
     with WidgetsBindingObserver {
-  SortOption _currentSort = SortOption.recent;
+  SortOption _currentSort = SortOption.noteNumberDesc;
   final TextEditingController _searchController = TextEditingController();
 
   @override

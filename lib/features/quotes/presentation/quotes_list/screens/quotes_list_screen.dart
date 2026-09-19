@@ -58,13 +58,13 @@ class _QuotesListScreenState extends ConsumerState<QuotesListScreen>
     final selection = ref.watch(quoteSelectionProvider);
     final paginatedStateAsync = ref.watch(paginatedQuotesListProvider);
     final draftService = ref.watch(draftStorageServiceProvider);
-    final hasNewQuoteDraft =
-        draftService.hasDraft(DraftConstants.quotesModule);
+    final hasNewQuoteDraft = draftService.hasDraft(DraftConstants.quotesModule);
 
     final adBanners = ref.watch(
-      placementBannersProvider(
-        (placementKey: 'quotes_list', searchQuery: null),
-      ),
+      placementBannersProvider((
+        placementKey: 'quotes_list',
+        searchQuery: null,
+      )),
     );
 
     final allQuotes = paginatedStateAsync.valueOrNull?.items ?? [];
@@ -122,7 +122,7 @@ class _QuotesListScreenState extends ConsumerState<QuotesListScreen>
                         orderBy = 'created_at';
                         ascending = false;
                       } else if (val == SortOption.dateIssued) {
-                        orderBy = 'issue_date';
+                        orderBy = 'date_issued';
                         ascending = false;
                       } else if (val == SortOption.nameAZ) {
                         orderBy = 'clients(name)';
@@ -183,7 +183,7 @@ class _QuotesListScreenState extends ConsumerState<QuotesListScreen>
                         child: SizedBox(
                           height: MediaQuery.of(context).size.height * 0.5,
                           child: EmptyListState(
-                            icon: Icons.description_outlined,
+                            icon: Symbols.request_quote,
                             message: 'No hay cotizaciones registradas.',
                           ),
                         ),
@@ -197,8 +197,7 @@ class _QuotesListScreenState extends ConsumerState<QuotesListScreen>
                       onLoadMore: () => ref
                           .read(paginatedQuotesListProvider.notifier)
                           .loadMore(),
-                      banners:
-                          selection.isSelectionMode ? null : adBanners,
+                      banners: selection.isSelectionMode ? null : adBanners,
                       screenContext: 'quotes_list',
                       padding: const EdgeInsets.fromLTRB(
                         0,
@@ -248,8 +247,7 @@ class _QuotesListScreenState extends ConsumerState<QuotesListScreen>
               },
               icon: Icons.add,
               label: 'Nueva',
-              trailingIcon:
-                  hasNewQuoteDraft ? DraftConstants.draftIcon : null,
+              trailingIcon: hasNewQuoteDraft ? DraftConstants.draftIcon : null,
               trailingTooltip: 'Borrador en proceso',
             ),
     );

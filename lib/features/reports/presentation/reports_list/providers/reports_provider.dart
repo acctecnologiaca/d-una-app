@@ -3,7 +3,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../../../../shared/models/paginated_state.dart';
+import '../../../../portfolio/presentation/providers/products_provider.dart';
 import '../../../domain/repositories/service_reports_repository.dart';
+import '../../../domain/models/batch_report_update_result.dart';
 import '../../../data/repositories/supabase_service_reports_repository.dart';
 import '../../../domain/models/service_report_model.dart' as domain;
 import '../../../data/models/service_report.dart' as data;
@@ -213,7 +215,7 @@ final reportsFilterProvider =
 class PaginatedReportsNotifier
     extends AsyncNotifier<PaginatedState<domain.ServiceReportSummary>> {
   static const int _limit = 25;
-  String _orderBy = 'service_date';
+  String _orderBy = 'report_number';
   bool _ascending = false;
   String? _searchQuery;
   String? _statusFilter;
@@ -443,6 +445,7 @@ class ReportsListNotifier extends StateNotifier<AsyncValue<List<domain.ServiceRe
   Future<void> updateReportStatus(String id, String status) async {
     await ref.read(serviceReportsRepositoryProvider).updateReportStatus(id, status);
     await refresh();
+    ref.invalidate(productsProvider);
   }
 
   Future<void> updateReportDate(String id, DateTime newDate) async {
@@ -450,9 +453,10 @@ class ReportsListNotifier extends StateNotifier<AsyncValue<List<domain.ServiceRe
     await refresh();
   }
 
-  Future<List<String>> batchUpdateStatus(List<String> ids, String status) async {
+  Future<BatchReportUpdateResult> batchUpdateStatus(List<String> ids, String status) async {
     final result = await ref.read(serviceReportsRepositoryProvider).batchUpdateStatus(ids, status);
     await refresh();
+    ref.invalidate(productsProvider);
     return result;
   }
 
@@ -470,6 +474,7 @@ void refreshAllReportProviders(dynamic ref) {
   ref.invalidate(reportsListProvider);
   ref.invalidate(paginatedReportsListProvider);
   ref.invalidate(paginatedReportSearchProvider);
+  ref.invalidate(productsProvider);
 }
 
 final paginatedReportsListProvider = AsyncNotifierProvider<

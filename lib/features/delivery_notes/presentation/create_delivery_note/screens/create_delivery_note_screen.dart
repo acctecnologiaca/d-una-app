@@ -22,7 +22,6 @@ import '../../view_delivery_note/widgets/send_delivery_note_whatsapp_sheet.dart'
 import '../../view_delivery_note/widgets/send_delivery_note_email_sheet.dart';
 import '../providers/create_delivery_note_provider.dart';
 import '../tabs/delivery_note_details_tab.dart';
-import '../tabs/delivery_note_client_tab.dart';
 import '../tabs/delivery_note_items_tab.dart';
 import '../tabs/delivery_note_delivery_tab.dart';
 import '../tabs/delivery_note_observations_tab.dart';
@@ -62,7 +61,7 @@ class _CreateDeliveryNoteScreenState
       final tabStr = GoRouterState.of(context).uri.queryParameters['tab'];
       if (tabStr != null) {
         final initialTab = int.tryParse(tabStr);
-        if (initialTab != null && initialTab >= 0 && initialTab < 6) {
+        if (initialTab != null && initialTab >= 0 && initialTab < 5) {
           _tabController.index = initialTab;
         }
       }
@@ -73,7 +72,7 @@ class _CreateDeliveryNoteScreenState
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 6, vsync: this);
+    _tabController = TabController(length: 5, vsync: this);
 
     _tabController.addListener(() {
       if (!_tabController.indexIsChanging) {
@@ -140,9 +139,9 @@ class _CreateDeliveryNoteScreenState
         final draft = await notifier.checkExistingDraft(noteId: widget.noteId);
         if (draft != null && mounted) {
           notifier.restoreDraft(draft, originalNote: note);
-          if (queryTab != null && queryTab >= 0 && queryTab < 6) {
+          if (queryTab != null && queryTab >= 0 && queryTab < 5) {
             _tabController.index = queryTab;
-          } else if (draft.tabIndex >= 0 && draft.tabIndex < 6) {
+          } else if (draft.tabIndex >= 0 && draft.tabIndex < 5) {
             _tabController.index = draft.tabIndex;
           }
           DraftToast.show(
@@ -160,7 +159,7 @@ class _CreateDeliveryNoteScreenState
             },
           );
         } else {
-          if (queryTab != null && queryTab >= 0 && queryTab < 6) {
+          if (queryTab != null && queryTab >= 0 && queryTab < 5) {
             _tabController.index = queryTab;
           }
         }
@@ -202,7 +201,7 @@ class _CreateDeliveryNoteScreenState
     final draft = await notifier.checkExistingDraft();
     if (draft != null && mounted) {
       notifier.restoreDraft(draft);
-      if (draft.tabIndex >= 0 && draft.tabIndex < 6) {
+      if (draft.tabIndex >= 0 && draft.tabIndex < 5) {
         _tabController.index = draft.tabIndex;
       }
       DraftToast.show(
@@ -290,13 +289,13 @@ class _CreateDeliveryNoteScreenState
 
     if (!state.isDetailsValid) {
       AppToast.error(context, message: 'Debe seleccionar un cliente.');
-      _tabController.animateTo(1);
+      _tabController.animateTo(0);
       return;
     }
 
     if (state.items.isEmpty) {
       AppToast.error(context, message: 'Debe agregar al menos un producto.');
-      _tabController.animateTo(2);
+      _tabController.animateTo(1);
       return;
     }
 
@@ -305,7 +304,7 @@ class _CreateDeliveryNoteScreenState
         context,
         message: 'Por favor complete la información de despacho.',
       );
-      _tabController.animateTo(3);
+      _tabController.animateTo(2);
       return;
     }
 
@@ -339,13 +338,13 @@ class _CreateDeliveryNoteScreenState
 
     if (!state.isDetailsValid) {
       AppToast.error(context, message: 'Debe seleccionar un cliente.');
-      _tabController.animateTo(1);
+      _tabController.animateTo(0);
       return;
     }
 
     if (state.items.isEmpty) {
       AppToast.error(context, message: 'Debe agregar al menos un producto.');
-      _tabController.animateTo(2);
+      _tabController.animateTo(1);
       return;
     }
 
@@ -354,7 +353,7 @@ class _CreateDeliveryNoteScreenState
         context,
         message: 'Por favor complete la información de despacho.',
       );
-      _tabController.animateTo(3);
+      _tabController.animateTo(2);
       return;
     }
 
@@ -581,8 +580,7 @@ class _CreateDeliveryNoteScreenState
             indicatorColor: colors.primary,
             labelStyle: const TextStyle(fontWeight: FontWeight.bold),
             tabs: [
-              const Tab(text: 'Detalles'),
-              const Tab(text: 'Cliente'),
+              const Tab(text: 'General'),
               Tab(
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
@@ -606,7 +604,6 @@ class _CreateDeliveryNoteScreenState
             controller: _tabController,
             children: [
               const DeliveryNoteDetailsTab(),
-              const DeliveryNoteClientTab(),
               const DeliveryNoteItemsTab(),
               const DeliveryNoteDeliveryTab(),
               const DeliveryNoteObservationsTab(),
@@ -622,7 +619,7 @@ class _CreateDeliveryNoteScreenState
   }
 
   Widget? _buildFab(DeliveryNoteCreateState state) {
-    if (_tabController.index == 2) {
+    if (_tabController.index == 1) {
       return CustomExtendedFab(
         label: 'Agregar',
         icon: Icons.add,
@@ -636,7 +633,7 @@ class _CreateDeliveryNoteScreenState
       );
     }
 
-    if (_tabController.index == 4) {
+    if (_tabController.index == 3) {
       return CustomExtendedFab(
         label: 'Agregar',
         icon: Icons.add,
@@ -650,7 +647,7 @@ class _CreateDeliveryNoteScreenState
       );
     }
 
-    if (_tabController.index == 5) {
+    if (_tabController.index == 4) {
       final isReadyToSave = state.isDetailsValid &&
           state.items.isNotEmpty &&
           state.isDeliveryValid;

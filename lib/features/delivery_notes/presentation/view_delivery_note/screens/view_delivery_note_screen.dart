@@ -25,7 +25,6 @@ import 'package:d_una_app/features/supplier_orders/presentation/supplier_orders_
 import '../../../../quotes/presentation/view_quote/providers/view_quote_provider.dart';
 import '../../create_delivery_note/providers/create_delivery_note_provider.dart';
 import '../tabs/view_delivery_note_details_tab.dart';
-import '../tabs/view_delivery_note_client_tab.dart';
 import '../tabs/view_delivery_note_items_tab.dart';
 import '../tabs/view_delivery_note_delivery_tab.dart';
 import '../tabs/view_delivery_note_observations_tab.dart';
@@ -53,8 +52,8 @@ class _ViewDeliveryNoteScreenState extends ConsumerState<ViewDeliveryNoteScreen>
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
-    // 6 pestañas homologadas, empezando en Resumen (índice 5)
-    _tabController = TabController(length: 6, vsync: this, initialIndex: 5);
+    // 5 pestañas homologadas, empezando en Resumen (índice 4)
+    _tabController = TabController(length: 5, vsync: this, initialIndex: 4);
     _tabController.addListener(() {
       if (!_tabController.indexIsChanging) setState(() {});
     });
@@ -431,8 +430,7 @@ class _ViewDeliveryNoteScreenState extends ConsumerState<ViewDeliveryNoteScreen>
               indicatorColor: colors.primary,
               labelStyle: const TextStyle(fontWeight: FontWeight.bold),
               tabs: [
-                const Tab(text: 'Detalles'),
-                const Tab(text: 'Cliente'),
+                const Tab(text: 'General'),
                 Tab(
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
@@ -455,10 +453,6 @@ class _ViewDeliveryNoteScreenState extends ConsumerState<ViewDeliveryNoteScreen>
             controller: _tabController,
             children: [
               ViewDeliveryNoteDetailsTab(
-                noteId: widget.noteId,
-                bottomPadding: bottomPadding,
-              ),
-              ViewDeliveryNoteClientTab(
                 noteId: widget.noteId,
                 bottomPadding: bottomPadding,
               ),

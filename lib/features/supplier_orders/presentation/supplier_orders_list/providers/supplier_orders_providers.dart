@@ -4,6 +4,8 @@ import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:d_una_app/features/quotes/domain/models/quote_model.dart' show StockStatus;
 import 'package:d_una_app/features/quotes/presentation/view_quote/providers/view_quote_provider.dart';
+import 'package:d_una_app/features/quotes/data/models/quote.dart' as quote_data;
+import 'package:d_una_app/features/quotes/presentation/quotes_list/providers/quotes_provider.dart';
 import '../../../domain/repositories/supplier_orders_repository.dart';
 import '../../../data/repositories/supabase_supplier_orders_repository.dart';
 import '../../../domain/models/supplier_order.dart';
@@ -403,5 +405,23 @@ Future<Map<String, dynamic>?> linkedPurchase(
   final repo = ref.watch(supplierOrdersRepositoryProvider);
   return repo.getLinkedPurchase(orderId);
 }
+
+final pendingApprovedOrdersBySupplierProvider = FutureProvider.autoDispose
+    .family<List<SupplierOrder>, String>((ref, supplierId) async {
+  if (supplierId.trim().isEmpty) return [];
+  final repo = ref.watch(supplierOrdersRepositoryProvider);
+  return repo.getPendingApprovedOrdersBySupplierId(supplierId);
+});
+
+final linkedQuoteProvider = FutureProvider.autoDispose
+    .family<quote_data.Quote?, String>((ref, quoteId) async {
+  if (quoteId.trim().isEmpty) return null;
+  try {
+    final repo = ref.watch(quotesRepositoryProvider);
+    return await repo.getQuoteById(quoteId);
+  } catch (e) {
+    return null;
+  }
+});
 
 

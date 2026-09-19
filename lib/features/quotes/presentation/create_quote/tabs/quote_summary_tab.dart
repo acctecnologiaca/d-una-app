@@ -422,6 +422,23 @@ class QuoteSummaryTab extends ConsumerWidget {
                 isTextValue: true,
               ),
             ],
+            const SizedBox(height: 8),
+            Align(
+              alignment: Alignment.centerRight,
+              child: TextButton.icon(
+                onPressed: () => onNavigateToTab(0), // General Tab
+                icon: const Icon(Icons.arrow_forward_ios, size: 14),
+                label: const Text('Ir a General'),
+                style: TextButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 4,
+                  ),
+                  minimumSize: Size.zero,
+                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                ),
+              ),
+            ),
           ],
         ),
       ),
@@ -495,7 +512,7 @@ class QuoteSummaryTab extends ConsumerWidget {
               Align(
                 alignment: Alignment.centerRight,
                 child: TextButton.icon(
-                  onPressed: () => onNavigateToTab(0), // Products Tab
+                  onPressed: () => onNavigateToTab(1), // Products Tab
                   icon: const Icon(Icons.arrow_forward_ios, size: 14),
                   label: const Text('Ir a productos'),
                   style: TextButton.styleFrom(
@@ -544,7 +561,7 @@ class QuoteSummaryTab extends ConsumerWidget {
                 Align(
                   alignment: Alignment.centerRight,
                   child: TextButton.icon(
-                    onPressed: () => onNavigateToTab(1), // Services Tab
+                    onPressed: () => onNavigateToTab(2), // Services Tab
                     icon: const Icon(Icons.arrow_forward_ios, size: 14),
                     label: const Text('Ir a servicios'),
                     style: TextButton.styleFrom(

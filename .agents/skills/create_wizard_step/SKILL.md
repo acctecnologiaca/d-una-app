@@ -195,6 +195,38 @@ En los creadores de documentos comerciales, los botones de acción principal (`A
 1. **Inicialización Obligatoria:** Todo campo de fecha operativo o logístico (ej. `deliveryDate`) debe inicializarse en el constructor del estado con `DateTime.now()`, precargándose en el controlador del formulario. Esto evita estados nulos que deriven en leyendas ambiguas como `"No especificada"` al guardar o recuperar borradores.
 2. **Respeto a Despachos Programados:** El campo debe ser interactivo para permitir programar fechas futuras cuando la operación lo requiera.
 
+### 6. Estándar Universal de la Pestaña `[0] General` y Acordeón con `CollapsibleCardBlock`
+
+Todo creador de documentos comerciales y logísticos en D'Una App inicia de forma universal en la pestaña `[0] General`, agrupando al sujeto de la transacción y sus metadatos operativos:
+
+```text
+┌─────────────────────────────────────────────────────────────────────────────┐
+│ MAPEO DE PESTAÑAS UNIVERSAL EN CREADORES DE DOCUMENTOS                      │
+│  • Cotización:       [0] General, [1] Productos, [2] Servicios,             │
+│                      [3] Condiciones, [4] Resúmen (Total: 5)                │
+│  • Reporte:          [0] General, [1] Productos, [2] Servicios,             │
+│                      [3] Condiciones, [4] Resumen (Total: 5)                │
+│  • Nota de Entrega:  [0] General, [1] Productos, [2] Despacho,              │
+│                      [3] Observaciones, [4] Resumen (Total: 5)              │
+│  • Orden de Compra:  [0] General, [1] Productos, [2] Resumen (Total: 3)      │
+│  • Compra:           [0] General, [1] Productos, [2] Resumen (Total: 3)      │
+└─────────────────────────────────────────────────────────────────────────────┘
+```
+
+1. **Agrupación en Acordeón ([`CollapsibleCardBlock`](file:///c:/Users/aleja/flutter_apps/MVP/d_una_app/lib/shared/widgets/collapsible_card_block.dart)):**
+   - La pestaña `General` divide la información en bloques colapsables (Cliente/Proveedor, Emisión/Vigencia, Clasificación/Asesor, Etiqueta/Notas).
+   - Cada bloque cuenta con su propio `ExpansibleController`, coordinando su apertura única con `_onExpandBlock(int index)` y colapsando los demás. Habitualmente arranca con el Bloque 0 expandido.
+2. **Regla Estética Mandatoria del Espaciado Inferior (`const SizedBox(height: 8)`):**
+   - **MANDATORIO:** En la lista de hijos (`children`) de **todo** `CollapsibleCardBlock`, se debe agregar **siempre** un espaciado final `const SizedBox(height: 8)` después del último campo o widget hijo, asegurando respiración visual simétrica antes del borde inferior de la tarjeta.
+3. **Etiqueta (Tag):**
+   - Campo independiente con `maxLength: 35` y `helperText`.
+   - No debe autollenarse con concatenaciones automáticas tipo `"Tipo - Categoría"` para evitar desbordar el límite de caracteres; debe iniciar limpio para libre entrada del usuario.
+4. **Redirección Reactiva en Validaciones de Guardado (`animateTo`):**
+   - Si al presionar "Guardar" el formulario detecta datos faltantes, debe redirigir al usuario animando la pestaña exacta que requiere atención:
+     - Falta cliente o datos iniciales: `_tabController.animateTo(0)`.
+     - Faltan productos: `_tabController.animateTo(1)`.
+     - Falta despacho o condiciones: `_tabController.animateTo(2)` o `_tabController.animateTo(3)`.
+
 ---
 
 ## 🏗️ Patrón B: Wizards Lineales por Pasos

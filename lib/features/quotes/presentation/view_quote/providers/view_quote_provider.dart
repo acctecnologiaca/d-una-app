@@ -7,6 +7,8 @@ import '../../create_quote/providers/create_quote_provider.dart';
 import 'package:d_una_app/features/supplier_orders/domain/models/supplier_order.dart';
 import 'package:d_una_app/features/supplier_orders/presentation/supplier_orders_list/providers/supplier_orders_providers.dart';
 import 'package:d_una_app/features/quotes/domain/models/quote_model.dart';
+import 'package:d_una_app/features/delivery_notes/domain/models/delivery_note_model.dart';
+import 'package:d_una_app/features/delivery_notes/presentation/delivery_notes_list/providers/delivery_notes_providers.dart';
 
 final viewQuoteProvider = StateNotifierProvider.autoDispose
     .family<CreateQuoteNotifier, QuoteState, String>((ref, quoteId) {
@@ -35,6 +37,13 @@ final linkedSupplierOrdersProvider = FutureProvider.autoDispose
     .family<List<SupplierOrder>, String>((ref, quoteId) async {
   final repo = ref.watch(supplierOrdersRepositoryProvider);
   return repo.getSupplierOrdersByQuoteId(quoteId);
+});
+
+final linkedDeliveryNotesProvider = FutureProvider.autoDispose
+    .family<List<DeliveryNoteModel>, String>((ref, quoteId) async {
+  if (quoteId.trim().isEmpty) return [];
+  final repo = ref.watch(deliveryNotesRepositoryProvider);
+  return repo.getDeliveryNotesByQuoteId(quoteId);
 });
 
 final quoteActiveFabsCountProvider = Provider.autoDispose

@@ -340,7 +340,7 @@ class ReportSelectionActions {
           iconColor: Colors.amber.shade800,
           title: 'Finalizar Reporte',
           contentText:
-              '¿Estás seguro de que deseas finalizar este reporte? Una vez finalizado, el reporte quedará cerrado permanentemente y solo podrá ser cancelado mediante anulación formal.',
+              '¿Estás seguro de que deseas finalizar este reporte? Los productos y repuestos propios consumidos se descontarán permanentemente del inventario físico. Una vez finalizado, el reporte quedará cerrado y solo podrá ser cancelado mediante anulación formal.',
           actions: [
             Builder(
               builder: (c) => TextButton(
@@ -407,7 +407,7 @@ class ReportSelectionActions {
     final selectedStatus = await showStatusDialog(context, currentStatus);
     if (!context.mounted || selectedStatus == null) return;
 
-    final successfulIds = await ref
+    final result = await ref
         .read(reportsListProvider.notifier)
         .batchUpdateStatus(
           selection.selectedIds.toList(),
@@ -419,13 +419,50 @@ class ReportSelectionActions {
 
     if (!context.mounted) return;
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(
-          'Estatus cambiado a "${selectedStatus.label}" en ${successfulIds.length} reporte${successfulIds.length > 1 ? 's' : ''}.',
+    if (result.hasErrors) {
+      if (result.stockErrors.isNotEmpty) {
+        final errorMessages = <String>[];
+        for (final entry in result.stockErrors.entries) {
+          errorMessages.add('• ${entry.value.productNames.join(', ')}');
+        }
+
+        CustomDialog.show(
+          context: context,
+          dialog: CustomDialog.confirmation(
+            icon: Symbols.warning,
+            iconColor: Colors.amber.shade800,
+            title: 'Stock Insuficiente en Reportes',
+            contentText:
+                'No se pudieron finalizar ${result.stockErrors.length} reporte(s) porque no hay suficiente stock disponible en el inventario propio de los siguientes productos:\n\n${errorMessages.toSet().join('\n')}\n\nPor favor, reponga el stock en almacén para poder finalizarlos.',
+            actions: [
+              TextButton(
+                onPressed: () =>
+                    Navigator.of(context, rootNavigator: true).pop(),
+                child: const Text('Entendido'),
+              ),
+            ],
+          ),
+        );
+      } else if (result.generalErrors.isNotEmpty) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(
+              'Ocurrieron errores al actualizar algunos reportes.',
+            ),
+          ),
+        );
+      }
+    }
+
+    if (result.successfulIds.isNotEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            'Estatus cambiado a "${selectedStatus.label}" en ${result.successfulIds.length} reporte${result.successfulIds.length > 1 ? 's' : ''}.',
+          ),
         ),
-      ),
-    );
+      );
+    }
   }
 
   static Future<void> handleBatchArchive(

@@ -12,6 +12,7 @@ import 'package:d_una_app/features/portfolio/domain/models/supplier_model.dart';
 import 'package:go_router/go_router.dart';
 import 'package:d_una_app/features/supplier_orders/presentation/widgets/supplier_order_credit_banner_card.dart';
 import 'package:d_una_app/features/supplier_orders/presentation/supplier_orders_list/providers/supplier_orders_providers.dart';
+import 'package:d_una_app/features/quotes/domain/models/quote_model.dart';
 
 class ViewSupplierOrderSummaryTab extends ConsumerWidget {
   final SupplierOrder order;
@@ -440,6 +441,7 @@ class ViewSupplierOrderSummaryTab extends ConsumerWidget {
             ] else ...[
               _buildMergedChildOrdersSection(context, ref, order),
             ],
+            _buildLinkedQuoteSection(context, ref, order),
             _buildLinkedPurchaseSection(context, ref, order),
           ],
         ),
@@ -994,6 +996,87 @@ class ViewSupplierOrderSummaryTab extends ConsumerWidget {
                 ),
                 onTap: () {
                   context.push('/my-purchases/view/${purchaseData['id']}');
+                },
+              ),
+            ),
+          ],
+        );
+      },
+      loading: () => const SizedBox.shrink(),
+      error: (_, _) => const SizedBox.shrink(),
+    );
+  }
+
+  Widget _buildLinkedQuoteSection(
+    BuildContext context,
+    WidgetRef ref,
+    SupplierOrder order,
+  ) {
+    if (order.quoteId == null || order.quoteId!.isEmpty) {
+      return const SizedBox.shrink();
+    }
+
+    final linkedQuoteAsync = ref.watch(linkedQuoteProvider(order.quoteId!));
+
+    return linkedQuoteAsync.when(
+      data: (quote) {
+        if (quote == null) return const SizedBox.shrink();
+        final colors = Theme.of(context).colorScheme;
+        final quoteNumber = quote.quoteNumber ?? 'Sin número';
+        final clientName = quote.clientName ?? 'Cliente';
+        final status = QuoteStatus.fromDbValue(quote.status);
+
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            const SizedBox(height: 16),
+            _buildSectionHeader(
+              context,
+              Icons.request_quote_outlined,
+              'Cotización vinculada',
+            ),
+            Card(
+              elevation: 0,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(8),
+                side: BorderSide(color: colors.outlineVariant),
+              ),
+              color: colors.surface,
+              child: ListTile(
+                contentPadding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 4,
+                ),
+                title: Text(
+                  '$quoteNumber ($clientName)',
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 14,
+                    color: colors.onSurface,
+                  ),
+                ),
+                trailing: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Tooltip(
+                      message: status.label,
+                      child: Image.asset(
+                        status.iconPath,
+                        width: 18,
+                        height: 18,
+                        errorBuilder: (context, error, stackTrace) =>
+                            const Icon(Icons.description_outlined, size: 18),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Icon(
+                      Icons.chevron_right,
+                      color: colors.onSurfaceVariant,
+                    ),
+                  ],
+                ),
+                onTap: () {
+                  context.push('/quotes/view/${order.quoteId}');
                 },
               ),
             ),

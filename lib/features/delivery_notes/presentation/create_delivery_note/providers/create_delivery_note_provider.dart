@@ -24,7 +24,6 @@ import 'package:d_una_app/features/portfolio/data/models/product_model.dart';
 import 'package:d_una_app/features/portfolio/presentation/providers/products_provider.dart';
 import '../../../data/repositories/supabase_delivery_notes_repository.dart';
 import '../../../domain/utils/delivery_note_stock_utils.dart';
-import 'package:d_una_app/features/quotes/domain/models/quote_model.dart' show QuoteStatus;
 import 'package:d_una_app/features/quotes/presentation/quotes_list/providers/quotes_provider.dart';
 
 class DeliveryNoteCreateState extends Equatable {
@@ -1272,23 +1271,6 @@ class CreateDeliveryNoteNotifier
         savedNote = await repo.createDeliveryNote(noteModel);
       } else {
         savedNote = await repo.updateDeliveryNote(noteModel);
-      }
-
-      // Si hay una cotización vinculada y no está en estatus 'approved', promoverla automáticamente a 'approved'
-      if (state.quoteId != null && state.quoteId!.isNotEmpty) {
-        try {
-          final quote = state.linkedQuote ??
-              await ref.read(quotesRepositoryProvider).getQuoteWithDetails(state.quoteId!);
-          if (quote.status != QuoteStatus.approved.dbValue) {
-            await ref.read(quotesRepositoryProvider).updateQuoteStatus(
-              state.quoteId!,
-              QuoteStatus.approved.dbValue,
-            );
-            ref.invalidate(quotesListProvider);
-          }
-        } catch (e) {
-          debugPrint('Error promoviendo cotización a aprobada: $e');
-        }
       }
 
       await discardDraft(noteId: state.id);

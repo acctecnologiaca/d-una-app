@@ -40,13 +40,18 @@ class Purchase extends Equatable {
   });
 
   factory Purchase.fromJson(Map<String, dynamic> json) {
+    final docType = json['document_type'] as String? ?? 'invoice';
+    final rawSupplierName = json['supplier_name'] as String?;
+    final fallbackSupplierName =
+        docType == 'initial_inventory' ? 'Inventario Inicial' : null;
+
     return Purchase(
       id: json['id'],
       userId: json['user_id'],
       supplierId: json['supplier_id'],
       supplierOrderId: json['supplier_order_id'],
-      documentType: json['document_type'],
-      documentNumber: json['document_number'],
+      documentType: docType,
+      documentNumber: json['document_number'] ?? '',
       date: DateTime.parse(json['date']),
       subtotal: (json['subtotal'] ?? 0).toDouble(),
       tax: (json['tax'] ?? 0).toDouble(),
@@ -54,7 +59,7 @@ class Purchase extends Equatable {
       hasMissingSerials: json['has_missing_serials'] ?? false,
       createdAt: DateTime.parse(json['created_at']),
       updatedAt: DateTime.parse(json['updated_at']),
-      supplierName: json['supplier_name'],
+      supplierName: rawSupplierName ?? fallbackSupplierName,
       invoicePhotoUrl: json['invoice_photo_url'],
       verificationStatus: json['verification_status'],
     );
