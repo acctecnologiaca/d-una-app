@@ -17,6 +17,7 @@ import '../../delivery_notes_list/providers/delivery_notes_providers.dart'
     show deliveryNoteDetailProvider, paginatedDeliveryNotesProvider;
 import '../../../data/repositories/supabase_delivery_notes_repository.dart';
 import '../../../domain/models/delivery_note_model.dart';
+import '../../../domain/models/delivery_note_status.dart';
 import '../../view_delivery_note/widgets/confirm_delivery_note_reception_dialog.dart';
 import '../../view_delivery_note/widgets/send_delivery_note_whatsapp_sheet.dart';
 import '../../view_delivery_note/widgets/send_delivery_note_email_sheet.dart';
@@ -308,6 +309,34 @@ class _CreateDeliveryNoteScreenState
       return;
     }
 
+    // Diálogo preventivo si la nota se encuentra en estatus distinto a borrador
+    if (state.status != DeliveryNoteStatus.draft) {
+      final confirm = await CustomDialog.show<bool>(
+            context: context,
+            dialog: CustomDialog.confirmation(
+              icon: Icons.warning_amber_rounded,
+              title: 'Cambio a estatus Borrador',
+              contentText:
+                  'La nota de entrega se encuentra en estatus "${state.status.label}". Al guardar las modificaciones, pasará automáticamente a estatus Borrador. ¿Deseas continuar?',
+              actions: [
+                TextButton(
+                  onPressed: () =>
+                      Navigator.of(context, rootNavigator: true).pop(false),
+                  child: const Text('Cancelar'),
+                ),
+                FilledButton(
+                  onPressed: () =>
+                      Navigator.of(context, rootNavigator: true).pop(true),
+                  child: const Text('Guardar'),
+                ),
+              ],
+            ),
+          ) ??
+          false;
+
+      if (!confirm) return;
+    }
+
     try {
       final savedNote = await notifier.saveDeliveryNote();
       if (mounted) {
@@ -321,7 +350,7 @@ class _CreateDeliveryNoteScreenState
         }
         AppToast.success(
           context,
-          message: 'Nota de entrega actualizada exitosamente.',
+          message: 'Nota de entrega guardada como Borrador.',
         );
         context.pushReplacement('/delivery-notes/view/${savedNote.id}');
       }
@@ -657,7 +686,15 @@ class _CreateDeliveryNoteScreenState
         label: state.isLoading ? 'Guardando...' : 'Guardar',
         icon: state.isLoading ? Icons.hourglass_empty : Icons.save_outlined,
         isEnabled: canSave,
-        onPressed: canSave ? _saveDeliveryNote : null,
+        onPressed: canSave
+            ? () {
+                if (widget.noteId != null) {
+                  _handleSaveInEditMode();
+                } else {
+                  _saveDeliveryNote();
+                }
+              }
+            : null,
       );
     }
 

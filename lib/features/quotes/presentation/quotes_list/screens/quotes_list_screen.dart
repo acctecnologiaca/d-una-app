@@ -90,7 +90,6 @@ class _QuotesListScreenState extends ConsumerState<QuotesListScreen>
                 hintText: 'Buscar...',
                 readOnly: true,
                 showFilterIcon: true,
-                onFilterTap: () {},
                 onTap: () {
                   context.push('/quotes/search');
                 },
@@ -326,7 +325,8 @@ class _QuotesListScreenState extends ConsumerState<QuotesListScreen>
           IconButton(
             icon: const Icon(Symbols.conversion_path),
             tooltip: 'Cambiar estatus',
-            onPressed: () => _showStatusDialog(context, ref, selection),
+            onPressed: () =>
+                _showStatusDialog(context, ref, selection, selectedQuotes),
           ),
           IconButton(
             icon: const Icon(Icons.more_vert),
@@ -350,12 +350,14 @@ class _QuotesListScreenState extends ConsumerState<QuotesListScreen>
   Future<void> _showStatusDialog(
     BuildContext context,
     WidgetRef ref,
-    QuoteSelectionState selection,
-  ) async {
+    QuoteSelectionState selection, [
+    List<Quote>? selectedQuotes,
+  ]) async {
     await QuoteSelectionActions.handleBatchStatusChange(
       context,
       ref,
       selection,
+      selectedQuotes: selectedQuotes,
     );
   }
 

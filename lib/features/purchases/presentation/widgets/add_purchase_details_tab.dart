@@ -81,6 +81,16 @@ class _AddPurchaseDetailsTabState extends ConsumerState<AddPurchaseDetailsTab> {
       }
     });
 
+    ref.listen<DateTime>(addPurchaseProvider.select((s) => s.date), (
+      prev,
+      next,
+    ) {
+      final formatted = DateFormat('dd/MM/yyyy').format(next);
+      if (_dateController.text != formatted) {
+        _dateController.text = formatted;
+      }
+    });
+
     final isLinkedToOrder = state.supplierOrderId != null;
 
     final pendingOrdersAsync = state.supplierId != null

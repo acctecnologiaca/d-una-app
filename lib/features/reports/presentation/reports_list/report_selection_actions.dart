@@ -47,7 +47,8 @@ class ReportSelectionActions {
   ) {
     final isFinalized = report.status == ServiceReportStatus.finalized;
     final isCancelled = report.status == ServiceReportStatus.cancelled;
-    final isSentOrResent = report.status == ServiceReportStatus.sent ||
+    final isSentOrResent =
+        report.status == ServiceReportStatus.sent ||
         report.status == ServiceReportStatus.resent ||
         report.status == ServiceReportStatus.opened;
 
@@ -253,30 +254,45 @@ class ReportSelectionActions {
             return Column(
               mainAxisSize: MainAxisSize.min,
               children: ServiceReportStatus.values
-                  .where((status) =>
-                      status != ServiceReportStatus.opened &&
-                      status != ServiceReportStatus.resent)
+                  .where(
+                    (status) =>
+                        status != ServiceReportStatus.draft &&
+                        status != ServiceReportStatus.opened &&
+                        status != ServiceReportStatus.resent,
+                  )
                   .map((status) {
                     final isSelected =
                         currentStatus != null && status == currentStatus;
                     bool isEnabled = true;
-                    String? disabledSubtitle;
+                    String? subtitle;
+                    Color? subtitleColor;
 
                     if (isCancelled) {
                       isEnabled = false;
-                      disabledSubtitle =
+                      subtitle =
                           'El reporte cancelado no puede cambiar de estatus';
                     } else if (isFinalized) {
-                      if (status != ServiceReportStatus.cancelled) {
+                      if (status == ServiceReportStatus.sent) {
                         isEnabled = false;
-                        disabledSubtitle =
-                            'Solo se puede anular un reporte finalizado';
+                        subtitle = 'Al enviarse no cambia de estatus';
+                      } else if (status == ServiceReportStatus.finalized) {
+                        isEnabled = false;
+                        subtitle = 'Estatus actual';
+                      } else if (status == ServiceReportStatus.cancelled) {
+                        isEnabled = true;
+                        subtitle = 'Cancelar reporte y reponer inventario';
+                        subtitleColor = colors.primary;
+                      }
+                    } else {
+                      if (isSelected) {
+                        isEnabled = false;
+                        subtitle = 'Estatus actual';
                       }
                     }
 
                     return ListTile(
                       leading: Opacity(
-                        opacity: isEnabled ? 1.0 : 0.4,
+                        opacity: (isEnabled || isSelected) ? 1.0 : 0.4,
                         child: Image.asset(
                           status.iconPath,
                           width: 24,
@@ -286,19 +302,28 @@ class ReportSelectionActions {
                       title: Text(
                         status.label,
                         style: TextStyle(
-                          fontWeight:
-                              isSelected ? FontWeight.bold : FontWeight.normal,
-                          color: !isEnabled
-                              ? colors.outline
-                              : (isSelected ? colors.primary : colors.onSurface),
+                          fontWeight: isSelected
+                              ? FontWeight.bold
+                              : FontWeight.normal,
+                          color: isSelected
+                              ? colors.primary
+                              : (!isEnabled
+                                    ? colors.onSurfaceVariant.withValues(
+                                        alpha: 0.4,
+                                      )
+                                    : colors.onSurface),
                         ),
                       ),
-                      subtitle: disabledSubtitle != null
+                      subtitle: subtitle != null
                           ? Text(
-                              disabledSubtitle,
+                              subtitle,
                               style: TextStyle(
                                 fontSize: 12,
-                                color: colors.outline,
+                                color:
+                                    subtitleColor ??
+                                    (isSelected
+                                        ? colors.primary.withValues(alpha: 0.8)
+                                        : colors.outline),
                               ),
                             )
                           : null,
@@ -336,7 +361,7 @@ class ReportSelectionActions {
           iconColor: Colors.amber.shade800,
           title: 'Finalizar Reporte',
           contentText:
-              '¿Estás seguro de que deseas finalizar este reporte? Los productos y repuestos propios consumidos se descontarán permanentemente del inventario físico. Una vez finalizado, el reporte quedará cerrado y solo podrá ser cancelado mediante anulación formal.',
+              '¿Estás seguro de que deseas finalizar este reporte? Los productos y repuestos propios consumidos se descontarán permanentemente del inventario físico. Una vez finalizado, el reporte quedará cerrado y solo podrá ser cancelado posteriormente.',
           actions: [
             Builder(
               builder: (c) => TextButton(
@@ -347,7 +372,7 @@ class ReportSelectionActions {
             Builder(
               builder: (c) => FilledButton(
                 onPressed: () => Navigator.of(c).pop(true),
-                child: const Text('Confirmar y Finalizar'),
+                child: const Text('Finalizar'),
               ),
             ),
           ],
@@ -365,9 +390,9 @@ class ReportSelectionActions {
         dialog: CustomDialog.confirmation(
           icon: Icons.warning_amber_rounded,
           iconColor: Colors.amber.shade800,
-          title: 'Anular Reporte Finalizado',
+          title: 'Cancelar Reporte Finalizado',
           contentText:
-              '¿Estás seguro de que deseas anular este reporte finalizado? Esta acción registrará la anulación formal del informe de servicio técnico.',
+              '¿Estás seguro de que deseas cancelar este reporte finalizado? Esta acción registrará la cancelación del reporte de servicio y repondrá los productos utilizados al stock disponible de inventario.',
           actions: [
             Builder(
               builder: (c) => TextButton(
@@ -381,7 +406,7 @@ class ReportSelectionActions {
                   backgroundColor: Theme.of(c).colorScheme.error,
                 ),
                 onPressed: () => Navigator.of(c).pop(true),
-                child: const Text('Confirmar Anulación'),
+                child: const Text('Confirmar Cancelación'),
               ),
             ),
           ],
@@ -504,10 +529,7 @@ class ReportSelectionActions {
 
     void onProceedSend(ServiceReportSummary targetReport) {
       ref.read(reportSelectionProvider.notifier).clear();
-      context.push(
-        '/reports/${targetReport.id}',
-        extra: {'triggerSend': true},
-      );
+      context.push('/reports/${targetReport.id}', extra: {'triggerSend': true});
     }
 
     if (isSameDate) {
@@ -560,10 +582,7 @@ class ReportSelectionActions {
         onProceedSend(report);
       } catch (e) {
         if (context.mounted) {
-          AppToast.error(
-            context,
-            message: 'Error al actualizar fecha: $e',
-          );
+          AppToast.error(context, message: 'Error al actualizar fecha: $e');
         }
       }
     } else if (action == 'modify') {

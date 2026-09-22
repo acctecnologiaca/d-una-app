@@ -125,6 +125,11 @@ PaginatedListView<Entity>(
    - **Insignia [`UomStatusBadge`](file:///c:/Users/aleja/flutter_apps/MVP/d_una_app/lib/shared/widgets/uom_status_badge.dart):**
      - Muestra `quantity: widget.selectedQty > 0 ? widget.selectedQty : (isReservedByOthers ? physicalStock : effectiveAvailable)`.
      - Configura `maxStock: widget.selectedQty > 0 ? effectiveAvailable : null`.
+7. **Estándar de Padding y SafeArea en Pantallas Selectoras sin FAB:**
+   - En pantallas de selección directa o listados de sugerencias donde no se requiere un `CustomExtendedFab` inferior de confirmación (porque la acción se desencadena con el toque directo sobre la tarjeta, como [`SelectProductScreen`](file:///c:/Users/aleja/flutter_apps/MVP/d_una_app/lib/features/quotes/presentation/create_quote/screens/select_product_screen.dart) o [`SelectSupplierOrderProductScreen`](file:///c:/Users/aleja/flutter_apps/MVP/d_una_app/lib/features/supplier_orders/presentation/create_supplier_order/screens/select_supplier_order_product_screen.dart)):
+     - **Envoltorio Obligatorio de `SafeArea`:** El cuerpo del `Scaffold` **DEBE** envolverse siempre en `SafeArea(child: Column(...))` para aislar el contenido de la barra de navegación gestual del sistema.
+     - **Padding Inferior Canónico de Respiro:** El `ListView` o `ListView.separated` **DEBE** usar `padding: const EdgeInsets.fromLTRB(16, 8, 16, 40)`.
+     - **Prohibición Estricta:** Queda **terminantemente prohibido** utilizar `padding: const EdgeInsets.symmetric(horizontal: 16)` con padding vertical en cero, ya que deja la última tarjeta rozando el borde físico de la pantalla.
 
 ### E. 📐 Regla Canónica para Barras de Botones Fijas Inferiores y Hojas Modales
 

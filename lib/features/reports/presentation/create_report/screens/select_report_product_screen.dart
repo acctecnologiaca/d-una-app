@@ -93,14 +93,27 @@ class _SelectReportProductScreenState
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
             child: OutlinedButton(
-              onPressed: () async {
-                final result = await context.push<ServiceReportItemProduct>(
-                  '/reports/create/select-product/temporal',
-                );
-                if (result != null && context.mounted) {
-                  ref.read(createReportProvider.notifier).addProduct(result);
-                  context.pop(true);
-                }
+              onPressed: () {
+                context
+                    .push<ServiceReportItemProduct>(
+                      '/reports/create/select-product/temporal',
+                    )
+                    .then((result) {
+                      if (result != null && context.mounted) {
+                        // Garantizar que el ítem esté en el provider
+                        final alreadyAdded = ref
+                            .read(createReportProvider)
+                            .products
+                            .any((p) => p.id == result.id);
+                        if (!alreadyAdded) {
+                          ref
+                              .read(createReportProvider.notifier)
+                              .addProduct(result);
+                        }
+                        // Cierra la pantalla de selección y vuelve a la pestaña de productos
+                        context.pop(true);
+                      }
+                    });
               },
               style: OutlinedButton.styleFrom(
                 padding: const EdgeInsets.symmetric(vertical: 12),

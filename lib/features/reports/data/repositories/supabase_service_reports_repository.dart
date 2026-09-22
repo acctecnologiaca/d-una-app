@@ -570,7 +570,7 @@ class SupabaseServiceReportsRepository implements ServiceReportsRepository {
       }
       if (currentStatus == 'finalized' && status != 'cancelled') {
         throw Exception(
-          'Un reporte de servicio finalizado solo puede anularse (pasar a cancelado).',
+          'Un reporte de servicio finalizado solo puede cancelarse.',
         );
       }
     }

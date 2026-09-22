@@ -170,17 +170,21 @@ class _SendReportWhatsAppSheetState
             documentNumber: widget.report.reportNumber,
           );
 
-      // 5. Actualizar estado del reporte
-      final currentStatus = widget.report.status;
-      final newStatus =
-          (currentStatus == ServiceReportStatus.sent.dbValue ||
-              currentStatus == ServiceReportStatus.resent.dbValue)
-          ? ServiceReportStatus.resent.dbValue
-          : ServiceReportStatus.sent.dbValue;
+      // 5. Actualizar estado del reporte si no está finalizado
+      final isFinalized =
+          widget.report.status == ServiceReportStatus.finalized.dbValue;
+      if (!isFinalized) {
+        final currentStatus = widget.report.status;
+        final newStatus =
+            (currentStatus == ServiceReportStatus.sent.dbValue ||
+                currentStatus == ServiceReportStatus.resent.dbValue)
+            ? ServiceReportStatus.resent.dbValue
+            : ServiceReportStatus.sent.dbValue;
 
-      await ref
-          .read(serviceReportsRepositoryProvider)
-          .updateReportStatus(widget.report.id, newStatus);
+        await ref
+            .read(serviceReportsRepositoryProvider)
+            .updateReportStatus(widget.report.id, newStatus);
+      }
 
       ref.invalidate(viewReportProvider(widget.report.id));
       refreshAllReportProviders(ref);
@@ -194,8 +198,9 @@ class _SendReportWhatsAppSheetState
       if (mounted) {
         AppToast.success(
           context,
-          message:
-              'Reporte enviado por WhatsApp exitosamente (créditos restantes: ${freshCreditStatus.remainingCredits})',
+          message: isFinalized
+              ? 'Copia de reporte enviada por WhatsApp exitosamente (créditos restantes: ${freshCreditStatus.remainingCredits})'
+              : 'Reporte enviado por WhatsApp exitosamente (créditos restantes: ${freshCreditStatus.remainingCredits})',
         );
         Navigator.of(context).pop();
       }
@@ -241,8 +246,13 @@ class _SendReportWhatsAppSheetState
     final remainingCredits = creditsAsync.valueOrNull?.remainingCredits ?? 0;
     final isZeroCredits = remainingCredits <= 0;
 
+    final isFinalized =
+        widget.report.status == ServiceReportStatus.finalized.dbValue;
+
     return CustomActionSheet(
-      title: 'Enviar por WhatsApp',
+      title: isFinalized
+          ? 'Enviar copia por WhatsApp'
+          : 'Enviar por WhatsApp',
       isContentScrollable: true,
       showDivider: false,
       content: Column(

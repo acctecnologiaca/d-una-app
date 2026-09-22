@@ -1,4 +1,5 @@
 import 'package:d_una_app/features/quotes/presentation/quotes_list/providers/quotes_provider.dart';
+import 'package:d_una_app/features/supplier_orders/domain/models/quote_supplier_oc_status.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../collaborators/presentation/providers/collaborators_providers.dart';
 import '../../../../portfolio/presentation/providers/lookup_providers.dart';
@@ -35,23 +36,26 @@ final viewQuoteProvider = StateNotifierProvider.autoDispose
 
 final linkedSupplierOrdersProvider = FutureProvider.autoDispose
     .family<List<SupplierOrder>, String>((ref, quoteId) async {
-  final repo = ref.watch(supplierOrdersRepositoryProvider);
-  return repo.getSupplierOrdersByQuoteId(quoteId);
-});
+      final repo = ref.watch(supplierOrdersRepositoryProvider);
+      return repo.getSupplierOrdersByQuoteId(quoteId);
+    });
 
 final linkedDeliveryNotesProvider = FutureProvider.autoDispose
     .family<List<DeliveryNoteModel>, String>((ref, quoteId) async {
-  if (quoteId.trim().isEmpty) return [];
-  final repo = ref.watch(deliveryNotesRepositoryProvider);
-  return repo.getDeliveryNotesByQuoteId(quoteId);
-});
+      if (quoteId.trim().isEmpty) return [];
+      final repo = ref.watch(deliveryNotesRepositoryProvider);
+      return repo.getDeliveryNotesByQuoteId(quoteId);
+    });
 
-final quoteActiveFabsCountProvider = Provider.autoDispose
-    .family<int, String>((ref, quoteId) {
+final quoteActiveFabsCountProvider = Provider.autoDispose.family<int, String>((
+  ref,
+  quoteId,
+) {
   final quote = ref.watch(viewQuoteProvider(quoteId)).quote;
   if (quote == null) return 0;
   final currentStatus = quote.status;
-  final showWhatsAppFab = currentStatus == QuoteStatus.sent.dbValue ||
+  final showWhatsAppFab =
+      currentStatus == QuoteStatus.sent.dbValue ||
       currentStatus == QuoteStatus.resent.dbValue ||
       currentStatus == QuoteStatus.inReview.dbValue ||
       currentStatus == QuoteStatus.opened.dbValue ||
@@ -59,3 +63,10 @@ final quoteActiveFabsCountProvider = Provider.autoDispose
   final canEdit = currentStatus != QuoteStatus.finalized.dbValue;
   return (showWhatsAppFab ? 1 : 0) + (canEdit ? 1 : 0);
 });
+
+/// Provider reactivo para el estado de OCs por proveedor de una cotización.
+final quoteSuppliersOcStatusProvider = FutureProvider.autoDispose
+    .family<List<QuoteSupplierOcStatus>, String>((ref, quoteId) async {
+      final repo = ref.watch(supplierOrdersRepositoryProvider);
+      return repo.getQuoteSuppliersOcStatus(quoteId);
+    });

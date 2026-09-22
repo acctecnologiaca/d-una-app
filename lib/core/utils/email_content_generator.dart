@@ -58,8 +58,6 @@ class EmailContentGenerator {
     switch (type) {
       case 'quote':
         return 'Cotización #{{numero}} - {{categoria}}';
-      case 'order':
-        return 'Pedido #{{numero}}';
       case 'report':
         return 'Reporte de {{categoria}}';
       case 'delivery_note':

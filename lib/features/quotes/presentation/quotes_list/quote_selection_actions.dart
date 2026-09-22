@@ -168,8 +168,8 @@ class QuoteSelectionActions {
           enabled: !isStatusChangeDisabled,
           subtitle: isStatusChangeDisabled
               ? (isFinalized
-                  ? 'Cotización finalizada. No se puede cambiar de estado'
-                  : 'Cotización cancelada. No se puede cambiar de estado')
+                    ? 'Cotización finalizada. No se puede cambiar de estado'
+                    : 'Cotización cancelada. No se puede cambiar de estado')
               : null,
           onTap: () {
             context.pop();
@@ -178,6 +178,7 @@ class QuoteSelectionActions {
               ref,
               selection,
               currentStatus: quote.status,
+              selectedQuotes: [quote],
             );
           },
         ),
@@ -357,11 +358,14 @@ class QuoteSelectionActions {
             try {
               // Monetization guardrail check:
               final ocRepo = ref.read(supplierOrdersRepositoryProvider);
-              final supplierStatuses =
-                  await ocRepo.getQuoteSuppliersOcStatus(quote.id);
+              final supplierStatuses = await ocRepo.getQuoteSuppliersOcStatus(
+                quote.id,
+              );
 
               if (supplierStatuses.isNotEmpty) {
-                final orders = await ocRepo.getSupplierOrdersByQuoteId(quote.id);
+                final orders = await ocRepo.getSupplierOrdersByQuoteId(
+                  quote.id,
+                );
                 final approvedSupplierIds = orders
                     .where(
                       (o) =>
@@ -385,10 +389,8 @@ class QuoteSelectionActions {
                           'Esta cotización contiene productos de proveedores afiliados (${pendingSuppliers.map((s) => s.supplierName).join(', ')}) que no cuentan con una Orden de Compra aprobada o finalizada en la plataforma.\n\nPara garantizar el despacho formal y la correcta trazabilidad, debe emitir y aprobar la Orden de Compra antes de generar la Nota de Entrega.',
                       actions: [
                         TextButton(
-                          onPressed: () => Navigator.of(
-                            context,
-                            rootNavigator: true,
-                          ).pop(),
+                          onPressed: () =>
+                              Navigator.of(context, rootNavigator: true).pop(),
                           child: const Text('Entendido'),
                         ),
                       ],
@@ -466,7 +468,12 @@ class QuoteSelectionActions {
           label: 'Cambiar estatus',
           onTap: () {
             context.pop();
-            handleBatchStatusChange(context, ref, selection);
+            handleBatchStatusChange(
+              context,
+              ref,
+              selection,
+              selectedQuotes: selectedQuotes,
+            );
           },
         ),
         const Divider(height: 1, indent: 16, endIndent: 16),
@@ -492,6 +499,7 @@ class QuoteSelectionActions {
   static Future<QuoteStatus?> showStatusDialog(
     BuildContext context, [
     QuoteStatus? currentStatus,
+    bool isBatch = false,
   ]) async {
     final colors = Theme.of(context).colorScheme;
     final selectedStatus = await CustomDialog.show<QuoteStatus>(
@@ -504,28 +512,58 @@ class QuoteSelectionActions {
             return Column(
               mainAxisSize: MainAxisSize.min,
               children: QuoteStatus.values
-                  .where((status) =>
-                      status != QuoteStatus.draft &&
-                      status != QuoteStatus.expired &&
-                      status != QuoteStatus.opened &&
-                      status != QuoteStatus.resent)
+                  .where(
+                    (status) =>
+                        status != QuoteStatus.draft &&
+                        status != QuoteStatus.expired &&
+                        status != QuoteStatus.opened &&
+                        status != QuoteStatus.resent,
+                  )
                   .map((status) {
                     final isSelected =
                         currentStatus != null && status == currentStatus;
+                    final isFinalizedDisabled =
+                        currentStatus == QuoteStatus.rejected &&
+                        status == QuoteStatus.finalized;
+
+                    final textColor = isFinalizedDisabled
+                        ? colors.onSurfaceVariant.withValues(alpha: 0.4)
+                        : (isSelected ? colors.primary : colors.onSurface);
+
                     return ListTile(
-                      leading: Image.asset(status.iconPath, width: 24, height: 24),
+                      leading: Opacity(
+                        opacity: isFinalizedDisabled ? 0.4 : 1.0,
+                        child: Image.asset(
+                          status.iconPath,
+                          width: 24,
+                          height: 24,
+                        ),
+                      ),
                       title: Text(
                         status.label,
                         style: TextStyle(
-                          fontWeight:
-                              isSelected ? FontWeight.bold : FontWeight.normal,
-                          color: isSelected ? colors.primary : colors.onSurface,
+                          fontWeight: isSelected
+                              ? FontWeight.bold
+                              : FontWeight.normal,
+                          color: textColor,
                         ),
                       ),
+                      subtitle: isFinalizedDisabled
+                          ? Text(
+                              'No se puede finalizar una cotización rechazada',
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: colors.error.withValues(alpha: 0.8),
+                              ),
+                            )
+                          : null,
                       trailing: isSelected
                           ? Icon(Icons.check, color: colors.primary, size: 20)
                           : null,
-                      onTap: () => Navigator.of(dialogContext).pop(status),
+                      enabled: !isFinalizedDisabled,
+                      onTap: isFinalizedDisabled
+                          ? null
+                          : () => Navigator.of(dialogContext).pop(status),
                     );
                   })
                   .toList(),
@@ -545,34 +583,68 @@ class QuoteSelectionActions {
 
     if (selectedStatus == null) return null;
 
-    if (selectedStatus == QuoteStatus.finalized) {
-      if (!context.mounted) return null;
-      final confirmFinalize = await CustomDialog.show<bool>(
-        context: context,
-        dialog: CustomDialog.confirmation(
-          icon: Icons.warning_amber_rounded,
-          iconColor: Colors.amber.shade800,
-          title: 'Finalizar Cotización',
-          contentText:
-              '¿Estás seguro de que deseas finalizar esta cotización? Una vez finalizada, la cotización quedará cerrada permanentemente y no se podrá editar, enviar ni cambiar de estado.',
-          actions: [
-            Builder(
-              builder: (c) => TextButton(
-                onPressed: () => Navigator.of(c).pop(false),
-                child: const Text('Cancelar'),
+    if (!isBatch) {
+      if (currentStatus == QuoteStatus.rejected &&
+          (selectedStatus == QuoteStatus.approved ||
+              selectedStatus == QuoteStatus.inReview)) {
+        if (!context.mounted) return null;
+        final confirmReactivate = await CustomDialog.show<bool>(
+          context: context,
+          dialog: CustomDialog.confirmation(
+            icon: Icons.warning_amber_rounded,
+            iconColor: Colors.amber.shade800,
+            title: 'Reactivar Cotización Rechazada',
+            contentText:
+                'Esta cotización fue previamente rechazada por el cliente. ¿Estás seguro de que deseas reactivarla y cambiar su estatus a "${selectedStatus.label}"?',
+            actions: [
+              Builder(
+                builder: (c) => TextButton(
+                  onPressed: () => Navigator.of(c).pop(false),
+                  child: const Text('Cancelar'),
+                ),
               ),
-            ),
-            Builder(
-              builder: (c) => FilledButton(
-                onPressed: () => Navigator.of(c).pop(true),
-                child: const Text('Confirmar y Finalizar'),
+              Builder(
+                builder: (c) => FilledButton(
+                  onPressed: () => Navigator.of(c).pop(true),
+                  child: const Text('Reactivar'),
+                ),
               ),
-            ),
-          ],
-        ),
-      );
+            ],
+          ),
+        );
 
-      if (confirmFinalize != true) return null;
+        if (confirmReactivate != true) return null;
+      }
+
+      if (selectedStatus == QuoteStatus.finalized) {
+        if (!context.mounted) return null;
+        final confirmFinalize = await CustomDialog.show<bool>(
+          context: context,
+          dialog: CustomDialog.confirmation(
+            icon: Icons.warning_amber_rounded,
+            iconColor: Colors.amber.shade800,
+            title: 'Finalizar Cotización',
+            contentText:
+                '¿Estás seguro de que deseas finalizar esta cotización? Una vez finalizada, la cotización quedará cerrada permanentemente y no se podrá editar, enviar ni cambiar de estado.',
+            actions: [
+              Builder(
+                builder: (c) => TextButton(
+                  onPressed: () => Navigator.of(c).pop(false),
+                  child: const Text('Cancelar'),
+                ),
+              ),
+              Builder(
+                builder: (c) => FilledButton(
+                  onPressed: () => Navigator.of(c).pop(true),
+                  child: const Text('Finalizar'),
+                ),
+              ),
+            ],
+          ),
+        );
+
+        if (confirmFinalize != true) return null;
+      }
     }
 
     return selectedStatus;
@@ -583,16 +655,158 @@ class QuoteSelectionActions {
     WidgetRef ref,
     QuoteSelectionState selection, {
     QuoteStatus? currentStatus,
+    List<Quote>? selectedQuotes,
   }) async {
-    final selectedStatus = await showStatusDialog(context, currentStatus);
+    QuoteStatus? effectiveCurrentStatus = currentStatus;
+    if (effectiveCurrentStatus == null &&
+        selectedQuotes != null &&
+        selectedQuotes.isNotEmpty) {
+      if (selectedQuotes.every((q) => q.status == QuoteStatus.rejected)) {
+        effectiveCurrentStatus = QuoteStatus.rejected;
+      } else if (selectedQuotes.every(
+        (q) => q.status == selectedQuotes.first.status,
+      )) {
+        effectiveCurrentStatus = selectedQuotes.first.status;
+      }
+    }
+
+    final selectedStatus = await showStatusDialog(
+      context,
+      effectiveCurrentStatus,
+      true,
+    );
     if (!context.mounted || selectedStatus == null) return;
+
+    List<String>? targetIds;
+
+    // Regla 1: Si se elige Finalizada, bloquear o advertir omisión de rechazadas
+    if (selectedStatus == QuoteStatus.finalized) {
+      final rejectedQuotes =
+          selectedQuotes
+              ?.where((q) => q.status == QuoteStatus.rejected)
+              .toList() ??
+          [];
+      if (rejectedQuotes.isNotEmpty) {
+        if (selectedQuotes != null &&
+            rejectedQuotes.length == selectedQuotes.length) {
+          AppToast.warning(
+            context,
+            message: 'No se pueden finalizar cotizaciones rechazadas.',
+          );
+          return;
+        }
+
+        // Selección mixta: advertir que las cotizaciones rechazadas serán omitidas
+        if (!context.mounted) return;
+        final confirm = await CustomDialog.show<bool>(
+          context: context,
+          dialog: CustomDialog.confirmation(
+            icon: Icons.warning_amber_rounded,
+            iconColor: Colors.amber.shade800,
+            title: 'Cotizaciones Rechazadas Omitidas',
+            contentText:
+                '${rejectedQuotes.length} de las cotizaciones seleccionadas están rechazadas y no pueden ser finalizadas.\n\n¿Deseas continuar finalizando únicamente las ${selectedQuotes!.length - rejectedQuotes.length} cotizaciones restantes?',
+            actions: [
+              Builder(
+                builder: (c) => TextButton(
+                  onPressed: () => Navigator.of(c).pop(false),
+                  child: const Text('Cancelar'),
+                ),
+              ),
+              Builder(
+                builder: (c) => FilledButton(
+                  onPressed: () => Navigator.of(c).pop(true),
+                  child: const Text('Continuar'),
+                ),
+              ),
+            ],
+          ),
+        );
+        if (confirm != true) return;
+
+        targetIds = selectedQuotes
+            .where((q) => q.status != QuoteStatus.rejected)
+            .map((q) => q.id)
+            .toList();
+      } else {
+        // No hay rechazadas en el lote: confirmar finalización del lote
+        if (!context.mounted) return;
+        final count = selectedQuotes?.length ?? selection.count;
+        final confirm = await CustomDialog.show<bool>(
+          context: context,
+          dialog: CustomDialog.confirmation(
+            icon: Icons.warning_amber_rounded,
+            iconColor: Colors.amber.shade800,
+            title: count > 1
+                ? 'Finalizar Cotizaciones'
+                : 'Finalizar Cotización',
+            contentText: count > 1
+                ? '¿Estás seguro de que deseas finalizar las $count cotizaciones seleccionadas? Una vez finalizadas, quedarán cerradas permanentemente y no se podrán editar, enviar ni cambiar de estado.'
+                : '¿Estás seguro de que deseas finalizar esta cotización? Una vez finalizada, la cotización quedará cerrada permanentemente y no se podrá editar, enviar ni cambiar de estado.',
+            actions: [
+              Builder(
+                builder: (c) => TextButton(
+                  onPressed: () => Navigator.of(c).pop(false),
+                  child: const Text('Cancelar'),
+                ),
+              ),
+              Builder(
+                builder: (c) => FilledButton(
+                  onPressed: () => Navigator.of(c).pop(true),
+                  child: const Text('Finalizar'),
+                ),
+              ),
+            ],
+          ),
+        );
+        if (confirm != true) return;
+      }
+    }
+
+    // Regla 2: Si se reactiva en lote pasando a Aprobada o En Revisión, advertir si hay rechazadas
+    if ((selectedStatus == QuoteStatus.approved ||
+            selectedStatus == QuoteStatus.inReview) &&
+        selectedQuotes != null &&
+        selectedQuotes.length > 1) {
+      final rejectedQuotes = selectedQuotes
+          .where((q) => q.status == QuoteStatus.rejected)
+          .toList();
+      if (rejectedQuotes.isNotEmpty) {
+        if (!context.mounted) return;
+        final confirmReactivateBatch = await CustomDialog.show<bool>(
+          context: context,
+          dialog: CustomDialog.confirmation(
+            icon: Icons.warning_amber_rounded,
+            iconColor: Colors.amber.shade800,
+            title: 'Reactivar Cotizaciones Rechazadas',
+            contentText:
+                'La selección incluye ${rejectedQuotes.length} cotización(es) previamente rechazada(s). ¿Estás seguro de que deseas reactivarlas y cambiar su estatus a "${selectedStatus.label}"?',
+            actions: [
+              Builder(
+                builder: (c) => TextButton(
+                  onPressed: () => Navigator.of(c).pop(false),
+                  child: const Text('Cancelar'),
+                ),
+              ),
+              Builder(
+                builder: (c) => FilledButton(
+                  onPressed: () => Navigator.of(c).pop(true),
+                  child: const Text('Reactivar'),
+                ),
+              ),
+            ],
+          ),
+        );
+        if (confirmReactivateBatch != true) return;
+      }
+    }
+
+    final idsToUpdate = targetIds ?? selection.selectedIds.toList();
+    if (idsToUpdate.isEmpty) return;
 
     final result = await ref
         .read(quotesListProvider.notifier)
-        .batchUpdateStatus(
-          selection.selectedIds.toList(),
-          selectedStatus.dbValue,
-        );
+        .batchUpdateStatus(idsToUpdate, selectedStatus.dbValue);
 
     ref.read(quoteSelectionProvider.notifier).clearSelection();
     refreshAllQuoteProviders(ref);
@@ -624,8 +838,7 @@ class QuoteSelectionActions {
           contentText: contentText,
           actions: [
             TextButton(
-              onPressed: () =>
-                  Navigator.of(context, rootNavigator: true).pop(),
+              onPressed: () => Navigator.of(context, rootNavigator: true).pop(),
               child: const Text('Entendido'),
             ),
           ],
@@ -740,10 +953,7 @@ class QuoteSelectionActions {
         onProceedSend(updatedQuote);
       } catch (e) {
         if (context.mounted) {
-          AppToast.error(
-            context,
-            message: 'Error al actualizar fecha: $e',
-          );
+          AppToast.error(context, message: 'Error al actualizar fecha: $e');
         }
       }
     } else if (action == 'modify') {

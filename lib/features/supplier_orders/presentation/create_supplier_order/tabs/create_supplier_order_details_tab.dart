@@ -64,8 +64,9 @@ class _CreateSupplierOrderDetailsTabState
           digits.length > 2 &&
           digits.substring(2).startsWith(code.substring(1))) {
         _selectedPhoneCode = code;
-        _recipientPhoneNumberController.text =
-            digits.substring(2 + code.length - 1);
+        _recipientPhoneNumberController.text = digits.substring(
+          2 + code.length - 1,
+        );
         return;
       }
     }
@@ -91,14 +92,17 @@ class _CreateSupplierOrderDetailsTabState
   void initState() {
     super.initState();
     final initial = ref.read(createSupplierOrderProvider);
-    _recipientAddressController =
-        TextEditingController(text: initial.recipientAddress ?? '');
-    _recipientContactNameController =
-        TextEditingController(text: initial.recipientContactName ?? '');
+    _recipientAddressController = TextEditingController(
+      text: initial.recipientAddress ?? '',
+    );
+    _recipientContactNameController = TextEditingController(
+      text: initial.recipientContactName ?? '',
+    );
     _recipientPhoneNumberController = TextEditingController();
     _initPhone(initial.recipientPhone);
-    _deliveryInstructionsController =
-        TextEditingController(text: initial.deliveryInstructions ?? '');
+    _deliveryInstructionsController = TextEditingController(
+      text: initial.deliveryInstructions ?? '',
+    );
   }
 
   @override
@@ -174,14 +178,12 @@ class _CreateSupplierOrderDetailsTabState
       if (next.recipientContactName != prev?.recipientContactName &&
           _recipientContactNameController.text !=
               (next.recipientContactName ?? '')) {
-        _recipientContactNameController.text =
-            next.recipientContactName ?? '';
+        _recipientContactNameController.text = next.recipientContactName ?? '';
       }
       if (next.recipientPhone != prev?.recipientPhone) {
-        final currentCombined =
-            _recipientPhoneNumberController.text.isNotEmpty
-                ? '$_selectedPhoneCode${_recipientPhoneNumberController.text.trim()}'
-                : '';
+        final currentCombined = _recipientPhoneNumberController.text.isNotEmpty
+            ? '$_selectedPhoneCode${_recipientPhoneNumberController.text.trim()}'
+            : '';
         if (currentCombined != (next.recipientPhone ?? '')) {
           _initPhone(next.recipientPhone);
         }
@@ -189,8 +191,7 @@ class _CreateSupplierOrderDetailsTabState
       if (next.deliveryInstructions != prev?.deliveryInstructions &&
           _deliveryInstructionsController.text !=
               (next.deliveryInstructions ?? '')) {
-        _deliveryInstructionsController.text =
-            next.deliveryInstructions ?? '';
+        _deliveryInstructionsController.text = next.deliveryInstructions ?? '';
       }
     });
 
@@ -203,7 +204,9 @@ class _CreateSupplierOrderDetailsTabState
             Container(
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
-                color: theme.colorScheme.primaryContainer.withValues(alpha: 0.3),
+                color: theme.colorScheme.primaryContainer.withValues(
+                  alpha: 0.3,
+                ),
                 borderRadius: BorderRadius.circular(8),
                 border: Border.all(
                   color: theme.colorScheme.primary.withValues(alpha: 0.5),
@@ -400,12 +403,12 @@ class _CreateSupplierOrderDetailsTabState
               segments: const [
                 ButtonSegment<bool>(
                   value: false,
-                  label: Text('Inventario propio'),
-                  icon: Icon(Icons.warehouse_outlined),
+                  label: Text('Recepción propia'),
+                  icon: Icon(Icons.shelves),
                 ),
                 ButtonSegment<bool>(
                   value: true,
-                  label: Text('Dropshipping'),
+                  label: Text('Envío al cliente'),
                   icon: Icon(Icons.local_shipping_outlined),
                 ),
               ],
@@ -499,7 +502,8 @@ class _CreateSupplierOrderDetailsTabState
                   }
                 }
 
-                final selectedCollaborator = state.receiverCollaboratorId != null
+                final selectedCollaborator =
+                    state.receiverCollaboratorId != null
                     ? collaborators
                           .where((c) => c.id == state.receiverCollaboratorId)
                           .firstOrNull
@@ -532,7 +536,9 @@ class _CreateSupplierOrderDetailsTabState
             Container(
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
-                color: theme.colorScheme.primaryContainer.withValues(alpha: 0.3),
+                color: theme.colorScheme.primaryContainer.withValues(
+                  alpha: 0.3,
+                ),
                 borderRadius: BorderRadius.circular(12),
                 border: Border.all(
                   color: theme.colorScheme.primary.withValues(alpha: 0.3),
@@ -583,9 +589,9 @@ class _CreateSupplierOrderDetailsTabState
                           final isComp = client.type == 'company';
                           final primaryContact = isComp
                               ? (client.contacts
-                                      .where((c) => c.isPrimary)
-                                      .firstOrNull ??
-                                  client.contacts.firstOrNull)
+                                        .where((c) => c.isPrimary)
+                                        .firstOrNull ??
+                                    client.contacts.firstOrNull)
                               : null;
                           final contactName = primaryContact?.name;
                           final phone = primaryContact?.phone ?? client.phone;
@@ -631,18 +637,14 @@ class _CreateSupplierOrderDetailsTabState
                       CustomDropdown<Contact>(
                         label: 'Seleccionar contacto de la empresa',
                         value: companyContacts
-                            .where(
-                              (c) =>
-                                  c.name == state.recipientContactName,
-                            )
+                            .where((c) => c.name == state.recipientContactName)
                             .firstOrNull,
                         items: companyContacts,
                         itemLabelBuilder: (c) =>
                             '${c.name}${c.role != null && c.role!.isNotEmpty ? " (${c.role})" : ""}',
                         onChanged: (contact) {
                           if (contact != null) {
-                            _recipientContactNameController.text =
-                                contact.name;
+                            _recipientContactNameController.text = contact.name;
                             ref
                                 .read(createSupplierOrderProvider.notifier)
                                 .setRecipientContactName(contact.name);
@@ -662,8 +664,7 @@ class _CreateSupplierOrderDetailsTabState
                       CustomTextField(
                         controller: _recipientContactNameController,
                         label: 'Contacto principal',
-                        hintText:
-                            'Persona que recibe en la empresa',
+                        hintText: 'Persona que recibe en la empresa',
                         onChanged: (val) {
                           ref
                               .read(createSupplierOrderProvider.notifier)
@@ -757,8 +758,8 @@ class _CreateSupplierOrderDetailsTabState
               if (state.paymentMethod == null && methods.isNotEmpty) {
                 final defaultMethod =
                     methods.contains('Transferencia bancaria en bolívares')
-                        ? 'Transferencia bancaria en bolívares'
-                        : methods.first;
+                    ? 'Transferencia bancaria en bolívares'
+                    : methods.first;
                 WidgetsBinding.instance.addPostFrameCallback((_) {
                   ref
                       .read(createSupplierOrderProvider.notifier)

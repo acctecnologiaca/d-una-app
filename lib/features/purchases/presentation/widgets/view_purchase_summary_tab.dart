@@ -28,9 +28,13 @@ class ViewPurchaseSummaryTab extends ConsumerWidget {
     final isInitialInventory = purchase.documentType == 'initial_inventory';
 
     final subtotal = purchase.subtotal;
-    // Assuming tax is calculated in purchase object or we can compute it from total - subtotal
-    final taxAmount = purchase.tax;
-    final finalTotal = purchase.total;
+    // Si tax viene en 0 pero total es igual a subtotal, calcular IVA referencial (16%)
+    final taxAmount = purchase.tax > 0
+        ? purchase.tax
+        : (purchase.total == purchase.subtotal && subtotal > 0 ? subtotal * 0.16 : 0.0);
+    final finalTotal = purchase.tax > 0
+        ? purchase.total
+        : (purchase.total == purchase.subtotal && subtotal > 0 ? subtotal + taxAmount : purchase.total);
     final taxRate = subtotal > 0 ? (taxAmount / subtotal) * 100 : 0.0;
 
     // Display products (max 3)

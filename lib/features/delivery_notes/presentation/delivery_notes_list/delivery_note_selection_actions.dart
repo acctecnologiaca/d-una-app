@@ -378,7 +378,6 @@ class DeliveryNoteSelectionActions {
     final isCurrentFinalized = currentStatus == DeliveryNoteStatus.finalized;
 
     final allowedStatuses = [
-      DeliveryNoteStatus.draft,
       DeliveryNoteStatus.sent,
       DeliveryNoteStatus.finalized,
       DeliveryNoteStatus.cancelled,
@@ -398,9 +397,8 @@ class DeliveryNoteSelectionActions {
                     currentStatus != null && status == currentStatus;
                 final isFinalizedDisabled =
                     status == DeliveryNoteStatus.finalized && hasMissingSerials;
-                final isReversionDisabled = isCurrentFinalized &&
-                    (status == DeliveryNoteStatus.draft ||
-                        status == DeliveryNoteStatus.sent);
+                final isReversionDisabled =
+                    isCurrentFinalized && status == DeliveryNoteStatus.sent;
                 final isDisabled = isFinalizedDisabled || isReversionDisabled;
 
                 final textColor = isDisabled
@@ -408,16 +406,30 @@ class DeliveryNoteSelectionActions {
                     : (isSelected ? colors.primary : colors.onSurface);
 
                 String? subtitle;
+                Color? subtitleColor;
+
                 if (isFinalizedDisabled) {
                   subtitle = 'Faltan seriales por asignar';
-                } else if (isCurrentFinalized &&
-                    status == DeliveryNoteStatus.cancelled) {
-                  subtitle = 'Reversar entrega e inventario';
+                  subtitleColor = colors.error.withValues(alpha: 0.8);
+                } else if (isCurrentFinalized) {
+                  if (status == DeliveryNoteStatus.sent) {
+                    subtitle = 'Al enviarse no cambia de estatus';
+                    subtitleColor = colors.outline;
+                  } else if (status == DeliveryNoteStatus.finalized) {
+                    subtitle = 'Estatus actual';
+                    subtitleColor = colors.primary.withValues(alpha: 0.8);
+                  } else if (status == DeliveryNoteStatus.cancelled) {
+                    subtitle = 'Cancelar entrega y reponer inventario';
+                    subtitleColor = colors.primary;
+                  }
+                } else if (isSelected) {
+                  subtitle = 'Estatus actual';
+                  subtitleColor = colors.primary.withValues(alpha: 0.8);
                 }
 
                 return ListTile(
                   leading: Opacity(
-                    opacity: isDisabled ? 0.4 : 1.0,
+                    opacity: (isDisabled && !isSelected) ? 0.4 : 1.0,
                     child: Image.asset(status.iconPath, width: 24, height: 24),
                   ),
                   title: Text(
@@ -433,16 +445,17 @@ class DeliveryNoteSelectionActions {
                           subtitle,
                           style: TextStyle(
                             fontSize: 12,
-                            color: isFinalizedDisabled
-                                ? colors.error.withValues(alpha: 0.8)
-                                : colors.primary,
+                            color: subtitleColor ??
+                                (isSelected
+                                    ? colors.primary.withValues(alpha: 0.8)
+                                    : colors.outline),
                           ),
                         )
                       : null,
                   trailing: isSelected
                       ? Icon(Icons.check, color: colors.primary, size: 20)
                       : null,
-                  enabled: !isDisabled,
+                  enabled: !isDisabled || isSelected,
                   onTap: isDisabled
                       ? null
                       : () async {
@@ -478,22 +491,27 @@ class DeliveryNoteSelectionActions {
                             final confirm = await CustomDialog.show<bool>(
                               context: dialogContext,
                               dialog: CustomDialog.destructive(
-                                title: 'Reversar entrega e inventario',
+                                title: 'Cancelar Entrega e Inventario',
                                 contentText:
-                                    'Al cancelar esta nota finalizada se restituirá el inventario y los seriales a stock disponible. ¿Deseas reversar la entrega?',
+                                    'Al cancelar esta nota finalizada se repondrá el inventario y los seriales a stock disponible. ¿Deseas cancelar la entrega?',
                                 actions: [
                                   Builder(
                                     builder: (c) => TextButton(
                                       onPressed: () =>
                                           Navigator.of(c).pop(false),
-                                      child: const Text('Cancelar'),
+                                      child: const Text('Volver'),
                                     ),
                                   ),
                                   Builder(
                                     builder: (c) => FilledButton(
+                                      style: FilledButton.styleFrom(
+                                        backgroundColor:
+                                            Theme.of(c).colorScheme.error,
+                                      ),
                                       onPressed: () =>
                                           Navigator.of(c).pop(true),
-                                      child: const Text('Reversar y cancelar'),
+                                      child:
+                                          const Text('Confirmar Cancelación'),
                                     ),
                                   ),
                                 ],

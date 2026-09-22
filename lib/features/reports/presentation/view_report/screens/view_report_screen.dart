@@ -128,9 +128,8 @@ class _ViewReportScreenState extends ConsumerState<ViewReportScreen>
             status == ServiceReportStatus.resent ||
             status == ServiceReportStatus.opened;
 
-        final isSendDisabled =
-            status == ServiceReportStatus.finalized ||
-            status == ServiceReportStatus.cancelled;
+        final isSendDisabled = status == ServiceReportStatus.cancelled;
+        final isFinalized = status == ServiceReportStatus.finalized;
 
         if (widget.triggerSend && !_hasTriggeredSend && !isSendDisabled) {
           _hasTriggeredSend = true;
@@ -159,8 +158,10 @@ class _ViewReportScreenState extends ConsumerState<ViewReportScreen>
                       : colors.onSurfaceVariant,
                 ),
                 tooltip: isSendDisabled
-                    ? 'Reporte ${status.label.toLowerCase()}. No se puede enviar'
-                    : (isSentOrResent ? 'Reenviar' : 'Enviar'),
+                    ? 'Reporte cancelado. No se puede enviar'
+                    : (isFinalized
+                        ? 'Enviar copia'
+                        : (isSentOrResent ? 'Reenviar' : 'Enviar')),
               ),
               IconButton(
                 icon: Icon(Icons.more_vert, color: colors.onSurfaceVariant),
@@ -374,18 +375,17 @@ class _ViewReportScreenState extends ConsumerState<ViewReportScreen>
     bool isSentOrResent,
   ) {
     final status = ServiceReportStatus.fromDbValue(report.status);
-    final isSendDisabled =
-        status == ServiceReportStatus.finalized ||
-        status == ServiceReportStatus.cancelled;
+    final isSendDisabled = status == ServiceReportStatus.cancelled;
 
     if (isSendDisabled) {
       AppToast.warning(
         context,
-        message:
-            'El reporte está ${status.label.toLowerCase()} y no se puede enviar.',
+        message: 'El reporte está cancelado y no se puede enviar.',
       );
       return;
     }
+
+    final isFinalized = status == ServiceReportStatus.finalized;
 
     _checkDateAndSend(
       context: context,
@@ -393,13 +393,17 @@ class _ViewReportScreenState extends ConsumerState<ViewReportScreen>
       onSend: (targetReport) {
         CustomActionSheet.show(
           context: context,
-          title: isSentOrResent ? 'Reenviar reporte' : 'Enviar reporte',
+          title: isFinalized
+              ? 'Enviar copia de reporte'
+              : (isSentOrResent ? 'Reenviar reporte' : 'Enviar reporte'),
           actions: [
             BottomSheetActionItem(
               icon: Icons.email_outlined,
-              label: isSentOrResent
-                  ? 'Reenviar por correo electrónico'
-                  : 'Enviar por correo electrónico',
+              label: isFinalized
+                  ? 'Enviar copia por correo electrónico'
+                  : (isSentOrResent
+                      ? 'Reenviar por correo electrónico'
+                      : 'Enviar por correo electrónico'),
               onTap: () {
                 Navigator.of(context).pop();
                 SendReportEmailSheet.show(context, targetReport);
@@ -407,9 +411,11 @@ class _ViewReportScreenState extends ConsumerState<ViewReportScreen>
             ),
             BottomSheetActionItem(
               icon: 'assets/icons/whatsapp_icon.png',
-              label: isSentOrResent
-                  ? 'Reenviar por WhatsApp'
-                  : 'Enviar por WhatsApp',
+              label: isFinalized
+                  ? 'Enviar copia por WhatsApp'
+                  : (isSentOrResent
+                      ? 'Reenviar por WhatsApp'
+                      : 'Enviar por WhatsApp'),
               onTap: () {
                 Navigator.of(context).pop();
                 SendReportWhatsAppSheet.show(context, targetReport);

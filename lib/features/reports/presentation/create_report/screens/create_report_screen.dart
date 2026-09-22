@@ -16,7 +16,7 @@ import '../tabs/report_services_tab.dart';
 import '../tabs/report_products_tab.dart';
 import '../tabs/report_conditions_tab.dart';
 import '../tabs/report_summary_tab.dart';
-import '../../../domain/models/service_report_model.dart';
+import '../../../data/models/models.dart';
 
 class CreateReportScreen extends ConsumerStatefulWidget {
   final String? reportId;
@@ -31,6 +31,7 @@ class _CreateReportScreenState extends ConsumerState<CreateReportScreen>
   late final TabController _tabController;
   late final AppLifecycleListener _lifecycleListener;
   bool _hasInitializedTab = false;
+  bool _isSavedSuccess = false;
 
   @override
   void initState() {
@@ -38,7 +39,7 @@ class _CreateReportScreenState extends ConsumerState<CreateReportScreen>
     _tabController = TabController(length: 5, vsync: this);
 
     _tabController.addListener(() {
-      if (!_tabController.indexIsChanging) {
+      if (!_tabController.indexIsChanging && !_isSavedSuccess) {
         setState(() {});
         ref
             .read(createReportProvider.notifier)
@@ -48,14 +49,18 @@ class _CreateReportScreenState extends ConsumerState<CreateReportScreen>
 
     _lifecycleListener = AppLifecycleListener(
       onPause: () {
-        ref
-            .read(createReportProvider.notifier)
-            .autoSaveDraft(tabIndex: _tabController.index, reportId: widget.reportId);
+        if (!_isSavedSuccess) {
+          ref
+              .read(createReportProvider.notifier)
+              .autoSaveDraft(tabIndex: _tabController.index, reportId: widget.reportId);
+        }
       },
       onInactive: () {
-        ref
-            .read(createReportProvider.notifier)
-            .autoSaveDraft(tabIndex: _tabController.index, reportId: widget.reportId);
+        if (!_isSavedSuccess) {
+          ref
+              .read(createReportProvider.notifier)
+              .autoSaveDraft(tabIndex: _tabController.index, reportId: widget.reportId);
+        }
       },
     );
 
@@ -195,6 +200,14 @@ class _CreateReportScreenState extends ConsumerState<CreateReportScreen>
   }
 
   Future<void> _handlePop() async {
+    if (_isSavedSuccess) {
+      ref
+          .read(createReportProvider.notifier)
+          .reset(clearPersistedDraft: true, reportId: widget.reportId);
+      context.pop();
+      return;
+    }
+
     final state = ref.read(createReportProvider);
     final hasDataOrChanges = state.hasChanges;
 
@@ -313,34 +326,51 @@ class _CreateReportScreenState extends ConsumerState<CreateReportScreen>
     if (_tabController.index == 4) {
       return CustomExtendedFab(
         label: state.isLoading ? 'Guardando...' : 'Guardar',
-          icon: state.isLoading ? Icons.hourglass_empty : Icons.save_outlined,
-          isEnabled:
-              state.isReadyToFinalize && state.hasChanges && !state.isLoading,
-          onPressed: () async {
-            final success = await ref
-                .read(createReportProvider.notifier)
-                .createReport(status: ServiceReportStatus.draft.dbValue);
+        icon: state.isLoading ? Icons.hourglass_empty : Icons.save_outlined,
+        isEnabled:
+            state.isReadyToFinalize && state.hasChanges && !state.isLoading,
+        onPressed: () async {
+          if (widget.reportId != null) {
+            await _handleSaveInEditMode(ref);
+            return;
+          }
 
-            if (!mounted) return;
+          final success = await ref
+              .read(createReportProvider.notifier)
+              .createReport(status: ServiceReportStatus.draft.dbValue);
 
-            if (success) {
-              final report = ref.read(createReportProvider).report;
-              if (report != null) {
-                ref.invalidate(viewReportProvider(report.id));
-              }
-              refreshAllReportProviders(ref);
-              final savedReportNumber =
-                  ref.read(createReportProvider).report?.reportNumber ?? '';
-              _showPostSaveOptions(ref, savedReportNumber);
-            } else {
-              AppToast.error(
-                context,
-                message:
-                    ref.read(createReportProvider).error ?? 'Error al guardar',
-              );
+          if (!mounted) return;
+
+          if (success) {
+            _isSavedSuccess = true;
+            final report = ref.read(createReportProvider).report;
+            if (report != null) {
+              ref.invalidate(viewReportProvider(report.id));
             }
-          },
-        );
+            refreshAllReportProviders(ref);
+
+            AppToast.success(
+              context,
+              message: 'Reporte guardado exitosamente',
+            );
+
+            if (report != null) {
+              await _showPostSaveSendOptions(report);
+            } else {
+              ref
+                  .read(createReportProvider.notifier)
+                  .reset(clearPersistedDraft: true);
+              context.pop();
+            }
+          } else {
+            AppToast.error(
+              context,
+              message:
+                  ref.read(createReportProvider).error ?? 'Error al guardar',
+            );
+          }
+        },
+      );
     }
 
     return CustomExtendedFab(
@@ -358,40 +388,47 @@ class _CreateReportScreenState extends ConsumerState<CreateReportScreen>
       );
   }
 
-  void _showPostSaveOptions(WidgetRef ref, String reportNumber) {
-    final report = ref.read(createReportProvider).report;
-    if (report == null) {
-      context.pop();
-      return;
-    }
-
-    CustomDialog.show(
+  Future<void> _showPostSaveSendOptions(ServiceReport report) async {
+    _isSavedSuccess = true;
+    final reportNumber = report.reportNumber ?? '';
+    final result = await CustomActionSheet.show<bool>(
       context: context,
-      dialog: CustomDialog.confirmation(
-        icon: Icons.check_circle_outline,
-        iconColor: Theme.of(context).colorScheme.primary,
-        title: 'Reporte Guardado',
-        contentText:
-            'El reporte $reportNumber ha sido guardado exitosamente. ¿Qué deseas hacer ahora?',
-        actions: [
-          TextButton(
-            onPressed: () {
-              Navigator.pop(context);
-              context.pop(); // Volver al listado
-            },
-            child: const Text('Ir al listado'),
-          ),
-          FilledButton(
-            onPressed: () {
-              Navigator.pop(context);
-              context.pop();
-              context.push('/reports/${report.id}');
-            },
-            child: const Text('Ver reporte'),
-          ),
-        ],
-      ),
+      title: 'Reporte $reportNumber guardado',
+      actions: [
+        BottomSheetActionItem(
+          icon: Icons.send_outlined,
+          label: 'Enviar ahora',
+          onTap: () {
+            context.pop(true);
+            ref
+                .read(createReportProvider.notifier)
+                .reset(clearPersistedDraft: true);
+            context.pushReplacement(
+              '/reports/${report.id}',
+              extra: {'triggerSend': true},
+            );
+          },
+        ),
+        BottomSheetActionItem(
+          icon: Icons.history_outlined,
+          label: 'Enviar más tarde',
+          onTap: () {
+            context.pop(true);
+            ref
+                .read(createReportProvider.notifier)
+                .reset(clearPersistedDraft: true);
+            context.pushReplacement('/reports/${report.id}');
+          },
+        ),
+      ],
     );
+
+    if (result != true && mounted) {
+      ref
+          .read(createReportProvider.notifier)
+          .reset(clearPersistedDraft: true);
+      context.pushReplacement('/reports/${report.id}');
+    }
   }
 
   Future<void> _handleSaveInEditMode(WidgetRef ref) async {
@@ -430,6 +467,7 @@ class _CreateReportScreenState extends ConsumerState<CreateReportScreen>
     final success = await ref.read(createReportProvider.notifier).saveAsDraft();
 
     if (success && mounted) {
+      _isSavedSuccess = true;
       final savedReport = ref.read(createReportProvider).report;
       final reportId = savedReport?.id ?? widget.reportId;
       refreshAllReportProviders(ref);
@@ -437,6 +475,10 @@ class _CreateReportScreenState extends ConsumerState<CreateReportScreen>
       if (reportId != null) {
         ref.invalidate(viewReportProvider(reportId));
       }
+
+      ref
+          .read(createReportProvider.notifier)
+          .reset(clearPersistedDraft: true, reportId: widget.reportId);
 
       AppToast.success(
         context,

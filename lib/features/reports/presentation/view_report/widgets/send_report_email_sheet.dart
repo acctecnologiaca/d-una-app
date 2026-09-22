@@ -16,7 +16,9 @@ class SendReportEmailSheet {
       documentNumber: report.reportNumber,
       initialRecipient: report.contactEmail ?? report.clientEmail,
       validityDays: 30,
-      sheetTitle: 'Enviar reporte por correo',
+      sheetTitle: report.status == ServiceReportStatus.finalized.dbValue
+          ? 'Enviar copia de reporte por correo'
+          : 'Enviar reporte por correo',
       categoryName: report.categoryName,
       tag: report.reportTag,
       advisorName: report.advisorName,
@@ -25,6 +27,9 @@ class SendReportEmailSheet {
           .read(serviceReportsRepositoryProvider)
           .generateActionToken(report.id),
       onStatusUpdate: (ref, _) async {
+        if (report.status == ServiceReportStatus.finalized.dbValue) {
+          return;
+        }
         final currentStatus = report.status;
         final newStatus = (currentStatus == ServiceReportStatus.sent.dbValue ||
                 currentStatus == ServiceReportStatus.resent.dbValue)

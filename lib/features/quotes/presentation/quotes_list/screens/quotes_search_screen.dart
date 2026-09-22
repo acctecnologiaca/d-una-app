@@ -457,6 +457,7 @@ class _QuotesSearchScreenState extends ConsumerState<QuotesSearchScreen> {
             context,
             ref,
             selection,
+            selectedQuotes: selectedQuotes,
           ),
         ),
         IconButton(

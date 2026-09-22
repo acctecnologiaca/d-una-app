@@ -128,6 +128,7 @@ Deno.serve(async (req) => {
         },
         items: {
           products: (quote.quote_items_products || []).map((p: any) => ({
+            group_index: p.group_index !== undefined ? p.group_index : null,
             name: p.name,
             brand: p.brand,
             model: p.model,

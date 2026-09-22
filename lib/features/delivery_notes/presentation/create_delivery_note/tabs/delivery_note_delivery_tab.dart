@@ -292,7 +292,7 @@ class _DeliveryNoteDeliveryTabState
                         const SizedBox(height: 2),
                         Text(
                           selectedClient == null
-                              ? 'Selecciona un cliente en la pestaña Cliente'
+                              ? 'Selecciona un cliente en la pestaña General'
                               : (clientHasAddress
                                     ? 'Bloquea la edición y toma los datos registrados del cliente'
                                     : 'El cliente no posee dirección registrada'),

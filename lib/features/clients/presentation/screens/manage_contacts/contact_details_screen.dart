@@ -82,6 +82,27 @@ class ContactDetailsScreen extends ConsumerWidget {
     final colors = Theme.of(context).colorScheme;
     final textTheme = Theme.of(context).textTheme;
 
+    // Watch linked documents status for this contact
+    final contactLinkedDocsAsync =
+        ref.watch(contactHasLinkedDocumentsProvider(contact.id));
+    final hasLinkedDocs =
+        contactLinkedDocsAsync.value ?? true; // default true while loading
+    final isCheckingDocs = contactLinkedDocsAsync.isLoading;
+
+    // --- Delete logic ---
+    final isLastContact = contactCount != null && contactCount! <= 1;
+    final canDelete =
+        canEdit && !isLastContact && !hasLinkedDocs && !isCheckingDocs;
+
+    String deleteTooltip;
+    if (isLastContact) {
+      deleteTooltip = 'No se puede eliminar el único contacto';
+    } else if (hasLinkedDocs) {
+      deleteTooltip = 'No se puede eliminar: tiene documentos asociados';
+    } else {
+      deleteTooltip = 'Eliminar contacto';
+    }
+
     final name = contact.name;
     final role = contact.role ?? 'Sin cargo';
     final phone = contact.phone ?? 'No registrado';
@@ -118,13 +139,9 @@ class ContactDetailsScreen extends ConsumerWidget {
         actions: [
           if (canEdit)
             IconButton(
-              onPressed: (contactCount != null && contactCount! > 1)
-                  ? () => _deleteContact(context, ref)
-                  : null,
+              onPressed: canDelete ? () => _deleteContact(context, ref) : null,
               icon: const Icon(Icons.delete_outline),
-              tooltip: (contactCount != null && contactCount! > 1)
-                  ? 'Eliminar contacto'
-                  : 'No se puede eliminar el único contacto',
+              tooltip: deleteTooltip,
             ),
         ],
         foregroundColor: colors.onSurface,

@@ -33,6 +33,7 @@ class _CreateQuoteScreenState extends ConsumerState<CreateQuoteScreen>
   late final TabController _tabController;
   late final AppLifecycleListener _lifecycleListener;
   bool _hasInitializedTab = false;
+  bool _isSavedSuccess = false;
 
   @override
   void initState() {
@@ -40,7 +41,7 @@ class _CreateQuoteScreenState extends ConsumerState<CreateQuoteScreen>
     _tabController = TabController(length: 5, vsync: this);
 
     _tabController.addListener(() {
-      if (!_tabController.indexIsChanging) {
+      if (!_tabController.indexIsChanging && !_isSavedSuccess) {
         setState(() {});
         ref
             .read(createQuoteProvider.notifier)
@@ -53,20 +54,24 @@ class _CreateQuoteScreenState extends ConsumerState<CreateQuoteScreen>
 
     _lifecycleListener = AppLifecycleListener(
       onPause: () {
-        ref
-            .read(createQuoteProvider.notifier)
-            .autoSaveDraft(
-              tabIndex: _tabController.index,
-              quoteId: widget.quoteId,
-            );
+        if (!_isSavedSuccess) {
+          ref
+              .read(createQuoteProvider.notifier)
+              .autoSaveDraft(
+                tabIndex: _tabController.index,
+                quoteId: widget.quoteId,
+              );
+        }
       },
       onInactive: () {
-        ref
-            .read(createQuoteProvider.notifier)
-            .autoSaveDraft(
-              tabIndex: _tabController.index,
-              quoteId: widget.quoteId,
-            );
+        if (!_isSavedSuccess) {
+          ref
+              .read(createQuoteProvider.notifier)
+              .autoSaveDraft(
+                tabIndex: _tabController.index,
+                quoteId: widget.quoteId,
+              );
+        }
       },
     );
 
@@ -228,6 +233,14 @@ class _CreateQuoteScreenState extends ConsumerState<CreateQuoteScreen>
   }
 
   Future<void> _handlePop() async {
+    if (_isSavedSuccess) {
+      ref
+          .read(createQuoteProvider.notifier)
+          .reset(clearPersistedDraft: true, quoteId: widget.quoteId);
+      context.pop();
+      return;
+    }
+
     final state = ref.read(createQuoteProvider);
     final hasDataOrChanges = state.hasChanges;
 
@@ -359,6 +372,7 @@ class _CreateQuoteScreenState extends ConsumerState<CreateQuoteScreen>
           if (!mounted) return;
 
           if (success) {
+            _isSavedSuccess = true;
             final quote = ref.read(createQuoteProvider).quote;
             if (quote != null) {
               ref.invalidate(viewQuoteProvider(quote.id));
@@ -412,6 +426,14 @@ class _CreateQuoteScreenState extends ConsumerState<CreateQuoteScreen>
           enabled: state.hasChanges,
           onTap: () async {
             context.pop(); // Close sheet
+
+            // En modo edición, usar el flujo con validación de OCs
+            if (widget.quoteId != null) {
+              await _handleSaveInEditMode(ref);
+              return;
+            }
+
+            // Modo creación: guardar directamente
             final success = await notifier.saveAsDraft();
             if (!mounted) return;
             if (success) {
@@ -485,8 +507,12 @@ class _CreateQuoteScreenState extends ConsumerState<CreateQuoteScreen>
         false;
   }
 
-  void _showPostSaveOptions(WidgetRef ref, String quoteNumber) {
-    CustomActionSheet.show(
+  void _showPostSaveOptions(WidgetRef ref, String quoteNumber) async {
+    _isSavedSuccess = true;
+    final savedQuote = ref.read(createQuoteProvider).quote;
+    final quoteId = savedQuote?.id;
+
+    final selected = await CustomActionSheet.show<bool>(
       context: context,
       title: 'Cotización $quoteNumber guardada',
       actions: [
@@ -494,12 +520,12 @@ class _CreateQuoteScreenState extends ConsumerState<CreateQuoteScreen>
           icon: Icons.send_outlined,
           label: 'Enviar ahora',
           onTap: () {
-            final savedQuote = ref.read(createQuoteProvider).quote;
-            final quoteId = savedQuote?.id;
-            ref.read(createQuoteProvider.notifier).reset();
+            ref
+                .read(createQuoteProvider.notifier)
+                .reset(clearPersistedDraft: true);
             ref.invalidate(paginatedQuotesListProvider);
             ref.invalidate(paginatedQuoteSearchProvider);
-            context.pop(); // Close sheet
+            context.pop(true); // Close sheet
             if (quoteId != null) {
               context.pushReplacement(
                 '/quotes/view/$quoteId',
@@ -512,8 +538,10 @@ class _CreateQuoteScreenState extends ConsumerState<CreateQuoteScreen>
           icon: Icons.history_outlined,
           label: 'Enviar más tarde',
           onTap: () {
-            context.pop(); // Close sheet
-            ref.read(createQuoteProvider.notifier).reset();
+            context.pop(true); // Close sheet
+            ref
+                .read(createQuoteProvider.notifier)
+                .reset(clearPersistedDraft: true);
             ref.invalidate(paginatedQuotesListProvider);
             ref.invalidate(paginatedQuoteSearchProvider);
             context.pop(); // Back to list
@@ -521,48 +549,117 @@ class _CreateQuoteScreenState extends ConsumerState<CreateQuoteScreen>
         ),
       ],
     );
+
+    if (selected != true && mounted) {
+      ref.read(createQuoteProvider.notifier).reset(clearPersistedDraft: true);
+      ref.invalidate(paginatedQuotesListProvider);
+      ref.invalidate(paginatedQuoteSearchProvider);
+      if (Navigator.of(context).canPop()) {
+        context.pop();
+      }
+    }
   }
 
   Future<void> _handleSaveInEditMode(WidgetRef ref) async {
     final state = ref.read(createQuoteProvider);
     final currentStatus = state.quote?.status;
 
-    // 1. Verificación preventiva de OCs vinculadas en borrador
+    // 1. Verificación granular de OCs vinculadas
     if (widget.quoteId != null) {
       try {
-        final repo = ref.read(supplierOrdersRepositoryProvider);
-        final linked = await repo.getSupplierOrdersByQuoteId(widget.quoteId!);
-        final draftOrders = linked
-            .where((o) => o.status == SupplierOrderStatus.draft)
-            .toList();
+        final affectedSbsIds = ref
+            .read(createQuoteProvider.notifier)
+            .getAffectedSupplierBranchStockIds();
 
-        if (draftOrders.isNotEmpty) {
-          if (!mounted) return;
-          final confirmOc = await CustomDialog.show<bool>(
-            context: context,
-            dialog: CustomDialog.confirmation(
-              icon: Icons.warning_amber_rounded,
-              iconColor: Colors.amber.shade800,
-              title: 'Actualizar Cotización',
-              contentText:
-                  'Al guardar las modificaciones, las Órdenes de Compra en borrador previas (${draftOrders.map((e) => e.orderNumber).join(', ')}) cambiarán a estatus "Cancelada" para permitir generar órdenes actualizadas. ¿Deseas continuar?',
-              actions: [
-                TextButton(
-                  onPressed: () => Navigator.pop(context, false),
-                  child: const Text('Cancelar'),
+        // Solo evaluar OCs si hay productos afiliados afectados
+        if (affectedSbsIds.isNotEmpty) {
+          final repo = ref.read(supplierOrdersRepositoryProvider);
+          final linked =
+              await repo.getSupplierOrdersByQuoteId(widget.quoteId!);
+
+          // Filtrar OCs no canceladas con al menos un item afectado
+          final affectedOrders = linked.where((order) {
+            if (order.status == SupplierOrderStatus.cancelled) return false;
+            if (order.items == null || order.items!.isEmpty) return false;
+            return order.items!.any(
+              (item) =>
+                  item.supplierBranchStockId != null &&
+                  affectedSbsIds.contains(item.supplierBranchStockId),
+            );
+          }).toList();
+
+          if (affectedOrders.isNotEmpty) {
+            final draftAffected = affectedOrders
+                .where((o) => o.status == SupplierOrderStatus.draft)
+                .toList();
+            final processedAffected = affectedOrders
+                .where((o) =>
+                    o.status != SupplierOrderStatus.draft &&
+                    o.status != SupplierOrderStatus.cancelled)
+                .toList();
+
+            // A) OCs procesadas afectadas → BLOQUEAR
+            if (processedAffected.isNotEmpty) {
+              if (!mounted) return;
+              await CustomDialog.show(
+                context: context,
+                dialog: CustomDialog.confirmation(
+                  icon: Icons.block_outlined,
+                  iconColor: Colors.red.shade700,
+                  title: 'Modificación no permitida',
+                  contentText:
+                      'Los productos modificados pertenecen a proveedores con '
+                      'Órdenes de Compra activas '
+                      '(${processedAffected.map((e) => e.orderNumber).join(', ')}). '
+                      'Debe cancelar o finalizar esas órdenes antes de '
+                      'modificar los productos asociados.',
+                  actions: [
+                    TextButton(
+                      onPressed: () => Navigator.pop(context),
+                      child: const Text('Entendido'),
+                    ),
+                  ],
                 ),
-                FilledButton(
-                  onPressed: () => Navigator.pop(context, true),
-                  child: const Text('Continuar'),
+              );
+              return;
+            }
+
+            // B) Solo OCs en borrador afectadas → confirmación selectiva
+            if (draftAffected.isNotEmpty) {
+              if (!mounted) return;
+              final confirmOc = await CustomDialog.show<bool>(
+                context: context,
+                dialog: CustomDialog.confirmation(
+                  icon: Icons.warning_amber_rounded,
+                  iconColor: Colors.amber.shade800,
+                  title: 'Actualizar Cotización',
+                  contentText:
+                      'Al guardar las modificaciones, las siguientes Órdenes '
+                      'de Compra en borrador pasarán a estatus "Cancelada" '
+                      'porque sus productos fueron modificados:\n\n'
+                      '${draftAffected.map((e) => '• ${e.orderNumber}').join('\n')}\n\n'
+                      '¿Deseas continuar?',
+                  actions: [
+                    TextButton(
+                      onPressed: () => Navigator.pop(context, false),
+                      child: const Text('Cancelar'),
+                    ),
+                    FilledButton(
+                      onPressed: () => Navigator.pop(context, true),
+                      child: const Text('Continuar'),
+                    ),
+                  ],
                 ),
-              ],
-            ),
-          );
+              );
 
-          if (confirmOc != true) return;
+              if (confirmOc != true) return;
 
-          await repo.cancelDraftOrdersByQuoteId(widget.quoteId!);
-          ref.invalidate(linkedSupplierOrdersProvider(widget.quoteId!));
+              // Cancelar SOLO las OCs afectadas
+              final idsToCancel = draftAffected.map((o) => o.id).toList();
+              await repo.cancelDraftOrdersByIds(idsToCancel);
+              ref.invalidate(linkedSupplierOrdersProvider(widget.quoteId!));
+            }
+          }
         }
       } catch (_) {}
     }
@@ -603,10 +700,15 @@ class _CreateQuoteScreenState extends ConsumerState<CreateQuoteScreen>
         .createQuote(status: 'draft');
 
     if (success && mounted) {
+      _isSavedSuccess = true;
       final savedQuote = ref.read(createQuoteProvider).quote;
       final quoteId = savedQuote?.id;
       ref.invalidate(paginatedQuotesListProvider);
       ref.invalidate(paginatedQuoteSearchProvider);
+
+      ref
+          .read(createQuoteProvider.notifier)
+          .reset(clearPersistedDraft: true, quoteId: widget.quoteId);
 
       AppToast.info(
         context,

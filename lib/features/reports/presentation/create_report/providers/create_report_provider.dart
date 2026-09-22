@@ -11,8 +11,10 @@ import '../../../../collaborators/presentation/providers/collaborators_providers
 import '../../../../clients/data/models/client_model.dart';
 import '../../../../quotes/data/models/commercial_condition.dart';
 import '../../../../portfolio/presentation/providers/lookup_providers.dart';
+import '../../../../portfolio/presentation/providers/products_provider.dart';
 import '../../../../profile/presentation/providers/profile_provider.dart';
 import '../../../../../core/utils/country_iso_codes.dart';
+import 'package:uuid/uuid.dart';
 
 class ServiceReportCreateState {
   final ServiceReport? report;
@@ -611,7 +613,11 @@ class CreateServiceReportNotifier
   }
 
   Future<void> clearDraft({String? reportId}) async {
-    final key = _getDraftKey(reportId: reportId);
+    final isEditing = (reportId != null && reportId.isNotEmpty) ||
+        (state.report != null && state.report!.id.isNotEmpty);
+    final key = isEditing
+        ? _getDraftKey(reportId: reportId)
+        : DraftConstants.reportsModule;
     await _draftStorage.clearDraft(key);
   }
 
@@ -622,7 +628,11 @@ class CreateServiceReportNotifier
     final currentId = reportId ?? state.report?.id;
     state = ServiceReportCreateState();
     if (clearPersistedDraft) {
-      clearDraft(reportId: isEditing ? currentId : null);
+      if (isEditing && currentId != null && currentId.isNotEmpty) {
+        clearDraft(reportId: currentId);
+      } else {
+        _draftStorage.clearDraft(DraftConstants.reportsModule);
+      }
     }
   }
 
@@ -656,6 +666,20 @@ class CreateServiceReportNotifier
           ? techs.map((t) => t.fullName).join(', ')
           : report.advisorName;
 
+      final catalogProducts =
+          await ref.read(productsRepositoryProvider).getProducts();
+      final stockMap = {
+        for (final p in catalogProducts) p.id: p.availableQuantity,
+      };
+
+      final loadedProducts = (report.products ?? []).map((p) {
+        final currentStock =
+            p.productId != null ? stockMap[p.productId] : p.availableStock;
+        return p.copyWith(
+          availableStock: currentStock,
+        );
+      }).toList();
+
       state = ServiceReportCreateState(
         report: report,
         currentReportNumber: report.reportNumber,
@@ -679,7 +703,7 @@ class CreateServiceReportNotifier
         durationMinutes: report.durationMinutes,
         notes: report.notes,
         reportTag: report.reportTag,
-        products: report.products ?? [],
+        products: loadedProducts,
         services: report.services ?? [],
         conditions: report.conditions ?? [],
         globalMargin: financialParams.profitMargin,
@@ -725,6 +749,36 @@ class CreateServiceReportNotifier
           ? techs.map((t) => t.fullName).join(', ')
           : source.advisorName;
 
+      final catalogProducts =
+          await ref.read(productsRepositoryProvider).getProducts();
+      final stockMap = {
+        for (final p in catalogProducts) p.id: p.availableQuantity,
+      };
+
+      final copiedProducts = (source.products ?? []).map((p) {
+        final currentStock =
+            p.productId != null ? stockMap[p.productId] : null;
+        return p.copyWith(
+          id: const Uuid().v4(),
+          reportId: '',
+          availableStock: currentStock,
+        );
+      }).toList();
+
+      final copiedServices = (source.services ?? []).map((s) {
+        return s.copyWith(
+          id: const Uuid().v4(),
+          reportId: '',
+        );
+      }).toList();
+
+      final copiedConditions = (source.conditions ?? []).map((c) {
+        return c.copyWith(
+          id: const Uuid().v4(),
+          reportId: '',
+        );
+      }).toList();
+
       state = ServiceReportCreateState(
         report: null,
         currentReportNumber: newNumber,
@@ -748,9 +802,9 @@ class CreateServiceReportNotifier
         durationMinutes: source.durationMinutes,
         notes: source.notes,
         reportTag: source.reportTag,
-        products: source.products ?? [],
-        services: source.services ?? [],
-        conditions: source.conditions ?? [],
+        products: copiedProducts,
+        services: copiedServices,
+        conditions: copiedConditions,
         globalMargin: financialParams.profitMargin,
         globalTaxRate: financialParams.taxRate,
         pricingMethod: financialParams.pricingMethod,
@@ -1117,17 +1171,17 @@ class CreateServiceReportNotifier
         );
       }
 
+      if (wasEditing && previousReportId != null && previousReportId.isNotEmpty) {
+        await clearDraft(reportId: previousReportId);
+      } else {
+        await _draftStorage.clearDraft(DraftConstants.reportsModule);
+      }
+
       state = state.copyWith(
         report: saved,
         currentReportNumber: saved.reportNumber,
         isLoading: false,
       );
-
-      if (wasEditing) {
-        await clearDraft(reportId: previousReportId);
-      } else {
-        await clearDraft(reportId: null);
-      }
 
       ref.invalidate(paginatedReportsListProvider);
       return true;

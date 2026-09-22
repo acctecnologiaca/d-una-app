@@ -532,18 +532,53 @@
           return `${time} ${unitStr}`;
         }
 
-        // Render Products (Columna Total = Cantidad * Precio Unitario sin IVA)
+        // Render Products: Agrupar por group_index (con fallback por atributos para compatibilidad histórica)
+        const groupedProductsMap = new Map();
+
         (items.products || []).forEach(p => {
+          const hasGroupIndex = p.group_index !== undefined && p.group_index !== null;
+          const groupKey = hasGroupIndex 
+            ? `grp_${p.group_index}` 
+            : `fallback_${p.name}_${p.brand || ''}_${p.model || ''}_${p.unit_price}`;
+
+          if (!groupedProductsMap.has(groupKey)) {
+            groupedProductsMap.set(groupKey, {
+              name: p.name,
+              brand: p.brand,
+              model: p.model,
+              uom: p.uom || 'Und',
+              warranty_time: p.warranty_time,
+              warranty_unit: p.warranty_unit,
+              unit_price: Number(p.unit_price) || 0,
+              quantity: 0,
+              total_price: 0,
+            });
+          }
+
+          const group = groupedProductsMap.get(groupKey);
+          const qty = Number(p.quantity) || 0;
+          group.quantity += qty;
+
+          const lineSubtotal = (p.total_price !== undefined && p.total_price !== null && !isNaN(Number(p.total_price)))
+            ? Number(p.total_price)
+            : (qty * (Number(p.unit_price) || 0));
+          group.total_price += lineSubtotal;
+        });
+
+        groupedProductsMap.forEach(p => {
           totalItems++;
           const subtitle = [p.brand, p.model].filter(Boolean).join(' - ');
-          const lineSubtotal = (Number(p.quantity) || 0) * (Number(p.unit_price) || 0);
+          const formattedQty = (p.quantity % 1 === 0)
+            ? p.quantity
+            : p.quantity.toFixed(2);
+
           itemsHtml += `
             <tr>
               <td><strong>${esc(p.name)}</strong>${subtitle ? `<br><small style="color:var(--neutral-muted);">${esc(subtitle)}</small>` : ''}</td>
               <td class="text-center">${esc(formatWarranty(p))}</td>
-              <td class="text-right">${p.quantity} ${esc(p.uom || '')}</td>
+              <td class="text-right">${formattedQty} ${esc(p.uom || '')}</td>
               <td class="text-right">$${fmt(p.unit_price)}</td>
-              <td class="text-right">$${fmt(lineSubtotal)}</td>
+              <td class="text-right">$${fmt(p.total_price)}</td>
             </tr>`;
         });
 

@@ -26,7 +26,7 @@ class PurchaseListItem extends StatelessWidget {
     final dateFormatter = DateFormat('dd/MM/yyyy');
     final formattedDate = dateFormatter.format(purchase.date);
 
-    final formattedAmount = CurrencyFormatter.format(purchase.subtotal);
+    final formattedAmount = CurrencyFormatter.format(purchase.total);
 
     final isInitialInventory = purchase.documentType == 'initial_inventory';
 

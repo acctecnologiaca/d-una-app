@@ -333,7 +333,7 @@ class SupabaseDeliveryNotesRepository implements DeliveryNotesRepository {
       if (currentStatusStr == DeliveryNoteStatus.finalized.dbValue &&
           status != DeliveryNoteStatus.cancelled) {
         throw Exception(
-          'Una nota de entrega finalizada solo puede anularse (pasar a cancelada).',
+          'Una nota de entrega finalizada solo puede cancelarse.',
         );
       }
     }

@@ -79,7 +79,9 @@ class _ViewQuoteScreenState extends ConsumerState<ViewQuoteScreen>
 
   void _initSingleQuoteRealtime() {
     _singleQuoteChannel = Supabase.instance.client
-        .channel('public:quote_${widget.quoteId}_${DateTime.now().millisecondsSinceEpoch}')
+        .channel(
+          'public:quote_${widget.quoteId}_${DateTime.now().millisecondsSinceEpoch}',
+        )
         .onPostgresChanges(
           event: PostgresChangeEvent.all,
           schema: 'public',
@@ -92,7 +94,9 @@ class _ViewQuoteScreenState extends ConsumerState<ViewQuoteScreen>
           callback: (payload) {
             if (mounted) {
               ref.invalidate(viewQuoteProvider(widget.quoteId));
-              ref.read(quoteValidationProvider(widget.quoteId).notifier).startValidation();
+              ref
+                  .read(quoteValidationProvider(widget.quoteId).notifier)
+                  .startValidation();
               ref.read(quotesListProvider.notifier).refresh();
               ref.invalidate(paginatedQuoteSearchProvider);
             }
@@ -146,7 +150,8 @@ class _ViewQuoteScreenState extends ConsumerState<ViewQuoteScreen>
             quote.status == QuoteStatus.opened.dbValue ||
             quote.status == QuoteStatus.inReview.dbValue);
 
-    final isSendDisabled = quote == null ||
+    final isSendDisabled =
+        quote == null ||
         quote.status == QuoteStatus.approved.dbValue ||
         quote.status == QuoteStatus.rejected.dbValue ||
         quote.status == QuoteStatus.cancelled.dbValue ||
@@ -247,8 +252,8 @@ class _ViewQuoteScreenState extends ConsumerState<ViewQuoteScreen>
                         enabled: !isStatusChangeDisabled,
                         subtitle: isStatusChangeDisabled
                             ? (isFinalized
-                                ? 'Cotización finalizada. No se puede cambiar de estado'
-                                : 'Cotización cancelada. No se puede cambiar de estado')
+                                  ? 'Cotización finalizada. No se puede cambiar de estado'
+                                  : 'Cotización cancelada. No se puede cambiar de estado')
                             : null,
                         onTap: () async {
                           sheetContext.pop(); // Close the action sheet
@@ -261,9 +266,9 @@ class _ViewQuoteScreenState extends ConsumerState<ViewQuoteScreen>
                           );
                           final selectedStatus =
                               await QuoteSelectionActions.showStatusDialog(
-                            context,
-                            currentEnum,
-                          );
+                                context,
+                                currentEnum,
+                              );
 
                           if (selectedStatus != null &&
                               selectedStatus != currentEnum) {
@@ -330,13 +335,11 @@ class _ViewQuoteScreenState extends ConsumerState<ViewQuoteScreen>
                           statusStr == QuoteStatus.rejected.dbValue ||
                           statusStr == QuoteStatus.finalized.dbValue ||
                           statusStr == QuoteStatus.cancelled.dbValue;
-
                       final hasAffiliatedProducts = state.products.any(
                         (p) =>
                             p.sourceType == QuoteItemSourceType.affiliated ||
                             p.supplierBranchStockId != null,
                       );
-
                       final validationState = ref.watch(
                         quoteValidationProvider(widget.quoteId),
                       );
@@ -353,12 +356,22 @@ class _ViewQuoteScreenState extends ConsumerState<ViewQuoteScreen>
                                   QuoteValidationStatus.lowStock,
                                 ),
                           );
-
+                      // Nueva verificación: ¿Todos los proveedores ya tienen OC?
+                      final ocStatusAsync = ref.watch(
+                        quoteSuppliersOcStatusProvider(widget.quoteId),
+                      );
+                      final allOcsGenerated =
+                          ocStatusAsync.whenOrNull(
+                            data: (statuses) =>
+                                statuses.isNotEmpty &&
+                                statuses.every((s) => s.hasExistingOc),
+                          ) ??
+                          false;
                       final isEnabled =
                           !isBlockedForOcNe &&
                           hasAffiliatedProducts &&
-                          !hasValidationAlerts;
-
+                          !hasValidationAlerts &&
+                          !allOcsGenerated; // ← Nueva condición
                       String? subtitleText;
                       if (isBlockedForOcNe) {
                         subtitleText =
@@ -369,6 +382,9 @@ class _ViewQuoteScreenState extends ConsumerState<ViewQuoteScreen>
                       } else if (hasValidationAlerts) {
                         subtitleText =
                             'Bloqueado: La cotización contiene productos con alza de costo o stock insuficiente. Resuelve las alertas antes de generar la OC';
+                      } else if (allOcsGenerated) {
+                        subtitleText =
+                            'Todas las Órdenes de Compra ya fueron generadas para esta cotización';
                       }
 
                       return BottomSheetActionItem(
@@ -378,7 +394,6 @@ class _ViewQuoteScreenState extends ConsumerState<ViewQuoteScreen>
                         subtitle: subtitleText,
                         onTap: () async {
                           final router = GoRouter.of(context);
-
                           final quote = state.quote;
                           if (quote == null) return;
 
@@ -395,38 +410,10 @@ class _ViewQuoteScreenState extends ConsumerState<ViewQuoteScreen>
                             // Close the action sheet
                             Navigator.of(context).pop();
 
-                            final availableSuppliers = statuses
-                                .where((s) => !s.hasExistingOc)
-                                .toList();
-
-                            if (availableSuppliers.isEmpty &&
-                                statuses.isNotEmpty) {
-                              await CustomDialog.show(
-                                context: context,
-                                dialog: CustomDialog.confirmation(
-                                  icon: Icons.info_outline,
-                                  title: 'Órdenes de Compra Emitidas',
-                                  contentText:
-                                      'Todos los proveedores afiliados de esta cotización ya cuentan con Órdenes de Compra activas generadas.',
-                                  actions: [
-                                    TextButton(
-                                      onPressed: () => Navigator.of(
-                                        context,
-                                        rootNavigator: true,
-                                      ).pop(),
-                                      child: const Text('Entendido'),
-                                    ),
-                                  ],
-                                ),
-                              );
-                              return;
-                            }
-
-                            final selection =
-                                await SelectOcSuppliersSheet.show(
-                                  context: context,
-                                  suppliers: statuses,
-                                );
+                            final selection = await SelectOcSuppliersSheet.show(
+                              context: context,
+                              suppliers: statuses,
+                            );
 
                             if (selection == null ||
                                 selection.selectedSupplierIds.isEmpty) {
@@ -443,8 +430,10 @@ class _ViewQuoteScreenState extends ConsumerState<ViewQuoteScreen>
 
                             final result = await repo.batchGenerateFromQuote(
                               quote.id,
-                              selectedSupplierIds: selection.selectedSupplierIds,
-                              supplierDestinations: selection.supplierDestinations,
+                              selectedSupplierIds:
+                                  selection.selectedSupplierIds,
+                              supplierDestinations:
+                                  selection.supplierDestinations,
                             );
 
                             final skipped =
@@ -458,6 +447,9 @@ class _ViewQuoteScreenState extends ConsumerState<ViewQuoteScreen>
                                   .read(viewQuoteProvider(quote.id).notifier)
                                   .loadExistingQuote(quote.id);
                               refreshAllQuoteProviders(ref);
+                              ref.invalidate(
+                                quoteSuppliersOcStatusProvider(quote.id),
+                              );
                             }
 
                             if (skipped.isNotEmpty) {
@@ -530,41 +522,51 @@ class _ViewQuoteScreenState extends ConsumerState<ViewQuoteScreen>
                           if (quote == null) return;
 
                           final router = GoRouter.of(sheetContext);
-                          Navigator.of(sheetContext).pop(); // Close action sheet
+                          Navigator.of(
+                            sheetContext,
+                          ).pop(); // Close action sheet
 
                           try {
                             // Supplier Monetization Guardrail:
                             // Check if quote contains products from affiliated suppliers
                             final hasAffiliatedProducts = state.products.any(
                               (p) =>
-                                  p.sourceType == QuoteItemSourceType.affiliated ||
+                                  p.sourceType ==
+                                      QuoteItemSourceType.affiliated ||
                                   p.supplierBranchStockId != null,
                             );
 
                             if (hasAffiliatedProducts) {
-                              final ocRepo =
-                                  ref.read(supplierOrdersRepositoryProvider);
-                              final supplierStatuses =
-                                  await ocRepo.getQuoteSuppliersOcStatus(quote.id);
+                              final ocRepo = ref.read(
+                                supplierOrdersRepositoryProvider,
+                              );
+                              final supplierStatuses = await ocRepo
+                                  .getQuoteSuppliersOcStatus(quote.id);
 
                               if (supplierStatuses.isNotEmpty) {
-                                final orders =
-                                    await ocRepo.getSupplierOrdersByQuoteId(quote.id);
+                                final orders = await ocRepo
+                                    .getSupplierOrdersByQuoteId(quote.id);
                                 final approvedSupplierIds = orders
-                                    .where((o) =>
-                                        o.status == SupplierOrderStatus.approved ||
-                                        o.status == SupplierOrderStatus.finalized)
+                                    .where(
+                                      (o) =>
+                                          o.status ==
+                                              SupplierOrderStatus.approved ||
+                                          o.status ==
+                                              SupplierOrderStatus.finalized,
+                                    )
                                     .map((o) => o.supplierId)
                                     .toSet();
 
                                 final pendingSuppliers = supplierStatuses
                                     .where(
-                                      (s) =>
-                                          !approvedSupplierIds.contains(s.supplierId),
+                                      (s) => !approvedSupplierIds.contains(
+                                        s.supplierId,
+                                      ),
                                     )
                                     .toList();
 
-                                if (pendingSuppliers.isNotEmpty && context.mounted) {
+                                if (pendingSuppliers.isNotEmpty &&
+                                    context.mounted) {
                                   await CustomDialog.show(
                                     context: context,
                                     dialog: CustomDialog.confirmation(
@@ -731,7 +733,8 @@ class _ViewQuoteScreenState extends ConsumerState<ViewQuoteScreen>
           if (quote == null) return const SizedBox.shrink();
 
           final currentStatus = quote.status;
-          final showWhatsAppFab = currentStatus == QuoteStatus.sent.dbValue ||
+          final showWhatsAppFab =
+              currentStatus == QuoteStatus.sent.dbValue ||
               currentStatus == QuoteStatus.resent.dbValue ||
               currentStatus == QuoteStatus.inReview.dbValue ||
               currentStatus == QuoteStatus.opened.dbValue ||
@@ -782,19 +785,12 @@ class _ViewQuoteScreenState extends ConsumerState<ViewQuoteScreen>
     // Al volver, refrescamos el proveedor de visualización para obtener los datos actualizados
     ref.invalidate(viewQuoteProvider(widget.quoteId));
     // Y disparamos la validación de inventario inmediatamente
-    ref
-        .read(quoteValidationProvider(widget.quoteId).notifier)
-        .validate();
+    ref.read(quoteValidationProvider(widget.quoteId).notifier).validate();
   }
 
-  Future<void> _contactClientWhatsApp(
-    BuildContext context,
-    Quote quote,
-  ) async {
-    final phone = quote.contact?.phone ??
-        quote.contactPhone ??
-        quote.clientPhone ??
-        '';
+  Future<void> _contactClientWhatsApp(BuildContext context, Quote quote) async {
+    final phone =
+        quote.contact?.phone ?? quote.contactPhone ?? quote.clientPhone ?? '';
 
     if (phone.trim().isEmpty) {
       if (context.mounted) {
@@ -826,14 +822,10 @@ class _ViewQuoteScreenState extends ConsumerState<ViewQuoteScreen>
       await ContactUtils.launchWhatsApp(phone.trim(), message: msg);
     } catch (e) {
       if (context.mounted) {
-        AppToast.error(
-          context,
-          message: 'No se pudo abrir WhatsApp: $e',
-        );
+        AppToast.error(context, message: 'No se pudo abrir WhatsApp: $e');
       }
     }
   }
-
 
   bool _isQuoteExpired(QuoteState state) {
     final statusStr = state.quote?.status;
@@ -871,7 +863,8 @@ class _ViewQuoteScreenState extends ConsumerState<ViewQuoteScreen>
         currentQuote.status == QuoteStatus.opened.dbValue ||
         currentQuote.status == QuoteStatus.inReview.dbValue;
 
-    final isSendDisabled = currentQuote.status == QuoteStatus.approved.dbValue ||
+    final isSendDisabled =
+        currentQuote.status == QuoteStatus.approved.dbValue ||
         currentQuote.status == QuoteStatus.rejected.dbValue ||
         currentQuote.status == QuoteStatus.cancelled.dbValue ||
         currentQuote.status == QuoteStatus.finalized.dbValue;
@@ -891,7 +884,9 @@ class _ViewQuoteScreenState extends ConsumerState<ViewQuoteScreen>
       onSend: (targetQuote) {
         CustomActionSheet.show(
           context: context,
-          title: currentIsSentOrResent ? 'Reenviar cotización' : 'Enviar cotización',
+          title: currentIsSentOrResent
+              ? 'Reenviar cotización'
+              : 'Enviar cotización',
           actions: [
             BottomSheetActionItem(
               icon: Icons.email_outlined,
@@ -978,10 +973,7 @@ class _ViewQuoteScreenState extends ConsumerState<ViewQuoteScreen>
         onSend(updatedQuote);
       } catch (e) {
         if (context.mounted) {
-          AppToast.error(
-            context,
-            message: 'Error al actualizar fecha: $e',
-          );
+          AppToast.error(context, message: 'Error al actualizar fecha: $e');
         }
       }
     } else if (action == 'modify') {
@@ -994,8 +986,9 @@ class _ViewQuoteScreenState extends ConsumerState<ViewQuoteScreen>
         ref.read(quoteValidationProvider(quote.id).notifier).validate();
 
         // 2. Obtener cotización fresca directamente de la base de datos
-        final freshQuote =
-            await ref.read(quotesRepositoryProvider).getQuoteWithDetails(quote.id);
+        final freshQuote = await ref
+            .read(quotesRepositoryProvider)
+            .getQuoteWithDetails(quote.id);
         if (context.mounted) {
           final isSentOrResent =
               freshQuote.status == QuoteStatus.sent.dbValue ||

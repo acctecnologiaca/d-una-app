@@ -351,6 +351,22 @@ class AddPurchaseNotifier extends StateNotifier<AddPurchaseState> {
     updateBaseline();
   }
 
+  Future<void> loadPurchase(String purchaseId) async {
+    state = state.copyWith(isLoading: true, error: null);
+    try {
+      final details = await _repository.getPurchaseDetails(purchaseId);
+      loadFromDetails(
+        details.purchase,
+        details.items,
+        details.serials,
+        details.supplierTaxId,
+      );
+    } catch (e) {
+      state = state.copyWith(isLoading: false, error: e.toString());
+    }
+  }
+
+
   void setDocumentType(String type) {
     state = state.copyWith(documentType: type);
     autoSaveDraft();
@@ -555,8 +571,8 @@ class AddPurchaseNotifier extends StateNotifier<AddPurchaseState> {
         invoicePhotoUrl: isInitialInventory ? null : state.invoicePhotoUrl,
         date: state.date,
         subtotal: state.subtotal,
-        tax: isInitialInventory ? 0.0 : state.tax,
-        total: isInitialInventory ? state.subtotal : state.total,
+        tax: state.tax,
+        total: state.total,
         hasMissingSerials: state.hasMissingSerials,
         createdAt: DateTime.now(),
         updatedAt: DateTime.now(),

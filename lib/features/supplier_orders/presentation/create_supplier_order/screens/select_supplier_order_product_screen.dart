@@ -41,9 +41,10 @@ class _SelectSupplierOrderProductScreenState
         title: 'Agregar producto',
         subtitle: 'Orden de Compra #$orderNumber',
       ),
-      body: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
+      body: SafeArea(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
           // 1. Search Bar (Read-only -> Navigates to Search)
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
@@ -192,6 +193,7 @@ class _SelectSupplierOrderProductScreenState
           ),
         ],
       ),
-    );
-  }
+    ),
+  );
+}
 }

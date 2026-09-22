@@ -142,7 +142,7 @@ class ViewQuoteSummaryTab extends ConsumerWidget {
               if (orders.isEmpty) return const SizedBox.shrink();
 
               return Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   const SizedBox(height: 16),
                   _buildSectionHeader(
@@ -380,38 +380,40 @@ class ViewQuoteSummaryTab extends ConsumerWidget {
         children: [
           Icon(Icons.chat_bubble_outline, size: 16, color: statusCol),
           const SizedBox(width: 8),
-          Column(
-            mainAxisAlignment: MainAxisAlignment.start,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                'Comentario del cliente:',
-                style: TextStyle(
-                  fontWeight: FontWeight.bold,
-                  fontSize: 13,
-                  color: colors.onSurfaceVariant,
-                ),
-              ),
-              const SizedBox(height: 6),
-              Text(
-                quote.clientFeedback!,
-                style: TextStyle(
-                  fontSize: 13,
-                  color: colors.onSurface,
-                  height: 1.4,
-                ),
-              ),
-              if (feedbackDateStr != null) ...[
-                const SizedBox(height: 6),
+          Expanded(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.start,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
                 Text(
-                  'Recibido: $feedbackDateStr',
+                  'Comentario del cliente:',
                   style: TextStyle(
-                    fontSize: 11,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 13,
                     color: colors.onSurfaceVariant,
                   ),
                 ),
+                const SizedBox(height: 6),
+                Text(
+                  quote.clientFeedback!,
+                  style: TextStyle(
+                    fontSize: 13,
+                    color: colors.onSurface,
+                    height: 1.4,
+                  ),
+                ),
+                if (feedbackDateStr != null) ...[
+                  const SizedBox(height: 6),
+                  Text(
+                    'Recibido: $feedbackDateStr',
+                    style: TextStyle(
+                      fontSize: 11,
+                      color: colors.onSurfaceVariant,
+                    ),
+                  ),
+                ],
               ],
-            ],
+            ),
           ),
         ],
       ),
@@ -876,11 +878,12 @@ class ViewQuoteSummaryTab extends ConsumerWidget {
       ),
       color: colors.surface,
       child: ListView.separated(
+        padding: EdgeInsets.zero,
         shrinkWrap: true,
         physics: const NeverScrollableScrollPhysics(),
         itemCount: orders.length,
         separatorBuilder: (context, index) => Divider(
-          height: 1,
+          height: orders.length > 1 ? 1 : 0,
           color: colors.outlineVariant.withValues(alpha: 0.5),
         ),
         itemBuilder: (context, index) {
@@ -915,7 +918,7 @@ class ViewQuoteSummaryTab extends ConsumerWidget {
                     errorBuilder: (context, error, stackTrace) {
                       return const Icon(
                         Icons.help_outline,
-                        size: 24,
+                        size: 18,
                         color: Colors.grey,
                       );
                     },
@@ -977,10 +980,7 @@ class ViewQuoteSummaryTab extends ConsumerWidget {
             ),
             subtitle: Text(
               DateFormat('dd/MM/yyyy').format(note.createdAt),
-              style: TextStyle(
-                fontSize: 12,
-                color: colors.onSurfaceVariant,
-              ),
+              style: TextStyle(fontSize: 12, color: colors.onSurfaceVariant),
             ),
             trailing: Row(
               mainAxisSize: MainAxisSize.min,

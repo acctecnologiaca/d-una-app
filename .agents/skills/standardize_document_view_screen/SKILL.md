@@ -465,6 +465,13 @@ Para documentos que requieran constancia de entrega o firma electrónica en el v
    - Botón primario de consulta (`"Ver nota de entrega"` / `"Ver documento"`) para regresar a la vista formal en cualquier momento.
    - Footer institucional oficial D-UNA con logotipo corporativo.
 
+### J. Homologación de Productos Multi-Origen en el Visor Web vs PDF
+1. **Separación Operativa vs Vista Unificada del Cliente:** Cuando un producto se abastece desde múltiples orígenes (ej. parte de stock propio y parte de proveedor afiliado o externo), el sistema registra múltiples filas en `quote_items_products` bajo un mismo `group_index` para llevar el control de inventario y trazabilidad con proveedores.
+2. **Consolidación Obligatoria en Documentos del Cliente:**
+   - **En el PDF ([`quote_pdf_template.dart`](file:///c:/Users/aleja/flutter_apps/MVP/d_una_app/lib/core/pdf/templates/quote_pdf_template.dart)):** Los productos se agrupan mediante `groupedProducts.putIfAbsent(product.groupIndex, ...)` sumando `quantity` y `totalPrice`.
+   - **En el Visor Web ([`quote.html`](file:///c:/Users/aleja/flutter_apps/MVP/d_una_app/firebase_hosting/public/quote.html)):** Es obligatorio agrupar los ítems en un `Map` por `group_index` (con fallback defensivo por firma `name_brand_model_unitPrice` si `group_index` no viniera), acumulando la cantidad total y el total consolidado antes de renderizar la tabla HTML. El cliente jamás debe ver el mismo producto duplicado o dividido por razones de abastecimiento interno.
+   - **En la Edge Function ([`quotes_action/index.ts`](file:///c:/Users/aleja/flutter_apps/MVP/d_una_app/supabase/functions/quotes_action/index.ts)):** Es mandatorio incluir `group_index: p.group_index` en el mapeo de `products` de la acción `get_details`.
+
 ---
 
 ## 7. Ciclo de Vida y Asignación de Fechas Logísticas y Recepción (Notas de Entrega)
@@ -570,7 +577,24 @@ Para documentos que consumen productos de inventario propio (`sourceType == 'own
 - [ ] ¿El lienzo de firma digital en la web incluye placeholder interactivo centrado que se oculta al trazar y se restaura al limpiar?
 - [ ] ¿Se eliminaron los `alert()` nativos al firmar/confirmar en la web, redirigiendo a su landing page institucional (`*_response.html`) con resumen y botón de consulta?
 - [ ] ¿El área de firma en la web finalizada carece por completo de fondos o cabeceras verdes y replica el bloque de firma sobrio del PDF (`slate50`/`slate200`) alineado a la derecha sobre la línea `#CBD5E1`?
-- [ ] ¿La impresión desde la web (`@media print` / guardar en PDF) es visualmente indistinguible del PDF nativo exportado en la app?
 - [ ] ¿Los timestamps de recepción (`receivedAt`) se convierten explícitamente a hora local (`.toLocal()`) en el modelo y se formatean en 12h con AM/PM (`DateFormat('dd/MM/yyyy - hh:mm a')`) tanto en la app como en el PDF?
+- [ ] ¿El estatus Borrador (`draft`) está excluido de `showStatusDialog` y solo se asigna automáticamente al crear o al guardar modificaciones en modo edición tras confirmar el diálogo preventivo?
+
+---
+
+## 10. Regla Arquitectónica de Inmutabilidad del Estatus Borrador (Draft) y Transición Exclusiva al Editar
+
+### A. Prohibición en Selectores Manuales
+1. **Exclusión de `draft` en `showStatusDialog`:** En los diálogos modales de cambio de estatus ([`QuoteSelectionActions`](file:///c:/Users/aleja/flutter_apps/MVP/d_una_app/lib/features/quotes/presentation/quotes_list/quote_selection_actions.dart), [`ReportSelectionActions`](file:///c:/Users/aleja/flutter_apps/MVP/d_una_app/lib/features/reports/presentation/reports_list/report_selection_actions.dart) y [`DeliveryNoteSelectionActions`](file:///c:/Users/aleja/flutter_apps/MVP/d_una_app/lib/features/delivery_notes/presentation/delivery_notes_list/delivery_note_selection_actions.dart)), el estatus `draft` (Borrador) está terminantemente prohibido.
+2. **Protección en Selección Individual y por Lotes:** Ningún usuario u operador puede degradar manualmente a borrador uno o varios documentos emitidos (`sent`, `opened`, `approved`, etc.) desde la vista detallada ni desde la lista principal mediante acciones masivas.
+
+### B. Transición Automática Exclusiva al Editar
+1. **Punto Único de Transición a `draft`:** El estatus `draft` solo se adquiere por dos vías exclusivas:
+   - Al crear un nuevo documento desde cero.
+   - Al editar y guardar modificaciones deliberadas sobre un documento emitido.
+2. **Diálogo Confirmatorio Preventivo:** En todos los creadores (`create_*_screen.dart`), si el documento actual no se encuentra en `draft`, al pulsar Guardar se debe desplegar un `CustomDialog.confirmation` alertando:
+   - *"El/La [documento] se encuentra en estatus '[Estatus]'. Al guardar las modificaciones, pasará automáticamente a estatus Borrador. ¿Deseas continuar?"*
+3. **Unificación de Puntos de Guardado en Modo Edición:** Tanto el icono de guardar en el `StandardAppBar` como el Extended FAB de la pestaña Resumen (tab 4) deben invocar invariablemente el método unificado `_handleSaveInEditMode`, garantizando la ejecución de la advertencia preventiva y el guardado formal con `status: 'draft'`.
+
 
 

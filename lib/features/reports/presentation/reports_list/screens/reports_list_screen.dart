@@ -89,7 +89,6 @@ class _ReportsListScreenState extends ConsumerState<ReportsListScreen>
                 hintText: 'Buscar...',
                 readOnly: true,
                 showFilterIcon: true,
-                onFilterTap: () {},
                 onTap: () {
                   context.push('/reports/search');
                 },

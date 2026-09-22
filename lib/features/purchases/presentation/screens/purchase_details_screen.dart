@@ -42,7 +42,7 @@ class _PurchaseDetailsScreenState extends ConsumerState<PurchaseDetailsScreen>
   late final AppLifecycleListener _lifecycleListener;
   RealtimeChannel? _singlePurchaseChannel;
   bool _isEditing = false;
-  bool _dataLoadedToEditState = false;
+  bool _hasStartedInEditMode = false;
 
   @override
   void initState() {
@@ -139,21 +139,6 @@ class _PurchaseDetailsScreenState extends ConsumerState<PurchaseDetailsScreen>
   }
 
   Future<void> _enterEditMode(PurchaseDetailsData data) async {
-    if (!_dataLoadedToEditState) {
-      final editState = ref.read(addPurchaseProvider);
-      if (editState.purchaseId != widget.purchaseId) {
-        ref
-            .read(addPurchaseProvider.notifier)
-            .loadFromDetails(
-              data.purchase,
-              data.items,
-              data.serials,
-              data.supplierTaxId,
-            );
-      }
-      _dataLoadedToEditState = true;
-    }
-
     setState(() {
       _isEditing = true;
     });
@@ -192,8 +177,19 @@ class _PurchaseDetailsScreenState extends ConsumerState<PurchaseDetailsScreen>
           }
         },
       );
+    } else {
+      // Si no hay borrador previo guardado, inicializar con los datos actuales del servidor
+      ref
+          .read(addPurchaseProvider.notifier)
+          .loadFromDetails(
+            data.purchase,
+            data.items,
+            data.serials,
+            data.supplierTaxId,
+          );
     }
   }
+
 
   Future<bool> _showDiscardDialog() async {
     final colors = Theme.of(context).colorScheme;
@@ -294,12 +290,6 @@ class _PurchaseDetailsScreenState extends ConsumerState<PurchaseDetailsScreen>
             final shouldDiscard = await _showDiscardDialog();
             if (!shouldDiscard) return;
             await notifier.clearDraft(purchaseId: widget.purchaseId);
-            notifier.loadFromDetails(
-              data.purchase,
-              data.items,
-              data.serials,
-              data.supplierTaxId,
-            );
             notifier.reset(
               clearPersistedDraft: true,
               purchaseId: widget.purchaseId,
@@ -334,8 +324,8 @@ class _PurchaseDetailsScreenState extends ConsumerState<PurchaseDetailsScreen>
       data: (data) {
         final purchase = data.purchase;
 
-        if (widget.startInEditMode && !_dataLoadedToEditState) {
-          _dataLoadedToEditState = true;
+        if (widget.startInEditMode && !_hasStartedInEditMode) {
+          _hasStartedInEditMode = true;
           _isEditing = true;
           WidgetsBinding.instance.addPostFrameCallback((_) {
             _enterEditMode(data);

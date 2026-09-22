@@ -311,4 +311,33 @@ class SupabaseClientsRepository {
 
     return (quotes as List).isNotEmpty;
   }
+
+  /// Verifica si un contacto está referenciado en quotes, service_reports o delivery_notes.
+  Future<bool> contactHasLinkedDocuments(String contactId) async {
+    // Check quotes
+    final quotes = await _supabase
+        .from('quotes')
+        .select('id')
+        .eq('contact_id', contactId)
+        .limit(1);
+    if ((quotes as List).isNotEmpty) return true;
+
+    // Check service reports
+    final reports = await _supabase
+        .from('service_reports')
+        .select('id')
+        .eq('contact_id', contactId)
+        .limit(1);
+    if ((reports as List).isNotEmpty) return true;
+
+    // Check delivery notes
+    final deliveryNotes = await _supabase
+        .from('delivery_notes')
+        .select('id')
+        .eq('contact_id', contactId)
+        .limit(1);
+    if ((deliveryNotes as List).isNotEmpty) return true;
+
+    return false;
+  }
 }

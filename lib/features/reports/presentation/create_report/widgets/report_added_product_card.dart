@@ -101,7 +101,7 @@ class ReportAddedProductCard extends StatelessWidget {
                     quantity: product.quantity,
                     uomAbbreviation: product.uom,
                     uomIconName: product.uomIconName,
-                    maxStock: product.availableStock ?? product.quantity,
+                    maxStock: isTemporal ? null : product.availableStock,
                   ),
                 ),
               ],
@@ -172,10 +172,12 @@ class ReportAddedProductCard extends StatelessWidget {
                   label: 'Cantidad:',
                   value: product.quantity,
                   min: 1,
-                  max:
-                      product.availableStock != null &&
+                  max: !isTemporal &&
+                          product.availableStock != null &&
                           product.availableStock! > 0
-                      ? product.availableStock!
+                      ? (product.availableStock! > product.quantity
+                          ? product.availableStock!
+                          : product.quantity)
                       : 99999,
                   onChanged: onQuantityChanged,
                 ),

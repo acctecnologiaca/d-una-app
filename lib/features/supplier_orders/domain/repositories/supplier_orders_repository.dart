@@ -37,6 +37,9 @@ abstract class SupplierOrdersRepository {
   Future<List<SupplierOrder>> getSupplierOrdersByQuoteId(String quoteId);
   Future<void> cancelDraftOrdersByQuoteId(String quoteId);
 
+  /// Cancela múltiples OCs en borrador dado un listado de IDs específicos.
+  Future<void> cancelDraftOrdersByIds(List<String> orderIds);
+
   /// Returns the last order number for the current user, or null if none.
   Future<String?> getLastOrderNumber();
 

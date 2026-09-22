@@ -58,16 +58,32 @@ class Product extends Equatable {
       userId: json['user_id'],
       name: json['name'],
       brandId: json['brand_id'],
-      brand: json['brands'] != null ? Brand.fromJson(json['brands']) : null,
+      brand:
+          (json['brands'] != null &&
+                  json['brands'] is Map &&
+                  json['brands']['id'] != null)
+              ? Brand.fromJson(json['brands'])
+              : null,
       model: json['model'],
       specs: json['specifications'],
       categoryId: json['category_id'],
-      category: json['categories'] != null
-          ? Category.fromJson(json['categories'])
-          : null,
+      category:
+          (json['categories'] != null &&
+                  json['categories'] is Map &&
+                  json['categories']['id'] != null)
+              ? Category.fromJson(json['categories'])
+              : null,
       uomId: json['uom_id'],
-      uom: json['uoms'] != null ? json['uoms']['symbol'] : null,
-      uomModel: json['uoms'] != null ? Uom.fromJson(json['uoms']) : null,
+      uom:
+          json['uoms'] != null && json['uoms'] is Map
+              ? json['uoms']['symbol']
+              : null,
+      uomModel:
+          (json['uoms'] != null &&
+                  json['uoms'] is Map &&
+                  json['uoms']['id'] != null)
+              ? Uom.fromJson(json['uoms'])
+              : null,
       imageUrl: json['image_url'],
       inventoryQuantity:
           (json['inventory_quantity'] as num?)?.toDouble() ?? 0.0,

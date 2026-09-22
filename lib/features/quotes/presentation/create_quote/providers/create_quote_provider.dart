@@ -484,7 +484,11 @@ class CreateQuoteNotifier extends StateNotifier<QuoteState> {
   }
 
   Future<void> clearDraft({String? quoteId}) async {
-    final key = _getDraftKey(quoteId: quoteId);
+    final isEditing = (quoteId != null && quoteId.isNotEmpty) ||
+        (state.quote != null && state.quote!.id.isNotEmpty);
+    final key = isEditing
+        ? _getDraftKey(quoteId: quoteId)
+        : DraftConstants.quotesModule;
     await _draftStorage.clearDraft(key);
   }
 
@@ -495,7 +499,11 @@ class CreateQuoteNotifier extends StateNotifier<QuoteState> {
     final currentId = quoteId ?? state.quote?.id;
     state = QuoteState();
     if (clearPersistedDraft) {
-      clearDraft(quoteId: isEditing ? currentId : null);
+      if (isEditing && currentId != null && currentId.isNotEmpty) {
+        clearDraft(quoteId: currentId);
+      } else {
+        _draftStorage.clearDraft(DraftConstants.quotesModule);
+      }
     }
   }
 
@@ -1178,6 +1186,61 @@ class CreateQuoteNotifier extends StateNotifier<QuoteState> {
 
   // Removed selectClient (redundant with setClient)
 
+  // --- OC Impact Analysis ---
+
+  /// Compara los productos afiliados actuales con los originales de la cotización.
+  /// Retorna el Set de `supplierBranchStockId` cuyo producto fue eliminado,
+  /// su cantidad cambió, o su costPrice cambió.
+  Set<String> getAffectedSupplierBranchStockIds() {
+    final original = state.quote?.products ?? [];
+    final current = state.products;
+
+    final affectedIds = <String>{};
+
+    // Mapa de productos originales afiliados: supplierBranchStockId → producto
+    final originalMap = <String, QuoteItemProduct>{};
+    for (final p in original) {
+      if (p.sourceType == QuoteItemSourceType.affiliated &&
+          p.supplierBranchStockId != null) {
+        originalMap[p.supplierBranchStockId!] = p;
+      }
+    }
+
+    // Mapa de productos actuales afiliados: supplierBranchStockId → producto
+    final currentMap = <String, QuoteItemProduct>{};
+    for (final p in current) {
+      if (p.sourceType == QuoteItemSourceType.affiliated &&
+          p.supplierBranchStockId != null) {
+        currentMap[p.supplierBranchStockId!] = p;
+      }
+    }
+
+    // 1. Productos afiliados eliminados o modificados
+    for (final entry in originalMap.entries) {
+      final sbsId = entry.key;
+      final orig = entry.value;
+      final curr = currentMap[sbsId];
+
+      if (curr == null) {
+        // Producto afiliado eliminado de la cotización
+        affectedIds.add(sbsId);
+      } else if (curr.quantity != orig.quantity ||
+          curr.costPrice != orig.costPrice) {
+        // Cantidad o precio de costo modificado
+        affectedIds.add(sbsId);
+      }
+    }
+
+    // 2. Productos afiliados nuevos (no existían en el original)
+    for (final sbsId in currentMap.keys) {
+      if (!originalMap.containsKey(sbsId)) {
+        affectedIds.add(sbsId);
+      }
+    }
+
+    return affectedIds;
+  }
+
   // --- Save / Finalize ---
   Future<bool> saveAsDraft() async {
     return createQuote(status: 'draft');
@@ -1307,13 +1370,13 @@ class CreateQuoteNotifier extends StateNotifier<QuoteState> {
       final wasEditing = isEditing;
       final previousQuoteId = state.quote?.id;
 
-      state = state.copyWith(quote: savedQuote, isLoading: false);
-
-      if (wasEditing) {
+      if (wasEditing && previousQuoteId != null && previousQuoteId.isNotEmpty) {
         await clearDraft(quoteId: previousQuoteId);
       } else {
-        await clearDraft(quoteId: null);
+        await _draftStorage.clearDraft(DraftConstants.quotesModule);
       }
+
+      state = state.copyWith(quote: savedQuote, isLoading: false);
 
       // Auto-refresh the list & view provider
       _ref.invalidate(viewQuoteProvider(savedQuote.id));

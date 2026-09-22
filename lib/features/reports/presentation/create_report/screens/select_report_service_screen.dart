@@ -188,7 +188,8 @@ class _SelectReportServiceScreenState
                 }
 
                 return ListView.separated(
-                  padding: const EdgeInsets.fromLTRB(16, 0, 16, FabScrollPadding.single),
+                  padding:
+                      const EdgeInsets.only(bottom: FabScrollPadding.single),
                   itemCount: sortedServices.length,
                   separatorBuilder: (_, _) =>
                       const Divider(height: 1, color: Colors.transparent),

@@ -130,24 +130,22 @@ class _AddPurchaseScreenState extends ConsumerState<AddPurchaseScreen>
                   await ref
                       .read(addPurchaseProvider.notifier)
                       .clearDraft(purchaseId: currentId);
-                  final repo = ref.read(purchasesRepositoryProvider);
-                  try {
-                    final details = await repo.getPurchaseDetails(currentId);
-                    ref
-                        .read(addPurchaseProvider.notifier)
-                        .loadFromDetails(
-                          details.purchase,
-                          details.items,
-                          details.serials,
-                          details.supplierTaxId,
-                        );
-                  } catch (_) {}
-                  setState(() {
-                    _tabController.index = 0;
-                  });
+                  await ref
+                      .read(addPurchaseProvider.notifier)
+                      .loadPurchase(currentId);
+                  if (mounted) {
+                    setState(() {
+                      _tabController.index = 0;
+                    });
+                  }
                 }
               },
             );
+          } else {
+            // Sin borrador local: cargar datos frescos desde el servidor
+            await ref
+                .read(addPurchaseProvider.notifier)
+                .loadPurchase(currentId);
           }
         }
       } else {

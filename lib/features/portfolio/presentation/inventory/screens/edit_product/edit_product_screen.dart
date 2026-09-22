@@ -160,74 +160,87 @@ class _EditProductScreenState extends ConsumerState<EditProductScreen> {
   }
 
   Future<void> _validateAndSave() async {
-    final products = ref.read(productsProvider).value ?? [];
     final currentModel = _modelController.text.trim();
+    final modelWasChanged = currentModel != _initialModel;
 
-    // 1. Check for Exact Match (excluding current product)
-    final exactMatch = ProductValidators.findExactMatch(products, currentModel);
+    // Only validate duplicates/similar models if the model field was modified
+    if (modelWasChanged) {
+      List<Product> products = ref.read(productsProvider).value ?? [];
+      if (products.isEmpty) {
+        try {
+          products = await ref.read(productsProvider.future);
+        } catch (e) {
+          debugPrint('Error loading products for validation: $e');
+        }
+      }
 
-    if (exactMatch != null && exactMatch.id != widget.product.id) {
-      // ... Validation Logic (Update to use brand.name if needed) ...
-      // Keeping validation logic mostly same but assuming validators handle Brand object or need update.
-      // Actually ProductValidators helper might accept list of products.
+      // Exclude current product being edited
+      final otherProducts =
+          products.where((p) => p.id != widget.product.id).toList();
 
-      if (!mounted) return;
-      CustomDialog.show(
-        context: context,
-        dialog: CustomDialog.confirmation(
-          title: 'Producto Duplicado',
-          icon: Symbols.error,
-          contentText:
-              'Ya existe otro equipo con el modelo "$currentModel" en el inventario.\n\n'
-              'Marca existente: ${exactMatch.brand?.name ?? "Desconocida"}',
-          actions: [
-            FilledButton(
-              onPressed: () {
-                Navigator.of(context, rootNavigator: true).pop();
-                FocusScope.of(context).requestFocus(FocusNode());
-              },
-              child: const Text('Entendido'),
-            ),
-          ],
-        ),
-      );
-      return;
-    }
+      // 1. Check for Exact Match (excluding current product)
+      final exactMatch =
+          ProductValidators.findExactMatch(otherProducts, currentModel);
 
-    // 2. Check for Similar Match (excluding current product)
-    final similarMatch = ProductValidators.findSimilarMatch(
-      products,
-      currentModel,
-    );
+      if (exactMatch != null) {
+        if (!mounted) return;
+        CustomDialog.show(
+          context: context,
+          dialog: CustomDialog.confirmation(
+            title: 'Producto Duplicado',
+            icon: Symbols.error,
+            contentText:
+                'Ya existe otro equipo con el modelo "$currentModel" en el inventario.\n\n'
+                'Marca existente: ${exactMatch.brand?.name ?? "Desconocida"}',
+            actions: [
+              FilledButton(
+                onPressed: () {
+                  Navigator.of(context, rootNavigator: true).pop();
+                  FocusScope.of(context).requestFocus(FocusNode());
+                },
+                child: const Text('Entendido'),
+              ),
+            ],
+          ),
+        );
+        return;
+      }
 
-    if (similarMatch != null && similarMatch.id != widget.product.id) {
-      if (!mounted) return;
-      final shouldProceed = await CustomDialog.show<bool>(
-        context: context,
-        dialog: CustomDialog.confirmation(
-          title: 'Modelo Similar Detectado',
-          icon: Symbols.info,
-          contentText:
-              'Ya existe un modelo similar en el inventario:\n\n'
-              'Modelo: ${similarMatch.model}\n'
-              'Marca: ${similarMatch.brand?.name ?? "Desconocida"}\n\n'
-              '¿Estás seguro de continuar?',
-          actions: [
-            TextButton(
-              onPressed: () =>
-                  Navigator.of(context, rootNavigator: true).pop(false),
-              child: const Text('Corregir'),
-            ),
-            FilledButton(
-              onPressed: () =>
-                  Navigator.of(context, rootNavigator: true).pop(true),
-              child: const Text('Continuar'),
-            ),
-          ],
-        ),
+      // 2. Check for Similar Match (excluding current product)
+      final similarMatch = ProductValidators.findSimilarMatch(
+        otherProducts,
+        currentModel,
       );
 
-      if (shouldProceed != true) return;
+      if (similarMatch != null) {
+        if (!mounted) return;
+        final shouldProceed = await CustomDialog.show<bool>(
+          context: context,
+          dialog: CustomDialog.confirmation(
+            title: 'Modelo Similar Detectado',
+            icon: Symbols.info,
+            contentText:
+                'Ya existe un modelo similar en el inventario:\n\n'
+                'Modelo: ${similarMatch.model}\n'
+                'Marca: ${similarMatch.brand?.name ?? "Desconocida"}\n\n'
+                '¿Estás seguro de continuar?',
+            actions: [
+              TextButton(
+                onPressed: () =>
+                    Navigator.of(context, rootNavigator: true).pop(false),
+                child: const Text('Corregir'),
+              ),
+              FilledButton(
+                onPressed: () =>
+                    Navigator.of(context, rootNavigator: true).pop(true),
+                child: const Text('Continuar'),
+              ),
+            ],
+          ),
+        );
+
+        if (shouldProceed != true) return;
+      }
     }
 
     // Proceed to save

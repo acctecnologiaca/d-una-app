@@ -357,4 +357,7 @@ final clientHasLinkedDocumentsProvider =
   return ref.read(clientsRepositoryProvider).hasLinkedDocuments(clientId);
 });
 
-
+final contactHasLinkedDocumentsProvider =
+    FutureProvider.family<bool, String>((ref, contactId) async {
+  return ref.read(clientsRepositoryProvider).contactHasLinkedDocuments(contactId);
+});

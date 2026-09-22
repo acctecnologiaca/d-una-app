@@ -43,8 +43,8 @@ class _SelectServiceScreenState extends ConsumerState<SelectServiceScreen> {
 
     final formattedQty =
         _selectedQuantity.truncateToDouble() == _selectedQuantity
-            ? _selectedQuantity.toInt().toString()
-            : _selectedQuantity.toStringAsFixed(2);
+        ? _selectedQuantity.toInt().toString()
+        : _selectedQuantity.toStringAsFixed(2);
     final totalPrice = (_selectedService?.price ?? 0.0) * _selectedQuantity;
     final formattedTotal = CurrencyFormatter.format(totalPrice);
     final rateSymbol = _selectedService?.serviceRate?.symbol ?? 'ud.';
@@ -57,173 +57,176 @@ class _SelectServiceScreenState extends ConsumerState<SelectServiceScreen> {
       body: SafeArea(
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          // 1. Search Bar (Read-only -> Navigates to Search)
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
-            child: InkWell(
-              onTap: () {
-                context.push('/quotes/create/select-service/search').then((
-                  result,
-                ) {
-                  if (result == true) {
-                    if (context.mounted) {
-                      context.pop(true);
-                    }
-                  }
-                });
-              },
-              borderRadius: BorderRadius.circular(12),
-              child: IgnorePointer(
-                child: CustomSearchBar(
-                  hintText: 'Buscar servicio...',
-                  onChanged: (_) {}, // No-op, handled by onTap
-                  readOnly: true,
-                  showFilterIcon: true,
-                ),
-              ),
-            ),
-          ),
-
-          // 2. Add Temporal Service Button
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-            child: OutlinedButton(
-              onPressed: () {
-                context
-                    .push('/quotes/create/select-service/temporal-service')
-                    .then((result) {
-                      if (result == true && context.mounted) {
+          children: [
+            // 1. Search Bar (Read-only -> Navigates to Search)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+              child: InkWell(
+                onTap: () {
+                  context.push('/quotes/create/select-service/search').then((
+                    result,
+                  ) {
+                    if (result == true) {
+                      if (context.mounted) {
                         context.pop(true);
                       }
-                    });
-              },
-              style: OutlinedButton.styleFrom(
-                padding: const EdgeInsets.symmetric(vertical: 12),
-                side: BorderSide(color: colors.outlineVariant),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(24),
+                    }
+                  });
+                },
+                borderRadius: BorderRadius.circular(12),
+                child: IgnorePointer(
+                  child: CustomSearchBar(
+                    hintText: 'Buscar servicio...',
+                    onChanged: (_) {}, // No-op, handled by onTap
+                    readOnly: true,
+                    showFilterIcon: true,
+                  ),
                 ),
-                foregroundColor: colors.onSurface,
-              ),
-              child: const Text(
-                'Agregar servicio temporal',
-                style: TextStyle(fontWeight: FontWeight.w600),
               ),
             ),
-          ),
 
-          // 3. Disclaimer
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-            child: const InfoDisclaimerCard(
-              text: 'Precios no incluyen impuestos',
-              showCloseButton: true,
-            ),
-          ),
-
-          // 4. Sort Selector
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-            child: Row(
-              children: [
-                SortSelector(
-                  currentSort: _currentSort,
-                  options: const [
-                    SortOption.frequency,
-                    SortOption.recent,
-                    SortOption.nameAZ,
-                    SortOption.nameZA,
-                  ],
-                  onSortChanged: (val) => setState(() => _currentSort = val),
+            // 2. Add Temporal Service Button
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              child: OutlinedButton(
+                onPressed: () {
+                  context
+                      .push('/quotes/create/select-service/temporal-service')
+                      .then((result) {
+                        if (result == true && context.mounted) {
+                          context.pop(true);
+                        }
+                      });
+                },
+                style: OutlinedButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(vertical: 12),
+                  side: BorderSide(color: colors.outlineVariant),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(24),
+                  ),
+                  foregroundColor: colors.onSurface,
                 ),
-              ],
-            ),
-          ),
-
-          // 5. List
-          Expanded(
-            child: suggestionsAsync.when(
-              loading: () => const Center(child: CircularProgressIndicator()),
-              error: (err, stack) => FriendlyErrorWidget(
-                error: err,
-                onRetry: () => ref.invalidate(quoteServiceSuggestionsProvider),
+                child: const Text(
+                  'Agregar servicio temporal',
+                  style: TextStyle(fontWeight: FontWeight.w600),
+                ),
               ),
-              data: (services) {
-                // Determine sort list
-                final sortedServices = List.of(services);
-                sortedServices.sort((a, b) {
-                  switch (_currentSort) {
-                    case SortOption.recent:
-                    case SortOption.frequency:
-                      return b.createdAt.compareTo(a.createdAt);
-                    case SortOption.nameAZ:
-                      return a.name.toLowerCase().compareTo(
-                        b.name.toLowerCase(),
-                      );
-                    case SortOption.nameZA:
-                      return b.name.toLowerCase().compareTo(
-                        a.name.toLowerCase(),
-                      );
-                    default:
-                      return 0;
+            ),
+
+            // 3. Disclaimer
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              child: const InfoDisclaimerCard(
+                text: 'Precios no incluyen impuestos',
+                showCloseButton: true,
+              ),
+            ),
+
+            // 4. Sort Selector
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              child: Row(
+                children: [
+                  SortSelector(
+                    currentSort: _currentSort,
+                    options: const [
+                      SortOption.frequency,
+                      SortOption.recent,
+                      SortOption.nameAZ,
+                      SortOption.nameZA,
+                    ],
+                    onSortChanged: (val) => setState(() => _currentSort = val),
+                  ),
+                ],
+              ),
+            ),
+
+            // 5. List
+            Expanded(
+              child: suggestionsAsync.when(
+                loading: () => const Center(child: CircularProgressIndicator()),
+                error: (err, stack) => FriendlyErrorWidget(
+                  error: err,
+                  onRetry: () =>
+                      ref.invalidate(quoteServiceSuggestionsProvider),
+                ),
+                data: (services) {
+                  // Determine sort list
+                  final sortedServices = List.of(services);
+                  sortedServices.sort((a, b) {
+                    switch (_currentSort) {
+                      case SortOption.recent:
+                      case SortOption.frequency:
+                        return b.createdAt.compareTo(a.createdAt);
+                      case SortOption.nameAZ:
+                        return a.name.toLowerCase().compareTo(
+                          b.name.toLowerCase(),
+                        );
+                      case SortOption.nameZA:
+                        return b.name.toLowerCase().compareTo(
+                          a.name.toLowerCase(),
+                        );
+                      default:
+                        return 0;
+                    }
+                  });
+
+                  if (sortedServices.isEmpty) {
+                    return Center(
+                      child: Text(
+                        'No hay servicios disponibles',
+                        style: TextStyle(color: colors.outline),
+                      ),
+                    );
                   }
-                });
 
-                if (sortedServices.isEmpty) {
-                  return Center(
-                    child: Text(
-                      'No hay servicios disponibles',
-                      style: TextStyle(color: colors.outline),
+                  return ListView.separated(
+                    padding: const EdgeInsets.only(
+                      bottom: FabScrollPadding.single,
                     ),
-                  );
-                }
+                    itemCount: sortedServices.length,
+                    separatorBuilder: (_, _) =>
+                        const Divider(height: 1, color: Colors.transparent),
+                    itemBuilder: (context, index) {
+                      final service = sortedServices[index];
+                      final currentQty = _selectedServiceId == service.id
+                          ? _selectedQuantity
+                          : 0.0;
+                      final isLocked =
+                          _selectedServiceId != null &&
+                          _selectedServiceId != service.id;
+                      final isAlreadyInQuote = quoteServices.any(
+                        (s) => s.serviceId == service.id,
+                      );
 
-                return ListView.separated(
-                  padding: const EdgeInsets.fromLTRB(16, 0, 16, FabScrollPadding.single),
-                  itemCount: sortedServices.length,
-                  separatorBuilder: (_, _) =>
-                      const Divider(height: 1, color: Colors.transparent),
-                  itemBuilder: (context, index) {
-                    final service = sortedServices[index];
-                    final currentQty = _selectedServiceId == service.id
-                        ? _selectedQuantity
-                        : 0.0;
-                    final isLocked =
-                        _selectedServiceId != null &&
-                        _selectedServiceId != service.id;
-                    final isAlreadyInQuote = quoteServices.any(
-                      (s) => s.serviceId == service.id,
-                    );
-
-                    return QuoteServiceSelectionCard(
-                      service: service,
-                      selectedQty: currentQty,
-                      isLocked: isLocked,
-                      isAlreadyInQuote: isAlreadyInQuote,
-                      onQtyChanged: (qty) {
-                        setState(() {
-                          if (qty > 0) {
-                            _selectedServiceId = service.id;
-                            _selectedQuantity = qty;
-                            _selectedService = service;
-                          } else {
-                            if (_selectedServiceId == service.id) {
-                              _selectedServiceId = null;
-                              _selectedQuantity = 0.0;
-                              _selectedService = null;
+                      return QuoteServiceSelectionCard(
+                        service: service,
+                        selectedQty: currentQty,
+                        isLocked: isLocked,
+                        isAlreadyInQuote: isAlreadyInQuote,
+                        onQtyChanged: (qty) {
+                          setState(() {
+                            if (qty > 0) {
+                              _selectedServiceId = service.id;
+                              _selectedQuantity = qty;
+                              _selectedService = service;
+                            } else {
+                              if (_selectedServiceId == service.id) {
+                                _selectedServiceId = null;
+                                _selectedQuantity = 0.0;
+                                _selectedService = null;
+                              }
                             }
-                          }
-                        });
-                      },
-                    );
-                  },
-                );
-              },
+                          });
+                        },
+                      );
+                    },
+                  );
+                },
+              ),
             ),
-          ),
-        ],
-      ),
+          ],
+        ),
       ),
       floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
       floatingActionButton: CustomExtendedFab(
@@ -254,4 +257,3 @@ class _SelectServiceScreenState extends ConsumerState<SelectServiceScreen> {
     );
   }
 }
-

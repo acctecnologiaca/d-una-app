@@ -318,7 +318,9 @@ class ViewSupplierOrderSummaryTab extends ConsumerWidget {
                       context,
                       Icons.alt_route,
                       'Modalidad',
-                      order.isDropshipping ? 'Dropshipping' : 'Inventario propio',
+                      order.isDropshipping
+                          ? 'Dropshipping'
+                          : 'Inventario propio',
                       isTextValue: true,
                     ),
                     if (order.isDropshipping) ...[
@@ -1033,7 +1035,7 @@ class ViewSupplierOrderSummaryTab extends ConsumerWidget {
             _buildSectionHeader(
               context,
               Icons.request_quote_outlined,
-              'Cotización vinculada',
+              'Cotización',
             ),
             Card(
               elevation: 0,
@@ -1069,10 +1071,7 @@ class ViewSupplierOrderSummaryTab extends ConsumerWidget {
                       ),
                     ),
                     const SizedBox(width: 8),
-                    Icon(
-                      Icons.chevron_right,
-                      color: colors.onSurfaceVariant,
-                    ),
+                    Icon(Icons.chevron_right, color: colors.onSurfaceVariant),
                   ],
                 ),
                 onTap: () {

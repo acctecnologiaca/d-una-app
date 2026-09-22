@@ -17,7 +17,6 @@ class EmailTemplatesListScreen extends ConsumerWidget {
 
     const documentTypes = [
       {'id': 'quote', 'label': 'Cotizaciones', 'icon': Symbols.request_quote},
-      {'id': 'order', 'label': 'Pedidos', 'icon': Icons.shopping_cart_outlined},
       {
         'id': 'receipt',
         'label': 'Recibos',

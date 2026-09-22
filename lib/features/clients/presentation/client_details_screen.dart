@@ -434,7 +434,8 @@ class ClientDetailsScreen extends ConsumerWidget {
                                     extra: {
                                       'companyName': client.name,
                                       'contact': c,
-                                    }, // Pass contact object
+                                      'contactCount': client.contacts.length,
+                                    },
                                   );
                                 },
                               ),

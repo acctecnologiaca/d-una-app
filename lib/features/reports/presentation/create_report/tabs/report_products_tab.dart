@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:d_una_app/shared/utils/fab_scroll_padding.dart';
+import '../../../../portfolio/presentation/providers/products_provider.dart';
 import '../../../data/models/service_report_item_product.dart';
 import '../providers/create_report_provider.dart';
 import '../providers/report_product_selection_provider.dart';
@@ -25,6 +26,8 @@ class _ReportProductsTabState extends ConsumerState<ReportProductsTab>
     super.build(context);
     final state = ref.watch(createReportProvider);
     final notifier = ref.read(createReportProvider.notifier);
+    final productsAsync = ref.watch(productsProvider);
+    final catalogProducts = productsAsync.valueOrNull ?? [];
 
     if (state.products.isEmpty) {
       return Center(
@@ -63,8 +66,16 @@ class _ReportProductsTabState extends ConsumerState<ReportProductsTab>
         final isTemporal =
             product.sourceType == ReportProductSourceType.temporal;
 
+        final catalogProduct = catalogProducts
+            .where((cp) => cp.id == product.productId)
+            .firstOrNull;
+        final effectiveStock =
+            catalogProduct?.availableQuantity ?? product.availableStock;
+        final effectiveProduct =
+            product.copyWith(availableStock: effectiveStock);
+
         return ReportAddedProductCard(
-          product: product,
+          product: effectiveProduct,
           isReadOnly: state.isReadOnly,
           onQuantityChanged: (newQty) {
             final newSubtotal = product.unitPrice * newQty;

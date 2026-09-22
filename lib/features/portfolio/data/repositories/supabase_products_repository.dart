@@ -136,7 +136,7 @@ class SupabaseProductsRepository {
       final response = await _supabase
           .from('products')
           .insert(productJson)
-          .select('*, brands(name), categories(name), uoms(symbol)')
+          .select('*, brands (*), categories (*), uoms (*)')
           .single();
 
       return Product.fromJson(response);

@@ -1071,6 +1071,16 @@ class SupabaseSupplierOrdersRepository implements SupplierOrdersRepository {
   }
 
   @override
+  Future<void> cancelDraftOrdersByIds(List<String> orderIds) async {
+    if (orderIds.isEmpty) return;
+    await _supabase
+        .from('supplier_orders')
+        .update({'status': SupplierOrderStatus.cancelled.dbValue})
+        .inFilter('id', orderIds)
+        .eq('status', SupplierOrderStatus.draft.dbValue);
+  }
+
+  @override
   Future<String?> getLastOrderNumber() async {
     final currentUserId = _supabase.auth.currentUser?.id;
     if (currentUserId == null) return null;
