@@ -368,25 +368,19 @@ class _AddShippingMethodScreenState
                         if (_selectedDeliveryOption != null) ...[
                           if (isHomeDelivery) ...[
                             // Switch: Entregar a la dirección principal
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              children: [
-                                Text(
-                                  'Entregar a la dirección principal',
-                                  style: textTheme.bodyLarge?.copyWith(
-                                    fontWeight: FontWeight.w600,
-                                    color: colors.onSurface,
-                                  ),
+                            SwitchListTile(
+                              contentPadding: EdgeInsets.zero,
+                              activeThumbColor: colors.primary,
+                              title: Text(
+                                'Entregar a la dirección principal',
+                                style: textTheme.bodyLarge?.copyWith(
+                                  fontWeight: FontWeight.w600,
+                                  color: colors.onSurface,
                                 ),
-                                Transform.scale(
-                                  scale: 0.9,
-                                  child: Switch(
-                                    value: _useMainAddress,
-                                    onChanged: (val) =>
-                                        _toggleMainAddress(val, profile),
-                                  ),
-                                ),
-                              ],
+                              ),
+                              value: _useMainAddress,
+                              onChanged: (val) =>
+                                  _toggleMainAddress(val, profile),
                             ),
                             const SizedBox(height: 16),
                           ] else ...[
@@ -438,27 +432,19 @@ class _AddShippingMethodScreenState
                         const SizedBox(height: 32),
 
                         // Default Method Switch
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            Expanded(
-                              child: Text(
-                                'Establecer como método de envío principal',
-                                style: textTheme.bodyLarge?.copyWith(
-                                  fontWeight: FontWeight.w600,
-                                  color: colors.onSurface,
-                                ),
-                              ),
+                        SwitchListTile(
+                          contentPadding: EdgeInsets.zero,
+                          activeThumbColor: colors.primary,
+                          title: Text(
+                            'Establecer como método de envío principal',
+                            style: textTheme.bodyLarge?.copyWith(
+                              fontWeight: FontWeight.w600,
+                              color: colors.onSurface,
                             ),
-                            Transform.scale(
-                              scale: 0.9,
-                              child: Switch(
-                                value: _isDefaultMethod,
-                                onChanged: (val) =>
-                                    setState(() => _isDefaultMethod = val),
-                              ),
-                            ),
-                          ],
+                          ),
+                          value: _isDefaultMethod,
+                          onChanged: (val) =>
+                              setState(() => _isDefaultMethod = val),
                         ),
                       ],
                     ),

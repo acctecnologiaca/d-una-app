@@ -273,66 +273,56 @@ class _DeliveryNoteDeliveryTabState
                   color: colors.outlineVariant.withValues(alpha: 0.5),
                 ),
               ),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'Usar la dirección registrada del cliente',
-                          style: TextStyle(
-                            fontSize: 14,
-                            fontWeight: FontWeight.w600,
-                            color: clientHasAddress
-                                ? colors.onSurface
-                                : colors.onSurfaceVariant,
-                          ),
-                        ),
-                        const SizedBox(height: 2),
-                        Text(
-                          selectedClient == null
-                              ? 'Selecciona un cliente en la pestaña General'
-                              : (clientHasAddress
-                                    ? 'Bloquea la edición y toma los datos registrados del cliente'
-                                    : 'El cliente no posee dirección registrada'),
-                          style: TextStyle(
-                            fontSize: 12,
-                            color: clientHasAddress
-                                ? colors.onSurfaceVariant
-                                : colors.error,
-                          ),
-                        ),
-                      ],
-                    ),
+              child: SwitchListTile(
+                contentPadding: EdgeInsets.zero,
+                title: Text(
+                  'Usar la dirección registrada del cliente',
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                    color: clientHasAddress
+                        ? colors.onSurface
+                        : colors.onSurfaceVariant,
                   ),
-                  Switch(
-                    value: state.useClientAddress,
-                    onChanged: clientHasAddress
-                        ? (val) {
-                            ref
-                                .read(createDeliveryNoteProvider.notifier)
-                                .setUseClientAddress(val);
-                            if (val) {
-                              _addressController.text =
-                                  selectedClient.address ?? '';
-                              ref
-                                  .read(createDeliveryNoteProvider.notifier)
-                                  .setRecipientAddress(
-                                    address: selectedClient.address,
-                                    stateName: selectedClient.state,
-                                    city: selectedClient.city,
-                                  );
-                            } else {
-                              _addressController.clear();
-                              ref
-                                  .read(createDeliveryNoteProvider.notifier)
-                                  .clearRecipientAddress();
-                            }
-                          }
-                        : null,
+                ),
+                subtitle: Text(
+                  selectedClient == null
+                      ? 'Selecciona un cliente en la pestaña General'
+                      : (clientHasAddress
+                            ? 'Bloquea la edición y toma los datos registrados del cliente'
+                            : 'El cliente no posee dirección registrada'),
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: clientHasAddress
+                        ? colors.onSurfaceVariant
+                        : colors.error,
                   ),
-                ],
+                ),
+                activeThumbColor: colors.primary,
+                value: state.useClientAddress,
+                onChanged: clientHasAddress
+                    ? (val) {
+                        ref
+                            .read(createDeliveryNoteProvider.notifier)
+                            .setUseClientAddress(val);
+                        if (val) {
+                          _addressController.text =
+                              selectedClient.address ?? '';
+                          ref
+                              .read(createDeliveryNoteProvider.notifier)
+                              .setRecipientAddress(
+                                address: selectedClient.address,
+                                stateName: selectedClient.state,
+                                city: selectedClient.city,
+                              );
+                        } else {
+                          _addressController.clear();
+                          ref
+                              .read(createDeliveryNoteProvider.notifier)
+                              .clearRecipientAddress();
+                        }
+                      }
+                    : null,
               ),
             ),
             const SizedBox(height: 20),

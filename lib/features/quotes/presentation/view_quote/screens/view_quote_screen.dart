@@ -157,6 +157,9 @@ class _ViewQuoteScreenState extends ConsumerState<ViewQuoteScreen>
         quote.status == QuoteStatus.cancelled.dbValue ||
         quote.status == QuoteStatus.finalized.dbValue;
 
+    // Pre-cargar estado de OCs por proveedor para que esté listo al abrir el ActionSheet
+    ref.watch(quoteSuppliersOcStatusProvider(widget.quoteId));
+
     if (widget.triggerSend &&
         !_hasTriggeredSend &&
         quote != null &&
@@ -328,8 +331,8 @@ class _ViewQuoteScreenState extends ConsumerState<ViewQuoteScreen>
                       );
                     },
                   ),
-                  Builder(
-                    builder: (context) {
+                  Consumer(
+                    builder: (context, ref, _) {
                       final statusStr = state.quote?.status;
                       final isBlockedForOcNe =
                           statusStr == QuoteStatus.rejected.dbValue ||
@@ -356,7 +359,7 @@ class _ViewQuoteScreenState extends ConsumerState<ViewQuoteScreen>
                                   QuoteValidationStatus.lowStock,
                                 ),
                           );
-                      // Nueva verificación: ¿Todos los proveedores ya tienen OC?
+                      // Verificación: ¿Todos los proveedores ya tienen OC?
                       final ocStatusAsync = ref.watch(
                         quoteSuppliersOcStatusProvider(widget.quoteId),
                       );
@@ -371,7 +374,7 @@ class _ViewQuoteScreenState extends ConsumerState<ViewQuoteScreen>
                           !isBlockedForOcNe &&
                           hasAffiliatedProducts &&
                           !hasValidationAlerts &&
-                          !allOcsGenerated; // ← Nueva condición
+                          !allOcsGenerated;
                       String? subtitleText;
                       if (isBlockedForOcNe) {
                         subtitleText =
@@ -381,15 +384,15 @@ class _ViewQuoteScreenState extends ConsumerState<ViewQuoteScreen>
                             'Esta cotización no contiene productos de proveedores afiliados';
                       } else if (hasValidationAlerts) {
                         subtitleText =
-                            'Bloqueado: La cotización contiene productos con alza de costo o stock insuficiente. Resuelve las alertas antes de generar la OC';
+                            'Bloqueado: La cotización contiene productos con alza de costo o stock insuficiente. Resuelve las alertas antes de generar la orden';
                       } else if (allOcsGenerated) {
                         subtitleText =
-                            'Todas las Órdenes de Compra ya fueron generadas para esta cotización';
+                            'Todas las órdenes de compra ya fueron generadas para esta cotización';
                       }
 
                       return BottomSheetActionItem(
                         icon: Icons.shopping_cart_outlined,
-                        label: 'Generar ordenes de compra',
+                        label: 'Generar órdenes de compra',
                         enabled: isEnabled,
                         subtitle: subtitleText,
                         onTap: () async {

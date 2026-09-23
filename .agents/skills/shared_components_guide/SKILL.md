@@ -130,6 +130,15 @@ PaginatedListView<Entity>(
      - **Envoltorio Obligatorio de `SafeArea`:** El cuerpo del `Scaffold` **DEBE** envolverse siempre en `SafeArea(child: Column(...))` para aislar el contenido de la barra de navegación gestual del sistema.
      - **Padding Inferior Canónico de Respiro:** El `ListView` o `ListView.separated` **DEBE** usar `padding: const EdgeInsets.fromLTRB(16, 8, 16, 40)`.
      - **Prohibición Estricta:** Queda **terminantemente prohibido** utilizar `padding: const EdgeInsets.symmetric(horizontal: 16)` con padding vertical en cero, ya que deja la última tarjeta rozando el borde físico de la pantalla.
+8. **Estándar Oficial de Interruptores (`SwitchListTile` vs `Switch`):**
+   - **Prohibición de Widgets Ad-Hoc y Escalas:** Queda **estrictamente prohibido** construir interruptores usando `Row(children: [Text(...), Switch(...)])` o `Transform.scale(scale: 0.9, child: Switch(...))`.
+   - **Uso Obligatorio de `SwitchListTile`:** En todas las pantallas, formularios, pasos de wizards y hojas modales (`bottom sheets`), se debe utilizar el componente nativo accesible `SwitchListTile`.
+   - **Alineación a Ras con Márgenes:** Debe configurarse obligatoriamente con `contentPadding: EdgeInsets.zero` para que el texto del interruptor coincida con la línea vertical de los campos de texto (`CustomTextField`) y selectores del formulario.
+   - **Tipografía Institucional:** El título debe estilizarse con `fontWeight: FontWeight.w600` (o estilo seminegrita equivalente del `textTheme`). Si incluye texto explicativo, debe utilizar el parámetro `subtitle: Text(...)`.
+   - **Paleta Material 3 Homologada:**
+     - **Color Activo del Thumb:** `activeThumbColor: Theme.of(context).colorScheme.primary` (o `colors.primary`).
+     - **Preservación del Track Color M3:** Queda prohibido forzar manualmente `activeTrackColor: colors.primary` con `activeThumbColor: colors.onPrimary` (inversión cromática), ya que rompe el contraste y la animación estándar de Material 3. La pista debe conservar el tintado armónico provisto por Flutter.
+   - **Referencia Canónica:** [`edit_product_screen.dart`](file:///c:/Users/aleja/flutter_apps/MVP/d_una_app/lib/features/portfolio/presentation/inventory/screens/edit_product/edit_product_screen.dart#L568-L601).
 
 ### E. 📐 Regla Canónica para Barras de Botones Fijas Inferiores y Hojas Modales
 

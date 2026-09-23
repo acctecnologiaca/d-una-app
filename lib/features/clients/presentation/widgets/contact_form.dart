@@ -117,27 +117,20 @@ class ContactForm extends StatelessWidget {
           const SizedBox(height: 24),
 
           // Primary Switch
-          Row(
-            children: [
-              Expanded(
-                child: Text(
-                  'Establecer como contacto principal',
-                  style: textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 16,
-                  ),
-                ),
+          SwitchListTile(
+            contentPadding: EdgeInsets.zero,
+            activeThumbColor: Theme.of(context).colorScheme.primary,
+            title: Text(
+              'Establecer como contacto principal',
+              style: textTheme.titleMedium?.copyWith(
+                fontWeight: FontWeight.w600,
+                fontSize: 16,
               ),
-              Transform.scale(
-                scale: 0.9,
-                child: Switch(
-                  value: isPrimary,
-                  onChanged: isPrimaryReadOnly
-                      ? null
-                      : (val) => onIsPrimaryChanged(val),
-                ),
-              ),
-            ],
+            ),
+            value: isPrimary,
+            onChanged: isPrimaryReadOnly
+                ? null
+                : (val) => onIsPrimaryChanged(val),
           ),
 
           const SizedBox(height: 48),

@@ -377,26 +377,20 @@ class _EditServiceScreenState extends ConsumerState<EditServiceScreen> {
                     const SizedBox(height: 24),
 
                     // Warranty Toggle
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Expanded(
-                          child: Text(
-                            'Ofrecer tiempo de garantía',
-                            style: TextStyle(
-                              fontSize: 14,
-                              fontWeight: FontWeight.bold,
-                              color: colors.onSurface,
-                            ),
-                          ),
+                    SwitchListTile(
+                      contentPadding: EdgeInsets.zero,
+                      activeThumbColor: colors.primary,
+                      title: const Text(
+                        'Ofrecer tiempo de garantía',
+                        style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w600,
                         ),
-                        Switch(
-                          value: _hasWarranty,
-                          onChanged: (val) {
-                            setState(() => _hasWarranty = val);
-                          },
-                        ),
-                      ],
+                      ),
+                      value: _hasWarranty,
+                      onChanged: (val) {
+                        setState(() => _hasWarranty = val);
+                      },
                     ),
 
                     if (_hasWarranty) ...[

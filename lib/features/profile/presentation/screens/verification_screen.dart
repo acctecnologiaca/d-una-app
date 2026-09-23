@@ -801,27 +801,22 @@ class _VerificationScreenState extends ConsumerState<VerificationScreen> {
                       const SizedBox(height: 24),
 
                       // Switch: disabled if account is verified
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Text(
-                            'Soy propietario de una empresa',
-                            style: textTheme.bodyLarge?.copyWith(
-                              color: colors.onSurface,
-                            ),
+                      SwitchListTile(
+                        contentPadding: EdgeInsets.zero,
+                        activeThumbColor: colors.primary,
+                        title: Text(
+                          'Soy propietario de una empresa',
+                          style: textTheme.bodyLarge?.copyWith(
+                            color: colors.onSurface,
+                            fontWeight: FontWeight.w600,
                           ),
-                          Transform.scale(
-                            scale: 0.9,
-                            child: Switch(
-                              value: _isBusiness,
-                              onChanged: isAccountVerified
-                                  ? null
-                                  : (val) {
-                                      setState(() => _isBusiness = val);
-                                    },
-                            ),
-                          ),
-                        ],
+                        ),
+                        value: _isBusiness,
+                        onChanged: isAccountVerified
+                            ? null
+                            : (val) {
+                                setState(() => _isBusiness = val);
+                              },
                       ),
                       const SizedBox(height: 24),
 

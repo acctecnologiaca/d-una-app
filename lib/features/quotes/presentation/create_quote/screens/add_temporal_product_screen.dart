@@ -1256,13 +1256,12 @@ class _AddTemporalProductScreenState
                           'Este producto no tiene garantía',
                           style: TextStyle(
                             fontSize: 14,
-                            fontWeight: FontWeight.bold,
+                            fontWeight: FontWeight.w600,
                           ),
                         ),
                         value: _noWarranty,
                         onChanged: (v) => setState(() => _noWarranty = v),
-                        activeThumbColor: colors.onPrimary,
-                        activeTrackColor: colors.primary,
+                        activeThumbColor: colors.primary,
                       ),
                       if (!_noWarranty) ...[
                         const SizedBox(height: 8),
@@ -1508,7 +1507,7 @@ class _AddTemporalProductScreenState
                           'Guardar en inventario propio',
                           style: TextStyle(
                             fontSize: 14,
-                            fontWeight: FontWeight.bold,
+                            fontWeight: FontWeight.w600,
                           ),
                         ),
                         subtitle: Text(
@@ -1533,10 +1532,6 @@ class _AddTemporalProductScreenState
                         activeThumbColor:
                             (_alreadyInInventory && widget.existingItem != null)
                             ? colors.outline.withValues(alpha: 0.5)
-                            : colors.onPrimary,
-                        activeTrackColor:
-                            (_alreadyInInventory && widget.existingItem != null)
-                            ? colors.outline.withValues(alpha: 0.2)
                             : colors.primary,
                       ),
                       const SizedBox(height: 8),

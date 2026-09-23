@@ -365,12 +365,11 @@ class _QuoteServiceSaleDetailsSheetState
               contentPadding: EdgeInsets.zero,
               title: const Text(
                 'Ofrecer tiempo de garantía',
-                style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
+                style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
               ),
               value: _offerWarranty,
               onChanged: (v) => setState(() => _offerWarranty = v),
-              activeThumbColor: colors.onPrimary,
-              activeTrackColor: colors.primary,
+              activeThumbColor: colors.primary,
             ),
             if (_offerWarranty) ...[
               const SizedBox(height: 8),
@@ -421,21 +420,17 @@ class _QuoteServiceSaleDetailsSheetState
             const SizedBox(height: 24),
 
             // Servicio tercerizado
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text(
-                  'Servicio tercerizado',
-                  style: textTheme.titleSmall?.copyWith(
-                    fontWeight: FontWeight.bold,
-                  ),
+            SwitchListTile(
+              contentPadding: EdgeInsets.zero,
+              title: Text(
+                'Servicio tercerizado',
+                style: textTheme.titleSmall?.copyWith(
+                  fontWeight: FontWeight.w600,
                 ),
-                Switch(
-                  value: _isOutsourced,
-                  onChanged: (val) => setState(() => _isOutsourced = val),
-                  activeTrackColor: colors.primary,
-                ),
-              ],
+              ),
+              value: _isOutsourced,
+              onChanged: (val) => setState(() => _isOutsourced = val),
+              activeThumbColor: colors.primary,
             ),
             if (_isOutsourced) ...[
               const SizedBox(height: 12),
@@ -460,21 +455,17 @@ class _QuoteServiceSaleDetailsSheetState
             const SizedBox(height: 24),
 
             // Modificar precio
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text(
-                  'Modificar precio de venta',
-                  style: textTheme.titleSmall?.copyWith(
-                    fontWeight: FontWeight.bold,
-                  ),
+            SwitchListTile(
+              contentPadding: EdgeInsets.zero,
+              title: Text(
+                'Modificar precio de venta',
+                style: textTheme.titleSmall?.copyWith(
+                  fontWeight: FontWeight.w600,
                 ),
-                Switch(
-                  value: _modifyPrice,
-                  onChanged: (val) => setState(() => _modifyPrice = val),
-                  activeTrackColor: colors.primary,
-                ),
-              ],
+              ),
+              value: _modifyPrice,
+              onChanged: (val) => setState(() => _modifyPrice = val),
+              activeThumbColor: colors.primary,
             ),
             if (_modifyPrice) ...[
               const SizedBox(height: 12),

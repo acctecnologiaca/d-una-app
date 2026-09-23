@@ -205,7 +205,11 @@ class _AddEditCommercialConditionSheetState
           const SizedBox(height: 4),
           SwitchListTile(
             contentPadding: EdgeInsets.zero,
-            title: const Text('Cotizaciones nuevas'),
+            activeThumbColor: colors.primary,
+            title: const Text(
+              'Cotizaciones nuevas',
+              style: TextStyle(fontWeight: FontWeight.w600),
+            ),
             value: _isDefaultQuote,
             onChanged: (value) {
               setState(() {
@@ -217,7 +221,11 @@ class _AddEditCommercialConditionSheetState
 
           SwitchListTile(
             contentPadding: EdgeInsets.zero,
-            title: const Text('Reportes de servicios nuevos'),
+            activeThumbColor: colors.primary,
+            title: const Text(
+              'Reportes de servicios nuevos',
+              style: TextStyle(fontWeight: FontWeight.w600),
+            ),
             value: _isDefaultReport,
             onChanged: (value) {
               setState(() {

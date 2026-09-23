@@ -12,5 +12,52 @@
       "default": true
     }
   ],
-  "java.jdt.ls.java.home": "C:/Program Files/Android/Android Studio/jbr"
+  "java.jdt.ls.java.home": "C:/Program Files/Android/Android Studio/jbr",
+  "ag-switchboard.modelPricing": {
+    "opus": {
+      "input": 5,
+      "output": 25,
+      "cache": 0.5
+    },
+    "sonnet": {
+      "input": 3,
+      "output": 15,
+      "cache": 0.3
+    },
+    "haiku": {
+      "input": 1,
+      "output": 5,
+      "cache": 0.1
+    },
+    "gemini-3-pro": {
+      "input": 2,
+      "output": 12,
+      "cache": 0.2
+    },
+    "gemini-3-flash": {
+      "input": 0.5,
+      "output": 3,
+      "cache": 0.05
+    },
+    "gemini-2-pro": {
+      "input": 1.25,
+      "output": 10,
+      "cache": 0.125
+    },
+    "gemini-2-flash": {
+      "input": 0.3,
+      "output": 2.5,
+      "cache": 0.03
+    },
+    "flash-lite": {
+      "input": 0.1,
+      "output": 0.4,
+      "cache": 0.01
+    },
+    "gpt-oss": {
+      "input": 2.5,
+      "output": 10,
+      "cache": 0.25
+    }
+  }
 }

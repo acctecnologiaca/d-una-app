@@ -221,24 +221,21 @@ class _AddPurchaseProductDetailsSheetState
           const SizedBox(height: 24),
 
           // Garantía Switch
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
-                'Este producto no tiene garantía',
-                style: textTheme.titleSmall?.copyWith(
-                  fontWeight: FontWeight.bold,
-                ),
+          SwitchListTile(
+            contentPadding: EdgeInsets.zero,
+            activeThumbColor: colors.primary,
+            title: Text(
+              'Este producto no tiene garantía',
+              style: textTheme.titleSmall?.copyWith(
+                fontWeight: FontWeight.w600,
               ),
-              Switch(
-                value: _noWarranty,
-                onChanged: (val) {
-                  setState(() {
-                    _noWarranty = val;
-                  });
-                },
-              ),
-            ],
+            ),
+            value: _noWarranty,
+            onChanged: (val) {
+              setState(() {
+                _noWarranty = val;
+              });
+            },
           ),
 
           if (!_noWarranty) ...[
@@ -278,24 +275,21 @@ class _AddPurchaseProductDetailsSheetState
           const SizedBox(height: 24),
 
           // Serials Switch
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
-                'Este producto no usa seriales',
-                style: textTheme.titleSmall?.copyWith(
-                  fontWeight: FontWeight.bold,
-                ),
+          SwitchListTile(
+            contentPadding: EdgeInsets.zero,
+            activeThumbColor: colors.primary,
+            title: Text(
+              'Este producto no usa seriales',
+              style: textTheme.titleSmall?.copyWith(
+                fontWeight: FontWeight.w600,
               ),
-              Switch(
-                value: _noSerials,
-                onChanged: (val) {
-                  setState(() {
-                    _noSerials = val;
-                  });
-                },
-              ),
-            ],
+            ),
+            value: _noSerials,
+            onChanged: (val) {
+              setState(() {
+                _noSerials = val;
+              });
+            },
           ),
           const SizedBox(height: 16),
         ],

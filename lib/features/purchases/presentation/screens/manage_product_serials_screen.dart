@@ -308,24 +308,21 @@ class _ManageProductSerialsScreenState
             ),
             child: Column(
               children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(
-                      'Este producto no usa seriales',
-                      style: textTheme.titleSmall?.copyWith(
-                        fontWeight: FontWeight.bold,
-                      ),
+                SwitchListTile(
+                  contentPadding: EdgeInsets.zero,
+                  title: Text(
+                    'Este producto no usa seriales',
+                    style: textTheme.titleSmall?.copyWith(
+                      fontWeight: FontWeight.w600,
                     ),
-                    Switch(
-                      value: _noSerials,
-                      onChanged: (val) {
-                        setState(() {
-                          _noSerials = val;
-                        });
-                      },
-                    ),
-                  ],
+                  ),
+                  activeThumbColor: colors.primary,
+                  value: _noSerials,
+                  onChanged: (val) {
+                    setState(() {
+                      _noSerials = val;
+                    });
+                  },
                 ),
                 if (_noSerials) ...[
                   const SizedBox(height: 8),

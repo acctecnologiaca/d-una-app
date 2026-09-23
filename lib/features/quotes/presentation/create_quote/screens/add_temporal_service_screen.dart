@@ -850,7 +850,7 @@ class _AddTemporalServiceScreenState
                     title: const Text(
                       'Servicio tercerizado',
                       style:
-                          TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
+                          TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
                     ),
                     subtitle: Text(
                       'Otra persona lo haría por ti y te cobraría.',
@@ -861,8 +861,7 @@ class _AddTemporalServiceScreenState
                     ),
                     value: _isOutsourced,
                     onChanged: (v) => setState(() => _isOutsourced = v),
-                    activeThumbColor: colors.onPrimary,
-                    activeTrackColor: colors.primary,
+                    activeThumbColor: colors.primary,
                   ),
                   if (_isOutsourced) ...[
                     const SizedBox(height: 12),
@@ -974,12 +973,11 @@ class _AddTemporalServiceScreenState
                     title: const Text(
                       'No ofrezco garantía para este servicio',
                       style:
-                          TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
+                          TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
                     ),
                     value: !_hasWarranty,
                     onChanged: (v) => setState(() => _hasWarranty = !v),
-                    activeThumbColor: colors.onPrimary,
-                    activeTrackColor: colors.primary,
+                    activeThumbColor: colors.primary,
                   ),
                   if (_hasWarranty) ...[
                     const SizedBox(height: 8),
@@ -1099,7 +1097,7 @@ class _AddTemporalServiceScreenState
                     title: const Text(
                       'Guardar en servicios propios',
                       style:
-                          TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
+                          TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
                     ),
                     subtitle: Text(
                       (_alreadyInPortfolio && widget.existingItem != null)
@@ -1122,10 +1120,6 @@ class _AddTemporalServiceScreenState
                     activeThumbColor:
                         (_alreadyInPortfolio && widget.existingItem != null)
                             ? colors.outline.withValues(alpha: 0.5)
-                            : colors.onPrimary,
-                    activeTrackColor:
-                        (_alreadyInPortfolio && widget.existingItem != null)
-                            ? colors.outline.withValues(alpha: 0.2)
                             : colors.primary,
                   ),
                   const SizedBox(height: 8),

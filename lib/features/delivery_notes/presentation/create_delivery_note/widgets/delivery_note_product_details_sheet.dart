@@ -142,6 +142,7 @@ class _DeliveryNoteProductDetailsSheetState
   @override
   Widget build(BuildContext context) {
     final textTheme = Theme.of(context).textTheme;
+    final colors = Theme.of(context).colorScheme;
 
     return Form(
       key: _formKey,
@@ -150,24 +151,21 @@ class _DeliveryNoteProductDetailsSheetState
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           // Garantía Switch
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
-                'Este producto no tiene garantía',
-                style: textTheme.titleSmall?.copyWith(
-                  fontWeight: FontWeight.bold,
-                ),
+          SwitchListTile(
+            contentPadding: EdgeInsets.zero,
+            title: Text(
+              'Este producto no tiene garantía',
+              style: textTheme.titleSmall?.copyWith(
+                fontWeight: FontWeight.w600,
               ),
-              Switch(
-                value: _noWarranty,
-                onChanged: (val) {
-                  setState(() {
-                    _noWarranty = val;
-                  });
-                },
-              ),
-            ],
+            ),
+            activeThumbColor: colors.primary,
+            value: _noWarranty,
+            onChanged: (val) {
+              setState(() {
+                _noWarranty = val;
+              });
+            },
           ),
 
           if (!_noWarranty) ...[
@@ -207,24 +205,21 @@ class _DeliveryNoteProductDetailsSheetState
           const SizedBox(height: 24),
 
           // Serials Switch
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
-                'Este producto no usa seriales',
-                style: textTheme.titleSmall?.copyWith(
-                  fontWeight: FontWeight.bold,
-                ),
+          SwitchListTile(
+            contentPadding: EdgeInsets.zero,
+            title: Text(
+              'Este producto no usa seriales',
+              style: textTheme.titleSmall?.copyWith(
+                fontWeight: FontWeight.w600,
               ),
-              Switch(
-                value: _noSerials,
-                onChanged: (val) {
-                  setState(() {
-                    _noSerials = val;
-                  });
-                },
-              ),
-            ],
+            ),
+            activeThumbColor: colors.primary,
+            value: _noSerials,
+            onChanged: (val) {
+              setState(() {
+                _noSerials = val;
+              });
+            },
           ),
           const SizedBox(height: 16),
         ],

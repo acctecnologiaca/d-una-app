@@ -65,24 +65,21 @@ class _AddServiceStep4State extends State<AddServiceStep4> {
                   const SizedBox(height: 24),
 
                   // Toggle Switch
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text(
-                        'No ofrezco garantía para este servicio',
-                        style: TextStyle(
-                          fontSize: 14,
-                          fontWeight: FontWeight.w600,
-                          color: colors.onSurface,
-                        ),
+                  SwitchListTile(
+                    contentPadding: EdgeInsets.zero,
+                    activeThumbColor: colors.primary,
+                    title: Text(
+                      'No ofrezco garantía para este servicio',
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                        color: colors.onSurface,
                       ),
-                      Switch(
-                        value: !widget.hasWarranty,
-                        onChanged: (val) {
-                          widget.onWarrantyChanged(!val);
-                        },
-                      ),
-                    ],
+                    ),
+                    value: !widget.hasWarranty,
+                    onChanged: (val) {
+                      widget.onWarrantyChanged(!val);
+                    },
                   ),
 
                   // Warranty Fields (Visible only if warranty is enabled)

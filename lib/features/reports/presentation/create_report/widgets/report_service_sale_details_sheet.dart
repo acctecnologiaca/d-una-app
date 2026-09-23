@@ -368,12 +368,11 @@ class _ReportServiceSaleDetailsSheetState
               contentPadding: EdgeInsets.zero,
               title: const Text(
                 'Ofrecer tiempo de garantía',
-                style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
+                style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
               ),
               value: _offerWarranty,
               onChanged: (v) => setState(() => _offerWarranty = v),
-              activeThumbColor: colors.onPrimary,
-              activeTrackColor: colors.primary,
+              activeThumbColor: colors.primary,
             ),
             if (_offerWarranty) ...[
               const SizedBox(height: 8),
@@ -428,12 +427,11 @@ class _ReportServiceSaleDetailsSheetState
               contentPadding: EdgeInsets.zero,
               title: const Text(
                 'Modificar descripción',
-                style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
+                style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
               ),
               value: _modifyDescription,
               onChanged: (v) => setState(() => _modifyDescription = v),
-              activeThumbColor: colors.onPrimary,
-              activeTrackColor: colors.primary,
+              activeThumbColor: colors.primary,
             ),
             if (_modifyDescription) ...[
               const SizedBox(height: 8),
@@ -450,12 +448,11 @@ class _ReportServiceSaleDetailsSheetState
               contentPadding: EdgeInsets.zero,
               title: const Text(
                 'Servicio tercerizado',
-                style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
+                style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
               ),
               value: _isOutsourced,
               onChanged: (v) => setState(() => _isOutsourced = v),
-              activeThumbColor: colors.onPrimary,
-              activeTrackColor: colors.primary,
+              activeThumbColor: colors.primary,
             ),
             if (_isOutsourced) ...[
               const SizedBox(height: 8),
@@ -477,12 +474,11 @@ class _ReportServiceSaleDetailsSheetState
               contentPadding: EdgeInsets.zero,
               title: const Text(
                 'Modificar precio de cobro',
-                style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
+                style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
               ),
               value: _modifyPrice,
               onChanged: (v) => setState(() => _modifyPrice = v),
-              activeThumbColor: colors.onPrimary,
-              activeTrackColor: colors.primary,
+              activeThumbColor: colors.primary,
             ),
             if (_modifyPrice) ...[
               const SizedBox(height: 8),

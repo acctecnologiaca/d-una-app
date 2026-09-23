@@ -196,7 +196,11 @@ class _AddEditObservationSheetState
           const SizedBox(height: 4),
           SwitchListTile(
             contentPadding: EdgeInsets.zero,
-            title: const Text('Notas de entrega nuevas'),
+            activeThumbColor: colors.primary,
+            title: const Text(
+              'Notas de entrega nuevas',
+              style: TextStyle(fontWeight: FontWeight.w600),
+            ),
             value: _isDefaultDeliveryNote,
             onChanged: (value) {
               setState(() {
