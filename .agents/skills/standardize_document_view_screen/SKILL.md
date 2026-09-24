@@ -170,6 +170,39 @@ En la parte inferior del scroll de la pestaña `Resumen`, deben mostrarse las ta
   - *Notas de Entrega generadas desde Cotización:* Cotización de origen omite el cliente (`$quoteNumber`).
   - *Registro de Compras:* Orden de compra vinculada omite el proveedor (`Orden de compra $cleanOrderNumber`).
 
+#### 🧩 Ejemplos de Implementación Canónicos:
+```dart
+// 1. Para un único documento vinculado (ej. Cotización u OC de origen):
+LinkedDocumentCard.single(
+  title: 'Cotización vinculada',
+  documentNumber: quote.quoteNumber,
+  companyName: quote.clientName, // Cruzado (Venta ↔ Compra) -> SÍ lleva companyName
+  statusLabel: quote.status.label,
+  statusIconPath: quote.status.iconPath,
+  isCancelled: quote.status == QuoteStatus.cancelled,
+  onTap: () async {
+    await context.push('/quotes/view/${quote.id}');
+    ref.invalidate(linkedQuoteProvider(currentDocId));
+  },
+)
+
+// 2. Para una colección de documentos vinculados (ej. Múltiples OCs o Notas de Entrega):
+LinkedDocumentCard(
+  title: 'Órdenes de compra vinculadas',
+  items: orders.map((order) => LinkedDocumentItem(
+    documentNumber: order.orderNumber,
+    companyName: order.supplierName, // Cruzado -> SÍ lleva companyName
+    statusLabel: order.status.label,
+    statusIconPath: order.status.iconPath,
+    isCancelled: order.status == SupplierOrderStatus.cancelled,
+    onTap: () async {
+      await context.push('/supplier-orders/${order.id}');
+      ref.invalidate(linkedSupplierOrdersProvider(quoteId));
+    },
+  )).toList(),
+)
+```
+
 #### ⚡ Reactividad en Tiempo Real y Actualización en Caliente:
 1. **Navegación Interactiva (`onTap`):**
    ```dart

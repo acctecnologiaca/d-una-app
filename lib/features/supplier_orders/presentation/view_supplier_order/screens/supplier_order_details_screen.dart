@@ -173,11 +173,18 @@ class _SupplierOrderDetailsScreenState
             order.status == SupplierOrderStatus.expired;
         final canSendOrResend = isDraft || isSentOrResent;
 
-        final hasTwoFabs =
-            (order.status == SupplierOrderStatus.approved) ||
-            (canEdit && isSentOrResent);
-        final hasOneFab = canEdit && isDraft;
-        final int activeFabsCount = hasTwoFabs ? 2 : (hasOneFab ? 1 : 0);
+        final isApproved = order.status == SupplierOrderStatus.approved;
+        final showActionFab = isApproved;
+        final showWhatsAppFab = isSentOrResent || isApproved;
+
+        int activeFabsCount = 0;
+        if (showActionFab) {
+          activeFabsCount = (showWhatsAppFab ? 1 : 0) + 1;
+        } else if (canEdit) {
+          activeFabsCount = (showWhatsAppFab ? 1 : 0) + 1;
+        } else if (showWhatsAppFab) {
+          activeFabsCount = 1;
+        }
         final double tabBottomPadding =
             FabScrollPadding.calculate(activeFabsCount);
 

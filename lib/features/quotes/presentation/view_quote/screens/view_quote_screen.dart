@@ -800,7 +800,8 @@ class _ViewQuoteScreenState extends ConsumerState<ViewQuoteScreen>
               currentStatus == QuoteStatus.opened.dbValue ||
               currentStatus == QuoteStatus.approved.dbValue;
 
-          final canEdit = currentStatus != QuoteStatus.finalized.dbValue;
+          final canEdit = currentStatus != QuoteStatus.finalized.dbValue &&
+              currentStatus != QuoteStatus.cancelled.dbValue;
 
           if (!showWhatsAppFab && !canEdit) {
             return const SizedBox.shrink();

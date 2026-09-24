@@ -60,7 +60,8 @@ final quoteActiveFabsCountProvider = Provider.autoDispose.family<int, String>((
       currentStatus == QuoteStatus.inReview.dbValue ||
       currentStatus == QuoteStatus.opened.dbValue ||
       currentStatus == QuoteStatus.approved.dbValue;
-  final canEdit = currentStatus != QuoteStatus.finalized.dbValue;
+  final canEdit = currentStatus != QuoteStatus.finalized.dbValue &&
+      currentStatus != QuoteStatus.cancelled.dbValue;
   return (showWhatsAppFab ? 1 : 0) + (canEdit ? 1 : 0);
 });
 

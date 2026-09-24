@@ -1,6 +1,6 @@
 ---
 name: shared_components_guide
-description: Guía Maestra y Sistema de Diseño UI/UX de D'Una App. Contiene los Design Tokens oficiales, el catálogo exhaustivo clasificado de los 48 componentes compartidos en /lib/shared/widgets/, fórmulas matemáticas de padding dinámico y la matriz de decisión de arquetipos de pantalla.
+description: Guía Maestra y Sistema de Diseño UI/UX de D'Una App. Contiene los Design Tokens oficiales, el catálogo exhaustivo clasificado de los 49 componentes compartidos en /lib/shared/widgets/, fórmulas matemáticas de padding dinámico y la matriz de decisión de arquetipos de pantalla.
 ---
 
 # Master UI/UX Design System & Shared Components Guide
@@ -265,59 +265,59 @@ Para formularios de pantalla completa (Arquetipo 5) y pasos de wizard (Arquetipo
 ---
 
 ### 📌 D. Búsqueda, Filtros y Ordenamiento
-21. **[`custom_search_bar.dart`](file:///c:/Users/aleja/flutter_apps/MVP/d_una_app/lib/shared/widgets/custom_search_bar.dart)**: Campo de búsqueda redondeado con icono de lupa, botón de borrado rápido y botón de filtros opcional. Soporta modo `readOnly: true` para redirigir a pantalla completa.
-22. **[`filter_bottom_sheet.dart`](file:///c:/Users/aleja/flutter_apps/MVP/d_una_app/lib/shared/widgets/filter_bottom_sheet.dart)**: Modal estándar para filtros con búsqueda interna, modo selección simple (`showSingle`) o múltiple (`showMulti`).
-23. **[`price_filter_sheet.dart`](file:///c:/Users/aleja/flutter_apps/MVP/d_una_app/lib/shared/widgets/price_filter_sheet.dart)**: Modal especializado para ingresar rangos de precios (mínimo - máximo).
-24. **[`sort_selector.dart`](file:///c:/Users/aleja/flutter_apps/MVP/d_una_app/lib/shared/widgets/sort_selector.dart)**: Selector desplegable que abre un modal con las opciones de ordenamiento (`SortOption`).
-25. **[`horizontal_filter_bar.dart`](file:///c:/Users/aleja/flutter_apps/MVP/d_una_app/lib/shared/widgets/horizontal_filter_bar.dart)**: Barra horizontal de scroll con chips para filtrar activamente en vistas de búsqueda.
-26. **[`searchable_selection_sheet.dart`](file:///c:/Users/aleja/flutter_apps/MVP/d_una_app/lib/shared/widgets/searchable_selection_sheet.dart)**: Bottom sheet con barra de búsqueda para seleccionar entidades de catálogos extensos.
+22. **[`custom_search_bar.dart`](file:///c:/Users/aleja/flutter_apps/MVP/d_una_app/lib/shared/widgets/custom_search_bar.dart)**: Campo de búsqueda redondeado con icono de lupa, botón de borrado rápido y botón de filtros opcional. Soporta modo `readOnly: true` para redirigir a pantalla completa.
+23. **[`filter_bottom_sheet.dart`](file:///c:/Users/aleja/flutter_apps/MVP/d_una_app/lib/shared/widgets/filter_bottom_sheet.dart)**: Modal estándar para filtros con búsqueda interna, modo selección simple (`showSingle`) o múltiple (`showMulti`).
+24. **[`price_filter_sheet.dart`](file:///c:/Users/aleja/flutter_apps/MVP/d_una_app/lib/shared/widgets/price_filter_sheet.dart)**: Modal especializado para ingresar rangos de precios (mínimo - máximo).
+25. **[`sort_selector.dart`](file:///c:/Users/aleja/flutter_apps/MVP/d_una_app/lib/shared/widgets/sort_selector.dart)**: Selector desplegable que abre un modal con las opciones de ordenamiento (`SortOption`).
+26. **[`horizontal_filter_bar.dart`](file:///c:/Users/aleja/flutter_apps/MVP/d_una_app/lib/shared/widgets/horizontal_filter_bar.dart)**: Barra horizontal de scroll con chips para filtrar activamente en vistas de búsqueda.
+27. **[`searchable_selection_sheet.dart`](file:///c:/Users/aleja/flutter_apps/MVP/d_una_app/lib/shared/widgets/searchable_selection_sheet.dart)**: Bottom sheet con barra de búsqueda para seleccionar entidades de catálogos extensos.
 
 ---
 
 ### 📌 E. Procesos y Wizards
-27. **[`wizard_progress_bar.dart`](file:///c:/Users/aleja/flutter_apps/MVP/d_una_app/lib/shared/widgets/wizard_progress_bar.dart)**: Barra segmentada de progreso para indicar visualmente el avance en flujos por pasos (`currentStep` / `totalSteps`).
-28. **[`wizard_bottom_bar.dart`](file:///c:/Users/aleja/flutter_apps/MVP/d_una_app/lib/shared/widgets/wizard_bottom_bar.dart)**: Barra inferior de navegación para wizards con botón de Cancelar a la izquierda y Atrás/Siguiente/Finalizar a la derecha. Comparte la misma arquitectura autocontenida de `FormBottomBar` (fondo `colors.surface`, borde superior tenue, `SafeArea` y 12px simétricos), colocándose directamente como último hijo de la columna sin padding inferior externo.
+28. **[`wizard_progress_bar.dart`](file:///c:/Users/aleja/flutter_apps/MVP/d_una_app/lib/shared/widgets/wizard_progress_bar.dart)**: Barra segmentada de progreso para indicar visualmente el avance en flujos por pasos (`currentStep` / `totalSteps`).
+29. **[`wizard_bottom_bar.dart`](file:///c:/Users/aleja/flutter_apps/MVP/d_una_app/lib/shared/widgets/wizard_bottom_bar.dart)**: Barra inferior de navegación para wizards con botón de Cancelar a la izquierda y Atrás/Siguiente/Finalizar a la derecha. Comparte la misma arquitectura autocontenida de `FormBottomBar` (fondo `colors.surface`, borde superior tenue, `SafeArea` y 12px simétricos), colocándose directamente como último hijo de la columna sin padding inferior externo.
 
 ---
 
 ### 📌 F. Botones y FABs
-29. **[`custom_button.dart`](file:///c:/Users/aleja/flutter_apps/MVP/d_una_app/lib/shared/widgets/custom_button.dart)**: Botón estilizado primario y secundario con soporte para estado de carga (`isLoading`) e icono.
-30. **[`custom_extended_fab.dart`](file:///c:/Users/aleja/flutter_apps/MVP/d_una_app/lib/shared/widgets/custom_extended_fab.dart)**: FAB extendido oficial para pantallas principales de listado ("Nuevo"), pantallas de selección ("Confirmar") y guardado en pestañas de Resumen. Soporta estados reactivos mediante `isEnabled`: cuando es `false`, se muestra bloqueado con fondo tenue (`surfaceContainerHighest`), elevación 0 y texto atenuado (`onSurface` al 38%). Soporta `trailingIcon` y `trailingTooltip` para mostrar indicadores auxiliares como el marcador de borrador en progreso (`DraftConstants.draftIcon`). Debe ocultarse únicamente durante el modo selección múltiple en listados.
+30. **[`custom_button.dart`](file:///c:/Users/aleja/flutter_apps/MVP/d_una_app/lib/shared/widgets/custom_button.dart)**: Botón estilizado primario y secundario con soporte para estado de carga (`isLoading`) e icono.
+31. **[`custom_extended_fab.dart`](file:///c:/Users/aleja/flutter_apps/MVP/d_una_app/lib/shared/widgets/custom_extended_fab.dart)**: FAB extendido oficial para pantallas principales de listado ("Nuevo"), pantallas de selección ("Confirmar") y guardado en pestañas de Resumen. Soporta estados reactivos mediante `isEnabled`: cuando es `false`, se muestra bloqueado con fondo tenue (`surfaceContainerHighest`), elevación 0 y texto atenuado (`onSurface` al 38%). Soporta `trailingIcon` y `trailingTooltip` para mostrar indicadores auxiliares como el marcador de borrador en progreso (`DraftConstants.draftIcon`). Debe ocultarse únicamente durante el modo selección múltiple en listados.
 
 ---
 
 ### 📌 G. Feedback, Notificaciones, Avisos y Diálogos
-31. **[`app_toast.dart`](file:///c:/Users/aleja/flutter_apps/MVP/d_una_app/lib/shared/widgets/app_toast.dart)**: Sistema estándar de feedback flotante. Usar siempre `AppToast.showSuccess(context, '...')` o `AppToast.showError(context, '...')` en lugar de `SnackBar` manuales o crudos.
-32. **[`draft_toast.dart`](file:///c:/Users/aleja/flutter_apps/MVP/d_una_app/lib/shared/widgets/draft_toast.dart)**: Notificación interactiva que informa al usuario sobre la recuperación de un borrador local, con acción de descarte rápido.
-33. **[`draft_recovery_banner.dart`](file:///c:/Users/aleja/flutter_apps/MVP/d_una_app/lib/shared/widgets/draft_recovery_banner.dart)**: Banner persistente superior para advertir sobre la presencia de un borrador no guardado.
-34. **[`custom_dialog.dart`](file:///c:/Users/aleja/flutter_apps/MVP/d_una_app/lib/shared/widgets/custom_dialog.dart)**: Diálogos modales con soporte para confirmaciones estándar y acciones destructivas en rojo (`CustomDialog.destructive`).
-35. **[`no_internet_blocking_overlay.dart`](file:///c:/Users/aleja/flutter_apps/MVP/d_una_app/lib/shared/widgets/no_internet_blocking_overlay.dart)**: Capa de bloqueo con diseño de desconexión cuando se pierde la conexión de red.
-36. **[`credit_banner_card.dart`](file:///c:/Users/aleja/flutter_apps/MVP/d_una_app/lib/shared/widgets/credit_banner_card.dart)**: Banner financiero que muestra límite de crédito disponible y balance consumido.
-37. **[`info_disclaimer_card.dart`](file:///c:/Users/aleja/flutter_apps/MVP/d_una_app/lib/shared/widgets/info_disclaimer_card.dart)**: Tarjeta informativa con fondo suave para notas legales o aclaratorias.
+32. **[`app_toast.dart`](file:///c:/Users/aleja/flutter_apps/MVP/d_una_app/lib/shared/widgets/app_toast.dart)**: Sistema estándar de feedback flotante. Usar siempre `AppToast.showSuccess(context, '...')` o `AppToast.showError(context, '...')` en lugar de `SnackBar` manuales o crudos.
+33. **[`draft_toast.dart`](file:///c:/Users/aleja/flutter_apps/MVP/d_una_app/lib/shared/widgets/draft_toast.dart)**: Notificación interactiva que informa al usuario sobre la recuperación de un borrador local, con acción de descarte rápido.
+34. **[`draft_recovery_banner.dart`](file:///c:/Users/aleja/flutter_apps/MVP/d_una_app/lib/shared/widgets/draft_recovery_banner.dart)**: Banner persistente superior para advertir sobre la presencia de un borrador no guardado.
+35. **[`custom_dialog.dart`](file:///c:/Users/aleja/flutter_apps/MVP/d_una_app/lib/shared/widgets/custom_dialog.dart)**: Diálogos modales con soporte para confirmaciones estándar y acciones destructivas en rojo (`CustomDialog.destructive`).
+36. **[`no_internet_blocking_overlay.dart`](file:///c:/Users/aleja/flutter_apps/MVP/d_una_app/lib/shared/widgets/no_internet_blocking_overlay.dart)**: Capa de bloqueo con diseño de desconexión cuando se pierde la conexión de red.
+37. **[`credit_banner_card.dart`](file:///c:/Users/aleja/flutter_apps/MVP/d_una_app/lib/shared/widgets/credit_banner_card.dart)**: Banner financiero que muestra límite de crédito disponible y balance consumido.
+38. **[`info_disclaimer_card.dart`](file:///c:/Users/aleja/flutter_apps/MVP/d_una_app/lib/shared/widgets/info_disclaimer_card.dart)**: Tarjeta informativa con fondo suave para notas legales o aclaratorias.
 
 ---
 
 ### 📌 H. Badges, Iconografía y Avatares
-38. **[`status_badge.dart`](file:///c:/Users/aleja/flutter_apps/MVP/d_una_app/lib/shared/widgets/status_badge.dart)**: Badge compacto con color contextual para estatus (Aprobado, Pendiente, Rechazado, etc.).
-39. **[`uom_status_badge.dart`](file:///c:/Users/aleja/flutter_apps/MVP/d_una_app/lib/shared/widgets/uom_status_badge.dart)**: Badge que combina icono dinámico de Unidad de Medida (UOM) y texto de estatus o cantidad (`quantity` o `quantity/maxStock`).
+39. **[`status_badge.dart`](file:///c:/Users/aleja/flutter_apps/MVP/d_una_app/lib/shared/widgets/status_badge.dart)**: Badge compacto con color contextual para estatus (Aprobado, Pendiente, Rechazado, etc.).
+40. **[`uom_status_badge.dart`](file:///c:/Users/aleja/flutter_apps/MVP/d_una_app/lib/shared/widgets/uom_status_badge.dart)**: Badge que combina icono dinámico de Unidad de Medida (UOM) y texto de estatus o cantidad (`quantity` o `quantity/maxStock`).
    - *Patrón de Reserva de Stock Propio:* Si un producto tiene stock físico en almacén pero su disponibilidad libre es 0 por estar reservado en otros documentos, el badge debe mostrar la cantidad física real (p. ej. `1 ud.`) en lugar de `"Sin stock"`, mientras que la tarjeta se deshabilita (`hasStock: false`, opacidad `0.5`) acompañada de subtítulo en rojo explicativo. Si tiene disponibilidad libre parcial, el badge muestra el saldo libre (p. ej. `2 ud.`) con subtítulo neutral informativo.
-40. **[`dynamic_material_symbol.dart`](file:///c:/Users/aleja/flutter_apps/MVP/d_una_app/lib/shared/widgets/dynamic_material_symbol.dart)**: Renderizador de Material Symbols dinámicos desde cadenas de texto (SVG/nombre) con caché en memoria.
-41. **[`product_image_avatar.dart`](file:///c:/Users/aleja/flutter_apps/MVP/d_una_app/lib/shared/widgets/product_image_avatar.dart)**: Contenedor con fallback elegante para miniaturas de productos.
-42. **[`user_profile_avatar.dart`](file:///c:/Users/aleja/flutter_apps/MVP/d_una_app/lib/shared/widgets/user_profile_avatar.dart)**: Avatar del usuario autenticado para encabezados principales.
-43. **[`custom_menu_tile.dart`](file:///c:/Users/aleja/flutter_apps/MVP/d_una_app/lib/shared/widgets/custom_menu_tile.dart)**: Fila de menú estilizada con icono, título y flecha de navegación para dashboards (Ajustes, Perfil).
-44. **[`document_draft_icon.dart`](file:///c:/Users/aleja/flutter_apps/MVP/d_una_app/lib/shared/widgets/document_draft_icon.dart)**: Indicador visual estandarizado para señalar cambios locales no guardados en base de datos (`Icons.bookmark_added_outlined`) en tarjetas de documentos ejecutivos. Se ubica a la izquierda del estatus principal.
+41. **[`dynamic_material_symbol.dart`](file:///c:/Users/aleja/flutter_apps/MVP/d_una_app/lib/shared/widgets/dynamic_material_symbol.dart)**: Renderizador de Material Symbols dinámicos desde cadenas de texto (SVG/nombre) con caché en memoria.
+42. **[`product_image_avatar.dart`](file:///c:/Users/aleja/flutter_apps/MVP/d_una_app/lib/shared/widgets/product_image_avatar.dart)**: Contenedor con fallback elegante para miniaturas de productos.
+43. **[`user_profile_avatar.dart`](file:///c:/Users/aleja/flutter_apps/MVP/d_una_app/lib/shared/widgets/user_profile_avatar.dart)**: Avatar del usuario autenticado para encabezados principales.
+44. **[`custom_menu_tile.dart`](file:///c:/Users/aleja/flutter_apps/MVP/d_una_app/lib/shared/widgets/custom_menu_tile.dart)**: Fila de menú estilizada con icono, título y flecha de navegación para dashboards (Ajustes, Perfil).
+45. **[`document_draft_icon.dart`](file:///c:/Users/aleja/flutter_apps/MVP/d_una_app/lib/shared/widgets/document_draft_icon.dart)**: Indicador visual estandarizado para señalar cambios locales no guardados en base de datos (`Icons.bookmark_added_outlined`) en tarjetas de documentos ejecutivos. Se ubica a la izquierda del estatus principal.
 
 ---
 
 ### 📌 I. Hojas de Acción y Envío
-45. **[`custom_action_sheet.dart`](file:///c:/Users/aleja/flutter_apps/MVP/d_una_app/lib/shared/widgets/custom_action_sheet.dart)**: Hoja inferior estándar para desplegar menús de opciones y acciones (`CustomActionSheet.show(...)`).
-46. **[`bottom_sheet_action_item.dart`](file:///c:/Users/aleja/flutter_apps/MVP/d_una_app/lib/shared/widgets/bottom_sheet_action_item.dart)**: Fila individual de acción dentro de un `CustomActionSheet`.
-47. **[`send_document_email_sheet.dart`](file:///c:/Users/aleja/flutter_apps/MVP/d_una_app/lib/shared/widgets/send_document_email_sheet.dart)**: Hoja estandarizada para envío de documentos por correo electrónico con prellenado de plantilla y destinatarios.
+46. **[`custom_action_sheet.dart`](file:///c:/Users/aleja/flutter_apps/MVP/d_una_app/lib/shared/widgets/custom_action_sheet.dart)**: Hoja inferior estándar para desplegar menús de opciones y acciones (`CustomActionSheet.show(...)`).
+47. **[`bottom_sheet_action_item.dart`](file:///c:/Users/aleja/flutter_apps/MVP/d_una_app/lib/shared/widgets/bottom_sheet_action_item.dart)**: Fila individual de acción dentro de un `CustomActionSheet`.
+48. **[`send_document_email_sheet.dart`](file:///c:/Users/aleja/flutter_apps/MVP/d_una_app/lib/shared/widgets/send_document_email_sheet.dart)**: Hoja estandarizada para envío de documentos por correo electrónico con prellenado de plantilla y destinatarios.
 
 ---
 
 ### 📌 J. Herramientas Especializadas
-48. **[`barcode_scanner_screen.dart`](file:///c:/Users/aleja/flutter_apps/MVP/d_una_app/lib/shared/widgets/barcode_scanner_screen.dart)**: Pantalla completa con visor de cámara para escanear códigos de barras y QR con linterna y retorno de valor.
+49. **[`barcode_scanner_screen.dart`](file:///c:/Users/aleja/flutter_apps/MVP/d_una_app/lib/shared/widgets/barcode_scanner_screen.dart)**: Pantalla completa con visor de cámara para escanear códigos de barras y QR con linterna y retorno de valor.
 
 ---
 

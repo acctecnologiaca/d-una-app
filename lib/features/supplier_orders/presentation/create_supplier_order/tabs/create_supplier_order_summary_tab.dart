@@ -93,7 +93,7 @@ class CreateSupplierOrderSummaryTab extends ConsumerWidget {
           16,
           16,
           16,
-          FabScrollPadding.none,
+          FabScrollPadding.single,
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -377,51 +377,48 @@ class CreateSupplierOrderSummaryTab extends ConsumerWidget {
               state.isDirty &&
               (editMode || isDetailsValid);
 
-          return Padding(
-            padding: const EdgeInsets.only(bottom: 40.0),
-            child: CustomExtendedFab(
-              label: state.isLoading ? 'Guardando...' : 'Guardar',
-              icon: state.isLoading ? Icons.hourglass_empty : Icons.save_outlined,
-              isEnabled: canSave,
-              onPressed: () async {
-                if (!isDetailsValid) {
-                  AppToast.error(
-                    context,
-                    message: 'Por favor complete todos los campos obligatorios.',
-                  );
-                  return;
-                }
-                final createdOrderId = await ref
-                    .read(createSupplierOrderProvider.notifier)
-                    .saveOrder();
-                if (!context.mounted) return;
-                if (createdOrderId != null) {
-                  onSaveSuccess?.call();
-                  ref.invalidate(supplierOrderDetailProvider(createdOrderId));
-                  ref.invalidate(paginatedSupplierOrdersProvider);
-                  AppToast.success(
-                    context,
-                    message: editMode
-                        ? 'Orden de compra guardada exitosamente'
-                        : 'Orden de compra guardada exitosamente',
-                  );
-                  if (editMode) {
-                    ref
-                        .read(createSupplierOrderProvider.notifier)
-                        .reset(clearPersistedDraft: true);
-                    ref.invalidate(createSupplierOrderProvider);
-                    context.pop();
-                  } else {
-                    await _showPostSaveOptions(context, ref, createdOrderId);
-                  }
+          return CustomExtendedFab(
+            label: state.isLoading ? 'Guardando...' : 'Guardar',
+            icon: state.isLoading ? Icons.hourglass_empty : Icons.save_outlined,
+            isEnabled: canSave,
+            onPressed: () async {
+              if (!isDetailsValid) {
+                AppToast.error(
+                  context,
+                  message: 'Por favor complete todos los campos obligatorios.',
+                );
+                return;
+              }
+              final createdOrderId = await ref
+                  .read(createSupplierOrderProvider.notifier)
+                  .saveOrder();
+              if (!context.mounted) return;
+              if (createdOrderId != null) {
+                onSaveSuccess?.call();
+                ref.invalidate(supplierOrderDetailProvider(createdOrderId));
+                ref.invalidate(paginatedSupplierOrdersProvider);
+                AppToast.success(
+                  context,
+                  message: editMode
+                      ? 'Orden de compra guardada exitosamente'
+                      : 'Orden de compra guardada exitosamente',
+                );
+                if (editMode) {
+                  ref
+                      .read(createSupplierOrderProvider.notifier)
+                      .reset(clearPersistedDraft: true);
+                  ref.invalidate(createSupplierOrderProvider);
+                  context.pop();
                 } else {
-                  AppToast.error(
-                    context,
-                    message: state.error ?? 'Error al guardar la orden',
-                  );
+                  await _showPostSaveOptions(context, ref, createdOrderId);
                 }
-              },
-            ),
+              } else {
+                AppToast.error(
+                  context,
+                  message: state.error ?? 'Error al guardar la orden',
+                );
+              }
+            },
           );
         },
       ),
