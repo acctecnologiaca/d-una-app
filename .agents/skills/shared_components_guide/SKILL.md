@@ -53,7 +53,15 @@ La aplicación utiliza un esquema de color armonizado basado en la semilla `Colo
 - `32.0 px`: Separación vertical antes de bloques de acción final o grupos de inputs.
 - `40.0 px`: Margen inferior mínimo para pantallas sin FAB o respiro para botones fijos.
 
-### D. 📐 Regla Matemática Universal de Padding Dinámico para FABs (MD3 Nativo)
+### D. Iconografía Oficial y Familias Canónicas
+El sistema utiliza prioritariamente la familia **Material Symbols** (`material_symbols_icons/symbols.dart`) para componentes y bloques analíticos modernos, complementado por **Material Icons** para controles del sistema:
+- **Garantía (Productos, Servicios, Documentos):**
+  - **Con garantía activa:** `Symbols.verified_user` (Escudo con check: protección, respaldo técnico y comercial).
+  - **Sin garantía:** `Symbols.shield_moon` (o `Symbols.verified_user` atenuado con `colors.onSurfaceVariant.withValues(alpha: 0.38)`).
+- **Verificación de Usuario / Cuenta (Perfil):**
+  - `Icons.badge_outlined` / `Symbols.badge` (Credencial o identificación personal y comercial para KYC/RIF/DNI), diferenciándose inequívocamente de los escudos de garantía.
+
+### E. 📐 Regla Matemática Universal de Padding Dinámico para FABs (MD3 Nativo)
 Cuando una vista con scroll (`SingleChildScrollView`, `ListView`, `PaginatedListView`) contiene Floating Action Buttons, el contenido inferior **nunca debe quedar oculto** detrás de los botones flotantes. Bajo el estándar nativo de Material Design 3 (sin envoltorios manuales adicionales), el botón reposa a $16\text{px}$ sobre el fondo del Scaffold (`SafeArea` o `NavigationBar`). Para garantizar una holgura de respiro visual confortable entre el contenido y el FAB más alto, se utiliza la clase canónica [`FabScrollPadding`](file:///c:/Users/aleja/flutter_apps/MVP/d_una_app/lib/shared/utils/fab_scroll_padding.dart):
 
 $$\text{bottomPadding}(N) = \begin{cases} 
@@ -247,6 +255,12 @@ Para formularios de pantalla completa (Arquetipo 5) y pasos de wizard (Arquetipo
 18. **[`info_block.dart`](file:///c:/Users/aleja/flutter_apps/MVP/d_una_app/lib/shared/widgets/info_block.dart)**: Visualizador de datos clave-valor con icono. Usar `InfoBlock.text(icon: ..., label: ..., value: ...)` para pantallas de detalle.
 19. **[`empty_list_state.dart`](file:///c:/Users/aleja/flutter_apps/MVP/d_una_app/lib/shared/widgets/empty_list_state.dart)**: Widget de estado vacío con ilustración/icono, mensaje explicativo y botón de acción opcional.
 20. **[`friendly_error_widget.dart`](file:///c:/Users/aleja/flutter_apps/MVP/d_una_app/lib/shared/widgets/friendly_error_widget.dart)**: Widget para capturar y mostrar errores de red o consulta con botón de reintentar (`Retry`).
+21. **[`linked_document_card.dart`](file:///c:/Users/aleja/flutter_apps/MVP/d_una_app/lib/shared/widgets/linked_document_card.dart)**: Componente canónico para enlaces de documentos cruzados y relacionados en pestañas de Resumen.
+    - Soporta colecciones múltiples (`LinkedDocumentCard(items: [...])`) con separadores `Divider` tenues y un único borde exterior, o elementos individuales con el constructor de conveniencia `LinkedDocumentCard.single(...)`.
+    - **Regla Maestra de Negocio (Empresa entre paréntesis):**
+      - *Relaciones Cruzadas (Venta ↔ Compra / Cliente ↔ Proveedor):* Se debe proporcionar `companyName` para mostrar `$documentNumber ($companyName)`. Ejemplos: Cotización listando OCs con su proveedor; OC mostrando Cotización con su cliente.
+      - *Relaciones Homogéneas (Mismo Cliente o Mismo Proveedor):* Se omite `companyName` porque es redundante. Ejemplos: Cotización listando Notas de Entrega; OC mostrando Registro de Compra; Nota de Entrega mostrando Cotización; Compra mostrando OC.
+    - **Elementos Visuales Obligatorios:** Título en negrita (con tachado si el documento está cancelado), `Tooltip` interactivo sobre el icono de estatus oficial y chevron `Icons.chevron_right`. Al pulsar (`onTap`), se debe esperar el retorno de `context.push(...)` e invalidar de inmediato los providers vinculados.
 
 ---
 

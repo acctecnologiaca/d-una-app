@@ -1,3 +1,4 @@
+import 'package:d_una_app/features/supplier_orders/domain/models/supplier_order_status.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -8,6 +9,7 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:d_una_app/shared/utils/currency_formatter.dart';
 import 'package:d_una_app/shared/utils/fab_scroll_padding.dart';
 import 'package:d_una_app/features/supplier_orders/presentation/supplier_orders_list/providers/supplier_orders_providers.dart';
+import 'package:d_una_app/shared/widgets/linked_document_card.dart';
 import '../providers/purchase_details_provider.dart';
 import 'purchase_rejected_support_notice.dart';
 
@@ -31,10 +33,14 @@ class ViewPurchaseSummaryTab extends ConsumerWidget {
     // Si tax viene en 0 pero total es igual a subtotal, calcular IVA referencial (16%)
     final taxAmount = purchase.tax > 0
         ? purchase.tax
-        : (purchase.total == purchase.subtotal && subtotal > 0 ? subtotal * 0.16 : 0.0);
+        : (purchase.total == purchase.subtotal && subtotal > 0
+              ? subtotal * 0.16
+              : 0.0);
     final finalTotal = purchase.tax > 0
         ? purchase.total
-        : (purchase.total == purchase.subtotal && subtotal > 0 ? subtotal + taxAmount : purchase.total);
+        : (purchase.total == purchase.subtotal && subtotal > 0
+              ? subtotal + taxAmount
+              : purchase.total);
     final taxRate = subtotal > 0 ? (taxAmount / subtotal) * 100 : 0.0;
 
     // Display products (max 3)
@@ -77,13 +83,13 @@ class ViewPurchaseSummaryTab extends ConsumerWidget {
               isInitialInventory
                   ? Symbols.fact_check
                   : (purchase.documentType == 'invoice'
-                      ? Icons.receipt_long
-                      : Icons.receipt),
+                        ? Icons.receipt_long
+                        : Icons.receipt),
               isInitialInventory
                   ? 'Acta de Inventario Inicial'
                   : (purchase.documentType == 'invoice'
-                      ? 'Factura'
-                      : 'Nota de entrega'),
+                        ? 'Factura'
+                        : 'Nota de entrega'),
             ),
             _buildInvoiceCard(
               context,
@@ -102,7 +108,7 @@ class ViewPurchaseSummaryTab extends ConsumerWidget {
               padding: const EdgeInsets.symmetric(horizontal: 8.0),
               child: Text(
                 isInitialInventory
-                    ? 'Los productos reflejados corresponden al conteo inicial de existencias en almacén.'
+                    ? 'Los productos reflejados corresponden al conteo inicial de existencias en inventario propio.'
                     : 'Los montos y/o los productos reflejados acá, deben ser iguales a los del documento de compra.',
                 style: TextStyle(
                   fontSize: 13,
@@ -179,9 +185,7 @@ class ViewPurchaseSummaryTab extends ConsumerWidget {
               ),
               if (purchase.verificationStatus == 'rejected') ...[
                 const SizedBox(height: 12),
-                PurchaseRejectedSupportNotice(
-                  totalAmount: purchase.total,
-                ),
+                PurchaseRejectedSupportNotice(totalAmount: purchase.total),
               ],
             ],
           ],
@@ -201,7 +205,6 @@ class ViewPurchaseSummaryTab extends ConsumerWidget {
     return orderAsync.when(
       data: (order) {
         if (order == null) return const SizedBox.shrink();
-        final colors = Theme.of(context).colorScheme;
 
         final rawOrderNumber = order.orderNumber.trim();
         final cleanOrderNumber = rawOrderNumber.startsWith('#')
@@ -216,34 +219,16 @@ class ViewPurchaseSummaryTab extends ConsumerWidget {
               Icons.shopping_cart,
               'Orden de compra',
             ),
-            Card(
-              elevation: 0,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(8),
-                side: BorderSide(color: colors.outlineVariant),
-              ),
-              color: colors.surface,
-              child: ListTile(
-                contentPadding: const EdgeInsets.symmetric(
-                  horizontal: 16,
-                  vertical: 0,
-                ),
-                title: Text(
-                  'Orden de compra $cleanOrderNumber',
-                  style: TextStyle(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 14,
-                    color: colors.onSurface,
-                  ),
-                ),
-                trailing: Icon(
-                  Icons.chevron_right,
-                  color: colors.onSurfaceVariant,
-                ),
-                onTap: () {
-                  context.push('/supplier-orders/view/${order.id}');
-                },
-              ),
+            LinkedDocumentCard.single(
+              id: order.id,
+              title: 'Orden de compra $cleanOrderNumber',
+              statusLabel: order.status.label,
+              statusIconPath: order.status.iconPath,
+              isCancelled: order.status == SupplierOrderStatus.cancelled,
+              onTap: () async {
+                await context.push('/supplier-orders/view/${order.id}');
+                ref.invalidate(parentSupplierOrderProvider(supplierOrderId));
+              },
             ),
           ],
         );

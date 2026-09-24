@@ -4,6 +4,7 @@ import 'package:d_una_app/features/portfolio/domain/utils/product_validators.dar
 import 'package:d_una_app/features/portfolio/presentation/providers/product_search_provider.dart';
 import 'package:d_una_app/shared/widgets/friendly_error_widget.dart';
 import 'package:flutter/material.dart';
+import 'package:material_symbols_icons/symbols.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -1242,7 +1243,7 @@ class _AddTemporalProductScreenState
                       }
                     },
                     leading: Icon(
-                      Icons.verified_user_outlined,
+                      Symbols.verified_user,
                       size: 28,
                       color: colors.onSurfaceVariant,
                     ),

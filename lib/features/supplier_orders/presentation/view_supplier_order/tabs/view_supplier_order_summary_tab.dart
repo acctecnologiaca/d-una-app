@@ -14,6 +14,7 @@ import 'package:go_router/go_router.dart';
 import 'package:d_una_app/features/supplier_orders/presentation/widgets/supplier_order_credit_banner_card.dart';
 import 'package:d_una_app/features/supplier_orders/presentation/supplier_orders_list/providers/supplier_orders_providers.dart';
 import 'package:d_una_app/features/quotes/domain/models/quote_model.dart';
+import '../../../../../shared/widgets/linked_document_card.dart';
 
 class ViewSupplierOrderSummaryTab extends ConsumerWidget {
   final SupplierOrder order;
@@ -319,8 +320,8 @@ class ViewSupplierOrderSummaryTab extends ConsumerWidget {
                       Icons.alt_route,
                       'Modalidad',
                       order.isDropshipping
-                          ? 'Dropshipping'
-                          : 'Inventario propio',
+                          ? 'Envío directo al cliente'
+                          : 'Recepción propia',
                       isTextValue: true,
                     ),
                     if (order.isDropshipping) ...[
@@ -795,7 +796,6 @@ class ViewSupplierOrderSummaryTab extends ConsumerWidget {
     return parentOrderAsync.when(
       data: (parentOrder) {
         if (parentOrder == null) return const SizedBox.shrink();
-        final colors = Theme.of(context).colorScheme;
 
         return Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -806,47 +806,16 @@ class ViewSupplierOrderSummaryTab extends ConsumerWidget {
               Icons.shopping_cart,
               'Orden Principal',
             ),
-            Card(
-              elevation: 0,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(8),
-                side: BorderSide(color: colors.outlineVariant),
-              ),
-              color: colors.surface,
-              child: ListTile(
-                contentPadding: const EdgeInsets.symmetric(
-                  horizontal: 16,
-                  vertical: 4,
-                ),
-                title: Text(
-                  '${parentOrder.orderNumber} (${parentOrder.supplierName})',
-                  style: TextStyle(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 14,
-                    color: colors.onSurface,
-                  ),
-                ),
-                trailing: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Tooltip(
-                      message: parentOrder.status.label,
-                      child: Image.asset(
-                        parentOrder.status.iconPath,
-                        width: 18,
-                        height: 18,
-                        errorBuilder: (context, error, stackTrace) =>
-                            const Icon(Icons.merge_type_rounded, size: 18),
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    Icon(Icons.chevron_right, color: colors.onSurfaceVariant),
-                  ],
-                ),
-                onTap: () {
-                  context.push('/supplier-orders/view/${parentOrder.id}');
-                },
-              ),
+            LinkedDocumentCard.single(
+              id: parentOrder.id,
+              title: parentOrder.orderNumber,
+              statusLabel: parentOrder.status.label,
+              statusIconPath: parentOrder.status.iconPath,
+              isCancelled: parentOrder.status == SupplierOrderStatus.cancelled,
+              onTap: () async {
+                await context.push('/supplier-orders/view/${parentOrder.id}');
+                ref.invalidate(parentSupplierOrderProvider(order.parentOrderId));
+              },
             ),
           ],
         );
@@ -865,7 +834,6 @@ class ViewSupplierOrderSummaryTab extends ConsumerWidget {
     return mergedOrdersAsync.when(
       data: (orders) {
         if (orders.isEmpty) return const SizedBox.shrink();
-        final colors = Theme.of(context).colorScheme;
 
         return Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -876,62 +844,20 @@ class ViewSupplierOrderSummaryTab extends ConsumerWidget {
               Icons.merge_type_rounded,
               'Órdenes consolidadas',
             ),
-            Card(
-              elevation: 0,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(8),
-                side: BorderSide(color: colors.outlineVariant),
-              ),
-              color: colors.surface,
-              child: ListView.separated(
-                shrinkWrap: true,
-                physics: const NeverScrollableScrollPhysics(),
-                itemCount: orders.length,
-                separatorBuilder: (context, index) => Divider(
-                  height: 1,
-                  color: colors.outlineVariant.withValues(alpha: 0.5),
-                ),
-                itemBuilder: (context, index) {
-                  final childOrder = orders[index];
-                  return ListTile(
-                    contentPadding: const EdgeInsets.symmetric(
-                      horizontal: 16,
-                      vertical: 4,
-                    ),
-                    title: Text(
-                      '${childOrder.orderNumber} (${childOrder.supplierName})',
-                      style: TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 14,
-                        color: colors.onSurface,
-                      ),
-                    ),
-                    trailing: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Tooltip(
-                          message: childOrder.status.label,
-                          child: Image.asset(
-                            childOrder.status.iconPath,
-                            width: 18,
-                            height: 18,
-                            errorBuilder: (context, error, stackTrace) =>
-                                const Icon(Icons.merge_type_rounded, size: 18),
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                        Icon(
-                          Icons.chevron_right,
-                          color: colors.onSurfaceVariant,
-                        ),
-                      ],
-                    ),
-                    onTap: () {
-                      context.push('/supplier-orders/view/${childOrder.id}');
-                    },
-                  );
-                },
-              ),
+            LinkedDocumentCard(
+              items: orders.map((childOrder) {
+                return LinkedDocumentItem(
+                  id: childOrder.id,
+                  title: childOrder.orderNumber,
+                  statusLabel: childOrder.status.label,
+                  statusIconPath: childOrder.status.iconPath,
+                  isCancelled: childOrder.status == SupplierOrderStatus.cancelled,
+                  onTap: () async {
+                    await context.push('/supplier-orders/view/${childOrder.id}');
+                    ref.invalidate(mergedChildOrdersProvider(order.id));
+                  },
+                );
+              }).toList(),
             ),
           ],
         );
@@ -951,7 +877,6 @@ class ViewSupplierOrderSummaryTab extends ConsumerWidget {
     return linkedPurchaseAsync.when(
       data: (purchaseData) {
         if (purchaseData == null) return const SizedBox.shrink();
-        final colors = Theme.of(context).colorScheme;
 
         final rawDocNumber =
             (purchaseData['document_number'] as String?)?.trim() ??
@@ -962,6 +887,9 @@ class ViewSupplierOrderSummaryTab extends ConsumerWidget {
         final docType = purchaseData['document_type'] == 'invoice'
             ? 'Factura'
             : 'Nota de entrega';
+        final verificationStatus =
+            purchaseData['verification_status'] as String?;
+        final isVerified = verificationStatus == 'verified';
 
         return Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -972,34 +900,18 @@ class ViewSupplierOrderSummaryTab extends ConsumerWidget {
               Icons.receipt_long_outlined,
               'Registro de compra',
             ),
-            Card(
-              elevation: 0,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(8),
-                side: BorderSide(color: colors.outlineVariant),
-              ),
-              color: colors.surface,
-              child: ListTile(
-                contentPadding: const EdgeInsets.symmetric(
-                  horizontal: 16,
-                  vertical: 0,
-                ),
-                title: Text(
-                  '$docType $cleanDocNumber',
-                  style: TextStyle(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 14,
-                    color: colors.onSurface,
-                  ),
-                ),
-                trailing: Icon(
-                  Icons.chevron_right,
-                  color: colors.onSurfaceVariant,
-                ),
-                onTap: () {
-                  context.push('/my-purchases/view/${purchaseData['id']}');
-                },
-              ),
+            LinkedDocumentCard.single(
+              id: purchaseData['id'] as String,
+              title: '$docType $cleanDocNumber',
+              statusLabel: isVerified ? 'Verificado' : 'Pendiente',
+              statusIconData: isVerified
+                  ? Icons.check_circle_outline
+                  : Icons.pending_outlined,
+              statusColor: isVerified ? Colors.green : Colors.orange,
+              onTap: () async {
+                await context.push('/my-purchases/view/${purchaseData['id']}');
+                ref.invalidate(linkedPurchaseProvider(order.id));
+              },
             ),
           ],
         );
@@ -1023,7 +935,6 @@ class ViewSupplierOrderSummaryTab extends ConsumerWidget {
     return linkedQuoteAsync.when(
       data: (quote) {
         if (quote == null) return const SizedBox.shrink();
-        final colors = Theme.of(context).colorScheme;
         final quoteNumber = quote.quoteNumber ?? 'Sin número';
         final clientName = quote.clientName ?? 'Cliente';
         final status = QuoteStatus.fromDbValue(quote.status);
@@ -1037,47 +948,17 @@ class ViewSupplierOrderSummaryTab extends ConsumerWidget {
               Icons.request_quote_outlined,
               'Cotización',
             ),
-            Card(
-              elevation: 0,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(8),
-                side: BorderSide(color: colors.outlineVariant),
-              ),
-              color: colors.surface,
-              child: ListTile(
-                contentPadding: const EdgeInsets.symmetric(
-                  horizontal: 16,
-                  vertical: 4,
-                ),
-                title: Text(
-                  '$quoteNumber ($clientName)',
-                  style: TextStyle(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 14,
-                    color: colors.onSurface,
-                  ),
-                ),
-                trailing: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Tooltip(
-                      message: status.label,
-                      child: Image.asset(
-                        status.iconPath,
-                        width: 18,
-                        height: 18,
-                        errorBuilder: (context, error, stackTrace) =>
-                            const Icon(Icons.description_outlined, size: 18),
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    Icon(Icons.chevron_right, color: colors.onSurfaceVariant),
-                  ],
-                ),
-                onTap: () {
-                  context.push('/quotes/view/${order.quoteId}');
-                },
-              ),
+            LinkedDocumentCard.single(
+              id: order.quoteId!,
+              title: quoteNumber,
+              companyName: clientName,
+              statusLabel: status.label,
+              statusIconPath: status.iconPath,
+              isCancelled: status == QuoteStatus.cancelled,
+              onTap: () async {
+                await context.push('/quotes/view/${order.quoteId}');
+                ref.invalidate(linkedQuoteProvider(order.quoteId!));
+              },
             ),
           ],
         );

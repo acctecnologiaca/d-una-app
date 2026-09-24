@@ -4,6 +4,10 @@ import 'package:intl/intl.dart';
 import 'package:go_router/go_router.dart';
 import 'package:material_symbols_icons/symbols.dart';
 import 'package:d_una_app/shared/utils/fab_scroll_padding.dart';
+import 'package:d_una_app/shared/widgets/linked_document_card.dart';
+import 'package:d_una_app/features/quotes/domain/models/quote_model.dart';
+import 'package:d_una_app/features/supplier_orders/presentation/supplier_orders_list/providers/supplier_orders_providers.dart';
+import 'package:d_una_app/features/supplier_orders/domain/models/supplier_order_status.dart';
 import '../providers/create_delivery_note_provider.dart';
 import '../../../domain/models/delivery_note_item_model.dart';
 
@@ -64,8 +68,7 @@ class DeliveryNoteSummaryTab extends ConsumerWidget {
 
           // 4. Documento Vinculado (Opcional si proviene de Cotización u Orden de Compra)
           if (state.quoteId != null || state.supplierOrderId != null) ...[
-            _buildSectionHeader(context, Icons.link, 'Documento vinculado'),
-            _buildLinkedDocumentCard(context, state),
+            _buildLinkedDocumentSection(context, ref, state),
             const SizedBox(height: 16),
           ],
         ],
@@ -463,49 +466,83 @@ class DeliveryNoteSummaryTab extends ConsumerWidget {
     );
   }
 
-  // ── 4. Documento Vinculado Card ────────────────────────────
-  Widget _buildLinkedDocumentCard(
+  // ── 4. Documento Vinculado Section ────────────────────────────
+  Widget _buildLinkedDocumentSection(
     BuildContext context,
+    WidgetRef ref,
     DeliveryNoteCreateState state,
   ) {
-    final colors = Theme.of(context).colorScheme;
-    final isQuote = state.quoteId != null && state.quoteId!.isNotEmpty;
-    final docTitle = isQuote
-        ? 'Cotización vinculada'
-        : 'Orden de Compra vinculada';
-    final docId = isQuote ? state.quoteId! : state.supplierOrderId!;
-    final route = isQuote
-        ? '/quotes/view/$docId'
-        : '/supplier-orders/view/$docId';
+    if (state.quoteId != null && state.quoteId!.isNotEmpty) {
+      final linkedQuoteAsync = ref.watch(linkedQuoteProvider(state.quoteId!));
+      return linkedQuoteAsync.when(
+        data: (quote) {
+          if (quote == null) return const SizedBox.shrink();
+          final quoteNumber = quote.quoteNumber ?? 'Sin número';
+          final status = QuoteStatus.fromDbValue(quote.status);
 
-    return Card(
-      elevation: 0,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(10),
-        side: BorderSide(color: colors.outlineVariant.withValues(alpha: 0.6)),
-      ),
-      color: colors.surface,
-      child: ListTile(
-        leading: Icon(
-          isQuote ? Icons.description_outlined : Icons.shopping_bag_outlined,
-          color: colors.primary,
-        ),
-        title: Text(
-          docTitle,
-          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
-        ),
-        subtitle: Text(
-          'ID: $docId',
-          style: TextStyle(fontSize: 12, color: colors.onSurfaceVariant),
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
-        ),
-        trailing: const Icon(Icons.chevron_right),
-        onTap: () {
-          context.push(route);
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              _buildSectionHeader(
+                context,
+                Icons.request_quote_outlined,
+                'Cotización',
+              ),
+              LinkedDocumentCard.single(
+                id: state.quoteId!,
+                title: quoteNumber,
+                statusLabel: status.label,
+                statusIconPath: status.iconPath,
+                isCancelled: status == QuoteStatus.cancelled,
+                onTap: () async {
+                  await context.push('/quotes/view/${state.quoteId}');
+                  ref.invalidate(linkedQuoteProvider(state.quoteId!));
+                },
+              ),
+            ],
+          );
         },
-      ),
-    );
+        loading: () => const SizedBox.shrink(),
+        error: (_, _) => const SizedBox.shrink(),
+      );
+    }
+
+    if (state.supplierOrderId != null && state.supplierOrderId!.isNotEmpty) {
+      final linkedOrderAsync = ref.watch(
+        supplierOrderDetailProvider(state.supplierOrderId!),
+      );
+      return linkedOrderAsync.when(
+        data: (orderData) {
+          final order = orderData.order;
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              _buildSectionHeader(
+                context,
+                Icons.shopping_cart_outlined,
+                'Orden de compra',
+              ),
+              LinkedDocumentCard.single(
+                id: order.id,
+                title: order.orderNumber,
+                companyName: order.supplierName,
+                statusLabel: order.status.label,
+                statusIconPath: order.status.iconPath,
+                isCancelled: order.status == SupplierOrderStatus.cancelled,
+                onTap: () async {
+                  await context.push('/supplier-orders/view/${order.id}');
+                  ref.invalidate(supplierOrderDetailProvider(state.supplierOrderId!));
+                },
+              ),
+            ],
+          );
+        },
+        loading: () => const SizedBox.shrink(),
+        error: (_, _) => const SizedBox.shrink(),
+      );
+    }
+
+    return const SizedBox.shrink();
   }
 
   // ── Helper Row ─────────────────────────────────────────────

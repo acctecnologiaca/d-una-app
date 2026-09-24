@@ -53,6 +53,8 @@ class _ViewQuoteScreenState extends ConsumerState<ViewQuoteScreen>
   late final TabController _tabController;
   bool _hasTriggeredSend = false;
   RealtimeChannel? _singleQuoteChannel;
+  RealtimeChannel? _linkedOrdersChannel;
+  RealtimeChannel? _linkedDeliveryNotesChannel;
 
   @override
   void initState() {
@@ -66,6 +68,7 @@ class _ViewQuoteScreenState extends ConsumerState<ViewQuoteScreen>
     });
 
     _initSingleQuoteRealtime();
+    _initLinkedDocsRealtime();
 
     // Etapa 1: Iniciar validación de productos inmediatamente para alimentar los badges
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -94,6 +97,8 @@ class _ViewQuoteScreenState extends ConsumerState<ViewQuoteScreen>
           callback: (payload) {
             if (mounted) {
               ref.invalidate(viewQuoteProvider(widget.quoteId));
+              ref.invalidate(linkedSupplierOrdersProvider(widget.quoteId));
+              ref.invalidate(linkedDeliveryNotesProvider(widget.quoteId));
               ref
                   .read(quoteValidationProvider(widget.quoteId).notifier)
                   .startValidation();
@@ -105,10 +110,58 @@ class _ViewQuoteScreenState extends ConsumerState<ViewQuoteScreen>
         .subscribe();
   }
 
+  void _initLinkedDocsRealtime() {
+    _linkedOrdersChannel = Supabase.instance.client
+        .channel(
+          'public:quote_orders_${widget.quoteId}_${DateTime.now().millisecondsSinceEpoch}',
+        )
+        .onPostgresChanges(
+          event: PostgresChangeEvent.all,
+          schema: 'public',
+          table: 'supplier_orders',
+          filter: PostgresChangeFilter(
+            type: PostgresChangeFilterType.eq,
+            column: 'quote_id',
+            value: widget.quoteId,
+          ),
+          callback: (payload) {
+            if (mounted) {
+              ref.invalidate(linkedSupplierOrdersProvider(widget.quoteId));
+              ref.invalidate(viewQuoteProvider(widget.quoteId));
+            }
+          },
+        )
+        .subscribe();
+
+    _linkedDeliveryNotesChannel = Supabase.instance.client
+        .channel(
+          'public:quote_notes_${widget.quoteId}_${DateTime.now().millisecondsSinceEpoch}',
+        )
+        .onPostgresChanges(
+          event: PostgresChangeEvent.all,
+          schema: 'public',
+          table: 'delivery_notes',
+          filter: PostgresChangeFilter(
+            type: PostgresChangeFilterType.eq,
+            column: 'quote_id',
+            value: widget.quoteId,
+          ),
+          callback: (payload) {
+            if (mounted) {
+              ref.invalidate(linkedDeliveryNotesProvider(widget.quoteId));
+              ref.invalidate(viewQuoteProvider(widget.quoteId));
+            }
+          },
+        )
+        .subscribe();
+  }
+
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.resumed && mounted) {
       ref.invalidate(viewQuoteProvider(widget.quoteId));
+      ref.invalidate(linkedSupplierOrdersProvider(widget.quoteId));
+      ref.invalidate(linkedDeliveryNotesProvider(widget.quoteId));
     }
   }
 
@@ -116,6 +169,10 @@ class _ViewQuoteScreenState extends ConsumerState<ViewQuoteScreen>
   void dispose() {
     _singleQuoteChannel?.unsubscribe();
     _singleQuoteChannel = null;
+    _linkedOrdersChannel?.unsubscribe();
+    _linkedOrdersChannel = null;
+    _linkedDeliveryNotesChannel?.unsubscribe();
+    _linkedDeliveryNotesChannel = null;
     WidgetsBinding.instance.removeObserver(this);
     _tabController.dispose();
     super.dispose();
@@ -576,7 +633,7 @@ class _ViewQuoteScreenState extends ConsumerState<ViewQuoteScreen>
                                       icon: Symbols.lock,
                                       title: 'Orden de Compra Requerida',
                                       contentText:
-                                          'Esta cotización contiene productos de proveedores afiliados (${pendingSuppliers.map((s) => s.supplierName).join(', ')}) que no cuentan con una Orden de Compra aprobada o finalizada en la plataforma.\n\nPara garantizar el despacho formal y la correcta trazabilidad, debe emitir y aprobar la Orden de Compra antes de generar la Nota de Entrega.',
+                                          'Esta cotización contiene productos de proveedores afiliados (${pendingSuppliers.map((s) => s.supplierName).join(', ')}) que no cuentan con una Orden de Compra aprobada o finalizada en la plataforma.\n\nPara garantizar el despacho formal y la correcta trazabilidad, debes emitir la Orden de Compra y esperar su aprobación antes de generar la Nota de Entrega.',
                                       actions: [
                                         TextButton(
                                           onPressed: () => Navigator.of(

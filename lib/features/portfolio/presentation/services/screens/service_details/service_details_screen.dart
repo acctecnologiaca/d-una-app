@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:material_symbols_icons/symbols.dart';
 import 'package:d_una_app/shared/widgets/app_toast.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -166,7 +167,7 @@ class ServiceDetailsScreen extends ConsumerWidget {
 
             // Warranty
             InfoBlock.text(
-              icon: Icons.verified_outlined,
+              icon: Symbols.verified_user,
               label: 'Tiempo de garantía',
               value: latestService.hasWarranty == true
                   ? '${latestService.warrantyTime} ${latestService.warrantyUnit}'

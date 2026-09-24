@@ -18,11 +18,13 @@ import 'package:d_una_app/shared/widgets/app_toast.dart';
 class CreateSupplierOrderSummaryTab extends ConsumerWidget {
   final Function(int) onNavigateToTab;
   final bool editMode;
+  final VoidCallback? onSaveSuccess;
 
   const CreateSupplierOrderSummaryTab({
     super.key,
     required this.onNavigateToTab,
     this.editMode = false,
+    this.onSaveSuccess,
   });
 
   @override
@@ -394,9 +396,9 @@ class CreateSupplierOrderSummaryTab extends ConsumerWidget {
                     .saveOrder();
                 if (!context.mounted) return;
                 if (createdOrderId != null) {
+                  onSaveSuccess?.call();
                   ref.invalidate(supplierOrderDetailProvider(createdOrderId));
                   ref.invalidate(paginatedSupplierOrdersProvider);
-                  ref.invalidate(createSupplierOrderProvider);
                   AppToast.success(
                     context,
                     message: editMode
@@ -404,9 +406,13 @@ class CreateSupplierOrderSummaryTab extends ConsumerWidget {
                         : 'Orden de compra guardada exitosamente',
                   );
                   if (editMode) {
+                    ref
+                        .read(createSupplierOrderProvider.notifier)
+                        .reset(clearPersistedDraft: true);
+                    ref.invalidate(createSupplierOrderProvider);
                     context.pop();
                   } else {
-                    _showPostSaveOptions(context, ref, createdOrderId);
+                    await _showPostSaveOptions(context, ref, createdOrderId);
                   }
                 } else {
                   AppToast.error(
@@ -422,12 +428,12 @@ class CreateSupplierOrderSummaryTab extends ConsumerWidget {
     );
   }
 
-  void _showPostSaveOptions(
+  Future<void> _showPostSaveOptions(
     BuildContext context,
     WidgetRef ref,
     String createdOrderId,
-  ) {
-    CustomActionSheet.show(
+  ) async {
+    final action = await CustomActionSheet.show<String>(
       context: context,
       title: 'Orden de compra guardada',
       actions: [
@@ -435,24 +441,35 @@ class CreateSupplierOrderSummaryTab extends ConsumerWidget {
           icon: Icons.send_outlined,
           label: 'Enviar ahora',
           onTap: () {
-            context.pop(); // Close action sheet
-            ref.invalidate(createSupplierOrderProvider);
-            context.pushReplacement(
-              '/supplier-orders/view/$createdOrderId?triggerSend=true',
-            );
+            Navigator.of(context).pop('send_now');
           },
         ),
         BottomSheetActionItem(
           icon: Icons.history_outlined,
           label: 'Enviar más tarde',
           onTap: () {
-            context.pop(); // Close action sheet
-            ref.invalidate(createSupplierOrderProvider);
-            context.pop(); // Back to list
+            Navigator.of(context).pop('send_later');
           },
         ),
       ],
     );
+
+    if (!context.mounted) return;
+
+    ref
+        .read(createSupplierOrderProvider.notifier)
+        .reset(clearPersistedDraft: true);
+    ref.invalidate(createSupplierOrderProvider);
+
+    if (action == 'send_now') {
+      context.pushReplacement(
+        '/supplier-orders/view/$createdOrderId?triggerSend=true',
+      );
+    } else {
+      context.pushReplacement(
+        '/supplier-orders/view/$createdOrderId',
+      );
+    }
   }
 
   Widget _buildSectionHeader(

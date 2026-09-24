@@ -175,7 +175,7 @@ class ViewServiceDetailsSheet extends StatelessWidget {
                       title: 'Garantía',
                       value: warrantyDisplay!,
                       icon: Icon(
-                        Icons.verified_user_outlined,
+                        Symbols.verified_user,
                         color: colors.onSurfaceVariant.withValues(alpha: 0.7),
                       ),
                     ),

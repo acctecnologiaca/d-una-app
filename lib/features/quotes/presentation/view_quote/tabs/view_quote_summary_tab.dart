@@ -14,6 +14,7 @@ import '../../../../supplier_orders/domain/models/supplier_order_status.dart';
 import '../../../../../shared/utils/fab_scroll_padding.dart';
 import 'package:d_una_app/features/delivery_notes/domain/models/delivery_note_model.dart';
 import 'package:d_una_app/features/delivery_notes/domain/models/delivery_note_status.dart';
+import '../../../../../shared/widgets/linked_document_card.dart';
 
 class ViewQuoteSummaryTab extends ConsumerWidget {
   final String quoteId;
@@ -150,7 +151,7 @@ class ViewQuoteSummaryTab extends ConsumerWidget {
                     Icons.shopping_cart_outlined,
                     'Órdenes de compra',
                   ),
-                  _buildLinkedSupplierOrdersCard(context, orders),
+                  _buildLinkedSupplierOrdersCard(context, ref, orders),
                 ],
               );
             },
@@ -174,7 +175,7 @@ class ViewQuoteSummaryTab extends ConsumerWidget {
                     Symbols.local_shipping,
                     'Notas de entrega',
                   ),
-                  _buildLinkedDeliveryNotesCard(context, notes),
+                  _buildLinkedDeliveryNotesCard(context, ref, notes),
                 ],
               );
             },
@@ -866,150 +867,49 @@ class ViewQuoteSummaryTab extends ConsumerWidget {
 
   Widget _buildLinkedSupplierOrdersCard(
     BuildContext context,
+    WidgetRef ref,
     List<SupplierOrder> orders,
   ) {
-    final colors = Theme.of(context).colorScheme;
-
-    return Card(
-      elevation: 0,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(8),
-        side: BorderSide(color: colors.outlineVariant),
-      ),
-      color: colors.surface,
-      child: ListView.separated(
-        padding: EdgeInsets.zero,
-        shrinkWrap: true,
-        physics: const NeverScrollableScrollPhysics(),
-        itemCount: orders.length,
-        separatorBuilder: (context, index) => Divider(
-          height: orders.length > 1 ? 1 : 0,
-          color: colors.outlineVariant.withValues(alpha: 0.5),
-        ),
-        itemBuilder: (context, index) {
-          final order = orders[index];
-          final isCancelled = order.status == SupplierOrderStatus.cancelled;
-
-          return ListTile(
-            contentPadding: const EdgeInsets.symmetric(
-              horizontal: 16,
-              vertical: 4,
-            ),
-            title: Text(
-              '${order.orderNumber} (${order.supplierName})',
-              style: TextStyle(
-                fontWeight: FontWeight.bold,
-                fontSize: 14,
-                color: isCancelled
-                    ? colors.onSurfaceVariant.withValues(alpha: 0.7)
-                    : colors.onSurface,
-                decoration: isCancelled ? TextDecoration.lineThrough : null,
-              ),
-            ),
-            trailing: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Tooltip(
-                  message: order.status.label,
-                  child: Image.asset(
-                    order.status.iconPath,
-                    width: 18,
-                    height: 18,
-                    errorBuilder: (context, error, stackTrace) {
-                      return const Icon(
-                        Icons.help_outline,
-                        size: 18,
-                        color: Colors.grey,
-                      );
-                    },
-                  ),
-                ),
-                const SizedBox(width: 8),
-                Icon(Icons.chevron_right, color: colors.onSurfaceVariant),
-              ],
-            ),
-            onTap: () {
-              context.push('/supplier-orders/view/${order.id}');
-            },
-          );
-        },
-      ),
+    return LinkedDocumentCard(
+      items: orders.map((order) {
+        final isCancelled = order.status == SupplierOrderStatus.cancelled;
+        return LinkedDocumentItem(
+          id: order.id,
+          title: order.orderNumber,
+          companyName: order.supplierName,
+          statusLabel: order.status.label,
+          statusIconPath: order.status.iconPath,
+          isCancelled: isCancelled,
+          onTap: () async {
+            await context.push('/supplier-orders/view/${order.id}');
+            ref.invalidate(linkedSupplierOrdersProvider(quoteId));
+          },
+        );
+      }).toList(),
     );
   }
 
   Widget _buildLinkedDeliveryNotesCard(
     BuildContext context,
+    WidgetRef ref,
     List<DeliveryNoteModel> deliveryNotes,
   ) {
-    final colors = Theme.of(context).colorScheme;
-
-    return Card(
-      elevation: 0,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(8),
-        side: BorderSide(color: colors.outlineVariant),
-      ),
-      color: colors.surface,
-      child: ListView.separated(
-        shrinkWrap: true,
-        physics: const NeverScrollableScrollPhysics(),
-        itemCount: deliveryNotes.length,
-        separatorBuilder: (context, index) => Divider(
-          height: 1,
-          color: colors.outlineVariant.withValues(alpha: 0.5),
-        ),
-        itemBuilder: (context, index) {
-          final note = deliveryNotes[index];
-          final isCancelled = note.status == DeliveryNoteStatus.cancelled;
-
-          return ListTile(
-            contentPadding: const EdgeInsets.symmetric(
-              horizontal: 16,
-              vertical: 4,
-            ),
-            title: Text(
-              note.deliveryNoteNumber,
-              style: TextStyle(
-                fontWeight: FontWeight.bold,
-                fontSize: 14,
-                color: isCancelled
-                    ? colors.onSurfaceVariant.withValues(alpha: 0.7)
-                    : colors.onSurface,
-                decoration: isCancelled ? TextDecoration.lineThrough : null,
-              ),
-            ),
-            subtitle: Text(
-              DateFormat('dd/MM/yyyy').format(note.createdAt),
-              style: TextStyle(fontSize: 12, color: colors.onSurfaceVariant),
-            ),
-            trailing: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Tooltip(
-                  message: note.status.label,
-                  child: Image.asset(
-                    note.status.iconPath,
-                    width: 18,
-                    height: 18,
-                    errorBuilder: (context, error, stackTrace) {
-                      return const Icon(
-                        Icons.help_outline,
-                        size: 24,
-                        color: Colors.grey,
-                      );
-                    },
-                  ),
-                ),
-                const SizedBox(width: 8),
-                Icon(Icons.chevron_right, color: colors.onSurfaceVariant),
-              ],
-            ),
-            onTap: () {
-              context.push('/delivery-notes/view/${note.id}');
-            },
-          );
-        },
-      ),
+    return LinkedDocumentCard(
+      items: deliveryNotes.map((note) {
+        final isCancelled = note.status == DeliveryNoteStatus.cancelled;
+        return LinkedDocumentItem(
+          id: note.id,
+          title: note.deliveryNoteNumber,
+          subtitle: DateFormat('dd/MM/yyyy').format(note.createdAt),
+          statusLabel: note.status.label,
+          statusIconPath: note.status.iconPath,
+          isCancelled: isCancelled,
+          onTap: () async {
+            await context.push('/delivery-notes/view/${note.id}');
+            ref.invalidate(linkedDeliveryNotesProvider(quoteId));
+          },
+        );
+      }).toList(),
     );
   }
 }

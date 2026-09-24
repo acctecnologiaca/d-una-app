@@ -58,6 +58,7 @@ class _SupplierOrderDetailsScreenState
   late TabController _tabController;
   bool _hasTriggeredSend = false;
   RealtimeChannel? _singleOrderChannel;
+  RealtimeChannel? _linkedPurchaseChannel;
 
   @override
   void initState() {
@@ -65,12 +66,20 @@ class _SupplierOrderDetailsScreenState
     WidgetsBinding.instance.addObserver(this);
     _tabController = TabController(length: 3, vsync: this, initialIndex: 2);
     _initSingleOrderRealtime();
+    _initLinkedPurchaseRealtime();
   }
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.resumed && mounted) {
       ref.invalidate(supplierOrderDetailProvider(widget.orderId));
+      ref.invalidate(linkedPurchaseProvider(widget.orderId));
+      ref.invalidate(mergedChildOrdersProvider(widget.orderId));
+      final currentOrder =
+          ref.read(supplierOrderDetailProvider(widget.orderId)).valueOrNull?.order;
+      if (currentOrder?.parentOrderId != null) {
+        ref.invalidate(parentSupplierOrderProvider(currentOrder!.parentOrderId));
+      }
     }
   }
 
@@ -97,6 +106,7 @@ class _SupplierOrderDetailsScreenState
                 (payload.newRecord['id'] ?? payload.oldRecord['id']) as String?;
             if (recId == widget.orderId && mounted) {
               ref.invalidate(supplierOrderDetailProvider(widget.orderId));
+              ref.invalidate(linkedPurchaseProvider(widget.orderId));
               final originQuoteId = (payload.newRecord['quote_id'] ??
                   payload.oldRecord['quote_id']) as String?;
               if (originQuoteId != null && originQuoteId.isNotEmpty) {
@@ -108,11 +118,37 @@ class _SupplierOrderDetailsScreenState
         .subscribe();
   }
 
+  void _initLinkedPurchaseRealtime() {
+    _linkedPurchaseChannel = Supabase.instance.client
+        .channel(
+          'public:supplier_order_purchase_${widget.orderId}_${DateTime.now().millisecondsSinceEpoch}',
+        )
+        .onPostgresChanges(
+          event: PostgresChangeEvent.all,
+          schema: 'public',
+          table: 'purchases',
+          filter: PostgresChangeFilter(
+            type: PostgresChangeFilterType.eq,
+            column: 'supplier_order_id',
+            value: widget.orderId,
+          ),
+          callback: (payload) {
+            if (mounted) {
+              ref.invalidate(linkedPurchaseProvider(widget.orderId));
+              ref.invalidate(supplierOrderDetailProvider(widget.orderId));
+            }
+          },
+        )
+        .subscribe();
+  }
+
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
     _singleOrderChannel?.unsubscribe();
     _singleOrderChannel = null;
+    _linkedPurchaseChannel?.unsubscribe();
+    _linkedPurchaseChannel = null;
     _tabController.dispose();
     super.dispose();
   }
@@ -160,7 +196,8 @@ class _SupplierOrderDetailsScreenState
           }
         }
 
-        final supplierDisplayName = matchedSupplier!.name;
+        final supplierDisplayName =
+            matchedSupplier?.name ?? order.supplierName;
 
         return Scaffold(
           appBar: StandardAppBar(

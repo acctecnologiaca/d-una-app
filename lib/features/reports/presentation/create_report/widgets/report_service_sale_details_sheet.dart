@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:material_symbols_icons/symbols.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:uuid/uuid.dart';
 import '../../../../../shared/widgets/friendly_error_widget.dart';
@@ -379,7 +380,7 @@ class _ReportServiceSaleDetailsSheetState
               Row(
                 children: [
                   Icon(
-                    Icons.verified_user_outlined,
+                    Symbols.verified_user,
                     color: colors.onSurfaceVariant,
                     size: 20,
                   ),

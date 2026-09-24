@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:material_symbols_icons/symbols.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:uuid/uuid.dart';
@@ -381,7 +382,7 @@ class _ReportProductSaleDetailsSheetState
               Row(
                 children: [
                   Icon(
-                    Icons.verified_user_outlined,
+                    Symbols.verified_user,
                     color: colors.onSurfaceVariant,
                     size: 20,
                   ),

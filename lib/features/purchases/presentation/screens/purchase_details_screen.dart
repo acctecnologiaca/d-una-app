@@ -8,6 +8,7 @@ import 'package:d_una_app/shared/widgets/standard_app_bar.dart';
 import 'package:d_una_app/shared/widgets/custom_extended_fab.dart';
 import '../providers/purchase_details_provider.dart';
 import '../providers/purchases_providers.dart';
+import 'package:d_una_app/features/supplier_orders/presentation/supplier_orders_list/providers/supplier_orders_providers.dart';
 import '../providers/add_purchase_provider.dart';
 import '../widgets/view_purchase_details_tab.dart';
 import '../widgets/view_purchase_products_tab.dart';
@@ -79,6 +80,10 @@ class _PurchaseDetailsScreenState extends ConsumerState<PurchaseDetailsScreen>
       onResume: () {
         if (mounted && !_isEditing) {
           ref.invalidate(purchaseDetailsProvider(widget.purchaseId));
+          final currentDetails = ref.read(purchaseDetailsProvider(widget.purchaseId)).valueOrNull;
+          if (currentDetails?.purchase.supplierOrderId != null) {
+            ref.invalidate(parentSupplierOrderProvider(currentDetails!.purchase.supplierOrderId!));
+          }
         }
       },
       onPause: () {

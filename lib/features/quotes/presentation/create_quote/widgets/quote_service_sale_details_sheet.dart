@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:material_symbols_icons/symbols.dart';
 import 'package:d_una_app/shared/widgets/friendly_error_widget.dart';
 import '../../../../../shared/widgets/custom_button.dart';
 import '../../../../../shared/widgets/custom_text_field.dart';
@@ -376,7 +377,7 @@ class _QuoteServiceSaleDetailsSheetState
               Row(
                 children: [
                   Icon(
-                    Icons.verified_user_outlined,
+                    Symbols.verified_user,
                     color: colors.onSurfaceVariant,
                     size: 20,
                   ),

@@ -188,7 +188,7 @@ class ViewProductDetailsSheet extends StatelessWidget {
                     _buildSectionTitle(
                       context,
                       'Garantía',
-                      Icons.verified_user_outlined,
+                      Symbols.verified_user,
                     ),
                     const SizedBox(height: 16),
                     _buildInfoCard(

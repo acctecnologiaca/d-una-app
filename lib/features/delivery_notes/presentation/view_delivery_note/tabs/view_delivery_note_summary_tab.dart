@@ -6,6 +6,11 @@ import 'package:material_symbols_icons/symbols.dart';
 import '../../../domain/models/delivery_note_model.dart';
 import '../../../domain/models/delivery_note_status.dart';
 import '../../delivery_notes_list/providers/delivery_notes_providers.dart';
+import 'package:go_router/go_router.dart';
+import 'package:d_una_app/shared/widgets/linked_document_card.dart';
+import 'package:d_una_app/features/quotes/domain/models/quote_model.dart';
+import 'package:d_una_app/features/supplier_orders/presentation/supplier_orders_list/providers/supplier_orders_providers.dart';
+import 'package:d_una_app/features/supplier_orders/domain/models/supplier_order_status.dart';
 
 class ViewDeliveryNoteSummaryTab extends ConsumerWidget {
   final String noteId;
@@ -74,9 +79,7 @@ class ViewDeliveryNoteSummaryTab extends ConsumerWidget {
 
               // 4. Documento Vinculado Section (si aplica)
               if (note.quoteId != null || note.supplierOrderId != null) ...[
-                const SizedBox(height: 16),
-                _buildSectionHeader(context, Icons.link, 'Documento vinculado'),
-                _buildLinkedDocumentCard(context, note),
+                _buildLinkedDocumentSection(context, ref, note),
               ],
 
               // 5. Recepción y Firma Section (solo si ya fue entregada / firmada)
@@ -475,35 +478,85 @@ class ViewDeliveryNoteSummaryTab extends ConsumerWidget {
     );
   }
 
-  // ── 4. Documento Vinculado Card ───────────────────────────────────
-  Widget _buildLinkedDocumentCard(
+  // ── 4. Documento Vinculado Section ───────────────────────────────
+  Widget _buildLinkedDocumentSection(
     BuildContext context,
+    WidgetRef ref,
     DeliveryNoteModel note,
   ) {
-    final colors = Theme.of(context).colorScheme;
-    return Card(
-      elevation: 0,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(8),
-        side: BorderSide(color: colors.outlineVariant),
-      ),
-      color: colors.surface,
-      child: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Row(
-          children: [
-            Icon(Icons.description_outlined, size: 18, color: colors.primary),
-            const SizedBox(width: 10),
-            Text(
-              note.quoteId != null
-                  ? 'Generada a partir de Cotización'
-                  : 'Generada a partir de Orden de Compra',
-              style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500),
-            ),
-          ],
-        ),
-      ),
-    );
+    if (note.quoteId != null && note.quoteId!.isNotEmpty) {
+      final linkedQuoteAsync = ref.watch(linkedQuoteProvider(note.quoteId!));
+      return linkedQuoteAsync.when(
+        data: (quote) {
+          if (quote == null) return const SizedBox.shrink();
+          final quoteNumber = quote.quoteNumber ?? 'Sin número';
+          final status = QuoteStatus.fromDbValue(quote.status);
+
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              const SizedBox(height: 16),
+              _buildSectionHeader(
+                context,
+                Icons.request_quote_outlined,
+                'Cotización',
+              ),
+              LinkedDocumentCard.single(
+                id: note.quoteId!,
+                title: quoteNumber,
+                statusLabel: status.label,
+                statusIconPath: status.iconPath,
+                isCancelled: status == QuoteStatus.cancelled,
+                onTap: () async {
+                  await context.push('/quotes/view/${note.quoteId}');
+                  ref.invalidate(linkedQuoteProvider(note.quoteId!));
+                },
+              ),
+            ],
+          );
+        },
+        loading: () => const SizedBox.shrink(),
+        error: (_, _) => const SizedBox.shrink(),
+      );
+    }
+
+    if (note.supplierOrderId != null && note.supplierOrderId!.isNotEmpty) {
+      final linkedOrderAsync = ref.watch(
+        supplierOrderDetailProvider(note.supplierOrderId!),
+      );
+      return linkedOrderAsync.when(
+        data: (orderData) {
+          final order = orderData.order;
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              const SizedBox(height: 16),
+              _buildSectionHeader(
+                context,
+                Icons.shopping_cart_outlined,
+                'Orden de compra',
+              ),
+              LinkedDocumentCard.single(
+                id: order.id,
+                title: order.orderNumber,
+                companyName: order.supplierName,
+                statusLabel: order.status.label,
+                statusIconPath: order.status.iconPath,
+                isCancelled: order.status == SupplierOrderStatus.cancelled,
+                onTap: () async {
+                  await context.push('/supplier-orders/view/${order.id}');
+                  ref.invalidate(supplierOrderDetailProvider(note.supplierOrderId!));
+                },
+              ),
+            ],
+          );
+        },
+        loading: () => const SizedBox.shrink(),
+        error: (_, _) => const SizedBox.shrink(),
+      );
+    }
+
+    return const SizedBox.shrink();
   }
 
   // ── 5. Recepción y Firma Card ─────────────────────────────────────

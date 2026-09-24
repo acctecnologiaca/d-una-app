@@ -106,6 +106,13 @@ class _ViewDeliveryNoteScreenState extends ConsumerState<ViewDeliveryNoteScreen>
       ref.read(paginatedDeliveryNotesProvider.notifier).refresh();
       ref.read(paginatedProductsProvider.notifier).refresh();
       ref.invalidate(productsProvider);
+      final currentDetail = ref.read(deliveryNoteDetailProvider(widget.noteId)).valueOrNull;
+      if (currentDetail?.quoteId != null) {
+        ref.invalidate(linkedQuoteProvider(currentDetail!.quoteId!));
+      }
+      if (currentDetail?.supplierOrderId != null) {
+        ref.invalidate(supplierOrderDetailProvider(currentDetail!.supplierOrderId!));
+      }
     }
   }
 

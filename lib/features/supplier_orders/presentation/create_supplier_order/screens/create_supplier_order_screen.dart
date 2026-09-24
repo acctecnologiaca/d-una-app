@@ -35,6 +35,7 @@ class _CreateSupplierOrderScreenState
     with SingleTickerProviderStateMixin {
   late TabController _tabController;
   late final AppLifecycleListener _lifecycleListener;
+  bool _isSavedSuccess = false;
 
   @override
   void initState() {
@@ -45,7 +46,7 @@ class _CreateSupplierOrderScreenState
       initialIndex: (widget.initialTab ?? 0).clamp(0, 2),
     );
     _tabController.addListener(() {
-      if (!_tabController.indexIsChanging) {
+      if (!_tabController.indexIsChanging && !_isSavedSuccess) {
         setState(() {});
         final orderId =
             widget.orderId ?? ref.read(createSupplierOrderProvider).id;
@@ -57,18 +58,22 @@ class _CreateSupplierOrderScreenState
 
     _lifecycleListener = AppLifecycleListener(
       onPause: () {
-        final orderId =
-            widget.orderId ?? ref.read(createSupplierOrderProvider).id;
-        ref
-            .read(createSupplierOrderProvider.notifier)
-            .autoSaveDraft(tabIndex: _tabController.index, orderId: orderId);
+        if (!_isSavedSuccess) {
+          final orderId =
+              widget.orderId ?? ref.read(createSupplierOrderProvider).id;
+          ref
+              .read(createSupplierOrderProvider.notifier)
+              .autoSaveDraft(tabIndex: _tabController.index, orderId: orderId);
+        }
       },
       onInactive: () {
-        final orderId =
-            widget.orderId ?? ref.read(createSupplierOrderProvider).id;
-        ref
-            .read(createSupplierOrderProvider.notifier)
-            .autoSaveDraft(tabIndex: _tabController.index, orderId: orderId);
+        if (!_isSavedSuccess) {
+          final orderId =
+              widget.orderId ?? ref.read(createSupplierOrderProvider).id;
+          ref
+              .read(createSupplierOrderProvider.notifier)
+              .autoSaveDraft(tabIndex: _tabController.index, orderId: orderId);
+        }
       },
     );
 
@@ -182,6 +187,11 @@ class _CreateSupplierOrderScreenState
   }
 
   Future<void> _handlePop() async {
+    if (_isSavedSuccess) {
+      context.pop();
+      return;
+    }
+
     final state = ref.read(createSupplierOrderProvider);
     final hasDataOrChanges = widget.editMode
         ? state.isDirty
@@ -349,6 +359,7 @@ class _CreateSupplierOrderScreenState
                             .saveOrder();
                         if (!context.mounted) return;
                         if (updatedOrderId != null) {
+                          _isSavedSuccess = true;
                           ref.invalidate(supplierOrderDetailProvider(updatedOrderId));
                           ref.invalidate(paginatedSupplierOrdersProvider);
                           ref.invalidate(createSupplierOrderProvider);
@@ -392,6 +403,7 @@ class _CreateSupplierOrderScreenState
             CreateSupplierOrderSummaryTab(
               editMode: widget.editMode,
               onNavigateToTab: (index) => _tabController.animateTo(index),
+              onSaveSuccess: () => _isSavedSuccess = true,
             ),
           ],
         ),

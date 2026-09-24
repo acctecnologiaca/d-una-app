@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:material_symbols_icons/symbols.dart';
 
 enum ServiceReportStatus {
   draft,
@@ -168,7 +169,7 @@ enum InterventionType {
       case InterventionType.diagnosis:
         return Icons.search_outlined;
       case InterventionType.warranty:
-        return Icons.verified_outlined;
+        return Symbols.verified_user;
       case InterventionType.support:
         return Icons.computer_outlined;
     }

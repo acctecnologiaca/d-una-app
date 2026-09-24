@@ -157,16 +157,29 @@ Cada sección se compone de:
    ```
 
 ### C. Sección de Trazabilidad Cruzada y Mapa de Relaciones (Relationship Map)
-En la parte inferior del scroll de la pestaña `Resumen`, deben mostrarse las tarjetas interactivas de los documentos vinculados en el ciclo de vida:
-1. **Cotizaciones (`ViewQuoteSummaryTab`):**
-   - **Órdenes de compra vinculadas:** Listado de órdenes generadas a proveedores con número, nombre del proveedor, estatus con icono oficial y navegación a `/supplier-orders/view/:id`.
-   - **Notas de entrega vinculadas:** Listado de notas emitidas con número de nota, fecha de emisión, badge de estatus oficial y navegación a `/delivery-notes/view/:id`.
-2. **Órdenes de Compra (`ViewSupplierOrderSummaryTab`):**
-   - **Cotización vinculada:** Si `order.quoteId != null`, tarjeta con número de cotización, cliente destinatario, badge de estatus oficial y navegación a `/quotes/view/:id`.
-   - **Registro de compra vinculado:** Si `linkedPurchase != null`, tarjeta con tipo de documento (Factura / Nota de entrega), número de documento y navegación a `/my-purchases/view/:id`.
-   - **Órdenes consolidadas / Orden principal:** Si la orden proviene o forma parte de una consolidación (`merged`).
-3. **Notas de Entrega:**
-   - Visualización de la cotización u orden de compra de origen.
+En la parte inferior del scroll de la pestaña `Resumen`, deben mostrarse las tarjetas interactivas de los documentos vinculados en el ciclo de vida utilizando **obligatoriamente** el componente oficial [`LinkedDocumentCard`](file:///c:/Users/aleja/flutter_apps/MVP/d_una_app/lib/shared/widgets/linked_document_card.dart) o `LinkedDocumentCard.single(...)`.
+
+#### 📐 Regla Maestra de Negocio (Empresa entre paréntesis):
+- **Relaciones Cruzadas (Venta ↔ Compra / Cliente ↔ Proveedor):** Se debe proporcionar `companyName` para mostrar `$documentNumber ($companyName)`.
+  - *Cotizaciones:* Órdenes de compra vinculadas muestran el proveedor (`${order.orderNumber} (${order.supplierName})`).
+  - *Órdenes de Compra:* Cotización de origen muestra el cliente (`$quoteNumber ($clientName)`).
+  - *Notas de Entrega generadas desde OC:* Muestran el proveedor de la orden (`${order.orderNumber} (${order.supplierName})`).
+- **Relaciones Homogéneas (Mismo Cliente o Mismo Proveedor):** Se omite `companyName` porque resulta redundante.
+  - *Cotizaciones:* Notas de entrega vinculadas omiten el cliente (`note.deliveryNoteNumber`).
+  - *Órdenes de Compra:* Registro de compra vinculado omite el proveedor (`$docType $cleanDocNumber`).
+  - *Notas de Entrega generadas desde Cotización:* Cotización de origen omite el cliente (`$quoteNumber`).
+  - *Registro de Compras:* Orden de compra vinculada omite el proveedor (`Orden de compra $cleanOrderNumber`).
+
+#### ⚡ Reactividad en Tiempo Real y Actualización en Caliente:
+1. **Navegación Interactiva (`onTap`):**
+   ```dart
+   onTap: () async {
+     await context.push('/destination/path/$id');
+     ref.invalidate(linkedDocumentProvider(currentId));
+   }
+   ```
+2. **Ciclo de Vida de la App (`resumed`):** En `didChangeAppLifecycleState` o `AppLifecycleListener.onResume`, invalidar tanto el provider principal del documento como los providers de documentos vinculados.
+3. **Suscripción Postgres Realtime:** Conectar canales de Supabase Realtime a las tablas relacionadas (`supplier_orders`, `delivery_notes`, `purchases`) filtradas por la clave foránea del documento actual.
 
 ---
 

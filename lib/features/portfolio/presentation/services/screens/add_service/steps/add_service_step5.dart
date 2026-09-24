@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:material_symbols_icons/symbols.dart';
 import '../../../../../../../shared/widgets/wizard_bottom_bar.dart';
 import '../../../../../../../shared/widgets/info_block.dart';
 
@@ -78,7 +79,7 @@ class AddServiceStep5 extends StatelessWidget {
 
                 // Warranty
                 InfoBlock.text(
-                  icon: Icons.verified_outlined,
+                  icon: Symbols.verified_user,
                   label: 'Tiempo de garantía',
                   value: hasWarranty
                       ? '$warrantyTime $warrantyUnit'

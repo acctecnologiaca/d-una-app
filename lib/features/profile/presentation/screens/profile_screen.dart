@@ -306,7 +306,7 @@ class ProfileScreen extends ConsumerWidget {
                   },
                 ),
                 CustomMenuTile(
-                  icon: Icons.verified_outlined,
+                  icon: Icons.badge_outlined,
                   title: 'Verificación',
                   subtitle: 'Para aprovechar al máximo la app.',
                   onTap: () {
