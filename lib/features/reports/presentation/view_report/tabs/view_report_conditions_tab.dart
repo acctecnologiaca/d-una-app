@@ -18,10 +18,11 @@ class ViewReportConditionsTab extends ConsumerWidget {
       error: (err, _) => Center(child: Text('Error: $err')),
       data: (report) {
         final conditions = report.conditions ?? [];
-        final isFinalized =
-            report.status == ServiceReportStatus.finalized.dbValue;
+        final isNoFab =
+            report.status == ServiceReportStatus.finalized.dbValue ||
+            report.status == ServiceReportStatus.cancelled.dbValue;
         final bottomPadding =
-            isFinalized ? FabScrollPadding.none : FabScrollPadding.single;
+            isNoFab ? FabScrollPadding.none : FabScrollPadding.single;
 
         if (conditions.isEmpty) {
           return Column(

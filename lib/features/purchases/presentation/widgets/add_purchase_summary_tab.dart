@@ -64,7 +64,7 @@ class AddPurchaseSummaryTab extends ConsumerWidget {
           left: 16,
           right: 16,
           top: 16,
-          bottom: FabScrollPadding.single,
+          bottom: FabScrollPadding.none,
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,

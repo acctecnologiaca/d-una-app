@@ -13,6 +13,7 @@ import 'package:d_una_app/features/supplier_orders/presentation/supplier_orders_
 import 'package:d_una_app/features/supplier_orders/domain/models/supplier_order.dart';
 import 'package:d_una_app/shared/widgets/custom_dialog.dart';
 import 'package:d_una_app/shared/utils/currency_formatter.dart';
+import 'package:d_una_app/shared/utils/fab_scroll_padding.dart';
 import '../providers/add_purchase_provider.dart';
 
 class AddPurchaseDetailsTab extends ConsumerStatefulWidget {
@@ -112,7 +113,7 @@ class _AddPurchaseDetailsTabState extends ConsumerState<AddPurchaseDetailsTab> {
     final isInitialInventory = state.documentType == 'initial_inventory';
 
     return SingleChildScrollView(
-      padding: const EdgeInsets.all(16.0),
+      padding: const EdgeInsets.fromLTRB(16, 16, 16, FabScrollPadding.none),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -353,7 +354,6 @@ class _AddPurchaseDetailsTabState extends ConsumerState<AddPurchaseDetailsTab> {
               ref.read(addPurchaseProvider.notifier).setDocumentNumber(val);
             },
           ),
-          const SizedBox(height: 24),
         ],
       ),
     );

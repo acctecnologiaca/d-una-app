@@ -535,15 +535,16 @@ class _AddTemporalServiceScreenState
 
     final salePrice = unitPrice;
 
-    final int? warrantyTime =
-        _hasWarranty ? int.tryParse(_warrantyQtyController.text) : null;
+    final int? warrantyTime = _hasWarranty
+        ? int.tryParse(_warrantyQtyController.text)
+        : null;
     final String? warrantyUnit = _hasWarranty
         ? switch (_warrantyPeriod) {
-          'Días' => 'days',
-          'Meses' => 'months',
-          'Años' => 'years',
-          _ => 'days',
-        }
+            'Días' => 'days',
+            'Meses' => 'months',
+            'Años' => 'years',
+            _ => 'days',
+          }
         : null;
 
     // In temporal services, we might not have a full UUID for serviceRateId, but we can store a string representation or leave null
@@ -711,437 +712,486 @@ class _AddTemporalServiceScreenState
               Expanded(
                 child: ListView(
                   padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
-            children: [
-              Text(
-                'Usa este apartado solo para incluir servicios que no existan en tu portafolio aún.',
-                style: TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.bold,
-                  color: colors.onSurface,
-                ),
-              ),
-              const SizedBox(height: 16),
-
-              // =========================================================
-              // BLOQUE 1: Definición del Servicio
-              // =========================================================
-              CollapsibleCardBlock(
-                controller: _controller1,
-                initiallyExpanded: true,
-                onExpansionChanged: (expanded) {
-                  if (expanded) {
-                    _onExpandBlock(0);
-                  } else {
-                    _onCollapseBlock(0);
-                  }
-                },
-                leading: Icon(
-                  Icons.handyman_outlined,
-                  size: 28,
-                  color: colors.onSurfaceVariant,
-                ),
-                title: 'Definición del servicio',
-                subtitle: _getBlock1Subtitle(rates),
-                isComplete: _isBlock1Complete(),
-                children: [
-                  CustomTextField(
-                    controller: _nameController,
-                    label: 'Nombre del servicio*',
-                    helperText: 'Ej: Servicio de mantenimiento preventivo',
-                    validator: (v) =>
-                        v == null || v.isEmpty ? 'Requerido' : null,
-                  ),
-                  const SizedBox(height: 16),
-                  CustomTextField(
-                    controller: _descriptionController,
-                    label: 'Descripción breve',
-                    maxLines: 3,
-                  ),
-                  const SizedBox(height: 16),
-                  Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Expanded(
-                        flex: 1,
-                        child: CustomTextField(
-                          controller: _quantityController,
-                          label: 'Cantidad*',
-                          keyboardType: const TextInputType.numberWithOptions(
-                            decimal: true,
-                          ),
-                          inputFormatters: [
-                            FilteringTextInputFormatter.allow(
-                              RegExp(r'^\d*[.,]?\d*'),
-                            ),
-                          ],
-                          validator: (v) {
-                            if (v == null || v.isEmpty) return 'Requerido';
-                            if (double.tryParse(v.replaceAll(',', '.')) ==
-                                null) {
-                              return 'Inválido';
-                            }
-                            if (double.parse(v.replaceAll(',', '.')) <= 0) {
-                              return 'Mayor a 0';
-                            }
-                            return null;
-                          },
-                        ),
-                      ),
-                      const SizedBox(width: 16),
-                      Expanded(
-                        flex: 2,
-                        child: CustomDropdown<ServiceRate>(
-                          value: rates.any((r) => r.id == _selectedRate)
-                              ? rates.firstWhere((r) => r.id == _selectedRate)
-                              : (rates.isNotEmpty ? rates.first : null),
-                          items: rates,
-                          label: 'Tarifa por',
-                          searchable: true,
-                          itemLabelBuilder: (r) =>
-                              '${r.name.toTitleCase} (${r.symbol})',
-                          onChanged: (newValue) {
-                            if (newValue != null &&
-                                newValue.id != '___ADD___') {
-                              setState(() {
-                                _selectedRate = newValue.id;
-                              });
-                              _checkPortfolioDuplicate();
-                            }
-                          },
-                          showAddOption: true,
-                          addOptionLabel: 'Agregar tarifa',
-                          addOptionValue: const ServiceRate(
-                            id: '___ADD___',
-                            name: '___ADD___',
-                            symbol: '',
-                          ),
-                          onAddPressed: _showAddRateDialog,
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 8),
-                ],
-              ),
-
-              // =========================================================
-              // BLOQUE 2: Costos, Tercerización y Venta
-              // =========================================================
-              CollapsibleCardBlock(
-                controller: _controller2,
-                initiallyExpanded: false,
-                onExpansionChanged: (expanded) {
-                  if (expanded) {
-                    _onExpandBlock(1);
-                  } else {
-                    _onCollapseBlock(1);
-                  }
-                },
-                leading: Icon(
-                  Icons.monetization_on_outlined,
-                  size: 28,
-                  color: colors.onSurfaceVariant,
-                ),
-                title: 'Costos, tercerización y venta',
-                subtitle: _getBlock2Subtitle(),
-                isComplete: _isBlock2Complete(),
-                children: [
-                  SwitchListTile(
-                    contentPadding: EdgeInsets.zero,
-                    title: const Text(
-                      'Servicio tercerizado',
-                      style:
-                          TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
-                    ),
-                    subtitle: Text(
-                      'Otra persona lo haría por ti y te cobraría.',
+                  children: [
+                    Text(
+                      'Usa este apartado solo para incluir servicios que no existan en tu portafolio aún.',
                       style: TextStyle(
-                        fontSize: 12,
+                        fontSize: 14,
+                        fontWeight: FontWeight.bold,
+                        color: colors.onSurface,
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+
+                    // =========================================================
+                    // BLOQUE 1: Definición del Servicio
+                    // =========================================================
+                    CollapsibleCardBlock(
+                      controller: _controller1,
+                      initiallyExpanded: true,
+                      onExpansionChanged: (expanded) {
+                        if (expanded) {
+                          _onExpandBlock(0);
+                        } else {
+                          _onCollapseBlock(0);
+                        }
+                      },
+                      leading: Icon(
+                        Icons.handyman_outlined,
+                        size: 28,
                         color: colors.onSurfaceVariant,
                       ),
-                    ),
-                    value: _isOutsourced,
-                    onChanged: (v) => setState(() => _isOutsourced = v),
-                    activeThumbColor: colors.primary,
-                  ),
-                  if (_isOutsourced) ...[
-                    const SizedBox(height: 12),
-                    CustomTextField(
-                      controller: _costController,
-                      label: 'Precio costo*',
-                      prefixText: '\$ ',
-                      keyboardType: const TextInputType.numberWithOptions(
-                        decimal: true,
-                      ),
-                      inputFormatters: [CurrencyInputFormatter()],
-                      helperText: 'Sin impuesto',
-                      validator: (v) {
-                        if (v == null || v.isEmpty) return 'Requerido';
-                        if (CurrencyFormatter.parse(v) == null) {
-                          return 'Inválido';
-                        }
-                        return null;
-                      },
-                    ),
-                  ],
-                  const SizedBox(height: 16),
-                  Text(
-                    'Precio de venta',
-                    style: TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.bold,
-                      color: colors.onSurface,
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.start,
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      if (_isOutsourced) ...[
-                        CustomStepper(
-                          controller: _marginController,
-                          label: 'Porcentaje',
-                          prefixText: '%',
-                          onIncrement: () {
-                            final current = double.tryParse(
-                                  _marginController.text.replaceAll(',', '.'),
-                                ) ??
-                                0;
-                            _marginController.text = (current + 1)
-                                .toStringAsFixed(2)
-                                .replaceAll('.', ',');
-                          },
-                          onDecrement: () {
-                            final current = double.tryParse(
-                                  _marginController.text.replaceAll(',', '.'),
-                                ) ??
-                                0;
-                            if (current >= 1) {
-                              _marginController.text = (current - 1)
-                                  .toStringAsFixed(2)
-                                  .replaceAll('.', ',');
-                            }
-                          },
-                        ),
-                        const SizedBox(width: 8),
-                      ],
-                      Expanded(
-                        child: CustomTextField(
-                          controller: _salePriceController,
-                          label: 'Precio*',
-                          prefixText: '\$ ',
-                          keyboardType: const TextInputType.numberWithOptions(
-                            decimal: true,
-                          ),
-                          inputFormatters: [CurrencyInputFormatter()],
-                          helperText: 'Sin impuesto',
-                          onChanged: (_) => _calculateMarginFromSalePrice(),
+                      title: 'Definición del servicio',
+                      subtitle: _getBlock1Subtitle(rates),
+                      isComplete: _isBlock1Complete(),
+                      children: [
+                        CustomTextField(
+                          controller: _nameController,
+                          label: 'Nombre del servicio*',
+                          helperText:
+                              'Ej: Servicio de mantenimiento preventivo',
                           validator: (v) =>
                               v == null || v.isEmpty ? 'Requerido' : null,
                         ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 8),
-                ],
-              ),
-
-              // =========================================================
-              // BLOQUE 3: Garantía, Ejecución y Servicios Propios
-              // =========================================================
-              CollapsibleCardBlock(
-                controller: _controller3,
-                initiallyExpanded: false,
-                onExpansionChanged: (expanded) {
-                  if (expanded) {
-                    _onExpandBlock(2);
-                  } else {
-                    _onCollapseBlock(2);
-                  }
-                },
-                leading: Icon(
-                  Symbols.verified_user,
-                  size: 28,
-                  color: colors.onSurfaceVariant,
-                ),
-                title: 'Garantía y servicios propios',
-                subtitle: _getBlock3Subtitle(),
-                isComplete: _isBlock3Complete(),
-                children: [
-                  SwitchListTile(
-                    contentPadding: EdgeInsets.zero,
-                    title: const Text(
-                      'No ofrezco garantía para este servicio',
-                      style:
-                          TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
-                    ),
-                    value: !_hasWarranty,
-                    onChanged: (v) => setState(() => _hasWarranty = !v),
-                    activeThumbColor: colors.primary,
-                  ),
-                  if (_hasWarranty) ...[
-                    const SizedBox(height: 8),
-                    Text(
-                      'Garantía',
-                      style: TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.bold,
-                        color: colors.onSurface,
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-                    Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Expanded(
-                          child: CustomTextField(
-                            controller: _warrantyQtyController,
-                            label: 'Cantidad*',
-                            keyboardType: TextInputType.number,
-                            inputFormatters: [
-                              FilteringTextInputFormatter.digitsOnly,
-                            ],
-                            validator: (v) =>
-                                v == null || v.isEmpty ? 'Requerido' : null,
-                          ),
+                        const SizedBox(height: 16),
+                        CustomTextField(
+                          controller: _descriptionController,
+                          label: 'Descripción breve',
+                          maxLines: 3,
                         ),
-                        const SizedBox(width: 16),
-                        Expanded(
-                          child: CustomDropdown<String>(
-                            value: _warrantyPeriod,
-                            items: const ['Días', 'Meses', 'Años'],
-                            label: 'Período',
-                            itemLabelBuilder: (String value) => value,
-                            onChanged: (newValue) {
-                              if (newValue != null) {
-                                setState(() {
-                                  _warrantyPeriod = newValue;
-                                });
+                        const SizedBox(height: 16),
+                        Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Expanded(
+                              flex: 1,
+                              child: CustomTextField(
+                                controller: _quantityController,
+                                label: 'Cantidad*',
+                                keyboardType:
+                                    const TextInputType.numberWithOptions(
+                                      decimal: true,
+                                    ),
+                                inputFormatters: [
+                                  FilteringTextInputFormatter.allow(
+                                    RegExp(r'^\d*[.,]?\d*'),
+                                  ),
+                                ],
+                                validator: (v) {
+                                  if (v == null || v.isEmpty) {
+                                    return 'Requerido';
+                                  }
+                                  if (double.tryParse(v.replaceAll(',', '.')) ==
+                                      null) {
+                                    return 'Inválido';
+                                  }
+                                  if (double.parse(v.replaceAll(',', '.')) <=
+                                      0) {
+                                    return 'Mayor a 0';
+                                  }
+                                  return null;
+                                },
+                              ),
+                            ),
+                            const SizedBox(width: 16),
+                            Expanded(
+                              flex: 2,
+                              child: CustomDropdown<ServiceRate>(
+                                value: rates.any((r) => r.id == _selectedRate)
+                                    ? rates.firstWhere(
+                                        (r) => r.id == _selectedRate,
+                                      )
+                                    : (rates.isNotEmpty ? rates.first : null),
+                                items: rates,
+                                label: 'Tarifa por',
+                                searchable: true,
+                                itemLabelBuilder: (r) =>
+                                    '${r.name.toTitleCase} (${r.symbol})',
+                                onChanged: (newValue) {
+                                  if (newValue != null &&
+                                      newValue.id != '___ADD___') {
+                                    setState(() {
+                                      _selectedRate = newValue.id;
+                                    });
+                                    _checkPortfolioDuplicate();
+                                  }
+                                },
+                                showAddOption: true,
+                                addOptionLabel: 'Agregar tarifa',
+                                addOptionValue: const ServiceRate(
+                                  id: '___ADD___',
+                                  name: '___ADD___',
+                                  symbol: '',
+                                ),
+                                onAddPressed: _showAddRateDialog,
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 8),
+                      ],
+                    ),
+
+                    // =========================================================
+                    // BLOQUE 2: Costos, Tercerización y Venta
+                    // =========================================================
+                    CollapsibleCardBlock(
+                      controller: _controller2,
+                      initiallyExpanded: false,
+                      onExpansionChanged: (expanded) {
+                        if (expanded) {
+                          _onExpandBlock(1);
+                        } else {
+                          _onCollapseBlock(1);
+                        }
+                      },
+                      leading: Icon(
+                        Icons.monetization_on_outlined,
+                        size: 28,
+                        color: colors.onSurfaceVariant,
+                      ),
+                      title: 'Costos, tercerización y venta',
+                      subtitle: _getBlock2Subtitle(),
+                      isComplete: _isBlock2Complete(),
+                      children: [
+                        SwitchListTile(
+                          contentPadding: EdgeInsets.zero,
+                          title: const Text(
+                            'Servicio tercerizado',
+                            style: TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                          subtitle: Text(
+                            'Otra persona lo haría por ti y te cobraría.',
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: colors.onSurfaceVariant,
+                            ),
+                          ),
+                          value: _isOutsourced,
+                          onChanged: (v) => setState(() => _isOutsourced = v),
+                          activeThumbColor: colors.primary,
+                        ),
+                        if (_isOutsourced) ...[
+                          const SizedBox(height: 12),
+                          CustomTextField(
+                            controller: _costController,
+                            label: 'Precio costo*',
+                            prefixText: '\$ ',
+                            keyboardType: const TextInputType.numberWithOptions(
+                              decimal: true,
+                            ),
+                            inputFormatters: [CurrencyInputFormatter()],
+                            helperText: 'Sin impuesto',
+                            validator: (v) {
+                              if (v == null || v.isEmpty) return 'Requerido';
+                              if (CurrencyFormatter.parse(v) == null) {
+                                return 'Inválido';
                               }
+                              return null;
                             },
                           ),
+                        ],
+                        const SizedBox(height: 16),
+                        Text(
+                          'Precio de venta',
+                          style: TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.bold,
+                            color: colors.onSurface,
+                          ),
                         ),
+                        const SizedBox(height: 12),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.start,
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            if (_isOutsourced) ...[
+                              CustomStepper(
+                                controller: _marginController,
+                                label: 'Porcentaje',
+                                prefixText: '%',
+                                onIncrement: () {
+                                  final current =
+                                      double.tryParse(
+                                        _marginController.text.replaceAll(
+                                          ',',
+                                          '.',
+                                        ),
+                                      ) ??
+                                      0;
+                                  _marginController.text = (current + 1)
+                                      .toStringAsFixed(2)
+                                      .replaceAll('.', ',');
+                                },
+                                onDecrement: () {
+                                  final current =
+                                      double.tryParse(
+                                        _marginController.text.replaceAll(
+                                          ',',
+                                          '.',
+                                        ),
+                                      ) ??
+                                      0;
+                                  if (current >= 1) {
+                                    _marginController.text = (current - 1)
+                                        .toStringAsFixed(2)
+                                        .replaceAll('.', ',');
+                                  }
+                                },
+                              ),
+                              const SizedBox(width: 8),
+                            ],
+                            Expanded(
+                              child: CustomTextField(
+                                controller: _salePriceController,
+                                label: 'Precio*',
+                                prefixText: '\$ ',
+                                keyboardType:
+                                    const TextInputType.numberWithOptions(
+                                      decimal: true,
+                                    ),
+                                inputFormatters: [CurrencyInputFormatter()],
+                                helperText: 'Sin impuesto',
+                                onChanged: (_) =>
+                                    _calculateMarginFromSalePrice(),
+                                validator: (v) =>
+                                    v == null || v.isEmpty ? 'Requerido' : null,
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 8),
+                      ],
+                    ),
+
+                    // =========================================================
+                    // BLOQUE 3: Garantía, Ejecución y Servicios Propios
+                    // =========================================================
+                    CollapsibleCardBlock(
+                      controller: _controller3,
+                      initiallyExpanded: false,
+                      onExpansionChanged: (expanded) {
+                        if (expanded) {
+                          _onExpandBlock(2);
+                        } else {
+                          _onCollapseBlock(2);
+                        }
+                      },
+                      leading: Icon(
+                        Symbols.verified_user,
+                        size: 28,
+                        color: colors.onSurfaceVariant,
+                      ),
+                      title: 'Garantía y servicios propios',
+                      subtitle: _getBlock3Subtitle(),
+                      isComplete: _isBlock3Complete(),
+                      children: [
+                        SwitchListTile(
+                          contentPadding: EdgeInsets.zero,
+                          title: const Text(
+                            'No ofrezco garantía para este servicio',
+                            style: TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                          value: !_hasWarranty,
+                          onChanged: (v) => setState(() => _hasWarranty = !v),
+                          activeThumbColor: colors.primary,
+                        ),
+                        if (_hasWarranty) ...[
+                          const SizedBox(height: 8),
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.start,
+                            children: [
+                              Text(
+                                'Garantía',
+                                style: TextStyle(
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.bold,
+                                  color: colors.onSurface,
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 12),
+                          Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Expanded(
+                                child: CustomTextField(
+                                  controller: _warrantyQtyController,
+                                  label: 'Cantidad*',
+                                  keyboardType: TextInputType.number,
+                                  inputFormatters: [
+                                    FilteringTextInputFormatter.digitsOnly,
+                                  ],
+                                  validator: (v) => v == null || v.isEmpty
+                                      ? 'Requerido'
+                                      : null,
+                                ),
+                              ),
+                              const SizedBox(width: 16),
+                              Expanded(
+                                child: CustomDropdown<String>(
+                                  value: _warrantyPeriod,
+                                  items: const ['Días', 'Meses', 'Años'],
+                                  label: 'Período',
+                                  itemLabelBuilder: (String value) => value,
+                                  onChanged: (newValue) {
+                                    if (newValue != null) {
+                                      setState(() {
+                                        _warrantyPeriod = newValue;
+                                      });
+                                    }
+                                  },
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+                        const SizedBox(height: 12),
+                        if (!isTimeBased) ...[
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.start,
+                            children: [
+                              Text(
+                                'Tiempo de ejecución',
+                                style: TextStyle(
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.bold,
+                                  color: colors.onSurface,
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 12),
+                          ref
+                              .watch(deliveryTimesForExecutionProvider)
+                              .when(
+                                data: (executionTimes) {
+                                  if (_selectedExecutionTimeId == null &&
+                                      executionTimes.isNotEmpty) {
+                                    WidgetsBinding.instance
+                                        .addPostFrameCallback((_) {
+                                          if (mounted) {
+                                            setState(() {
+                                              _selectedExecutionTimeId =
+                                                  executionTimes.first.id;
+                                              if (widget.existingItem == null) {
+                                                _originalExecutionTimeId =
+                                                    _selectedExecutionTimeId;
+                                              }
+                                            });
+                                          }
+                                        });
+                                  }
+
+                                  return CustomDropdown<DeliveryTime>(
+                                    value:
+                                        executionTimes.any(
+                                          (e) =>
+                                              e.id == _selectedExecutionTimeId,
+                                        )
+                                        ? executionTimes.firstWhere(
+                                            (e) =>
+                                                e.id ==
+                                                _selectedExecutionTimeId,
+                                          )
+                                        : (executionTimes.isNotEmpty
+                                              ? executionTimes.first
+                                              : null),
+                                    items: executionTimes,
+                                    label: 'Seleccionar tiempo',
+                                    searchable: true,
+                                    itemLabelBuilder: (dt) => dt.name,
+                                    onChanged: (val) {
+                                      if (val != null &&
+                                          val.id != '___ADD___') {
+                                        setState(
+                                          () =>
+                                              _selectedExecutionTimeId = val.id,
+                                        );
+                                      }
+                                    },
+                                    showAddOption: true,
+                                    addOptionLabel:
+                                        'Agregar tiempo de ejecución',
+                                    addOptionValue: DeliveryTime(
+                                      id: '___ADD___',
+                                      name: '___ADD___',
+                                      unit: '',
+                                      type: '',
+                                      orderIdx: 0,
+                                    ),
+                                    onAddPressed: _showAddExecutionTimeDialog,
+                                  );
+                                },
+                                loading: () => const Center(
+                                  child: CircularProgressIndicator(),
+                                ),
+                                error: (err, stack) =>
+                                    FriendlyErrorWidget(error: err),
+                              ),
+                          const SizedBox(height: 12),
+                        ],
+                        SwitchListTile(
+                          contentPadding: EdgeInsets.zero,
+                          title: const Text(
+                            'Guardar en servicios propios',
+                            style: TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                          subtitle: Text(
+                            (_alreadyInPortfolio && widget.existingItem != null)
+                                ? 'Este servicio ya fue incluído en tu portafolio.'
+                                : 'Luego deberás completar otros datos.',
+                            style: TextStyle(
+                              color: _alreadyInPortfolio
+                                  ? colors.primary
+                                  : colors.outline,
+                              fontWeight: _alreadyInPortfolio
+                                  ? FontWeight.bold
+                                  : null,
+                              fontSize: 12,
+                            ),
+                          ),
+                          value: _addToOwnServices,
+                          onChanged:
+                              (_alreadyInPortfolio &&
+                                  widget.existingItem != null)
+                              ? null
+                              : (v) => setState(() => _addToOwnServices = v),
+                          activeThumbColor:
+                              (_alreadyInPortfolio &&
+                                  widget.existingItem != null)
+                              ? colors.outline.withValues(alpha: 0.5)
+                              : colors.primary,
+                        ),
+                        const SizedBox(height: 8),
                       ],
                     ),
                   ],
-                  const SizedBox(height: 12),
-                  if (!isTimeBased) ...[
-                    Text(
-                      'Tiempo de ejecución',
-                      style: TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.bold,
-                        color: colors.onSurface,
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-                    ref.watch(deliveryTimesForExecutionProvider).when(
-                          data: (executionTimes) {
-                            if (_selectedExecutionTimeId == null &&
-                                executionTimes.isNotEmpty) {
-                              WidgetsBinding.instance.addPostFrameCallback((_) {
-                                if (mounted) {
-                                  setState(() {
-                                    _selectedExecutionTimeId =
-                                        executionTimes.first.id;
-                                    if (widget.existingItem == null) {
-                                      _originalExecutionTimeId =
-                                          _selectedExecutionTimeId;
-                                    }
-                                  });
-                                }
-                              });
-                            }
-
-                            return CustomDropdown<DeliveryTime>(
-                              value: executionTimes.any(
-                                (e) => e.id == _selectedExecutionTimeId,
-                              )
-                                  ? executionTimes.firstWhere(
-                                      (e) => e.id == _selectedExecutionTimeId,
-                                    )
-                                  : (executionTimes.isNotEmpty
-                                      ? executionTimes.first
-                                      : null),
-                              items: executionTimes,
-                              label: 'Seleccionar tiempo',
-                              searchable: true,
-                              itemLabelBuilder: (dt) => dt.name,
-                              onChanged: (val) {
-                                if (val != null && val.id != '___ADD___') {
-                                  setState(
-                                      () => _selectedExecutionTimeId = val.id);
-                                }
-                              },
-                              showAddOption: true,
-                              addOptionLabel: 'Agregar tiempo de ejecución',
-                              addOptionValue: DeliveryTime(
-                                id: '___ADD___',
-                                name: '___ADD___',
-                                unit: '',
-                                type: '',
-                                orderIdx: 0,
-                              ),
-                              onAddPressed: _showAddExecutionTimeDialog,
-                            );
-                          },
-                          loading: () =>
-                              const Center(child: CircularProgressIndicator()),
-                          error: (err, stack) =>
-                              FriendlyErrorWidget(error: err),
-                        ),
-                    const SizedBox(height: 12),
-                  ],
-                  SwitchListTile(
-                    contentPadding: EdgeInsets.zero,
-                    title: const Text(
-                      'Guardar en servicios propios',
-                      style:
-                          TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
-                    ),
-                    subtitle: Text(
-                      (_alreadyInPortfolio && widget.existingItem != null)
-                          ? 'Este servicio ya fue incluído en tu portafolio.'
-                          : 'Luego deberás completar otros datos.',
-                      style: TextStyle(
-                        color: _alreadyInPortfolio
-                            ? colors.primary
-                            : colors.outline,
-                        fontWeight:
-                            _alreadyInPortfolio ? FontWeight.bold : null,
-                        fontSize: 12,
-                      ),
-                    ),
-                    value: _addToOwnServices,
-                    onChanged:
-                        (_alreadyInPortfolio && widget.existingItem != null)
-                            ? null
-                            : (v) => setState(() => _addToOwnServices = v),
-                    activeThumbColor:
-                        (_alreadyInPortfolio && widget.existingItem != null)
-                            ? colors.outline.withValues(alpha: 0.5)
-                            : colors.primary,
-                  ),
-                  const SizedBox(height: 8),
-                ],
+                ),
+              ),
+              FormBottomBar(
+                onCancel: () => Navigator.maybePop(context),
+                onSave:
+                    (_hasChanges() && _nameController.text.trim().isNotEmpty)
+                    ? _saveService
+                    : null,
+                saveLabel:
+                    'Confirmar (${_quantityController.text} $selectedRateSymbol)',
               ),
             ],
           ),
         ),
-        FormBottomBar(
-          onCancel: () => Navigator.maybePop(context),
-          onSave: (_hasChanges() &&
-                  _nameController.text.trim().isNotEmpty)
-              ? _saveService
-              : null,
-          saveLabel:
-              'Confirmar (${_quantityController.text} $selectedRateSymbol)',
-        ),
-      ],
-    ),
-  ),
-),
+      ),
     );
   }
 }

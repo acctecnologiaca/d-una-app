@@ -8,6 +8,7 @@ import 'package:d_una_app/shared/widgets/custom_dropdown.dart';
 import 'package:d_una_app/shared/widgets/custom_text_field.dart';
 import 'package:d_una_app/shared/widgets/info_block.dart';
 import 'package:d_una_app/shared/widgets/custom_dialog.dart';
+import 'package:d_una_app/shared/utils/fab_scroll_padding.dart';
 import 'package:d_una_app/shared/utils/currency_formatter.dart';
 import 'package:d_una_app/features/clients/presentation/providers/clients_provider.dart';
 import 'package:d_una_app/features/clients/data/models/client_model.dart';
@@ -190,7 +191,7 @@ class _DeliveryNoteDetailsTabState
         : 'Pendiente de etiqueta';
 
     return SingleChildScrollView(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.fromLTRB(16, 16, 16, FabScrollPadding.none),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
@@ -642,8 +643,6 @@ class _DeliveryNoteDetailsTabState
               const SizedBox(height: 8),
             ],
           ),
-
-          const SizedBox(height: 80),
         ],
       ),
     );

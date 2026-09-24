@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:material_symbols_icons/symbols.dart';
+import 'package:d_una_app/shared/utils/fab_scroll_padding.dart';
 import '../providers/create_delivery_note_provider.dart';
 
 class DeliveryNoteObservationsTab extends ConsumerWidget {
@@ -39,7 +40,7 @@ class DeliveryNoteObservationsTab extends ConsumerWidget {
         top: 12,
         left: 0,
         right: 0,
-        bottom: 88,
+        bottom: FabScrollPadding.single,
       ),
       itemCount: state.observations.length,
       onReorder: (oldIndex, newIndex) {

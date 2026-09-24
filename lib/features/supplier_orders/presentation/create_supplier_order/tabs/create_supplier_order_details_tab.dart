@@ -18,6 +18,7 @@ import 'package:d_una_app/shared/utils/currency_formatter.dart';
 import '../providers/create_supplier_order_provider.dart';
 import '../../supplier_orders_list/providers/supplier_orders_providers.dart';
 import 'package:d_una_app/shared/widgets/custom_dialog.dart';
+import 'package:d_una_app/shared/utils/fab_scroll_padding.dart';
 
 class CreateSupplierOrderDetailsTab extends ConsumerStatefulWidget {
   const CreateSupplierOrderDetailsTab({super.key});
@@ -196,7 +197,7 @@ class _CreateSupplierOrderDetailsTabState
     });
 
     return SingleChildScrollView(
-      padding: const EdgeInsets.all(16.0),
+      padding: const EdgeInsets.fromLTRB(16, 16, 16, FabScrollPadding.none),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -788,7 +789,6 @@ class _CreateSupplierOrderDetailsTabState
             loading: () => const Center(child: CircularProgressIndicator()),
             error: (e, s) => FriendlyErrorWidget(error: e),
           ),
-          const SizedBox(height: 24),
         ],
       ),
     );

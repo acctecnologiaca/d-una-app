@@ -4,6 +4,7 @@ import 'package:intl/intl.dart';
 import 'package:d_una_app/shared/widgets/custom_dropdown.dart';
 import 'package:d_una_app/shared/widgets/custom_text_field.dart';
 import 'package:d_una_app/shared/widgets/custom_location_picker.dart';
+import 'package:d_una_app/shared/utils/fab_scroll_padding.dart';
 import 'package:d_una_app/features/portfolio/presentation/providers/lookup_providers.dart';
 import 'package:d_una_app/features/settings/data/models/shipping_company.dart';
 import 'package:d_una_app/features/settings/presentation/widgets/add_edit_shipping_company_sheet.dart';
@@ -132,7 +133,7 @@ class _DeliveryNoteDeliveryTabState
     });
 
     return SingleChildScrollView(
-      padding: const EdgeInsets.fromLTRB(16, 16, 16, 40),
+      padding: const EdgeInsets.fromLTRB(16, 16, 16, FabScrollPadding.none),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [

@@ -85,10 +85,11 @@ class ViewReportSummaryTab extends ConsumerWidget {
           ..sort((a, b) => a.orderIndex.compareTo(b.orderIndex));
         final displayServices = sortedServices.take(3).toList();
 
-        final isFinalized = status == ServiceReportStatus.finalized;
-        final bottomPadding = isFinalized
-            ? FabScrollPadding.none
-            : FabScrollPadding.single;
+        final isNoFab =
+            status == ServiceReportStatus.finalized ||
+            status == ServiceReportStatus.cancelled;
+        final bottomPadding =
+            isNoFab ? FabScrollPadding.none : FabScrollPadding.single;
 
         return SingleChildScrollView(
           padding: EdgeInsets.fromLTRB(16, 16, 16, bottomPadding),

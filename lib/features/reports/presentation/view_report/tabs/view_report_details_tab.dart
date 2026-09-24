@@ -42,11 +42,11 @@ class ViewReportDetailsTab extends ConsumerWidget {
             (report.notes != null && report.notes!.trim().isNotEmpty) ||
             (report.reportTag != null && report.reportTag!.trim().isNotEmpty);
 
-        final isFinalized =
-            report.status == ServiceReportStatus.finalized.dbValue;
-        final bottomPadding = isFinalized
-            ? FabScrollPadding.none
-            : FabScrollPadding.single;
+        final isNoFab =
+            report.status == ServiceReportStatus.finalized.dbValue ||
+            report.status == ServiceReportStatus.cancelled.dbValue;
+        final bottomPadding =
+            isNoFab ? FabScrollPadding.none : FabScrollPadding.single;
 
         return SingleChildScrollView(
           padding: EdgeInsets.fromLTRB(16.0, 16.0, 16.0, bottomPadding),
@@ -310,8 +310,6 @@ class ViewReportDetailsTab extends ConsumerWidget {
                   const SizedBox(height: 24),
                 ],
               ],
-
-              const SizedBox(height: 80),
             ],
           ),
         );

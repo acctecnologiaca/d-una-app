@@ -241,7 +241,6 @@ class ViewQuoteDetailsTab extends ConsumerWidget {
                 style: textTheme.bodyLarge?.copyWith(color: colors.onSurface),
               ),
             ),
-            const SizedBox(height: 40),
           ],
         ],
       ),

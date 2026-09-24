@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:material_symbols_icons/symbols.dart';
 import 'package:uuid/uuid.dart';
 import 'package:d_una_app/shared/utils/fab_scroll_padding.dart';
 import 'package:d_una_app/shared/widgets/standard_app_bar.dart';
@@ -217,280 +218,284 @@ class _ManageProductSerialsScreenState
       body: SafeArea(
         child: Column(
           children: [
-          // 1. Tarjeta informativa del producto y progreso
-          Container(
-            width: double.infinity,
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              border: Border(
-                bottom: BorderSide(
-                  color: colors.outlineVariant.withValues(alpha: 0.5),
+            // 1. Tarjeta informativa del producto y progreso
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                border: Border(
+                  bottom: BorderSide(
+                    color: colors.outlineVariant.withValues(alpha: 0.5),
+                  ),
                 ),
               ),
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  widget.product.name,
-                  style: const TextStyle(
-                    fontSize: 15,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                if (widget.product.brand?.name != null ||
-                    (widget.product.model != null &&
-                        widget.product.model!.isNotEmpty))
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
                   Text(
-                    [widget.product.brand?.name, widget.product.model]
-                        .whereType<String>()
-                        .where((s) => s.isNotEmpty)
-                        .join(' · '),
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: colors.onSurfaceVariant,
+                    widget.product.name,
+                    style: const TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.bold,
                     ),
                   ),
-                if (!_noSerials) ...[
-                  const SizedBox(height: 12),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text(
-                        'Asignados: $assigned de $needed requeridos',
-                        style: TextStyle(
-                          fontSize: 13,
-                          fontWeight: FontWeight.bold,
-                          color: colors.onSurface,
-                        ),
+                  if (widget.product.brand?.name != null ||
+                      (widget.product.model != null &&
+                          widget.product.model!.isNotEmpty))
+                    Text(
+                      [widget.product.brand?.name, widget.product.model]
+                          .whereType<String>()
+                          .where((s) => s.isNotEmpty)
+                          .join(' · '),
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: colors.onSurfaceVariant,
                       ),
-                      if (isComplete)
-                        Row(
-                          children: [
-                            Icon(
-                              Icons.check_circle,
-                              size: 16,
-                              color: colors.primary,
-                            ),
-                            const SizedBox(width: 4),
-                            Text(
-                              'Completo',
-                              style: TextStyle(
-                                fontSize: 12,
-                                fontWeight: FontWeight.bold,
+                    ),
+                  if (!_noSerials) ...[
+                    const SizedBox(height: 12),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(
+                          'Asignados: $assigned de $needed requeridos',
+                          style: TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.bold,
+                            color: colors.onSurface,
+                          ),
+                        ),
+                        if (isComplete)
+                          Row(
+                            children: [
+                              Icon(
+                                Icons.check_circle,
+                                size: 16,
                                 color: colors.primary,
                               ),
-                            ),
-                          ],
-                        ),
-                    ],
-                  ),
-                  const SizedBox(height: 8),
-                  LinearProgressIndicator(
-                    value: needed > 0
-                        ? (assigned / needed).clamp(0.0, 1.0)
-                        : 1.0,
-                    backgroundColor: colors.secondaryContainer,
-                    color: colors.primary,
-                    minHeight: 4,
-                    borderRadius: BorderRadius.circular(2),
-                  ),
-                ],
-              ],
-            ),
-          ),
-
-          // 2. Switch "Este producto no usa seriales"
-          Padding(
-            padding: const EdgeInsets.symmetric(
-              horizontal: 16.0,
-              vertical: 8.0,
-            ),
-            child: Column(
-              children: [
-                SwitchListTile(
-                  contentPadding: EdgeInsets.zero,
-                  title: Text(
-                    'Este producto no usa seriales',
-                    style: textTheme.titleSmall?.copyWith(
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                  activeThumbColor: colors.primary,
-                  value: _noSerials,
-                  onChanged: (val) {
-                    setState(() {
-                      _noSerials = val;
-                    });
-                  },
-                ),
-                if (_noSerials) ...[
-                  const SizedBox(height: 8),
-                  Container(
-                    padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      color: colors.primaryContainer.withValues(alpha: 0.3),
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Row(
-                      children: [
-                        Icon(
-                          Icons.info_outline,
-                          size: 20,
-                          color: colors.primary,
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: Text(
-                            'Al activar esta opción, no se registrarán seriales para este producto y podrá guardarse la compra sin ellos.',
-                            style: textTheme.bodySmall?.copyWith(
-                              color: colors.onPrimaryContainer,
-                            ),
+                              const SizedBox(width: 4),
+                              Text(
+                                'Completo',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.bold,
+                                  color: colors.primary,
+                                ),
+                              ),
+                            ],
                           ),
-                        ),
                       ],
                     ),
-                  ),
-                ],
-              ],
-            ),
-          ),
-
-          // 3. Barra de entrada manual y botón de escáner (visible si usa seriales)
-          if (!_noSerials)
-            Padding(
-              padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: CustomTextField(
-                      controller: _textController,
-                      focusNode: _focusNode,
-                      label: 'Número de serial',
-                      hintText: isComplete
-                          ? 'Todos los seriales registrados'
-                          : 'Escriba el serial...',
-                      enabled: !isComplete,
-                      textCapitalization: TextCapitalization.characters,
-                      onSubmitted: isComplete
-                          ? null
-                          : (val) {
-                              _addSerial(val);
-                              _focusNode.requestFocus();
-                            },
+                    const SizedBox(height: 8),
+                    LinearProgressIndicator(
+                      value: needed > 0
+                          ? (assigned / needed).clamp(0.0, 1.0)
+                          : 1.0,
+                      backgroundColor: colors.secondaryContainer,
+                      color: colors.primary,
+                      minHeight: 4,
+                      borderRadius: BorderRadius.circular(2),
                     ),
-                  ),
-                  const SizedBox(width: 8),
-                  IconButton.filled(
-                    onPressed: isComplete
-                        ? null
-                        : () => _addSerial(_textController.text),
-                    icon: const Icon(Icons.add),
-                    tooltip: isComplete ? 'Límite alcanzado' : 'Agregar serial',
-                  ),
-                  const SizedBox(width: 8),
-                  IconButton.filledTonal(
-                    onPressed: isComplete ? null : _openScanner,
-                    icon: const Icon(Icons.qr_code_scanner),
-                    tooltip: isComplete
-                        ? 'Límite alcanzado'
-                        : 'Escanear código con cámara',
-                  ),
+                  ],
                 ],
               ),
             ),
 
-          // 4. Lista de seriales agregados (16px margen horizontal)
-          Expanded(
-            child: _noSerials
-                ? const SizedBox.shrink()
-                : _serials.isEmpty
-                ? Center(
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(
-                          Icons.qr_code_2_outlined,
-                          size: 48,
-                          color: colors.onSurfaceVariant.withValues(alpha: 0.5),
-                        ),
-                        const SizedBox(height: 12),
-                        Text(
-                          'No hay seriales registrados',
-                          style: TextStyle(
-                            fontSize: 14,
-                            color: colors.onSurfaceVariant,
-                          ),
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          'Escanea o escribe el número de serial arriba',
-                          style: TextStyle(
-                            fontSize: 12,
-                            color: colors.onSurfaceVariant.withValues(
-                              alpha: 0.7,
-                            ),
-                          ),
-                        ),
-                      ],
+            // 2. Switch "Este producto no usa seriales"
+            Padding(
+              padding: const EdgeInsets.symmetric(
+                horizontal: 16.0,
+                vertical: 8.0,
+              ),
+              child: Column(
+                children: [
+                  SwitchListTile(
+                    contentPadding: EdgeInsets.zero,
+                    title: Text(
+                      'Este producto no usa seriales',
+                      style: textTheme.titleSmall?.copyWith(
+                        fontWeight: FontWeight.w600,
+                      ),
                     ),
-                  )
-                : ListView.separated(
-                    padding: const EdgeInsets.fromLTRB(
-                      16,
-                      0,
-                      16,
-                      FabScrollPadding.single,
-                    ),
-                    itemCount: filteredSerials.length,
-                    separatorBuilder: (context, index) => Divider(
-                      height: 1,
-                      color: colors.outlineVariant.withValues(alpha: 0.3),
-                    ),
-                    itemBuilder: (context, index) {
-                      final serial = filteredSerials[index];
-                      final originalIndex = _serials.indexOf(serial);
-
-                      return ListTile(
-                        contentPadding: EdgeInsets.zero,
-                        leading: CircleAvatar(
-                          radius: 14,
-                          backgroundColor: colors.primaryContainer,
-                          child: Text(
-                            '${originalIndex + 1}',
-                            style: TextStyle(
-                              fontSize: 11,
-                              fontWeight: FontWeight.bold,
-                              color: colors.onPrimaryContainer,
-                            ),
-                          ),
-                        ),
-                        title: Text(
-                          serial,
-                          style: const TextStyle(
-                            fontFamily: 'monospace',
-                            fontWeight: FontWeight.w600,
-                            fontSize: 14,
-                          ),
-                        ),
-                        trailing: IconButton(
-                          icon: const Icon(Icons.close, size: 20),
-                          color: colors.onSurfaceVariant,
-                          tooltip: 'Remover serial',
-                          onPressed: () {
-                            setState(() {
-                              _serials.removeAt(originalIndex);
-                            });
-                          },
-                        ),
-                      );
+                    activeThumbColor: colors.primary,
+                    value: _noSerials,
+                    onChanged: (val) {
+                      setState(() {
+                        _noSerials = val;
+                      });
                     },
                   ),
-          ),
-        ],
+                  if (_noSerials) ...[
+                    const SizedBox(height: 8),
+                    Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: colors.primaryContainer.withValues(alpha: 0.3),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Row(
+                        children: [
+                          Icon(
+                            Icons.info_outline,
+                            size: 20,
+                            color: colors.primary,
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Text(
+                              'Al activar esta opción, no se registrarán seriales para este producto y podrá guardarse la compra sin ellos.',
+                              style: textTheme.bodySmall?.copyWith(
+                                color: colors.onPrimaryContainer,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+            ),
+
+            // 3. Barra de entrada manual y botón de escáner (visible si usa seriales)
+            if (!_noSerials)
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: CustomTextField(
+                        controller: _textController,
+                        focusNode: _focusNode,
+                        label: 'Número de serial',
+                        hintText: isComplete
+                            ? 'Todos los seriales registrados'
+                            : 'Escriba el serial...',
+                        enabled: !isComplete,
+                        textCapitalization: TextCapitalization.characters,
+                        onSubmitted: isComplete
+                            ? null
+                            : (val) {
+                                _addSerial(val);
+                                _focusNode.requestFocus();
+                              },
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    IconButton.filled(
+                      onPressed: isComplete
+                          ? null
+                          : () => _addSerial(_textController.text),
+                      icon: const Icon(Icons.add),
+                      tooltip: isComplete
+                          ? 'Límite alcanzado'
+                          : 'Agregar serial',
+                    ),
+                    const SizedBox(width: 8),
+                    IconButton.filledTonal(
+                      onPressed: isComplete ? null : _openScanner,
+                      icon: const Icon(Symbols.barcode_scanner),
+                      tooltip: isComplete
+                          ? 'Límite alcanzado'
+                          : 'Escanear código con cámara',
+                    ),
+                  ],
+                ),
+              ),
+
+            // 4. Lista de seriales agregados (16px margen horizontal)
+            Expanded(
+              child: _noSerials
+                  ? const SizedBox.shrink()
+                  : _serials.isEmpty
+                  ? Center(
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            Symbols.barcode,
+                            size: 48,
+                            color: colors.onSurfaceVariant.withValues(
+                              alpha: 0.5,
+                            ),
+                          ),
+                          const SizedBox(height: 12),
+                          Text(
+                            'No hay seriales registrados',
+                            style: TextStyle(
+                              fontSize: 14,
+                              color: colors.onSurfaceVariant,
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            'Escanea o escribe el número de serial arriba',
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: colors.onSurfaceVariant.withValues(
+                                alpha: 0.7,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    )
+                  : ListView.separated(
+                      padding: const EdgeInsets.fromLTRB(
+                        16,
+                        0,
+                        16,
+                        FabScrollPadding.single,
+                      ),
+                      itemCount: filteredSerials.length,
+                      separatorBuilder: (context, index) => Divider(
+                        height: 1,
+                        color: colors.outlineVariant.withValues(alpha: 0.3),
+                      ),
+                      itemBuilder: (context, index) {
+                        final serial = filteredSerials[index];
+                        final originalIndex = _serials.indexOf(serial);
+
+                        return ListTile(
+                          contentPadding: EdgeInsets.zero,
+                          leading: CircleAvatar(
+                            radius: 14,
+                            backgroundColor: colors.primaryContainer,
+                            child: Text(
+                              '${originalIndex + 1}',
+                              style: TextStyle(
+                                fontSize: 11,
+                                fontWeight: FontWeight.bold,
+                                color: colors.onPrimaryContainer,
+                              ),
+                            ),
+                          ),
+                          title: Text(
+                            serial,
+                            style: const TextStyle(
+                              fontFamily: 'monospace',
+                              fontWeight: FontWeight.w600,
+                              fontSize: 14,
+                            ),
+                          ),
+                          trailing: IconButton(
+                            icon: const Icon(Icons.close, size: 20),
+                            color: colors.onSurfaceVariant,
+                            tooltip: 'Remover serial',
+                            onPressed: () {
+                              setState(() {
+                                _serials.removeAt(originalIndex);
+                              });
+                            },
+                          ),
+                        );
+                      },
+                    ),
+            ),
+          ],
+        ),
       ),
-    ),
-    floatingActionButton: CustomExtendedFab(
+      floatingActionButton: CustomExtendedFab(
         label: _noSerials ? 'Guardar' : 'Guardar ($assigned/$needed)',
         icon: Icons.check,
         isEnabled: _canSave,

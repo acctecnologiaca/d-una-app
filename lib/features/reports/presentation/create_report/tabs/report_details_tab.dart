@@ -10,6 +10,7 @@ import 'package:d_una_app/shared/widgets/custom_text_field.dart';
 import 'package:d_una_app/shared/widgets/filter_bottom_sheet.dart';
 import 'package:d_una_app/shared/widgets/info_block.dart';
 import 'package:d_una_app/shared/widgets/collapsible_card_block.dart';
+import 'package:d_una_app/shared/utils/fab_scroll_padding.dart';
 import 'package:d_una_app/features/clients/presentation/providers/clients_provider.dart';
 import 'package:d_una_app/features/clients/data/models/client_model.dart';
 import 'package:d_una_app/features/portfolio/data/models/category_model.dart';
@@ -340,7 +341,12 @@ class _ReportDetailsTabState extends ConsumerState<ReportDetailsTab> {
 
     return SingleChildScrollView(
       keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
-      padding: const EdgeInsets.fromLTRB(16, 12, 16, 80),
+      padding: const EdgeInsets.fromLTRB(
+        16,
+        12,
+        16,
+        FabScrollPadding.none,
+      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [

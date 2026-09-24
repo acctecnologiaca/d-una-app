@@ -8,6 +8,7 @@ import 'package:d_una_app/shared/widgets/custom_dropdown.dart';
 import 'package:d_una_app/shared/widgets/custom_text_field.dart';
 import 'package:d_una_app/shared/widgets/info_block.dart';
 import 'package:d_una_app/shared/widgets/friendly_error_widget.dart';
+import 'package:d_una_app/shared/utils/fab_scroll_padding.dart';
 import 'package:d_una_app/features/clients/presentation/providers/clients_provider.dart';
 import 'package:d_una_app/features/clients/data/models/client_model.dart';
 import 'package:d_una_app/features/portfolio/data/models/category_model.dart';
@@ -140,7 +141,7 @@ class _QuoteDetailsTabState extends ConsumerState<QuoteDetailsTab> {
     final collaboratorsAsync = ref.watch(collaboratorsProvider);
 
     return SingleChildScrollView(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.fromLTRB(16, 16, 16, FabScrollPadding.none),
       child: Column(
         children: [
           // 1. Bloque Cliente y Contacto
@@ -560,8 +561,6 @@ class _QuoteDetailsTabState extends ConsumerState<QuoteDetailsTab> {
               const SizedBox(height: 8),
             ],
           ),
-
-          const SizedBox(height: 80),
         ],
       ),
     );
