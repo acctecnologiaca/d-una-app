@@ -13,6 +13,22 @@ class QuoteCondition {
     required this.orderIndex,
   });
 
+  QuoteCondition copyWith({
+    String? id,
+    String? quoteId,
+    String? conditionId,
+    String? description,
+    int? orderIndex,
+  }) {
+    return QuoteCondition(
+      id: id ?? this.id,
+      quoteId: quoteId ?? this.quoteId,
+      conditionId: conditionId ?? this.conditionId,
+      description: description ?? this.description,
+      orderIndex: orderIndex ?? this.orderIndex,
+    );
+  }
+
   factory QuoteCondition.fromJson(Map<String, dynamic> json) {
     return QuoteCondition(
       id: json['id'] as String,

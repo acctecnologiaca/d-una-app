@@ -192,6 +192,8 @@ class _ReportProductSaleDetailsSheetState
       warrantyUnit: _noWarranty ? null : _warrantyPeriodToDb(_warrantyPeriod),
       sourceType: ReportProductSourceType.own,
       groupIndex: widget.existingItem?.groupIndex ?? widget.reportState.nextGroupIndex,
+      requiresSerials: widget.existingItem?.requiresSerials ?? widget.product.requiresSerials,
+      serials: widget.existingItem?.serials ?? const [],
     );
 
     Navigator.of(context).pop(item);

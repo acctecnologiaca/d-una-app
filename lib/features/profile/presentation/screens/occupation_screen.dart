@@ -119,17 +119,11 @@ class _OccupationScreenState extends ConsumerState<OccupationScreen> {
 
       if (mounted) {
         context.pop();
-        AppToast.success(
-          context,
-          message: 'Ocupación actualizada',
-        );
+        AppToast.success(context, message: 'Ocupación actualizada');
       }
     } catch (e) {
       if (mounted) {
-        AppToast.error(
-          context,
-          message: 'Error al guardar: $e',
-        );
+        AppToast.error(context, message: 'Error al guardar: $e');
       }
     } finally {
       if (mounted) {
@@ -248,7 +242,8 @@ class _OccupationScreenState extends ConsumerState<OccupationScreen> {
 
                             // Secondary Occupations (CustomMultiDropdown with Search and max 2 selections)
                             CustomMultiDropdown<String>(
-                              label: 'Otras ocupaciones',
+                              label:
+                                  'Otras ocupaciones (añade hasta 2 ocupaciones más)',
                               isRequired: false,
                               maxSelections: 2,
                               selectedValues: _secondaryOccupationIds,

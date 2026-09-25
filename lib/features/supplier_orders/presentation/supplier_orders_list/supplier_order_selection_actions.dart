@@ -317,6 +317,11 @@ class SupplierOrderSelectionActions {
           onTap: () async {
             Navigator.pop(context);
             ref.read(supplierOrderSelectionProvider.notifier).clearSelection();
+            AppToast.info(
+              context,
+              message: 'Preparando copia de orden de compra...',
+              duration: const Duration(seconds: 1),
+            );
             await ref
                 .read(createSupplierOrderProvider.notifier)
                 .loadSupplierOrderAsCopy(order.id);

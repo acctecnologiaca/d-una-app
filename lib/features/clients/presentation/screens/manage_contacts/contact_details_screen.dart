@@ -103,14 +103,17 @@ class ContactDetailsScreen extends ConsumerWidget {
       deleteTooltip = 'Eliminar contacto';
     }
 
-    final name = contact.name;
-    final role = contact.role ?? 'Sin cargo';
-    final phone = contact.phone ?? 'No registrado';
-    final email = contact.email ?? '';
-    final department =
-        contact.department ??
-        'Tecnología de la Información'; // Mock default from image
+    final name = contact.name.trim();
+    final phone = contact.phone?.trim();
+    final email = contact.email?.trim();
+    final role = contact.role?.trim();
+    final department = contact.department?.trim();
     final isPrimary = contact.isPrimary;
+
+    final hasPhone = phone != null && phone.isNotEmpty;
+    final hasEmail = email != null && email.isNotEmpty;
+    final hasRole = role != null && role.isNotEmpty;
+    final hasDepartment = department != null && department.isNotEmpty;
 
     return Scaffold(
       appBar: AppBar(
@@ -213,60 +216,64 @@ class ContactDetailsScreen extends ConsumerWidget {
                 ],
               ),
             ),
-            const SizedBox(height: 24),
 
-            // Phone Section
-            InfoBlock.text(
-              icon: Icons.contact_phone_outlined,
-              label: 'Teléfono',
-              value: _formatPhone(phone),
-              action: IconButton(
-                onPressed: () {
-                  Clipboard.setData(ClipboardData(text: phone));
-                  AppToast.info(
-                    context,
-                    message: 'Teléfono copiado',
-                  );
-                },
-                icon: const Icon(Icons.copy_outlined),
-                color: colors.onSurfaceVariant,
+            if (hasPhone) ...[
+              const SizedBox(height: 24),
+              InfoBlock.text(
+                icon: Icons.contact_phone_outlined,
+                label: 'Teléfono',
+                value: _formatPhone(phone),
+                action: IconButton(
+                  onPressed: () {
+                    Clipboard.setData(ClipboardData(text: phone));
+                    AppToast.info(
+                      context,
+                      message: 'Teléfono copiado',
+                    );
+                  },
+                  icon: const Icon(Icons.copy_outlined),
+                  color: colors.onSurfaceVariant,
+                ),
               ),
-            ),
-            const SizedBox(height: 24),
+            ],
 
-            // Email Section
-            InfoBlock.text(
-              icon: Icons.alternate_email,
-              label: 'Correo Electrónico',
-              value: email,
-              action: IconButton(
-                onPressed: () {
-                  Clipboard.setData(ClipboardData(text: email));
-                  AppToast.info(
-                    context,
-                    message: 'Correo copiado',
-                  );
-                },
-                icon: const Icon(Icons.copy_outlined),
-                color: colors.onSurfaceVariant,
+            if (hasEmail) ...[
+              const SizedBox(height: 24),
+              InfoBlock.text(
+                icon: Icons.alternate_email,
+                label: 'Correo Electrónico',
+                value: email,
+                action: IconButton(
+                  onPressed: () {
+                    Clipboard.setData(ClipboardData(text: email));
+                    AppToast.info(
+                      context,
+                      message: 'Correo copiado',
+                    );
+                  },
+                  icon: const Icon(Icons.copy_outlined),
+                  color: colors.onSurfaceVariant,
+                ),
               ),
-            ),
-            const SizedBox(height: 24),
+            ],
 
-            // Role Section
-            InfoBlock.text(
-              icon: Icons.manage_accounts_outlined,
-              label: 'Cargo',
-              value: role,
-            ),
-            const SizedBox(height: 24),
+            if (hasRole) ...[
+              const SizedBox(height: 24),
+              InfoBlock.text(
+                icon: Icons.manage_accounts_outlined,
+                label: 'Cargo',
+                value: role,
+              ),
+            ],
 
-            // Department Section
-            InfoBlock.text(
-              icon: Icons.domain_outlined,
-              label: 'Departamento',
-              value: department,
-            ),
+            if (hasDepartment) ...[
+              const SizedBox(height: 24),
+              InfoBlock.text(
+                icon: Icons.domain_outlined,
+                label: 'Departamento',
+                value: department,
+              ),
+            ],
           ],
         ),
       ),

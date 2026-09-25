@@ -25,14 +25,25 @@ List<RouteBase> serviceReportsRoutes(GlobalKey<NavigatorState> rootNavigatorKey)
           parentNavigatorKey: rootNavigatorKey,
           builder: (context, state) {
             final extra = state.extra as Map<String, dynamic>?;
+            final productId = extra?['productId'] as String? ??
+                state.uri.queryParameters['productId'];
+            final clientId = extra?['clientId'] as String? ??
+                state.uri.queryParameters['clientId'];
+            final clientName = state.uri.queryParameters['clientName'];
+            final productModel = state.uri.queryParameters['productModel'];
+            final isReadOnly = (extra?['isSearchQueryReadOnly'] as bool?) ??
+                (state.uri.queryParameters['readOnly'] == 'true');
+            final initialQuery = extra?['initialQuery'] as String? ??
+                productModel ??
+                clientName;
+
             return ReportSearchScreen(
               selectionMode: extra?['selectionMode'] as bool? ?? false,
               excludeStatuses: extra?['excludeStatuses'] as Set<String>?,
-              productId: extra?['productId'] as String?,
-              clientId: extra?['clientId'] as String?,
-              initialQuery: extra?['initialQuery'] as String?,
-              isSearchQueryReadOnly:
-                  extra?['isSearchQueryReadOnly'] as bool? ?? false,
+              productId: productId,
+              clientId: clientId,
+              initialQuery: initialQuery,
+              isSearchQueryReadOnly: isReadOnly,
             );
           },
         ),

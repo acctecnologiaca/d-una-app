@@ -592,8 +592,10 @@ class CreateSupplierOrder extends _$CreateSupplierOrder {
           uomIconName: item.uomIconName,
           quantity: item.quantity,
           unitPrice: item.unitPrice,
-          supplierBranchStockId: item.supplierBranchStockId,
+          currentSupplierPrice: item.currentSupplierPrice,
           currentSupplierStock: item.currentSupplierStock,
+          supplierBranchStockId: item.supplierBranchStockId,
+          branchName: item.branchName,
         )).toList(),
         supplierName: source.order.supplierName,
         branchName: source.order.branchName,
@@ -608,6 +610,10 @@ class CreateSupplierOrder extends _$CreateSupplierOrder {
         recipientPhone: source.order.recipientPhone,
         deliveryInstructions: source.order.deliveryInstructions,
       );
+
+      // Sincronizar borrador: limpiar borrador huérfano y auto-guardar copia
+      await clearDraft();
+      autoSaveDraft();
     } catch (e) {
       state = state.copyWith(isLoading: false, error: e.toString());
     }

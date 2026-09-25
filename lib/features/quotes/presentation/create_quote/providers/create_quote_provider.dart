@@ -3,6 +3,7 @@ import 'package:d_una_app/core/models/draft_data.dart';
 import 'package:d_una_app/core/services/draft_storage_service.dart';
 import 'package:d_una_app/core/providers/draft_providers.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:uuid/uuid.dart';
 import '../../../data/models/models.dart';
 import '../../../domain/repositories/quotes_repository.dart';
 import '../../../../clients/data/models/client_model.dart';
@@ -553,11 +554,33 @@ class CreateQuoteNotifier extends StateNotifier<QuoteState> {
       final lastNumber = await _repository.getLastQuoteNumber();
       final newNumber = _generateNextQuoteNumber(lastNumber);
 
+      // 1. Regenerar UUIDs desvinculando la cotización origen
+      final copiedProducts = (source.products ?? []).map((p) {
+        return p.copyWith(
+          id: const Uuid().v4(),
+          quoteId: '',
+        );
+      }).toList();
+
+      final copiedServices = (source.services ?? []).map((s) {
+        return s.copyWith(
+          id: const Uuid().v4(),
+          quoteId: '',
+        );
+      }).toList();
+
+      final copiedConditions = (source.conditions ?? []).map((c) {
+        return c.copyWith(
+          id: const Uuid().v4(),
+          quoteId: '',
+        );
+      }).toList();
+
       state = QuoteState(
         // quote is intentionally null — this is a NEW quote
-        products: source.products ?? [],
-        services: source.services ?? [],
-        conditions: source.conditions ?? [],
+        products: copiedProducts,
+        services: copiedServices,
+        conditions: copiedConditions,
         clientId: source.clientId,
         clientName: source.clientName,
         contactId: source.contactId,
@@ -577,6 +600,10 @@ class CreateQuoteNotifier extends StateNotifier<QuoteState> {
         pricingMethod: params.pricingMethod,
         isLoading: false,
       );
+
+      // 2. Limpiar borrador anterior y auto-guardar copia como nuevo borrador
+      await clearDraft();
+      autoSaveDraft();
     } catch (e) {
       state = state.copyWith(isLoading: false, error: e.toString());
     }

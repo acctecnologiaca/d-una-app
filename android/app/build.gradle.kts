@@ -1,8 +1,23 @@
+import java.io.ByteArrayOutputStream
+
 plugins {
     id("com.android.application")
     id("kotlin-android")
     // The Flutter Gradle Plugin must be applied after the Android and Kotlin Gradle plugins.
     id("dev.flutter.flutter-gradle-plugin")
+}
+
+fun getGitCommitCount(): Int {
+    return try {
+        val stdout = ByteArrayOutputStream()
+        exec {
+            commandLine("git", "rev-list", "--count", "HEAD")
+            standardOutput = stdout
+        }
+        stdout.toString().trim().toInt()
+    } catch (e: Exception) {
+        flutter.versionCode
+    }
 }
 
 android {
@@ -24,7 +39,7 @@ android {
         // For more information, see: https://flutter.dev/to/review-gradle-config.
         minSdk = flutter.minSdkVersion
         targetSdk = flutter.targetSdkVersion
-        versionCode = flutter.versionCode
+        versionCode = getGitCommitCount()
         versionName = flutter.versionName
     }
 

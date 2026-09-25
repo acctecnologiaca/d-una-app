@@ -257,6 +257,10 @@ class ServiceReportCreateState {
   }
 
   // --- Getters for validation & calculations ---
+  bool get hasMissingSerials => products.any((p) => p.hasMissingSerials);
+  int get totalMissingSerials =>
+      products.fold(0, (sum, p) => sum + p.missingSerialsCount);
+
   bool get isReadyToSaveDraft {
     final hasItems = products.isNotEmpty || services.isNotEmpty;
     return clientId != null && hasItems;
@@ -279,7 +283,8 @@ class ServiceReportCreateState {
         hasConditions &&
         baseFields &&
         contactValid &&
-        hasWorkInfo;
+        hasWorkInfo &&
+        !hasMissingSerials;
   }
 
   double get productsSubtotal =>
@@ -363,8 +368,15 @@ class ServiceReportCreateState {
           p.costPrice != op.costPrice ||
           p.profitMargin != op.profitMargin ||
           p.sourceType != op.sourceType ||
-          p.name != op.name) {
+          p.name != op.name ||
+          p.requiresSerials != op.requiresSerials) {
         return true;
+      }
+      if (p.serials.length != op.serials.length) return true;
+      for (int sIdx = 0; sIdx < p.serials.length; sIdx++) {
+        if (p.serials[sIdx].serialNumber != op.serials[sIdx].serialNumber) {
+          return true;
+        }
       }
     }
 
@@ -762,6 +774,7 @@ class CreateServiceReportNotifier
           id: const Uuid().v4(),
           reportId: '',
           availableStock: currentStock,
+          serials: const [], // Limpieza obligatoria de seriales en copia
         );
       }).toList();
 
@@ -1000,6 +1013,35 @@ class CreateServiceReportNotifier
       final updated = List<ServiceReportItemProduct>.from(state.products);
       updated[index] = product;
       state = state.copyWith(products: updated);
+      autoSaveDraft();
+    }
+  }
+
+  void updateProductSerials(
+    int index,
+    List<ServiceReportSerial> serials, {
+    bool? requiresSerials,
+  }) {
+    if (index >= 0 && index < state.products.length) {
+      final cur = state.products[index];
+      final updated = cur.copyWith(
+        serials: serials,
+        requiresSerials: requiresSerials ?? cur.requiresSerials,
+      );
+      final list = List<ServiceReportItemProduct>.from(state.products);
+      list[index] = updated;
+      state = state.copyWith(products: list);
+      autoSaveDraft();
+    }
+  }
+
+  void setProductRequiresSerials(int index, bool requiresSerials) {
+    if (index >= 0 && index < state.products.length) {
+      final cur = state.products[index];
+      final updated = cur.copyWith(requiresSerials: requiresSerials);
+      final list = List<ServiceReportItemProduct>.from(state.products);
+      list[index] = updated;
+      state = state.copyWith(products: list);
       autoSaveDraft();
     }
   }

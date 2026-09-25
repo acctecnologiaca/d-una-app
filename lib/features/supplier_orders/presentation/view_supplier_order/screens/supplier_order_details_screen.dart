@@ -502,6 +502,11 @@ class _SupplierOrderDetailsScreenState
                         onTap: () async {
                           final router = GoRouter.of(context);
                           context.pop(); // Close action sheet
+                          AppToast.info(
+                            context,
+                            message: 'Preparando copia de orden de compra...',
+                            duration: const Duration(seconds: 1),
+                          );
                           await ref
                               .read(createSupplierOrderProvider.notifier)
                               .loadSupplierOrderAsCopy(order.id);

@@ -420,6 +420,11 @@ class QuoteSelectionActions {
           label: 'Crear una copia',
           onTap: () async {
             context.pop();
+            AppToast.info(
+              context,
+              message: 'Preparando copia de cotización...',
+              duration: const Duration(seconds: 1),
+            );
             await ref
                 .read(createQuoteProvider.notifier)
                 .loadQuoteAsCopy(quote.id);

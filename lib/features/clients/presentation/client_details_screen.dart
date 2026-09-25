@@ -328,11 +328,9 @@ class ClientDetailsScreen extends ConsumerWidget {
                           ),
                         ),
                         onPressed: () {
-                          AppToast.info(
-                            context,
-                            message:
-                                'El módulo de reportes estará disponible próximamente.',
-                            duration: const Duration(seconds: 2),
+                          final encodedName = Uri.encodeComponent(client.name);
+                          context.push(
+                            '/reports/search?clientId=${client.id}&clientName=$encodedName&readOnly=true',
                           );
                         },
                         icon: const Icon(Icons.analytics_outlined, size: 18),
@@ -350,161 +348,186 @@ class ClientDetailsScreen extends ConsumerWidget {
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
                       // Fiscal Info Section
-                      Text(
-                        'Información fiscal',
-                        style: textTheme.titleMedium?.copyWith(
-                          fontWeight: FontWeight.bold,
-                          color: colors.onSurface,
-                        ),
+                      Builder(
+                        builder: (context) {
+                          final hasTaxId = client.taxId != null && client.taxId!.trim().isNotEmpty;
+                          final hasAddress = fullAddress.trim().isNotEmpty;
+
+                          return Column(
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                            children: [
+                              Text(
+                                'Información fiscal',
+                                style: textTheme.titleMedium?.copyWith(
+                                  fontWeight: FontWeight.bold,
+                                  color: colors.onSurface,
+                                ),
+                              ),
+                              const SizedBox(height: 24),
+                              if (isCompany) ...[
+                                InfoBlock.text(
+                                  icon: Icons.domain_outlined,
+                                  label: 'Razón Social',
+                                  value: client.name,
+                                ),
+                                if (hasTaxId) ...[
+                                  const SizedBox(height: 24),
+                                  InfoBlock.text(
+                                    icon: Icons.badge_outlined,
+                                    label: 'RIF/NIF/RUT',
+                                    value: client.taxId!.trim(),
+                                  ),
+                                ],
+                                if (hasAddress) ...[
+                                  const SizedBox(height: 24),
+                                  InfoBlock.text(
+                                    icon: Icons.location_on_outlined,
+                                    label: 'Dirección Fiscal',
+                                    value: fullAddress.trim(),
+                                  ),
+                                ],
+                              ] else ...[
+                                InfoBlock.text(
+                                  icon: Icons.person_outline,
+                                  label: 'Nombre y apellido',
+                                  value: client.name,
+                                ),
+                                if (hasTaxId) ...[
+                                  const SizedBox(height: 24),
+                                  InfoBlock.text(
+                                    icon: Icons.badge_outlined,
+                                    label: 'Número de identificación',
+                                    value: client.taxId!.trim(),
+                                  ),
+                                ],
+                                if (hasAddress) ...[
+                                  const SizedBox(height: 24),
+                                  InfoBlock.text(
+                                    icon: Icons.location_on_outlined,
+                                    label: 'Dirección',
+                                    value: fullAddress.trim(),
+                                  ),
+                                ],
+                              ],
+                            ],
+                          );
+                        },
                       ),
-                      const SizedBox(height: 24),
-
-                      if (isCompany) ...[
-                        InfoBlock.text(
-                          icon: Icons.domain_outlined,
-                          label: 'Razón Social',
-                          value: client.name,
-                        ),
-                        const SizedBox(height: 24),
-                        InfoBlock.text(
-                          icon: Icons.badge_outlined,
-                          label: 'RIF/NIF/RUT',
-                          value: client.taxId ?? 'No registrado',
-                        ),
-                        const SizedBox(height: 24),
-                        InfoBlock.text(
-                          icon: Icons.location_on_outlined,
-                          label: 'Dirección Fiscal',
-                          value: fullAddress.isNotEmpty
-                              ? fullAddress
-                              : 'No registrada',
-                        ),
-                      ] else ...[
-                        InfoBlock.text(
-                          icon: Icons.person_outline,
-                          label: 'Nombre y apellido',
-                          value: client.name,
-                        ),
-                        const SizedBox(height: 24),
-                        InfoBlock.text(
-                          icon: Icons.badge_outlined,
-                          label: 'Número de identificación',
-                          value:
-                              client.taxId ??
-                              'No registrado', // Assuming taxId holds personal ID too
-                        ),
-                        const SizedBox(height: 24),
-                        InfoBlock.text(
-                          icon: Icons.location_on_outlined,
-                          label: 'Dirección',
-                          value: fullAddress.isNotEmpty
-                              ? fullAddress
-                              : 'Dirección no registrada',
-                        ),
-                      ],
-
-                      const SizedBox(height: 32),
 
                       // Contacts Section
-                      Text(
-                        isCompany ? 'Contactos' : 'Información de contacto',
-                        style: textTheme.titleMedium?.copyWith(
-                          fontWeight: FontWeight.bold,
-                          color: colors.onSurface,
-                        ),
-                      ),
-                      const SizedBox(height: 16),
+                      Builder(
+                        builder: (context) {
+                          final hasPhone = client.phone != null && client.phone!.trim().isNotEmpty;
+                          final hasEmail = client.email != null && client.email!.trim().isNotEmpty;
+                          final hasPersonContactInfo = hasPhone || hasEmail;
 
-                      if (isCompany) ...[
-                        ...client.contacts
-                            .take(3)
-                            .map(
-                              (c) => ContactListTile(
-                                name: c.name,
-                                role: c.role ?? '',
-                                initial: c.initial,
-                                isPrimary: c.isPrimary,
-                                onPhoneTap: () =>
-                                    ContactUtils.makePhoneCall(c.phone),
-                                onWhatsAppTap: () =>
-                                    ContactUtils.launchWhatsApp(c.phone),
-                                onTap: () {
-                                  context.push(
-                                    '/clients/$clientId/contacts/details',
-                                    extra: {
-                                      'companyName': client.name,
-                                      'contact': c,
-                                      'contactCount': client.contacts.length,
+                          if (!isCompany && !hasPersonContactInfo) {
+                            return const SizedBox.shrink();
+                          }
+
+                          return Column(
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                            children: [
+                              const SizedBox(height: 32),
+                              Text(
+                                isCompany ? 'Contactos' : 'Información de contacto',
+                                style: textTheme.titleMedium?.copyWith(
+                                  fontWeight: FontWeight.bold,
+                                  color: colors.onSurface,
+                                ),
+                              ),
+                              const SizedBox(height: 16),
+                              if (isCompany) ...[
+                                ...client.contacts
+                                    .take(3)
+                                    .map(
+                                      (c) => ContactListTile(
+                                        name: c.name,
+                                        role: c.role ?? '',
+                                        initial: c.initial,
+                                        isPrimary: c.isPrimary,
+                                        onPhoneTap: () =>
+                                            ContactUtils.makePhoneCall(c.phone),
+                                        onWhatsAppTap: () =>
+                                            ContactUtils.launchWhatsApp(c.phone),
+                                        onTap: () {
+                                          context.push(
+                                            '/clients/$clientId/contacts/details',
+                                            extra: {
+                                              'companyName': client.name,
+                                              'contact': c,
+                                              'contactCount': client.contacts.length,
+                                            },
+                                          );
+                                        },
+                                      ),
+                                    ),
+                                const SizedBox(height: 16),
+                                Align(
+                                  alignment: Alignment.centerRight,
+                                  child: TextButton(
+                                    onPressed: () {
+                                      context.go(
+                                        '/clients/$clientId/contacts',
+                                        extra: {'name': client.name},
+                                      );
                                     },
-                                  );
-                                },
-                              ),
-                            ),
-                        const SizedBox(height: 16),
-                        Align(
-                          alignment: Alignment.centerRight,
-                          child: TextButton(
-                            onPressed: () {
-                              context.go(
-                                '/clients/$clientId/contacts',
-                                extra: {'name': client.name},
-                              );
-                            },
-                            child: Text(
-                              'Administrar contactos',
-                              style: TextStyle(
-                                color: colors.primary,
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                          ),
-                        ),
-                      ] else ...[
-                        // Person Contact Layout
-                        InfoBlock.text(
-                          icon: Icons.contact_phone_outlined,
-                          label: 'Teléfono',
-                          value: _formatPhone(client.phone),
-                          action: IconButton(
-                            onPressed: () {
-                              if (client.phone != null &&
-                                  client.phone!.isNotEmpty) {
-                                Clipboard.setData(
-                                  ClipboardData(text: client.phone!),
-                                );
-                                AppToast.info(
-                                  context,
-                                  message: 'Teléfono copiado',
-                                );
-                              }
-                            },
-                            icon: const Icon(Icons.copy_outlined),
-                            color: colors.onSurfaceVariant,
-                          ),
-                        ),
-                        const SizedBox(height: 24),
-                        InfoBlock.text(
-                          icon: Icons.alternate_email_outlined,
-                          label: 'Correo Electrónico',
-                          value: client.email ?? 'No registrado',
-                          action: IconButton(
-                            onPressed: () {
-                              if (client.email != null &&
-                                  client.email!.isNotEmpty) {
-                                Clipboard.setData(
-                                  ClipboardData(text: client.email!),
-                                );
-                                AppToast.info(
-                                  context,
-                                  message: 'Correo copiado',
-                                );
-                              }
-                            },
-                            icon: const Icon(Icons.copy_outlined),
-                            color: colors.onSurfaceVariant,
-                          ),
-                        ),
-                      ],
+                                    child: Text(
+                                      'Administrar contactos',
+                                      style: TextStyle(
+                                        color: colors.primary,
+                                        fontWeight: FontWeight.w600,
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ] else ...[
+                                if (hasPhone) ...[
+                                  InfoBlock.text(
+                                    icon: Icons.contact_phone_outlined,
+                                    label: 'Teléfono',
+                                    value: _formatPhone(client.phone),
+                                    action: IconButton(
+                                      onPressed: () {
+                                        Clipboard.setData(
+                                          ClipboardData(text: client.phone!.trim()),
+                                        );
+                                        AppToast.info(
+                                          context,
+                                          message: 'Teléfono copiado',
+                                        );
+                                      },
+                                      icon: const Icon(Icons.copy_outlined),
+                                      color: colors.onSurfaceVariant,
+                                    ),
+                                  ),
+                                ],
+                                if (hasPhone && hasEmail) const SizedBox(height: 24),
+                                if (hasEmail) ...[
+                                  InfoBlock.text(
+                                    icon: Icons.alternate_email_outlined,
+                                    label: 'Correo Electrónico',
+                                    value: client.email!.trim(),
+                                    action: IconButton(
+                                      onPressed: () {
+                                        Clipboard.setData(
+                                          ClipboardData(text: client.email!.trim()),
+                                        );
+                                        AppToast.info(
+                                          context,
+                                          message: 'Correo copiado',
+                                        );
+                                      },
+                                      icon: const Icon(Icons.copy_outlined),
+                                      color: colors.onSurfaceVariant,
+                                    ),
+                                  ),
+                                ],
+                              ],
+                            ],
+                          );
+                        },
+                      ),
                     ],
                   ),
                 ),

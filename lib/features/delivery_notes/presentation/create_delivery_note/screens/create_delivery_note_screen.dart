@@ -477,6 +477,12 @@ class _CreateDeliveryNoteScreenState
       return;
     }
 
+    final recipientEmail = (note.contactEmail != null &&
+            note.contactEmail!.trim().isNotEmpty)
+        ? note.contactEmail!.trim()
+        : note.clientEmail?.trim();
+    final hasEmail = recipientEmail != null && recipientEmail.isNotEmpty;
+
     final result = await CustomActionSheet.show<bool>(
       context: context,
       title: 'Enviar Nota de Entrega',
@@ -484,13 +490,19 @@ class _CreateDeliveryNoteScreenState
         BottomSheetActionItem(
           icon: Icons.email_outlined,
           label: 'Enviar por correo electrónico',
-          onTap: () async {
-            context.pop(true);
-            await SendDeliveryNoteEmailSheet.show(context, note);
-            if (mounted) {
-              context.pushReplacement('/delivery-notes/view/${note.id}');
-            }
-          },
+          enabled: hasEmail,
+          subtitle: hasEmail
+              ? null
+              : 'El destinatario no tiene correo electrónico registrado',
+          onTap: hasEmail
+              ? () async {
+                  context.pop(true);
+                  await SendDeliveryNoteEmailSheet.show(context, note);
+                  if (mounted) {
+                    context.pushReplacement('/delivery-notes/view/${note.id}');
+                  }
+                }
+              : null,
         ),
         BottomSheetActionItem(
           icon: 'assets/icons/whatsapp_icon.png',

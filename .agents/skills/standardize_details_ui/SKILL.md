@@ -32,6 +32,14 @@ Una pantalla de detalle consta de:
 
 ---
 
+### A. Regla Canónica de Ocultamiento Dinámico de InfoBlocks Vacíos
+- **Prohibición de Textos Residuales ('No registrado' / 'Sin observaciones'):** Queda estrictamente prohibido renderizar un `InfoBlock` con etiquetas como `'No registrado'`, `'No especificado'` o valores vacíos cuando el dato no existe.
+- **Ocultamiento Limpio:** Si un campo opcional (como teléfono, correo, RIF/cédula, dirección, cargo o departamento) es `null` o está vacío tras `trim()`, el `InfoBlock` completo y su separación vertical (`const SizedBox(height: 24)`) deben **omitirse por completo** del árbol de widgets.
+- **Agrupadores de Sección Condicionales:** Si una subsección (como *Información de contacto*) contiene únicamente campos opcionales, el título de la sección solo debe renderizarse si al menos uno de sus campos dependientes tiene valor registrado.
+
+
+---
+
 ## 2. Regla de Oro: Proveedores de Detalle con `autoDispose`
 
 > [!CAUTION]

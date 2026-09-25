@@ -40,6 +40,7 @@ class DeliveryNoteObservationModel {
     String? id,
     String? deliveryNoteId,
     String? observationId,
+    String? title,
     String? description,
     int? orderIndex,
   }) {
@@ -47,6 +48,7 @@ class DeliveryNoteObservationModel {
       id: id ?? this.id,
       deliveryNoteId: deliveryNoteId ?? this.deliveryNoteId,
       observationId: observationId ?? this.observationId,
+      title: title ?? this.title,
       description: description ?? this.description,
       orderIndex: orderIndex ?? this.orderIndex,
     );

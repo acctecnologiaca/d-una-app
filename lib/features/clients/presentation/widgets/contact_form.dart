@@ -88,19 +88,15 @@ class ContactForm extends StatelessWidget {
           const SizedBox(height: 16),
 
           CustomTextField(
-            label: 'Correo electrónico*',
+            label: 'Correo electrónico',
             controller: emailController,
             keyboardType: TextInputType.emailAddress,
             validator: (val) {
-              if (val != null && val.isNotEmpty) {
-                final emailRegex = RegExp(
-                  r'^[a-zA-Z0-9.]+@[a-zA-Z0-9]+\.[a-zA-Z]+',
-                );
-                if (!emailRegex.hasMatch(val)) {
-                  return 'Correo electrónico inválido';
-                }
+              if (val == null || val.trim().isEmpty) return null;
+              final emailRegex = RegExp(r'^[^@]+@[^@]+\.[^@]+');
+              if (!emailRegex.hasMatch(val.trim())) {
+                return 'Correo electrónico inválido';
               }
-              if (val == null || val.isEmpty) return 'Requerido';
               return null;
             },
           ),

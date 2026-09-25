@@ -1,3 +1,5 @@
+import 'service_report_serial.dart';
+
 enum ReportProductSourceType { own, temporal }
 
 class ServiceReportItemProduct {
@@ -28,6 +30,10 @@ class ServiceReportItemProduct {
 
   final ReportProductSourceType sourceType;
 
+  // Serials
+  final bool requiresSerials;
+  final List<ServiceReportSerial> serials;
+
   ServiceReportItemProduct({
     required this.id,
     required this.reportId,
@@ -50,9 +56,27 @@ class ServiceReportItemProduct {
     this.warrantyUnit,
     this.sourceType = ReportProductSourceType.own,
     this.groupIndex = 0,
+    this.requiresSerials = false,
+    this.serials = const [],
   });
 
+  int get missingSerialsCount {
+    if (!requiresSerials) return 0;
+    final needed = quantity.round();
+    final current = serials.length;
+    return (needed - current).clamp(0, 99999);
+  }
+
+  bool get hasMissingSerials => missingSerialsCount > 0;
+
   factory ServiceReportItemProduct.fromJson(Map<String, dynamic> json) {
+    final rawSerials = (json['service_report_serials'] ?? json['serials'])
+            as List<dynamic>? ??
+        [];
+    final serialsList = rawSerials
+        .map((s) => ServiceReportSerial.fromJson(s as Map<String, dynamic>))
+        .toList();
+
     return ServiceReportItemProduct(
       id: json['id'] as String? ?? '',
       reportId: json['report_id'] as String? ?? '',
@@ -76,6 +100,8 @@ class ServiceReportItemProduct {
       sourceType: json['product_id'] != null
           ? ReportProductSourceType.own
           : ReportProductSourceType.temporal,
+      requiresSerials: json['requires_serials'] as bool? ?? false,
+      serials: serialsList,
     );
   }
 
@@ -100,6 +126,8 @@ class ServiceReportItemProduct {
       'group_index': groupIndex,
       if (warrantyTime != null) 'warranty_time': warrantyTime,
       if (warrantyUnit != null) 'warranty_unit': warrantyUnit,
+      'requires_serials': requiresSerials,
+      'serials': serials.map((s) => s.toJson()).toList(),
     };
   }
 
@@ -125,6 +153,8 @@ class ServiceReportItemProduct {
     String? warrantyUnit,
     ReportProductSourceType? sourceType,
     int? groupIndex,
+    bool? requiresSerials,
+    List<ServiceReportSerial>? serials,
   }) {
     return ServiceReportItemProduct(
       id: id ?? this.id,
@@ -148,6 +178,8 @@ class ServiceReportItemProduct {
       warrantyUnit: warrantyUnit ?? this.warrantyUnit,
       sourceType: sourceType ?? this.sourceType,
       groupIndex: groupIndex ?? this.groupIndex,
+      requiresSerials: requiresSerials ?? this.requiresSerials,
+      serials: serials ?? this.serials,
     );
   }
 }

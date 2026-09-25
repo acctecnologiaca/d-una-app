@@ -120,8 +120,8 @@ class SupabaseServiceReportsRepository implements ServiceReportsRepository {
     if (userId == null) throw Exception('Usuario no autenticado');
 
     final selectQuery = productId != null
-        ? '*, clients(name), categories(name), collaborators!advisor_id(full_name), service_report_collaborators(collaborator_id, collaborators(*)), service_report_items_products!inner(*), service_report_items_services(*)'
-        : '*, clients(name), categories(name), collaborators!advisor_id(full_name), service_report_collaborators(collaborator_id, collaborators(*)), service_report_items_products(*), service_report_items_services(*)';
+        ? '*, clients(name), categories(name), collaborators!advisor_id(full_name), service_report_collaborators(collaborator_id, collaborators(*)), service_report_items_products!inner(*, service_report_serials(*)), service_report_items_services(*)'
+        : '*, clients(name), categories(name), collaborators!advisor_id(full_name), service_report_collaborators(collaborator_id, collaborators(*)), service_report_items_products(*, service_report_serials(*)), service_report_items_services(*)';
 
     var query = _client
         .from('service_reports')
@@ -214,7 +214,7 @@ class SupabaseServiceReportsRepository implements ServiceReportsRepository {
     final response = await _client
         .from('service_reports')
         .select(
-          '*, clients(name), categories(name), collaborators!advisor_id(full_name), service_report_collaborators(collaborator_id, collaborators(*)), service_report_items_products(*), service_report_items_services(*), service_report_conditions(*)',
+          '*, clients(name), categories(name), collaborators!advisor_id(full_name), service_report_collaborators(collaborator_id, collaborators(*)), service_report_items_products(*, service_report_serials(*)), service_report_items_services(*), service_report_conditions(*)',
         )
         .eq('id', id)
         .single();
@@ -227,7 +227,7 @@ class SupabaseServiceReportsRepository implements ServiceReportsRepository {
     final response = await _client
         .from('service_reports')
         .select(
-          '*, clients(*), contacts(*), collaborators!advisor_id(full_name), service_report_collaborators(collaborator_id, collaborators(*)), categories(name), service_report_items_products(*), service_report_items_services(*), service_report_conditions(*)',
+          '*, clients(*), contacts(*), collaborators!advisor_id(full_name), service_report_collaborators(collaborator_id, collaborators(*)), categories(name), service_report_items_products(*, service_report_serials(*)), service_report_items_services(*), service_report_conditions(*)',
         )
         .eq('id', id)
         .single();
@@ -315,13 +315,38 @@ class SupabaseServiceReportsRepository implements ServiceReportsRepository {
               'group_index': e.groupIndex,
               'warranty_time': e.warrantyTime,
               'warranty_unit': e.warrantyUnit,
+              'requires_serials': e.requiresSerials,
             },
           )
           .toList();
 
-      await _client
+      final insertedProducts = await _client
           .from('service_report_items_products')
-          .insert(productsData);
+          .insert(productsData)
+          .select('id');
+
+      final List<Map<String, dynamic>> allSerialsToInsert = [];
+      for (int i = 0; i < products.length; i++) {
+        final item = products[i];
+        if (i < insertedProducts.length && item.serials.isNotEmpty) {
+          final generatedItemId = insertedProducts[i]['id'] as String;
+          for (final s in item.serials) {
+            allSerialsToInsert.add({
+              'report_item_id': generatedItemId,
+              if (s.productId != null) 'product_id': s.productId,
+              if (s.productSerialId != null)
+                'product_serial_id': s.productSerialId,
+              'serial_number': s.serialNumber,
+            });
+          }
+        }
+      }
+
+      if (allSerialsToInsert.isNotEmpty) {
+        await _client
+            .from('service_report_serials')
+            .insert(allSerialsToInsert);
+      }
     }
 
     // 3. Insert Services
@@ -454,13 +479,38 @@ class SupabaseServiceReportsRepository implements ServiceReportsRepository {
                 'group_index': e.groupIndex,
                 'warranty_time': e.warrantyTime,
                 'warranty_unit': e.warrantyUnit,
+                'requires_serials': e.requiresSerials,
               },
             )
             .toList();
 
-        await _client
+        final insertedProducts = await _client
             .from('service_report_items_products')
-            .insert(productsData);
+            .insert(productsData)
+            .select('id');
+
+        final List<Map<String, dynamic>> allSerialsToInsert = [];
+        for (int i = 0; i < products.length; i++) {
+          final item = products[i];
+          if (i < insertedProducts.length && item.serials.isNotEmpty) {
+            final generatedItemId = insertedProducts[i]['id'] as String;
+            for (final s in item.serials) {
+              allSerialsToInsert.add({
+                'report_item_id': generatedItemId,
+                if (s.productId != null) 'product_id': s.productId,
+                if (s.productSerialId != null)
+                  'product_serial_id': s.productSerialId,
+                'serial_number': s.serialNumber,
+              });
+            }
+          }
+        }
+
+        if (allSerialsToInsert.isNotEmpty) {
+          await _client
+              .from('service_report_serials')
+              .insert(allSerialsToInsert);
+        }
       }
     }
 

@@ -675,6 +675,11 @@ class _ViewQuoteScreenState extends ConsumerState<ViewQuoteScreen>
                     onTap: () async {
                       final router = GoRouter.of(context);
                       context.pop(); // Close the action sheet
+                      AppToast.info(
+                        context,
+                        message: 'Preparando copia de cotización...',
+                        duration: const Duration(seconds: 1),
+                      );
                       await ref
                           .read(createQuoteProvider.notifier)
                           .loadQuoteAsCopy(widget.quoteId);
@@ -943,6 +948,12 @@ class _ViewQuoteScreenState extends ConsumerState<ViewQuoteScreen>
       context: context,
       quote: currentQuote,
       onSend: (targetQuote) {
+        final recipientEmail = (targetQuote.contactEmail != null &&
+                targetQuote.contactEmail!.trim().isNotEmpty)
+            ? targetQuote.contactEmail!.trim()
+            : targetQuote.clientEmail?.trim();
+        final hasEmail = recipientEmail != null && recipientEmail.isNotEmpty;
+
         CustomActionSheet.show(
           context: context,
           title: currentIsSentOrResent
@@ -954,10 +965,16 @@ class _ViewQuoteScreenState extends ConsumerState<ViewQuoteScreen>
               label: currentIsSentOrResent
                   ? 'Reenviar por correo electrónico'
                   : 'Enviar por correo electrónico',
-              onTap: () {
-                Navigator.of(context).pop();
-                SendEmailBottomSheet.show(context, targetQuote);
-              },
+              enabled: hasEmail,
+              subtitle: hasEmail
+                  ? null
+                  : 'El destinatario no tiene correo electrónico registrado',
+              onTap: hasEmail
+                  ? () {
+                      Navigator.of(context).pop();
+                      SendEmailBottomSheet.show(context, targetQuote);
+                    }
+                  : null,
             ),
             BottomSheetActionItem(
               icon: 'assets/icons/whatsapp_icon.png',

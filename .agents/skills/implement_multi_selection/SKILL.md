@@ -263,6 +263,25 @@ class EntitySelectionActions {
           },
         ),
         BottomSheetActionItem(
+          icon: Icons.content_copy_outlined,
+          label: 'Crear una copia',
+          onTap: () async {
+            Navigator.pop(context);
+            AppToast.info(
+              context,
+              message: 'Preparando copia de documento...',
+              duration: const Duration(seconds: 1),
+            );
+            await ref
+                .read(createEntityProvider.notifier)
+                .loadEntityAsCopy(entity.id);
+            if (context.mounted) {
+              ref.read(entitySelectionProvider.notifier).clearSelection();
+              context.push('/entity/create');
+            }
+          },
+        ),
+        BottomSheetActionItem(
           icon: Icons.delete_outline,
           label: 'Eliminar',
           onTap: () {

@@ -14,6 +14,7 @@ class ReportAddedProductCard extends StatelessWidget {
   final VoidCallback onDelete;
   final VoidCallback? onEditTemporal;
   final VoidCallback? onEditPrice;
+  final VoidCallback? onManageSerials;
   final bool isReadOnly;
   final VoidCallback? onTap;
 
@@ -24,6 +25,7 @@ class ReportAddedProductCard extends StatelessWidget {
     required this.onDelete,
     this.onEditTemporal,
     this.onEditPrice,
+    this.onManageSerials,
     this.isReadOnly = false,
     this.onTap,
   });
@@ -32,9 +34,13 @@ class ReportAddedProductCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final colors = Theme.of(context).colorScheme;
     final isTemporal = product.sourceType == ReportProductSourceType.temporal;
+    final hasMissing = product.hasMissingSerials;
 
     return ExpandableActionCard(
       onTap: onTap,
+      backgroundColor: hasMissing
+          ? colors.errorContainer.withValues(alpha: 0.8)
+          : null,
       overline: product.brand != null && product.brand!.isNotEmpty
           ? Text(product.brand!)
           : null,
@@ -94,14 +100,29 @@ class ReportAddedProductCard extends StatelessWidget {
                   style: TextStyle(fontSize: 12, color: colors.onSurface),
                 ),
                 const SizedBox(height: 4),
-                // UoM Status Badge
+                // UoM Status Badge with missing barcode icon
                 Padding(
                   padding: const EdgeInsets.symmetric(vertical: 2),
-                  child: UomStatusBadge(
-                    quantity: product.quantity,
-                    uomAbbreviation: product.uom,
-                    uomIconName: product.uomIconName,
-                    maxStock: isTemporal ? null : product.availableStock,
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      if (hasMissing) ...[
+                        Image.asset(
+                          'assets/icons/no_barcode.png',
+                          width: 20,
+                          height: 20,
+                          color: colors.onSurfaceVariant,
+                        ),
+                        const SizedBox(width: 4),
+                      ],
+                      UomStatusBadge(
+                        quantity: product.quantity,
+                        uomAbbreviation: product.uom,
+                        uomIconName: product.uomIconName,
+                        maxStock: isTemporal ? null : product.availableStock,
+                        backgroundColor: hasMissing ? Colors.white : null,
+                      ),
+                    ],
                   ),
                 ),
               ],
@@ -161,6 +182,16 @@ class ReportAddedProductCard extends StatelessWidget {
                   visualDensity: VisualDensity.compact,
                   onPressed: onEditTemporal,
                   tooltip: 'Editar producto temporal',
+                ),
+              if (!isReadOnly &&
+                  (product.requiresSerials || product.serials.isNotEmpty) &&
+                  onManageSerials != null)
+                IconButton(
+                  icon: const Icon(Symbols.barcode),
+                  color: hasMissing ? colors.error : colors.onSurfaceVariant,
+                  visualDensity: VisualDensity.compact,
+                  onPressed: onManageSerials,
+                  tooltip: 'Gestionar seriales',
                 ),
             ],
       expandedTrailing: isReadOnly

@@ -268,6 +268,12 @@ Las acciones del documento (descarga de PDF, envío por correo, WhatsApp, duplic
 
 ```dart
 void _showSendOptions(BuildContext context, DocumentModel document) {
+  // Comprobación preventiva obligatoria de correo del destinatario:
+  final recipientEmail = (document.contactEmail != null && document.contactEmail!.trim().isNotEmpty)
+      ? document.contactEmail!.trim()
+      : document.clientEmail?.trim();
+  final hasEmail = recipientEmail != null && recipientEmail.isNotEmpty;
+
   CustomActionSheet.show(
     context: context,
     title: 'Opciones de Documento',
@@ -292,16 +298,27 @@ void _showSendOptions(BuildContext context, DocumentModel document) {
       BottomSheetActionItem(
         icon: Symbols.mail,
         label: 'Enviar por Correo Electrónico',
-        subtitle: 'Envía la plantilla oficial configurada',
-        onTap: () {
-          context.pop();
-          SendDocumentEmailSheet.show(context, document);
-        },
+        enabled: hasEmail,
+        subtitle: hasEmail
+            ? 'Envía la plantilla oficial configurada'
+            : 'El destinatario no tiene correo electrónico registrado',
+        onTap: hasEmail
+            ? () {
+                context.pop();
+                SendDocumentEmailSheet.show(context, document);
+              }
+            : null,
       ),
     ],
   );
 }
 ```
+
+> [!IMPORTANT]
+> **Regla de Bloqueo Preventivo de Envío:**
+> Si el destinatario del documento no posee correo registrado (tanto a nivel de contacto asignado como de cliente), la opción `Enviar por Correo Electrónico` **DEBE** permanecer deshabilitada (`enabled: false`) con el subtítulo explícito: `'El destinatario no tiene correo electrónico registrado'`. Nunca debe permitirse abrir el modal de envío de correo si no existe un destinatario con dirección válida.
+
+---
 
 ### B. Modal Canónico de Confirmación de Recepción y Firma Presencial
 Para documentos logísticos o de entrega física donde el receptor firma directamente en el dispositivo:
@@ -332,6 +349,55 @@ Para documentos logísticos o de entrega física donde el receptor firma directa
        }
      }
      ```
+
+---
+
+### D. Estándar Universal para la Acción "Crear una copia" en Documentos Ejecutivos
+
+Todo documento transaccional o ejecutivo (Cotizaciones, Notas de Entrega, Órdenes de Compra, Informes de Servicio) debe implementar la acción **"Crear una copia"** dentro de su menú contextual ([`CustomActionSheet`](file:///c:/Users/aleja/flutter_apps/MVP/d_una_app/lib/shared/widgets/custom_action_sheet.dart)), ubicado obligatoriamente en el **Bloque 3: Utilidades y Gestión Documental** justo antes de *Archivar / Desarchivar*.
+
+#### 1. Regla de Negocio Canónica: Opción B (Cantidades Intactas + Alertas Reactivas)
+- **Conservación Estricta:** No truncar silenciosamente las cantidades solicitadas de los ítems en función de las existencias actuales. Se preserva el volumen original para no alterar el alcance comercial ni los totales a espaldas del usuario.
+- **Alertas Reactivas Visibles:** Al cargar la copia en el formulario/wizard, el evaluador reactivo activa las insignias correspondientes:
+  - `QuoteValidationStatus.outOfStock` (Agotado): Stock disponible = 0.
+  - `QuoteValidationStatus.lowStock` (Stock insuficiente): Stock disponible < cantidad solicitada.
+  - `QuoteValidationStatus.priceIncreased` (Alza de costo): Costo actual del proveedor > costo histórico pactado.
+- En **Notas de Entrega**, la finalización del despacho queda protegida hasta que las unidades cuenten con existencia física y seriales válidos.
+
+#### 2. Protocolo de Limpieza de Datos Sensibles
+Al ejecutar la copia de un documento, el notifier correspondiente (`load[Entity]AsCopy`) debe aplicar estrictamente:
+1. **Limpieza de Seriales:** En Notas de Entrega, `serials: const []` (los productos nacen con seriales vacíos listos para ser seleccionados o escaneados del inventario físico disponible).
+2. **Limpieza de Trazabilidad y Recepción:** Poner a `null` firmas digitales (`signatureData`), datos de receptor (`receivedByName`, `receivedById`, `receivedByPhone`, `receiverRelationship`), fecha de entrega real y números de guía courier (`trackingNumber`).
+3. **Regeneración de UUIDs de Ítems:** Todos los ítems hijos (productos, servicios, condiciones, observaciones) generan nuevos identificadores con `const Uuid().v4()` y desvinculan su clave foránea (`quoteId: ''`, `deliveryNoteId: ''`, etc.).
+4. **Renovación Temporal:** Asignar `date = DateTime.now()`, nuevo número correlativo oficial mediante `getLast...Number()` y desvincular el ID (`id: null`, `status: draft`).
+5. **Persistencia y Sincronización de Borrador:**
+   - Descartar cualquier borrador huérfano anterior con `await clearDraft();` (o `discardDraft()`).
+   - Persistir la copia inmediatamente en el almacenamiento local con `autoSaveDraft();`.
+
+#### 3. Feedback Visual Obligatorio en UI
+Antes de aguardar la consulta asíncrona a base de datos y la navegación al creador, se debe mostrar un toast informativo para garantizar fluidez:
+
+```dart
+BottomSheetActionItem(
+  icon: Icons.content_copy_outlined,
+  label: 'Crear una copia',
+  onTap: () async {
+    final router = GoRouter.of(context);
+    context.pop(); // Cierra el modal de acciones
+    AppToast.info(
+      context,
+      message: 'Preparando copia de documento...',
+      duration: const Duration(seconds: 1),
+    );
+    await ref
+        .read(createDocumentProvider.notifier)
+        .loadDocumentAsCopy(document.id);
+    if (context.mounted) {
+      router.push('/documents/create');
+    }
+  },
+),
+```
 
 ---
 

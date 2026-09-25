@@ -420,7 +420,7 @@ class DeliveryNoteCreateState extends Equatable {
 }
 
 final createDeliveryNoteProvider =
-    StateNotifierProvider.autoDispose<CreateDeliveryNoteNotifier, DeliveryNoteCreateState>((
+    StateNotifierProvider<CreateDeliveryNoteNotifier, DeliveryNoteCreateState>((
   ref,
 ) {
   return CreateDeliveryNoteNotifier(ref);
@@ -505,8 +505,7 @@ class CreateDeliveryNoteNotifier
 
     // Fetch next number preview
     try {
-      final profile = ref.read(userProfileProvider).value ??
-          await ref.read(userProfileProvider.future);
+      final profile = ref.read(userProfileProvider).value;
       final repo = ref.read(deliveryNotesRepositoryProvider);
       final lastNum = await repo.getLastDeliveryNoteNumber();
       if (state.deliveryNoteNumber == null ||
@@ -788,6 +787,99 @@ class CreateDeliveryNoteNotifier
     );
     if (note.quoteId != null && note.quoteId!.isNotEmpty) {
       _loadLinkedQuote(note.quoteId!);
+    }
+  }
+
+  Future<bool> loadDeliveryNoteAsCopy(String sourceNoteId) async {
+    state = state.copyWith(isLoading: true, error: null);
+    try {
+      final repo = ref.read(deliveryNotesRepositoryProvider);
+      final source = await repo.getDeliveryNoteWithDetails(sourceNoteId);
+      if (source == null) {
+        state = state.copyWith(
+          isLoading: false,
+          error: 'Nota de entrega no encontrada',
+        );
+        return false;
+      }
+
+      // 1. Obtener siguiente número correlativo oficial de forma segura (sin deadlocks de stream)
+      final profile = ref.read(userProfileProvider).value;
+      final lastNum = await repo.getLastDeliveryNoteNumber();
+      final newNumber =
+          _generateNextDeliveryNoteNumber(lastNum, profile: profile);
+
+      // 2. Clonar ítems: preservar cantidades originales, vaciar seriales asignados y regenerar UUIDs
+      final copiedItems = source.items.map((item) {
+        return item.copyWith(
+          id: const Uuid().v4(),
+          deliveryNoteId: '',
+          serials: const [],
+        );
+      }).toList();
+
+      // 3. Clonar observaciones con nuevos UUIDs
+      final copiedObservations = source.observations.map((obs) {
+        return obs.copyWith(
+          id: const Uuid().v4(),
+          deliveryNoteId: '',
+          title: obs.title,
+        );
+      }).toList();
+
+      state = DeliveryNoteCreateState(
+        id: null, // Nuevo documento borrador
+        deliveryNoteNumber: newNumber,
+        clientId: source.clientId,
+        clientName: source.clientName,
+        clientTaxId: source.clientTaxId,
+        contactId: source.contactId,
+        contactName: source.contactName,
+        quoteId: source.quoteId,
+        supplierOrderId: source.supplierOrderId,
+        clientPoNumber: source.clientPoNumber,
+        tag: source.tag,
+        notes: source.notes,
+        status: DeliveryNoteStatus.draft,
+        date: DateTime.now(),
+        deliveryDate: DateTime.now(),
+        deliveryType: source.deliveryType,
+        shippingCompanyId: source.shippingCompanyId,
+        shippingCompanyName: source.shippingCompanyName,
+        trackingNumber: null, // Limpiar tracking courier
+        recipientAddress: source.recipientAddress,
+        recipientCity: source.recipientCity,
+        recipientState: source.recipientState,
+        deliveryInstructions: source.deliveryInstructions,
+        receivedByName: null, // Limpiar datos de recepción y firma
+        receivedById: null,
+        receivedByPhone: null,
+        receiverRelationship: null,
+        receivedAt: null,
+        signatureData: null,
+        taxRate: source.taxRate,
+        useClientAddress: source.useClientAddress,
+        items: copiedItems,
+        observations: copiedObservations,
+        isDropshipping: source.isDropshipping,
+        initialNote: null,
+        linkedQuote: null,
+        isLoading: false,
+        isDirty: true,
+      );
+
+      if (source.quoteId != null && source.quoteId!.isNotEmpty) {
+        await _loadLinkedQuote(source.quoteId!);
+      }
+
+      // 4. Limpiar borrador local previo no vinculado y forzar guardado inmediato
+      await discardDraft();
+      await saveDraftNow();
+      return true;
+    } catch (e, stack) {
+      debugPrint('Error en loadDeliveryNoteAsCopy: $e\n$stack');
+      state = state.copyWith(isLoading: false, error: e.toString());
+      return false;
     }
   }
 

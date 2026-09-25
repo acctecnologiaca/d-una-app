@@ -150,6 +150,11 @@ class _ViewDeliveryNoteScreenState extends ConsumerState<ViewDeliveryNoteScreen>
     }
 
     final isFinalized = note.status == DeliveryNoteStatus.finalized;
+    final recipientEmail = (note.contactEmail != null &&
+            note.contactEmail!.trim().isNotEmpty)
+        ? note.contactEmail!.trim()
+        : note.clientEmail?.trim();
+    final hasEmail = recipientEmail != null && recipientEmail.isNotEmpty;
 
     CustomActionSheet.show(
       context: context,
@@ -166,10 +171,16 @@ class _ViewDeliveryNoteScreenState extends ConsumerState<ViewDeliveryNoteScreen>
               : (isSentOrResent
                   ? 'Reenviar por correo electrónico'
                   : 'Enviar por correo electrónico'),
-          onTap: () {
-            context.pop();
-            SendDeliveryNoteEmailSheet.show(context, note);
-          },
+          enabled: hasEmail,
+          subtitle: hasEmail
+              ? null
+              : 'El destinatario no tiene correo electrónico registrado',
+          onTap: hasEmail
+              ? () {
+                  context.pop();
+                  SendDeliveryNoteEmailSheet.show(context, note);
+                }
+              : null,
         ),
         BottomSheetActionItem(
           icon: 'assets/icons/whatsapp_icon.png',
@@ -304,6 +315,34 @@ class _ViewDeliveryNoteScreenState extends ConsumerState<ViewDeliveryNoteScreen>
         const Divider(height: 1, indent: 16, endIndent: 16),
 
         // Bloque 3: Utilidades y Gestión Documental
+        BottomSheetActionItem(
+          icon: Icons.content_copy_outlined,
+          label: 'Crear una copia',
+          onTap: () async {
+            final router = GoRouter.of(context);
+            context.pop();
+            AppToast.info(
+              context,
+              message: 'Preparando copia de nota de entrega...',
+              duration: const Duration(seconds: 1),
+            );
+            final success = await ref
+                .read(createDeliveryNoteProvider.notifier)
+                .loadDeliveryNoteAsCopy(note.id);
+            if (!success) {
+              if (mounted) {
+                AppToast.error(
+                  this.context,
+                  message: 'No se pudo generar la copia de la nota de entrega.',
+                );
+              }
+              return;
+            }
+            if (mounted) {
+              router.push('/delivery-notes/create');
+            }
+          },
+        ),
         BottomSheetActionItem(
           icon: note.isArchived
               ? Icons.unarchive_outlined

@@ -165,6 +165,11 @@ class ReportSelectionActions {
           label: 'Crear una copia',
           onTap: () async {
             context.pop();
+            AppToast.info(
+              context,
+              message: 'Preparando copia de informe...',
+              duration: const Duration(seconds: 1),
+            );
             await ref
                 .read(createReportProvider.notifier)
                 .loadReportAsCopy(report.id);

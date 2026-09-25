@@ -9,6 +9,8 @@ import '../providers/report_product_selection_provider.dart';
 import '../widgets/report_added_product_card.dart';
 import '../widgets/report_product_sale_details_sheet.dart';
 
+import '../screens/report_manage_serials_screen.dart';
+
 class ReportProductsTab extends ConsumerStatefulWidget {
   const ReportProductsTab({super.key});
 
@@ -80,15 +82,40 @@ class _ReportProductsTabState extends ConsumerState<ReportProductsTab>
           onQuantityChanged: (newQty) {
             final newSubtotal = product.unitPrice * newQty;
             final taxAmount = newSubtotal * (product.taxRate / 100);
+            var updatedSerials = product.serials;
+            final needed = newQty.round();
+            if (updatedSerials.length > needed) {
+              updatedSerials = updatedSerials.take(needed).toList();
+            }
             final updated = product.copyWith(
               quantity: newQty,
               taxAmount: taxAmount,
               totalPrice: newSubtotal,
+              serials: updatedSerials,
             );
             notifier.updateProduct(originalIndex, updated);
           },
           onDelete: () {
             notifier.removeProduct(originalIndex);
+          },
+          onManageSerials: () {
+            Navigator.of(context).push(
+              MaterialPageRoute(
+                builder: (_) => ReportManageSerialsScreen(
+                  item: effectiveProduct,
+                  onRequiresSerialsChanged: (requires) {
+                    notifier.setProductRequiresSerials(originalIndex, requires);
+                  },
+                  onSerialsSaved: (serials) {
+                    notifier.updateProductSerials(
+                      originalIndex,
+                      serials,
+                      requiresSerials: serials.isNotEmpty ? true : null,
+                    );
+                  },
+                ),
+              ),
+            );
           },
           onEditPrice: !isTemporal
               ? () async {

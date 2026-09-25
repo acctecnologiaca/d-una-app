@@ -79,6 +79,13 @@ class ConfirmDeliveryNoteReceptionDialog extends ConsumerStatefulWidget {
                 'Enviar constancia de entrega digital por WhatsApp o Correo',
             onTap: () {
               Navigator.of(context).pop();
+              final recipientEmail = (updatedNote.contactEmail != null &&
+                      updatedNote.contactEmail!.trim().isNotEmpty)
+                  ? updatedNote.contactEmail!.trim()
+                  : updatedNote.clientEmail?.trim();
+              final hasEmail =
+                  recipientEmail != null && recipientEmail.isNotEmpty;
+
               CustomActionSheet.show(
                 context: context,
                 title: 'Enviar copia de Nota de Entrega',
@@ -86,13 +93,19 @@ class ConfirmDeliveryNoteReceptionDialog extends ConsumerStatefulWidget {
                   BottomSheetActionItem(
                     icon: Icons.email_outlined,
                     label: 'Enviar por correo electrónico',
-                    onTap: () {
-                      Navigator.of(context).pop();
-                      SendDeliveryNoteEmailSheet.show(
-                        context,
-                        updatedNote,
-                      );
-                    },
+                    enabled: hasEmail,
+                    subtitle: hasEmail
+                        ? null
+                        : 'El destinatario no tiene correo electrónico registrado',
+                    onTap: hasEmail
+                        ? () {
+                            Navigator.of(context).pop();
+                            SendDeliveryNoteEmailSheet.show(
+                              context,
+                              updatedNote,
+                            );
+                          }
+                        : null,
                   ),
                   BottomSheetActionItem(
                     icon: 'assets/icons/whatsapp_icon.png',

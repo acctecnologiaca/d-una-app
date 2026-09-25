@@ -167,12 +167,16 @@ class _AddEditContactScreenState extends ConsumerState<AddEditContactScreen> {
       final fullPhone =
           '$_selectedPhoneCode${_phoneController.text.replaceAll(RegExp(r'\D'), '')}';
 
+      final emailVal = _emailController.text.trim();
+      final roleVal = _roleController.text.trim();
+      final deptVal = _departmentController.text.trim();
+
       final contactData = {
-        'name': _nameController.text,
-        'role': _roleController.text,
-        'email': _emailController.text,
+        'name': _nameController.text.trim(),
+        'role': roleVal.isEmpty ? null : roleVal,
+        'email': emailVal.isEmpty ? null : emailVal,
         'phone': fullPhone,
-        'department': _departmentController.text,
+        'department': deptVal.isEmpty ? null : deptVal,
         'isPrimary': _isPrimary,
       };
 

@@ -278,7 +278,35 @@ class _ViewReportScreenState extends ConsumerState<ViewReportScreen>
               currentEnum,
             );
 
+            if (!context.mounted) return;
+
             if (selectedStatus != null && selectedStatus != currentEnum) {
+              if (selectedStatus == ServiceReportStatus.finalized) {
+                final missingProducts = (report.products ?? [])
+                    .where((p) => p.hasMissingSerials)
+                    .toList();
+                if (missingProducts.isNotEmpty) {
+                  CustomDialog.show(
+                    context: context,
+                    dialog: CustomDialog.confirmation(
+                      icon: Symbols.warning,
+                      iconColor: Colors.amber.shade800,
+                      title: 'Seriales Faltantes',
+                      contentText:
+                          'No se puede finalizar el reporte de servicio porque hay productos que requieren asignación de seriales pendientes:\n\n${missingProducts.map((p) => '• ${p.name} (Faltan ${p.missingSerialsCount})').join('\n')}\n\nPor favor, edite el reporte y asigne los seriales requeridos para poder finalizarlo.',
+                      actions: [
+                        TextButton(
+                          onPressed: () =>
+                              Navigator.of(context, rootNavigator: true).pop(),
+                          child: const Text('Entendido'),
+                        ),
+                      ],
+                    ),
+                  );
+                  return;
+                }
+              }
+
               try {
                 await ref
                     .read(reportsListProvider.notifier)
@@ -333,6 +361,11 @@ class _ViewReportScreenState extends ConsumerState<ViewReportScreen>
           onTap: () async {
             final router = GoRouter.of(context);
             context.pop();
+            AppToast.info(
+              context,
+              message: 'Preparando copia de informe...',
+              duration: const Duration(seconds: 1),
+            );
             await ref
                 .read(createReportProvider.notifier)
                 .loadReportAsCopy(report.id);
@@ -391,6 +424,12 @@ class _ViewReportScreenState extends ConsumerState<ViewReportScreen>
       context: context,
       report: report,
       onSend: (targetReport) {
+        final recipientEmail = (targetReport.contactEmail != null &&
+                targetReport.contactEmail!.trim().isNotEmpty)
+            ? targetReport.contactEmail!.trim()
+            : targetReport.clientEmail?.trim();
+        final hasEmail = recipientEmail != null && recipientEmail.isNotEmpty;
+
         CustomActionSheet.show(
           context: context,
           title: isFinalized
@@ -404,10 +443,16 @@ class _ViewReportScreenState extends ConsumerState<ViewReportScreen>
                   : (isSentOrResent
                       ? 'Reenviar por correo electrónico'
                       : 'Enviar por correo electrónico'),
-              onTap: () {
-                Navigator.of(context).pop();
-                SendReportEmailSheet.show(context, targetReport);
-              },
+              enabled: hasEmail,
+              subtitle: hasEmail
+                  ? null
+                  : 'El destinatario no tiene correo electrónico registrado',
+              onTap: hasEmail
+                  ? () {
+                      Navigator.of(context).pop();
+                      SendReportEmailSheet.show(context, targetReport);
+                    }
+                  : null,
             ),
             BottomSheetActionItem(
               icon: 'assets/icons/whatsapp_icon.png',

@@ -4,6 +4,7 @@ import '../providers/view_report_provider.dart';
 import '../../create_report/widgets/report_added_product_card.dart';
 import '../../../domain/models/service_report_model.dart';
 import '../../../../../shared/utils/fab_scroll_padding.dart';
+import '../widgets/view_report_product_details_sheet.dart';
 
 class ViewReportProductsTab extends ConsumerWidget {
   final String reportId;
@@ -48,7 +49,6 @@ class ViewReportProductsTab extends ConsumerWidget {
             ),
           );
         }
-
         return ListView.builder(
           itemCount: products.length,
           padding: EdgeInsets.only(top: 8, bottom: bottomPadding),
@@ -59,6 +59,9 @@ class ViewReportProductsTab extends ConsumerWidget {
               isReadOnly: true,
               onDelete: () {},
               onQuantityChanged: (_) {},
+              onTap: () {
+                ViewReportProductDetailsSheet.show(context, item: p);
+              },
             );
           },
         );
