@@ -188,7 +188,8 @@ class ReportAddedProductCard extends StatelessWidget {
                   onManageSerials != null)
                 IconButton(
                   icon: const Icon(Symbols.barcode),
-                  color: hasMissing ? colors.error : colors.onSurfaceVariant,
+                  color: /*hasMissing ? colors.error :*/
+                      colors.onSurfaceVariant,
                   visualDensity: VisualDensity.compact,
                   onPressed: onManageSerials,
                   tooltip: 'Gestionar seriales',
@@ -203,12 +204,13 @@ class ReportAddedProductCard extends StatelessWidget {
                   label: 'Cantidad:',
                   value: product.quantity,
                   min: 1,
-                  max: !isTemporal &&
+                  max:
+                      !isTemporal &&
                           product.availableStock != null &&
                           product.availableStock! > 0
                       ? (product.availableStock! > product.quantity
-                          ? product.availableStock!
-                          : product.quantity)
+                            ? product.availableStock!
+                            : product.quantity)
                       : 99999,
                   onChanged: onQuantityChanged,
                 ),

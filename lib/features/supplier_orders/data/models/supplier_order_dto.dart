@@ -47,6 +47,11 @@ class SupplierOrderDto {
       }
     }
 
+    String? parentOrderNumber;
+    if (json['parent_order'] != null && json['parent_order'] is Map) {
+      parentOrderNumber = json['parent_order']['order_number'] as String?;
+    }
+
     return SupplierOrder(
       id: json['id'],
       userId: json['user_id'],
@@ -56,6 +61,7 @@ class SupplierOrderDto {
       receiverCollaboratorId: json['receiver_collaborator_id'],
       quoteId: json['quote_id'] as String?,
       parentOrderId: json['parent_order_id'] as String?,
+      parentOrderNumber: parentOrderNumber,
       orderNumber: json['order_number'] ?? 'S/N',
       date: DateTime.parse(json['date']),
       paymentMethod: json['payment_method'],

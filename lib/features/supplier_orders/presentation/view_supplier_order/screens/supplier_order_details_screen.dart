@@ -375,7 +375,7 @@ class _SupplierOrderDetailsScreenState
                         ),
                       if (order.status == SupplierOrderStatus.merged)
                         Builder(
-                          builder: (context) {
+                          builder: (sheetItemContext) {
                             final parentOrder = ref
                                 .watch(parentSupplierOrderProvider(order.parentOrderId))
                                 .valueOrNull;
@@ -390,7 +390,7 @@ class _SupplierOrderDetailsScreenState
                                   ? 'No disponible: la orden principal ya fue emitida o procesada'
                                   : null,
                               onTap: () async {
-                                context.pop();
+                                sheetItemContext.pop();
                                 final confirm = await CustomDialog.show<bool>(
                                   context: context,
                                   dialog: CustomDialog.confirmation(
@@ -398,15 +398,19 @@ class _SupplierOrderDetailsScreenState
                                     contentText:
                                         'La orden seleccionada se desvinculará de la OC Principal y volverá al estado Borrador.',
                                     actions: [
-                                      TextButton(
-                                        onPressed: () =>
-                                            Navigator.pop(context, false),
-                                        child: const Text('Volver'),
+                                      Builder(
+                                        builder: (dialogCtx) => TextButton(
+                                          onPressed: () =>
+                                              Navigator.of(dialogCtx).pop(false),
+                                          child: const Text('Cancelar'),
+                                        ),
                                       ),
-                                      FilledButton(
-                                        onPressed: () =>
-                                            Navigator.pop(context, true),
-                                        child: const Text('Confirmar'),
+                                      Builder(
+                                        builder: (dialogCtx) => FilledButton(
+                                          onPressed: () =>
+                                              Navigator.of(dialogCtx).pop(true),
+                                          child: const Text('Confirmar'),
+                                        ),
                                       ),
                                     ],
                                   ),
@@ -427,7 +431,7 @@ class _SupplierOrderDetailsScreenState
                                       supplierOrderDetailProvider(order.id),
                                     );
 
-                                    if (context.mounted) {
+                                    if (mounted) {
                                       AppToast.success(
                                         context,
                                         message:
@@ -435,7 +439,7 @@ class _SupplierOrderDetailsScreenState
                                       );
                                     }
                                   } catch (e) {
-                                    if (context.mounted) {
+                                    if (mounted) {
                                       AppToast.error(
                                         context,
                                         message: 'Error al deshacer: $e',
@@ -460,15 +464,19 @@ class _SupplierOrderDetailsScreenState
                                 contentText:
                                     'La orden pasará a estatus Cancelada y no podrá modificarse.',
                                 actions: [
-                                  TextButton(
-                                    onPressed: () =>
-                                        Navigator.pop(context, false),
-                                    child: const Text('Volver'),
+                                  Builder(
+                                    builder: (dialogCtx) => TextButton(
+                                      onPressed: () =>
+                                          Navigator.of(dialogCtx).pop(false),
+                                      child: const Text('Cancelar'),
+                                    ),
                                   ),
-                                  FilledButton(
-                                    onPressed: () =>
-                                        Navigator.pop(context, true),
-                                    child: const Text('Confirmar'),
+                                  Builder(
+                                    builder: (dialogCtx) => FilledButton(
+                                      onPressed: () =>
+                                          Navigator.of(dialogCtx).pop(true),
+                                      child: const Text('Confirmar'),
+                                    ),
                                   ),
                                 ],
                               ),

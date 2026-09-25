@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import '../../../domain/models/supplier_order.dart';
+import '../../../domain/models/supplier_order_status.dart';
 import '../../../../../shared/utils/currency_formatter.dart';
 import '../../../../../shared/widgets/standard_list_item.dart';
 import '../../../../../shared/widgets/document_draft_icon.dart';
@@ -71,8 +72,26 @@ class SupplierOrderCard extends ConsumerWidget {
         padding: const EdgeInsets.symmetric(vertical: 12.0, horizontal: 16.0),
         onTap: onTap,
         onLongPress: onLongPress,
-        overline: Text(
-          '${order.orderNumber} (${dateFormat.format(order.date)})',
+        overline: Text.rich(
+          TextSpan(
+            children: [
+              TextSpan(
+                text: '${order.orderNumber} (${dateFormat.format(order.date)})',
+              ),
+              if (order.status == SupplierOrderStatus.merged &&
+                  order.shortParentOrderNumber != null) ...[
+                TextSpan(
+                  text: '  ➔ ${order.shortParentOrderNumber}',
+                  style: TextStyle(
+                    color: const Color(0xFF009688),
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ],
+            ],
+          ),
+          overflow: TextOverflow.ellipsis,
+          maxLines: 1,
         ),
         title: supplierDisplayName,
         subtitle: order.branchName != null

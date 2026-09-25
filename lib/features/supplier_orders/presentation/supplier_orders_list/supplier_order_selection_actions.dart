@@ -284,13 +284,17 @@ class SupplierOrderSelectionActions {
                 contentText:
                     'La orden pasará a estatus Cancelada y no podrá modificarse.',
                 actions: [
-                  TextButton(
-                    onPressed: () => Navigator.pop(context, false),
-                    child: const Text('Volver'),
+                  Builder(
+                    builder: (dialogCtx) => TextButton(
+                      onPressed: () => Navigator.of(dialogCtx).pop(false),
+                      child: const Text('Cancelar'),
+                    ),
                   ),
-                  FilledButton(
-                    onPressed: () => Navigator.pop(context, true),
-                    child: const Text('Confirmar'),
+                  Builder(
+                    builder: (dialogCtx) => FilledButton(
+                      onPressed: () => Navigator.of(dialogCtx).pop(true),
+                      child: const Text('Confirmar'),
+                    ),
                   ),
                 ],
               ),
@@ -707,13 +711,17 @@ class SupplierOrderSelectionActions {
         contentText:
             'Las órdenes seleccionadas pasarán a estatus Canceladas y no podrán modificarse.',
         actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: const Text('Volver'),
+          Builder(
+            builder: (dialogCtx) => TextButton(
+              onPressed: () => Navigator.of(dialogCtx).pop(false),
+              child: const Text('Cancelar'),
+            ),
           ),
-          FilledButton(
-            onPressed: () => Navigator.pop(context, true),
-            child: const Text('Confirmar'),
+          Builder(
+            builder: (dialogCtx) => FilledButton(
+              onPressed: () => Navigator.of(dialogCtx).pop(true),
+              child: const Text('Confirmar'),
+            ),
           ),
         ],
       ),
@@ -844,13 +852,17 @@ class SupplierOrderSelectionActions {
             ? 'La orden seleccionada se desvinculará de la OC Principal y volverá al estado Borrador.'
             : 'Las ${orderIds.length} órdenes seleccionadas se desvincularán de sus OCs Principales y volverán al estado Borrador.',
         actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: const Text('Volver'),
+          Builder(
+            builder: (dialogCtx) => TextButton(
+              onPressed: () => Navigator.of(dialogCtx).pop(false),
+              child: const Text('Cancelar'),
+            ),
           ),
-          FilledButton(
-            onPressed: () => Navigator.pop(context, true),
-            child: const Text('Confirmar'),
+          Builder(
+            builder: (dialogCtx) => FilledButton(
+              onPressed: () => Navigator.of(dialogCtx).pop(true),
+              child: const Text('Confirmar'),
+            ),
           ),
         ],
       ),

@@ -12,6 +12,7 @@ class SupplierOrder extends Equatable {
   final String? receiverCollaboratorId;
   final String? quoteId;
   final String? parentOrderId;
+  final String? parentOrderNumber;
   final String orderNumber;
   final DateTime date;
   final String? paymentMethod;
@@ -55,6 +56,7 @@ class SupplierOrder extends Equatable {
     this.receiverCollaboratorId,
     this.quoteId,
     this.parentOrderId,
+    this.parentOrderNumber,
     required this.orderNumber,
     required this.date,
     this.paymentMethod,
@@ -97,6 +99,15 @@ class SupplierOrder extends Equatable {
     return orderNumber;
   }
 
+  String? get shortParentOrderNumber {
+    if (parentOrderNumber == null || parentOrderNumber!.isEmpty) return null;
+    final parts = parentOrderNumber!.split('-');
+    if (parts.length >= 3) {
+      return '#${parts.last}';
+    }
+    return parentOrderNumber;
+  }
+
   SupplierOrder copyWith({
     String? id,
     String? userId,
@@ -106,6 +117,7 @@ class SupplierOrder extends Equatable {
     String? receiverCollaboratorId,
     String? quoteId,
     String? parentOrderId,
+    String? parentOrderNumber,
     String? orderNumber,
     DateTime? date,
     String? paymentMethod,
@@ -144,6 +156,7 @@ class SupplierOrder extends Equatable {
       receiverCollaboratorId: receiverCollaboratorId ?? this.receiverCollaboratorId,
       quoteId: quoteId ?? this.quoteId,
       parentOrderId: parentOrderId ?? this.parentOrderId,
+      parentOrderNumber: parentOrderNumber ?? this.parentOrderNumber,
       orderNumber: orderNumber ?? this.orderNumber,
       date: date ?? this.date,
       paymentMethod: paymentMethod ?? this.paymentMethod,
@@ -185,6 +198,7 @@ class SupplierOrder extends Equatable {
     receiverCollaboratorId,
     quoteId,
     parentOrderId,
+    parentOrderNumber,
     orderNumber,
     date,
     paymentMethod,
