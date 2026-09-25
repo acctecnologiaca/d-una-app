@@ -22,6 +22,7 @@ import 'package:d_una_app/features/quotes/domain/models/quote_model.dart'
     show StockStatus;
 import 'package:d_una_app/features/supplier_orders/presentation/supplier_orders_list/widgets/merge_supplier_orders_sheet.dart';
 import 'package:d_una_app/features/supplier_orders/domain/utils/oc_email_template_builder.dart';
+import 'package:d_una_app/features/supplier_orders/domain/utils/supplier_order_merge_validator.dart';
 
 class SupplierOrderSelectionActions {
   SupplierOrderSelectionActions._();
@@ -367,20 +368,14 @@ class SupplierOrderSelectionActions {
           o.status == SupplierOrderStatus.expired,
     );
 
-    final canMerge =
-        selectedOrders.length >= 2 &&
-        selectedOrders.every((o) => o.status.canEdit);
+    final showMergeOption = selectedOrders.length >= 2;
+    final mergeValidation = showMergeOption
+        ? SupplierOrderMergeValidator.validate(selectedOrders)
+        : null;
 
     final canUnmergeAll =
         selectedOrders.isNotEmpty &&
         selectedOrders.every((o) => o.status == SupplierOrderStatus.merged);
-
-    final firstSupplierId = selectedOrders.isNotEmpty
-        ? selectedOrders.first.supplierId
-        : null;
-    final isSameSupplier =
-        selectedOrders.isNotEmpty &&
-        selectedOrders.every((o) => o.supplierId == firstSupplierId);
 
     final isAllArchived =
         selectedOrders.isNotEmpty && selectedOrders.every((o) => o.isArchived);
@@ -389,13 +384,13 @@ class SupplierOrderSelectionActions {
       context: context,
       title: '${selection.count} seleccionados',
       actions: [
-        if (canMerge)
+        if (showMergeOption && mergeValidation != null)
           BottomSheetActionItem(
             icon: Icons.merge_type_rounded,
             label: 'Consolidar órdenes de compra',
-            enabled: isSameSupplier,
-            subtitle: !isSameSupplier
-                ? 'Solo se pueden consolidar órdenes del mismo proveedor'
+            enabled: mergeValidation.isValid,
+            subtitle: !mergeValidation.isValid
+                ? mergeValidation.errorMessage
                 : null,
             onTap: () {
               Navigator.pop(context);
@@ -445,12 +440,12 @@ class SupplierOrderSelectionActions {
     WidgetRef ref,
     List<SupplierOrder> selectedOrders,
   ) async {
-    final confirm = await MergeSupplierOrdersSheet.show(
+    final config = await MergeSupplierOrdersSheet.show(
       context: context,
       selectedOrders: selectedOrders,
     );
 
-    if (confirm == true && context.mounted) {
+    if (config != null && context.mounted) {
       AppToast.info(
         context,
         message: 'Consolidando órdenes de compra...',
@@ -459,8 +454,17 @@ class SupplierOrderSelectionActions {
 
       try {
         final repo = ref.read(supplierOrdersRepositoryProvider);
-        final orderIds = selectedOrders.map((o) => o.id).toList();
-        final primaryOrder = await repo.mergeSupplierOrders(orderIds);
+        final secondaryOrderIds = selectedOrders
+            .where((o) => o.id != config.primaryOrderId)
+            .map((o) => o.id)
+            .toList();
+
+        final primaryOrder = await repo.mergeSupplierOrders(
+          primaryOrderId: config.primaryOrderId,
+          secondaryOrderIds: secondaryOrderIds,
+          resolvedBranchId: config.targetBranchId,
+          resolvedPaymentMethod: config.targetPaymentMethod,
+        );
 
         ref.read(paginatedSupplierOrdersProvider.notifier).refresh();
         ref.invalidate(paginatedSupplierOrderSearchProvider);

@@ -44,7 +44,12 @@ abstract class SupplierOrdersRepository {
   Future<String?> getLastOrderNumber();
 
   /// Consolidates multiple supplier orders from the same supplier into one primary order.
-  Future<SupplierOrder> mergeSupplierOrders(List<String> orderIds);
+  Future<SupplierOrder> mergeSupplierOrders({
+    required String primaryOrderId,
+    required List<String> secondaryOrderIds,
+    String? resolvedBranchId,
+    String? resolvedPaymentMethod,
+  });
 
   /// Returns secondary orders that were merged into the specified parent order ID.
   Future<List<SupplierOrder>> getMergedChildOrders(String parentOrderId);

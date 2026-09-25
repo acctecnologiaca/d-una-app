@@ -73,8 +73,13 @@ class _ReportProductsTabState extends ConsumerState<ReportProductsTab>
             .firstOrNull;
         final effectiveStock =
             catalogProduct?.availableQuantity ?? product.availableStock;
-        final effectiveProduct =
-            product.copyWith(availableStock: effectiveStock);
+        final effectiveRequiresSerials = product.requiresSerials ||
+            (catalogProduct?.requiresSerials ?? false) ||
+            product.serials.isNotEmpty;
+        final effectiveProduct = product.copyWith(
+          availableStock: effectiveStock,
+          requiresSerials: effectiveRequiresSerials,
+        );
 
         return ReportAddedProductCard(
           product: effectiveProduct,

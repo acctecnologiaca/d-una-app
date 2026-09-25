@@ -660,7 +660,10 @@ class SupabaseSupplierOrdersRepository implements SupplierOrdersRepository {
     ''')
         .eq('quote_id', quoteId);
 
-    final Map<String, ({String name, int count, double subtotal, bool allowsDropshipping})>
+    final Map<
+      String,
+      ({String name, int count, double subtotal, bool allowsDropshipping})
+    >
     supplierData = {};
 
     for (final qi in (quoteItemsResponse as List)) {
@@ -968,8 +971,9 @@ class SupabaseSupplierOrdersRepository implements SupplierOrdersRepository {
         'supplier_id': sId,
         'supplier_branch_id': bId,
         'shipping_method_id': primaryShippingId,
-        'receiver_collaborator_id':
-            isDropshipping ? null : receiverCollaboratorId,
+        'receiver_collaborator_id': isDropshipping
+            ? null
+            : receiverCollaboratorId,
         'payment_method': defaultPaymentMethod,
         'date': DateTime.now().toIso8601String().split('T')[0],
         'status': SupplierOrderStatus.draft.dbValue,
@@ -1145,24 +1149,38 @@ class SupabaseSupplierOrdersRepository implements SupplierOrdersRepository {
   }
 
   @override
-  Future<SupplierOrder> mergeSupplierOrders(List<String> orderIds) async {
+  Future<SupplierOrder> mergeSupplierOrders({
+    required String primaryOrderId,
+    required List<String> secondaryOrderIds,
+    String? resolvedBranchId,
+    String? resolvedPaymentMethod,
+  }) async {
     final currentUserId = _supabase.auth.currentUser?.id;
     if (currentUserId == null) throw Exception('Usuario no autenticado');
-    if (orderIds.length < 2) {
+    if (secondaryOrderIds.isEmpty) {
       throw Exception('Se requieren al menos 2 órdenes para fusionar');
     }
 
+    final allOrderIds = [primaryOrderId, ...secondaryOrderIds];
     final ordersResponse = await _supabase
         .from('supplier_orders')
         .select('*, suppliers(name, legal_name), supplier_branches(name)')
-        .inFilter('id', orderIds);
+        .inFilter('id', allOrderIds);
 
     final orders = (ordersResponse as List)
         .map((json) => SupplierOrderDto.fromJson(json))
         .toList();
 
-    if (orders.length != orderIds.length) {
+    if (orders.length != allOrderIds.length) {
       throw Exception('No se encontraron todas las órdenes seleccionadas');
+    }
+
+    // Validar que TODAS las órdenes a consolidar estén estrictamente en Borrador
+    final nonDrafts = orders
+        .where((o) => o.status != SupplierOrderStatus.draft)
+        .toList();
+    if (nonDrafts.isNotEmpty) {
+      throw Exception('Solo se pueden consolidar órdenes en estado Borrador.');
     }
 
     final firstSupplierId = orders.first.supplierId;
@@ -1173,10 +1191,13 @@ class SupabaseSupplierOrdersRepository implements SupplierOrdersRepository {
       throw Exception('Todas las órdenes deben pertenecer al mismo proveedor');
     }
 
-    // Primary order is the newest one (most recent createdAt)
-    orders.sort((a, b) => b.createdAt.compareTo(a.createdAt));
-    final primaryOrder = orders.first;
-    final secondaryOrders = orders.sublist(1);
+    final primaryOrder = orders.firstWhere(
+      (o) => o.id == primaryOrderId,
+      orElse: () => throw Exception('No se encontró la orden principal'),
+    );
+    final secondaryOrders = orders
+        .where((o) => o.id != primaryOrderId)
+        .toList();
 
     for (final secondary in secondaryOrders) {
       await _supabase
@@ -1191,7 +1212,23 @@ class SupabaseSupplierOrdersRepository implements SupplierOrdersRepository {
           .eq('id', secondary.id);
     }
 
-    final allOrderIds = [primaryOrder.id, ...secondaryOrders.map((s) => s.id)];
+    // Si se especificó una sucursal o método de pago resuelto, actualizar la principal
+    final primaryUpdates = <String, dynamic>{
+      'updated_at': DateTime.now().toIso8601String(),
+    };
+    if (resolvedBranchId != null && resolvedBranchId.isNotEmpty) {
+      primaryUpdates['supplier_branch_id'] = resolvedBranchId;
+    }
+    if (resolvedPaymentMethod != null && resolvedPaymentMethod.isNotEmpty) {
+      primaryUpdates['payment_method'] = resolvedPaymentMethod;
+    }
+    if (primaryUpdates.length > 1) {
+      await _supabase
+          .from('supplier_orders')
+          .update(primaryUpdates)
+          .eq('id', primaryOrder.id);
+    }
+
     final allItemsRes = await _supabase
         .from('supplier_order_items')
         .select('*')
@@ -1289,6 +1326,22 @@ class SupabaseSupplierOrdersRepository implements SupplierOrdersRepository {
         .maybeSingle();
 
     final parentOrderId = childRes?['parent_order_id'] as String?;
+
+    if (parentOrderId != null) {
+      final parentRes = await _supabase
+          .from('supplier_orders')
+          .select('status')
+          .eq('id', parentOrderId)
+          .maybeSingle();
+
+      final parentStatus = parentRes?['status'] as String?;
+      if (parentStatus != null &&
+          parentStatus != SupplierOrderStatus.draft.dbValue) {
+        throw Exception(
+          'No se puede deshacer la consolidación porque la orden principal ya fue emitida o procesada (Estado actual: $parentStatus).',
+        );
+      }
+    }
 
     final childItemsRes = await _supabase
         .from('supplier_order_items')

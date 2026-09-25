@@ -374,63 +374,77 @@ class _SupplierOrderDetailsScreenState
                           },
                         ),
                       if (order.status == SupplierOrderStatus.merged)
-                        BottomSheetActionItem(
-                          icon: Icons.call_split_rounded,
-                          label: 'Deshacer Consolidación',
-                          onTap: () async {
-                            context.pop();
-                            final confirm = await CustomDialog.show<bool>(
-                              context: context,
-                              dialog: CustomDialog.confirmation(
-                                title: '¿Deshacer consolidación?',
-                                contentText:
-                                    'La orden seleccionada se desvinculará de la OC Principal y volverá al estado Borrador.',
-                                actions: [
-                                  TextButton(
-                                    onPressed: () =>
-                                        Navigator.pop(context, false),
-                                    child: const Text('Volver'),
-                                  ),
-                                  FilledButton(
-                                    onPressed: () =>
-                                        Navigator.pop(context, true),
-                                    child: const Text('Confirmar'),
-                                  ),
-                                ],
-                              ),
-                            );
+                        Builder(
+                          builder: (context) {
+                            final parentOrder = ref
+                                .watch(parentSupplierOrderProvider(order.parentOrderId))
+                                .valueOrNull;
+                            final canUnmerge = parentOrder == null ||
+                                parentOrder.status == SupplierOrderStatus.draft;
 
-                            if (confirm == true) {
-                              try {
-                                await ref
-                                    .read(supplierOrdersRepositoryProvider)
-                                    .batchUnmergeSupplierOrders([order.id]);
-
-                                ref
-                                    .read(
-                                      paginatedSupplierOrdersProvider.notifier,
-                                    )
-                                    .refresh();
-                                ref.invalidate(
-                                  supplierOrderDetailProvider(order.id),
+                            return BottomSheetActionItem(
+                              icon: Icons.call_split_rounded,
+                              label: 'Deshacer Consolidación',
+                              enabled: canUnmerge,
+                              subtitle: !canUnmerge
+                                  ? 'No disponible: la orden principal ya fue emitida o procesada'
+                                  : null,
+                              onTap: () async {
+                                context.pop();
+                                final confirm = await CustomDialog.show<bool>(
+                                  context: context,
+                                  dialog: CustomDialog.confirmation(
+                                    title: '¿Deshacer consolidación?',
+                                    contentText:
+                                        'La orden seleccionada se desvinculará de la OC Principal y volverá al estado Borrador.',
+                                    actions: [
+                                      TextButton(
+                                        onPressed: () =>
+                                            Navigator.pop(context, false),
+                                        child: const Text('Volver'),
+                                      ),
+                                      FilledButton(
+                                        onPressed: () =>
+                                            Navigator.pop(context, true),
+                                        child: const Text('Confirmar'),
+                                      ),
+                                    ],
+                                  ),
                                 );
 
-                                if (context.mounted) {
-                                  AppToast.success(
-                                    context,
-                                    message:
-                                        'Consolidación deshecha exitosamente',
-                                  );
+                                if (confirm == true) {
+                                  try {
+                                    await ref
+                                        .read(supplierOrdersRepositoryProvider)
+                                        .batchUnmergeSupplierOrders([order.id]);
+
+                                    ref
+                                        .read(
+                                          paginatedSupplierOrdersProvider.notifier,
+                                        )
+                                        .refresh();
+                                    ref.invalidate(
+                                      supplierOrderDetailProvider(order.id),
+                                    );
+
+                                    if (context.mounted) {
+                                      AppToast.success(
+                                        context,
+                                        message:
+                                            'Consolidación deshecha exitosamente',
+                                      );
+                                    }
+                                  } catch (e) {
+                                    if (context.mounted) {
+                                      AppToast.error(
+                                        context,
+                                        message: 'Error al deshacer: $e',
+                                      );
+                                    }
+                                  }
                                 }
-                              } catch (e) {
-                                if (context.mounted) {
-                                  AppToast.error(
-                                    context,
-                                    message: 'Error al deshacer: $e',
-                                  );
-                                }
-                              }
-                            }
+                              },
+                            );
                           },
                         ),
                       if (canEdit)

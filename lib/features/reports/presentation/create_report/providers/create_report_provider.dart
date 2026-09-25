@@ -680,15 +680,21 @@ class CreateServiceReportNotifier
 
       final catalogProducts =
           await ref.read(productsRepositoryProvider).getProducts();
-      final stockMap = {
-        for (final p in catalogProducts) p.id: p.availableQuantity,
+      final productMap = {
+        for (final p in catalogProducts) p.id: p,
       };
 
       final loadedProducts = (report.products ?? []).map((p) {
+        final catalogProd =
+            p.productId != null ? productMap[p.productId] : null;
         final currentStock =
-            p.productId != null ? stockMap[p.productId] : p.availableStock;
+            catalogProd?.availableQuantity ?? p.availableStock;
+        final effectiveRequiresSerials = p.requiresSerials ||
+            (catalogProd?.requiresSerials ?? false) ||
+            p.serials.isNotEmpty;
         return p.copyWith(
           availableStock: currentStock,
+          requiresSerials: effectiveRequiresSerials,
         );
       }).toList();
 
@@ -763,17 +769,21 @@ class CreateServiceReportNotifier
 
       final catalogProducts =
           await ref.read(productsRepositoryProvider).getProducts();
-      final stockMap = {
-        for (final p in catalogProducts) p.id: p.availableQuantity,
+      final productMap = {
+        for (final p in catalogProducts) p.id: p,
       };
 
       final copiedProducts = (source.products ?? []).map((p) {
-        final currentStock =
-            p.productId != null ? stockMap[p.productId] : null;
+        final catalogProd =
+            p.productId != null ? productMap[p.productId] : null;
+        final currentStock = catalogProd?.availableQuantity;
+        final effectiveRequiresSerials = p.requiresSerials ||
+            (catalogProd?.requiresSerials ?? false);
         return p.copyWith(
           id: const Uuid().v4(),
           reportId: '',
           availableStock: currentStock,
+          requiresSerials: effectiveRequiresSerials,
           serials: const [], // Limpieza obligatoria de seriales en copia
         );
       }).toList();

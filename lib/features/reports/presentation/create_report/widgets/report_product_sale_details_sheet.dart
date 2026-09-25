@@ -69,6 +69,9 @@ class _ReportProductSaleDetailsSheetState
   final _warrantyQtyController = TextEditingController(text: '12');
   String _warrantyPeriod = 'Meses';
 
+  // Serials
+  bool _noSerials = false;
+
   @override
   void initState() {
     super.initState();
@@ -88,12 +91,14 @@ class _ReportProductSaleDetailsSheetState
       } else {
         _noWarranty = true;
       }
+      _noSerials = !item.requiresSerials && item.serials.isEmpty;
     } else {
       _currentMargin = widget.reportState.globalMargin;
       _recalculatePriceFromMargin();
       _noWarranty = !widget.product.hasWarranty;
       _warrantyQtyController.text = '12';
       _warrantyPeriod = 'Meses';
+      _noSerials = !widget.product.requiresSerials;
     }
   }
 
@@ -192,8 +197,8 @@ class _ReportProductSaleDetailsSheetState
       warrantyUnit: _noWarranty ? null : _warrantyPeriodToDb(_warrantyPeriod),
       sourceType: ReportProductSourceType.own,
       groupIndex: widget.existingItem?.groupIndex ?? widget.reportState.nextGroupIndex,
-      requiresSerials: widget.existingItem?.requiresSerials ?? widget.product.requiresSerials,
-      serials: widget.existingItem?.serials ?? const [],
+      requiresSerials: !_noSerials,
+      serials: _noSerials ? const [] : (widget.existingItem?.serials ?? const []),
     );
 
     Navigator.of(context).pop(item);
@@ -425,6 +430,21 @@ class _ReportProductSaleDetailsSheetState
                 ],
               ),
             ],
+            const SizedBox(height: 16),
+            Divider(color: colors.outlineVariant),
+            const SizedBox(height: 16),
+
+            // --- SERIALS SECTION ---
+            SwitchListTile(
+              contentPadding: EdgeInsets.zero,
+              title: const Text(
+                'Este producto no usa seriales',
+                style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
+              ),
+              value: _noSerials,
+              onChanged: (v) => setState(() => _noSerials = v),
+              activeThumbColor: colors.primary,
+            ),
             const SizedBox(height: 24),
           ],
         ),
