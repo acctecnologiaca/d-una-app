@@ -78,12 +78,18 @@ class SupplierOrderCard extends ConsumerWidget {
               TextSpan(
                 text: '${order.orderNumber} (${dateFormat.format(order.date)})',
               ),
-              if (order.status == SupplierOrderStatus.merged &&
-                  order.shortParentOrderNumber != null) ...[
+              if (order.status == SupplierOrderStatus.merged) ...[
                 TextSpan(
-                  text: '  ➔ ${order.shortParentOrderNumber}',
+                  text: '  ➔ ',
+                  style: const TextStyle(
+                    color: Color(0xFF009688),
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                TextSpan(
+                  text: order.shortParentOrderNumber ?? 'Consolidada',
                   style: TextStyle(
-                    color: const Color(0xFF009688),
+                    color: colors.onSurfaceVariant,
                     fontWeight: FontWeight.w600,
                   ),
                 ),

@@ -48,8 +48,16 @@ class SupplierOrderDto {
     }
 
     String? parentOrderNumber;
-    if (json['parent_order'] != null && json['parent_order'] is Map) {
-      parentOrderNumber = json['parent_order']['order_number'] as String?;
+    if (json['parent_order'] != null) {
+      if (json['parent_order'] is Map) {
+        parentOrderNumber = json['parent_order']['order_number'] as String?;
+      } else if (json['parent_order'] is List &&
+          (json['parent_order'] as List).isNotEmpty) {
+        final first = (json['parent_order'] as List).first;
+        if (first is Map) {
+          parentOrderNumber = first['order_number'] as String?;
+        }
+      }
     }
 
     return SupplierOrder(

@@ -17,6 +17,7 @@ import 'package:d_una_app/core/theme/app_theme.dart';
 import 'package:d_una_app/core/pdf/templates/delivery_note_pdf_template.dart';
 import '../../../domain/models/delivery_note_model.dart';
 import '../../../domain/models/delivery_note_status.dart';
+import '../../../domain/repositories/delivery_notes_repository.dart';
 import '../../delivery_notes_list/providers/delivery_notes_providers.dart';
 import '../../delivery_notes_list/delivery_note_selection_actions.dart';
 import 'package:d_una_app/features/portfolio/presentation/providers/products_provider.dart';
@@ -299,6 +300,26 @@ class _ViewDeliveryNoteScreenState extends ConsumerState<ViewDeliveryNoteScreen>
                   AppToast.success(
                     context,
                     message: 'Estatus cambiado a "${selected.label}"',
+                  );
+                }
+              } on InsufficientStockException catch (e) {
+                if (context.mounted) {
+                  CustomDialog.show(
+                    context: context,
+                    dialog: CustomDialog.confirmation(
+                      icon: Symbols.warning,
+                      iconColor: Colors.amber.shade800,
+                      title: 'Stock Insuficiente',
+                      contentText:
+                          'No se puede finalizar la nota de entrega porque no hay suficiente stock disponible en almacén para los siguientes productos:\n\n${e.productNames.map((name) => '• $name').join('\n')}\n\nPor favor, reponga el stock en almacén para poder finalizarla.',
+                      actions: [
+                        TextButton(
+                          onPressed: () =>
+                              Navigator.of(context, rootNavigator: true).pop(),
+                          child: const Text('Entendido'),
+                        ),
+                      ],
+                    ),
                   );
                 }
               } catch (e) {

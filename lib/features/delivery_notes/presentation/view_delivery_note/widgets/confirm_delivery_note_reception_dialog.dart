@@ -14,6 +14,7 @@ import 'package:d_una_app/shared/widgets/info_disclaimer_card.dart';
 import 'package:d_una_app/features/portfolio/presentation/providers/products_provider.dart';
 import '../../../domain/models/delivery_note_model.dart';
 import '../../../domain/models/delivery_note_status.dart';
+import '../../../domain/repositories/delivery_notes_repository.dart';
 import '../../delivery_notes_list/providers/delivery_notes_providers.dart';
 import 'package:d_una_app/shared/widgets/bottom_sheet_action_item.dart';
 import 'package:d_una_app/features/supplier_orders/domain/models/supplier_order_status.dart';
@@ -389,6 +390,26 @@ class _ConfirmDeliveryNoteReceptionDialogState
         );
 
         Navigator.of(context).pop(updatedNote);
+      }
+    } on InsufficientStockException catch (e) {
+      if (mounted) {
+        CustomDialog.show(
+          context: context,
+          dialog: CustomDialog.confirmation(
+            icon: Symbols.warning,
+            iconColor: Colors.amber.shade800,
+            title: 'Stock Insuficiente',
+            contentText:
+                'No se puede confirmar la entrega porque no hay suficiente stock disponible en almacén para los siguientes productos:\n\n${e.productNames.map((name) => '• $name').join('\n')}\n\nPor favor, reponga el stock en almacén para poder entregarla.',
+            actions: [
+              TextButton(
+                onPressed: () =>
+                    Navigator.of(context, rootNavigator: true).pop(),
+                child: const Text('Entendido'),
+              ),
+            ],
+          ),
+        );
       }
     } catch (e) {
       if (mounted) {

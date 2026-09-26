@@ -71,39 +71,9 @@ Future<List<SupplierOrder>> _enrichOrdersWithValidation(
       }
     }
 
-    return SupplierOrder(
-      id: order.id,
-      userId: order.userId,
-      supplierId: order.supplierId,
-      supplierBranchId: order.supplierBranchId,
-      shippingMethodId: order.shippingMethodId,
-      receiverCollaboratorId: order.receiverCollaboratorId,
-      orderNumber: order.orderNumber,
-      date: order.date,
-      paymentMethod: order.paymentMethod,
-      status: order.status,
-      subtotal: order.subtotal,
-      tax: order.tax,
-      total: order.total,
-      invoicePhotoUrl: order.invoicePhotoUrl,
-      isArchived: order.isArchived,
-      verificationStatus: order.verificationStatus,
-      createdAt: order.createdAt,
-      updatedAt: order.updatedAt,
-      supplierName: order.supplierName,
-      branchName: order.branchName,
-      shippingMethodLabel: order.shippingMethodLabel,
-      receiverName: order.receiverName,
-      items: order.items,
+    return order.copyWith(
       stockStatus: stockStatus,
       hasPriceIncrease: hasPriceIncrease,
-      isDropshipping: order.isDropshipping,
-      clientId: order.clientId,
-      recipientName: order.recipientName,
-      recipientContactName: order.recipientContactName,
-      recipientAddress: order.recipientAddress,
-      recipientPhone: order.recipientPhone,
-      deliveryInstructions: order.deliveryInstructions,
     );
   }).toList();
 }

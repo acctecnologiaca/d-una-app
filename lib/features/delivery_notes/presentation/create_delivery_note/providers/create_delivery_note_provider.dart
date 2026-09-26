@@ -1369,14 +1369,6 @@ class CreateDeliveryNoteNotifier
       state = state.copyWith(isLoading: false, initialNote: savedNote);
       return savedNote;
     } catch (e) {
-      final message = e.toString();
-      if (message.contains('STOCK_INSUFFICIENT')) {
-        final cleanMsg = message.contains(':')
-            ? message.substring(message.indexOf('STOCK_INSUFFICIENT') + 'STOCK_INSUFFICIENT:'.length).trim()
-            : 'Stock insuficiente para uno o más productos.';
-        state = state.copyWith(isLoading: false, error: cleanMsg);
-        throw Exception(cleanMsg);
-      }
       state = state.copyWith(isLoading: false, error: e.toString());
       rethrow;
     }

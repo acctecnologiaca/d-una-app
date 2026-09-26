@@ -1,5 +1,6 @@
 import 'package:equatable/equatable.dart';
-import 'package:d_una_app/features/quotes/domain/models/quote_model.dart' show StockStatus;
+import 'package:d_una_app/features/quotes/domain/models/quote_model.dart'
+    show StockStatus;
 import 'supplier_order_status.dart';
 import 'supplier_order_item.dart';
 
@@ -100,12 +101,15 @@ class SupplierOrder extends Equatable {
   }
 
   String? get shortParentOrderNumber {
-    if (parentOrderNumber == null || parentOrderNumber!.isEmpty) return null;
-    final parts = parentOrderNumber!.split('-');
-    if (parts.length >= 3) {
-      return '#${parts.last}';
+    if (parentOrderNumber == null || parentOrderNumber!.trim().isEmpty) {
+      return null;
     }
-    return parentOrderNumber;
+    final trimmed = parentOrderNumber!.trim();
+    final parts = trimmed.split('-');
+    if (parts.length >= 2) {
+      return parts.last;
+    }
+    return trimmed;
   }
 
   SupplierOrder copyWith({
@@ -153,7 +157,8 @@ class SupplierOrder extends Equatable {
       supplierId: supplierId ?? this.supplierId,
       supplierBranchId: supplierBranchId ?? this.supplierBranchId,
       shippingMethodId: shippingMethodId ?? this.shippingMethodId,
-      receiverCollaboratorId: receiverCollaboratorId ?? this.receiverCollaboratorId,
+      receiverCollaboratorId:
+          receiverCollaboratorId ?? this.receiverCollaboratorId,
       quoteId: quoteId ?? this.quoteId,
       parentOrderId: parentOrderId ?? this.parentOrderId,
       parentOrderNumber: parentOrderNumber ?? this.parentOrderNumber,

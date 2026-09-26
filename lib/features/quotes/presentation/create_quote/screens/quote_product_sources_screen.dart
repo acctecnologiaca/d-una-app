@@ -360,35 +360,8 @@ class _QuoteProductSourcesScreenState
                   itemBuilder: (context, index) {
                     final item = filteredSources[index];
 
-                    // For approved quotes, adjust reservedStock to exclude
-                    // this quote's own contribution (already counted by the DB trigger).
-                    QuoteProductSource effectiveSource = item;
-                    if (item.sourceType == ProductSourceType.own &&
-                        item.reservedStock > 0) {
-                      final quoteState = ref.read(createQuoteProvider);
-                      if (quoteState.quote?.status == 'approved') {
-                        final originalOwnQtyInQuote =
-                            quoteState.quote?.products
-                                ?.where(
-                                  (p) =>
-                                      (p.productId == item.id ||
-                                          (widget.groupIndex != null &&
-                                              p.groupIndex == widget.groupIndex)) &&
-                                      p.sourceType == QuoteItemSourceType.own,
-                                )
-                                .fold(0.0, (sum, p) => sum + p.quantity) ??
-                            0.0;
-                        final adjusted =
-                            item.reservedStock - originalOwnQtyInQuote;
-                        if (adjusted > 0) {
-                          effectiveSource = item.copyWith(
-                            reservedStock: adjusted,
-                          );
-                        } else {
-                          effectiveSource = item.copyWith(reservedStock: 0.0);
-                        }
-                      }
-                    }
+                    // get_product_sources en PostgreSQL ya descuenta la propia cotización si está aprobada
+                    final QuoteProductSource effectiveSource = item;
 
                     return QuoteProductSourceCard(
                       key: ValueKey(item.id),

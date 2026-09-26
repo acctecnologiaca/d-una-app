@@ -13,6 +13,7 @@ import 'package:d_una_app/features/profile/presentation/providers/profile_provid
 import 'package:d_una_app/core/pdf/templates/delivery_note_pdf_template.dart';
 import '../../domain/models/delivery_note_model.dart';
 import '../../domain/models/delivery_note_status.dart';
+import '../../domain/repositories/delivery_notes_repository.dart';
 import 'providers/delivery_notes_providers.dart';
 import '../create_delivery_note/providers/create_delivery_note_provider.dart';
 import 'package:d_una_app/features/portfolio/presentation/providers/products_provider.dart';
@@ -176,40 +177,69 @@ class DeliveryNoteSelectionActions {
               hasMissingSerials: isMissingSerials,
             );
             if (selected != null && selected != note.status) {
-              await ref
-                  .read(paginatedDeliveryNotesProvider.notifier)
-                  .updateDeliveryNoteStatus(note.id, selected);
-              if (selected == DeliveryNoteStatus.finalized ||
-                  selected == DeliveryNoteStatus.cancelled) {
-                ref.invalidate(productsProvider);
-                ref.invalidate(paginatedProductsProvider);
-              }
-
-              // Cascada a OC vinculada al finalizar
-              if (selected == DeliveryNoteStatus.finalized &&
-                  note.supplierOrderId != null &&
-                  note.supplierOrderId!.isNotEmpty) {
-                try {
-                  await ref
-                      .read(supplierOrdersRepositoryProvider)
-                      .updateSupplierOrderStatus(
-                        note.supplierOrderId!,
-                        SupplierOrderStatus.finalized.dbValue,
-                      );
-                  ref.invalidate(paginatedSupplierOrdersProvider);
-                } catch (e) {
-                  debugPrint('Error auto-finalizando orden de compra vinculada: $e');
+              try {
+                await ref
+                    .read(paginatedDeliveryNotesProvider.notifier)
+                    .updateDeliveryNoteStatus(note.id, selected);
+                if (selected == DeliveryNoteStatus.finalized ||
+                    selected == DeliveryNoteStatus.cancelled) {
+                  ref.invalidate(productsProvider);
+                  ref.invalidate(paginatedProductsProvider);
                 }
-              }
 
-              ref
-                  .read(deliveryNotesSelectionProvider.notifier)
-                  .clearSelection();
-              if (context.mounted) {
-                AppToast.success(
-                  context,
-                  message: 'Estatus cambiado a "${selected.label}"',
-                );
+                // Cascada a OC vinculada al finalizar
+                if (selected == DeliveryNoteStatus.finalized &&
+                    note.supplierOrderId != null &&
+                    note.supplierOrderId!.isNotEmpty) {
+                  try {
+                    await ref
+                        .read(supplierOrdersRepositoryProvider)
+                        .updateSupplierOrderStatus(
+                          note.supplierOrderId!,
+                          SupplierOrderStatus.finalized.dbValue,
+                        );
+                    ref.invalidate(paginatedSupplierOrdersProvider);
+                  } catch (e) {
+                    debugPrint('Error auto-finalizando orden de compra vinculada: $e');
+                  }
+                }
+
+                ref
+                    .read(deliveryNotesSelectionProvider.notifier)
+                    .clearSelection();
+                if (context.mounted) {
+                  AppToast.success(
+                    context,
+                    message: 'Estatus cambiado a "${selected.label}"',
+                  );
+                }
+              } on InsufficientStockException catch (e) {
+                if (context.mounted) {
+                  CustomDialog.show(
+                    context: context,
+                    dialog: CustomDialog.confirmation(
+                      icon: Symbols.warning,
+                      iconColor: Colors.amber.shade800,
+                      title: 'Stock Insuficiente',
+                      contentText:
+                          'No se puede finalizar la nota de entrega porque no hay suficiente stock disponible en almacén para los siguientes productos:\n\n${e.productNames.map((name) => '• $name').join('\n')}\n\nPor favor, reponga el stock en almacén para poder finalizarla.',
+                      actions: [
+                        TextButton(
+                          onPressed: () =>
+                              Navigator.of(context, rootNavigator: true).pop(),
+                          child: const Text('Entendido'),
+                        ),
+                      ],
+                    ),
+                  );
+                }
+              } catch (e) {
+                if (context.mounted) {
+                  AppToast.error(
+                    context,
+                    message: 'Error al cambiar estatus: $e',
+                  );
+                }
               }
             }
           },
@@ -351,23 +381,45 @@ class DeliveryNoteSelectionActions {
                 }
               }
 
-              await ref
-                  .read(paginatedDeliveryNotesProvider.notifier)
-                  .batchUpdateStatus(selectedIds, selectedStatus);
-              if (selectedStatus == DeliveryNoteStatus.finalized ||
-                  selectedStatus == DeliveryNoteStatus.cancelled) {
-                ref.invalidate(productsProvider);
-                ref.invalidate(paginatedProductsProvider);
-              }
-              ref
-                  .read(deliveryNotesSelectionProvider.notifier)
-                  .clearSelection();
-              if (context.mounted) {
-                AppToast.success(
-                  context,
-                  message:
-                      'Se actualizó el estatus de ${selectedIds.length} notas a "${selectedStatus.label}"',
-                );
+              try {
+                await ref
+                    .read(paginatedDeliveryNotesProvider.notifier)
+                    .batchUpdateStatus(selectedIds, selectedStatus);
+                if (selectedStatus == DeliveryNoteStatus.finalized ||
+                    selectedStatus == DeliveryNoteStatus.cancelled) {
+                  ref.invalidate(productsProvider);
+                  ref.invalidate(paginatedProductsProvider);
+                }
+                ref
+                    .read(deliveryNotesSelectionProvider.notifier)
+                    .clearSelection();
+                if (context.mounted) {
+                  AppToast.success(
+                    context,
+                    message:
+                        'Se actualizó el estatus de ${selectedIds.length} notas a "${selectedStatus.label}"',
+                  );
+                }
+              } on InsufficientStockException catch (e) {
+                if (context.mounted) {
+                  CustomDialog.show(
+                    context: context,
+                    dialog: CustomDialog.confirmation(
+                      icon: Symbols.warning,
+                      iconColor: Colors.amber.shade800,
+                      title: 'Stock Insuficiente',
+                      contentText:
+                          'No se pueden finalizar las notas de entrega seleccionadas porque no hay suficiente stock disponible en almacén para los siguientes productos:\n\n${e.productNames.map((name) => '• $name').join('\n')}\n\nPor favor, reponga el stock en almacén para poder finalizarlas.',
+                      actions: [
+                        TextButton(
+                          onPressed: () =>
+                              Navigator.of(context, rootNavigator: true).pop(),
+                          child: const Text('Entendido'),
+                        ),
+                      ],
+                    ),
+                  );
+                }
               }
             }
           },

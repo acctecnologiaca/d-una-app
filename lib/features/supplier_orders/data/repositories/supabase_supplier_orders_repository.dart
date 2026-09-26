@@ -22,7 +22,7 @@ class SupabaseSupplierOrdersRepository implements SupplierOrdersRepository {
         .from('supplier_orders')
         .select('''
       *,
-      parent_order:supplier_orders!parent_order_id(order_number),
+      parent_order:parent_order_id(order_number),
       suppliers(name, legal_name),
       supplier_branches(name),
       shipping_methods(label),
@@ -55,7 +55,7 @@ class SupabaseSupplierOrdersRepository implements SupplierOrdersRepository {
         .from('supplier_orders')
         .select('''
       *,
-      parent_order:supplier_orders!parent_order_id(order_number),
+      parent_order:parent_order_id(order_number),
       suppliers(name, legal_name),
       supplier_branches(name),
       shipping_methods(label),
@@ -196,7 +196,7 @@ class SupabaseSupplierOrdersRepository implements SupplierOrdersRepository {
         .from('supplier_orders')
         .select('''
       *,
-      parent_order:supplier_orders!parent_order_id(order_number),
+      parent_order:parent_order_id(order_number),
       suppliers(name, legal_name),
       supplier_branches(name),
       shipping_methods(label),
@@ -1054,7 +1054,7 @@ class SupabaseSupplierOrdersRepository implements SupplierOrdersRepository {
         .from('supplier_orders')
         .select('''
       *,
-      parent_order:supplier_orders!parent_order_id(order_number),
+      parent_order:parent_order_id(order_number),
       suppliers(name, legal_name),
       supplier_branches(name),
       shipping_methods(label),
@@ -1652,7 +1652,7 @@ class SupabaseSupplierOrdersRepository implements SupplierOrdersRepository {
         .from('supplier_orders')
         .select('''
       *,
-      parent_order:supplier_orders!parent_order_id(order_number),
+      parent_order:parent_order_id(order_number),
       suppliers(name, legal_name),
       supplier_branches(name),
       shipping_methods(label),

@@ -75,3 +75,12 @@ abstract class DeliveryNotesRepository {
 
   Future<String?> getLastDeliveryNoteNumber();
 }
+
+class InsufficientStockException implements Exception {
+  final List<String> productNames;
+  InsufficientStockException(this.productNames);
+
+  @override
+  String toString() =>
+      'InsufficientStockException: Stock insuficiente para los productos: ${productNames.join(", ")}';
+}

@@ -431,7 +431,7 @@ class _SupplierOrderDetailsScreenState
                                       supplierOrderDetailProvider(order.id),
                                     );
 
-                                    if (mounted) {
+                                    if (context.mounted) {
                                       AppToast.success(
                                         context,
                                         message:
@@ -439,7 +439,7 @@ class _SupplierOrderDetailsScreenState
                                       );
                                     }
                                   } catch (e) {
-                                    if (mounted) {
+                                    if (context.mounted) {
                                       AppToast.error(
                                         context,
                                         message: 'Error al deshacer: $e',

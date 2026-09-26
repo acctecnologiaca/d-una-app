@@ -344,6 +344,39 @@ class SupabaseDeliveryNotesRepository implements DeliveryNotesRepository {
           'No se puede finalizar la nota de entrega porque faltan seriales por asignar.',
         );
       }
+
+      // Validación de Stock disponible en almacén y reservas
+      final List<dynamic> insufficient = await _supabase.rpc(
+        'check_delivery_note_insufficient_stock',
+        params: {'p_note_id': id},
+      );
+
+      if (insufficient.isNotEmpty) {
+        final productIds = insufficient
+            .map((item) => item['product_id'] as String)
+            .toList();
+
+        final itemsData = await _supabase
+            .from('delivery_note_items')
+            .select('product_id, name, model')
+            .eq('delivery_note_id', id)
+            .inFilter('product_id', productIds);
+
+        final names = (itemsData as List<dynamic>).map((item) {
+          final name = item['name'] as String? ?? 'Producto';
+          final model = item['model'] as String?;
+          if (model != null && model.isNotEmpty) {
+            return '$name ($model)';
+          }
+          return name;
+        }).toList();
+
+        throw InsufficientStockException(names.isEmpty
+            ? insufficient
+                .map((i) => i['product_name'] as String? ?? 'Producto')
+                .toList()
+            : names);
+      }
     }
 
     final updatePayload = <String, dynamic>{
@@ -431,6 +464,40 @@ class SupabaseDeliveryNotesRepository implements DeliveryNotesRepository {
         throw Exception(
           'No se pueden finalizar las notas de entrega porque una o más notas seleccionadas tienen seriales pendientes por asignar.',
         );
+      }
+
+      if (status == DeliveryNoteStatus.finalized) {
+        final List<dynamic> insufficient = await _supabase.rpc(
+          'check_delivery_note_insufficient_stock',
+          params: {'p_note_id': noteId},
+        );
+
+        if (insufficient.isNotEmpty) {
+          final productIds = insufficient
+              .map((item) => item['product_id'] as String)
+              .toList();
+
+          final itemsData = await _supabase
+              .from('delivery_note_items')
+              .select('product_id, name, model')
+              .eq('delivery_note_id', noteId)
+              .inFilter('product_id', productIds);
+
+          final names = (itemsData as List<dynamic>).map((item) {
+            final name = item['name'] as String? ?? 'Producto';
+            final model = item['model'] as String?;
+            if (model != null && model.isNotEmpty) {
+              return '$name ($model)';
+            }
+            return name;
+          }).toList();
+
+          throw InsufficientStockException(names.isEmpty
+              ? insufficient
+                  .map((i) => i['product_name'] as String? ?? 'Producto')
+                  .toList()
+              : names);
+        }
       }
 
       validIds.add(noteId);
