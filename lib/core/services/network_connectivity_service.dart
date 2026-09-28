@@ -51,7 +51,29 @@ class NetworkConnectivityService {
     }
   }
 
+  /// Comprueba instantáneamente (<5ms) si existe al menos una interfaz de hardware activa
+  /// (WiFi, Móvil, Ethernet).
+  Future<bool> hasActiveNetworkInterface() async {
+    try {
+      final results = await _connectivity.checkConnectivity();
+      if (results.isEmpty ||
+          results.every((result) => result == ConnectivityResult.none)) {
+        return false;
+      }
+      return true;
+    } catch (_) {
+      return true; // En caso de fallo de plataforma, no asumir desconexión
+    }
+  }
+
   Future<bool> _executeVerification(Duration timeout) async {
+    // Si la interfaz de hardware está completamente desconectada (modo avión, radios apagadas),
+    // podemos retornar false de inmediato (<5ms) sin desperdiciar el timeout de sockets.
+    final hasHardware = await hasActiveNetworkInterface();
+    if (!hasHardware) {
+      return false;
+    }
+
     if (kIsWeb) {
       return await _checkViaHttp(timeout);
     }

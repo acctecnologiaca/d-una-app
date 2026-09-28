@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:d_una_app/shared/widgets/app_toast.dart';
+import 'package:d_una_app/shared/widgets/friendly_error_widget.dart';
+import 'package:d_una_app/core/providers/network_status_provider.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../../../shared/widgets/standard_app_bar.dart';
@@ -180,6 +182,18 @@ class _ViewQuoteScreenState extends ConsumerState<ViewQuoteScreen>
 
   @override
   Widget build(BuildContext context) {
+    ref.listen<NetworkStatusState>(networkStatusProvider, (previous, next) {
+      if (previous != null && !previous.isOnline && next.isOnline) {
+        if (ref.read(viewQuoteProvider(widget.quoteId)).quote == null) {
+          ref
+              .read(viewQuoteProvider(widget.quoteId).notifier)
+              .loadExistingQuote(widget.quoteId);
+          ref.invalidate(linkedSupplierOrdersProvider(widget.quoteId));
+          ref.invalidate(linkedDeliveryNotesProvider(widget.quoteId));
+        }
+      }
+    });
+
     ref.listen<QuoteState>(viewQuoteProvider(widget.quoteId), (prev, next) {
       if (widget.triggerSend && !_hasTriggeredSend && next.quote != null) {
         _hasTriggeredSend = true;
@@ -779,19 +793,31 @@ class _ViewQuoteScreenState extends ConsumerState<ViewQuoteScreen>
       ),
       body: state.isLoading && state.quote == null
           ? const Center(child: CircularProgressIndicator())
-          : TabBarView(
-              controller: _tabController,
-              children: [
-                ViewQuoteDetailsTab(quoteId: widget.quoteId),
-                ViewQuoteProductsTab(quoteId: widget.quoteId),
-                ViewQuoteServicesTab(quoteId: widget.quoteId),
-                ViewQuoteConditionsTab(quoteId: widget.quoteId),
-                ViewQuoteSummaryTab(
-                  quoteId: widget.quoteId,
-                  onNavigateToTab: (index) => _tabController.animateTo(index),
+          : state.quote == null
+              ? FriendlyErrorWidget(
+                  error: state.error ??
+                      'No se pudo cargar la información de la cotización',
+                  onRetry: () {
+                    ref
+                        .read(viewQuoteProvider(widget.quoteId).notifier)
+                        .loadExistingQuote(widget.quoteId);
+                    ref.invalidate(linkedSupplierOrdersProvider(widget.quoteId));
+                    ref.invalidate(linkedDeliveryNotesProvider(widget.quoteId));
+                  },
+                )
+              : TabBarView(
+                  controller: _tabController,
+                  children: [
+                    ViewQuoteDetailsTab(quoteId: widget.quoteId),
+                    ViewQuoteProductsTab(quoteId: widget.quoteId),
+                    ViewQuoteServicesTab(quoteId: widget.quoteId),
+                    ViewQuoteConditionsTab(quoteId: widget.quoteId),
+                    ViewQuoteSummaryTab(
+                      quoteId: widget.quoteId,
+                      onNavigateToTab: (index) => _tabController.animateTo(index),
+                    ),
+                  ],
                 ),
-              ],
-            ),
       floatingActionButton: Builder(
         builder: (context) {
           final quote = state.quote;

@@ -9,6 +9,8 @@ import 'package:d_una_app/shared/widgets/custom_action_sheet.dart';
 import 'package:d_una_app/shared/widgets/bottom_sheet_action_item.dart';
 import 'package:d_una_app/shared/widgets/custom_dialog.dart';
 import 'package:d_una_app/shared/widgets/app_toast.dart';
+import 'package:d_una_app/shared/widgets/friendly_error_widget.dart';
+import 'package:d_una_app/core/providers/network_status_provider.dart';
 import 'package:d_una_app/shared/utils/string_utils.dart';
 import 'package:d_una_app/core/utils/contact_utils.dart';
 import 'package:d_una_app/features/profile/presentation/providers/profile_provider.dart';
@@ -399,6 +401,12 @@ class _ViewDeliveryNoteScreenState extends ConsumerState<ViewDeliveryNoteScreen>
 
   @override
   Widget build(BuildContext context) {
+    ref.listen<NetworkStatusState>(networkStatusProvider, (previous, next) {
+      if (previous != null && !previous.isOnline && next.isOnline) {
+        ref.invalidate(deliveryNoteDetailProvider(widget.noteId));
+      }
+    });
+
     final colors = Theme.of(context).colorScheme;
     final noteAsync = ref.watch(deliveryNoteDetailProvider(widget.noteId));
 
@@ -415,8 +423,9 @@ class _ViewDeliveryNoteScreenState extends ConsumerState<ViewDeliveryNoteScreen>
           title: 'Nota de Entrega',
           subtitle: 'Error',
         ),
-        body: Center(
-          child: Text('Error al cargar la nota: $e'),
+        body: FriendlyErrorWidget(
+          error: e,
+          onRetry: () => ref.invalidate(deliveryNoteDetailProvider(widget.noteId)),
         ),
       ),
       data: (note) {

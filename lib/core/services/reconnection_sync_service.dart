@@ -9,6 +9,7 @@ import '../../features/quotes/presentation/quotes_list/providers/quotes_provider
 import '../../features/clients/presentation/providers/clients_provider.dart';
 import '../../features/delivery_notes/presentation/delivery_notes_list/providers/delivery_notes_providers.dart';
 import '../../features/portfolio/presentation/providers/products_provider.dart';
+import '../../features/portfolio/presentation/providers/services_provider.dart';
 
 /// Servicio centralizado para sincronizar datos tras una reconexión a internet
 /// o reanudación desde segundo plano.
@@ -63,6 +64,7 @@ class ReconnectionSyncService {
     invalidate(paginatedSupplierOrdersProvider);
     invalidate(paginatedDeliveryNotesProvider);
     invalidate(paginatedProductsProvider);
+    invalidate(paginatedServicesProvider);
     invalidate(paginatedClientsProvider);
 
     debugPrint('ReconnectionSync: Todos los providers fueron invalidados.');

@@ -169,17 +169,18 @@ class _SupplierOrdersListScreenState
                   builder: (context) {
                     final state = paginatedAsync.valueOrNull;
 
-                    if (state == null || state.isInitialLoading) {
-                      return const Center(child: CircularProgressIndicator());
-                    }
-
-                    if (paginatedAsync.hasError && state.items.isEmpty) {
+                    if (paginatedAsync.hasError &&
+                        (state == null || state.items.isEmpty)) {
                       return FriendlyErrorWidget(
                         error: paginatedAsync.error!,
                         onRetry: () => ref
                             .read(paginatedSupplierOrdersProvider.notifier)
                             .refresh(),
                       );
+                    }
+
+                    if (state == null || state.isInitialLoading) {
+                      return const Center(child: CircularProgressIndicator());
                     }
 
                     var items = state.items;

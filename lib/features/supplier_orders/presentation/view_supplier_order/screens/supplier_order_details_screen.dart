@@ -21,6 +21,8 @@ import '../../../../../shared/widgets/custom_action_sheet.dart';
 import '../../../../../shared/widgets/bottom_sheet_action_item.dart';
 import '../../../../../shared/widgets/custom_dialog.dart';
 import '../../../../../shared/widgets/app_toast.dart';
+import '../../../../../shared/widgets/friendly_error_widget.dart';
+import 'package:d_una_app/core/providers/network_status_provider.dart';
 import 'package:material_symbols_icons/symbols.dart';
 import 'package:d_una_app/features/profile/presentation/providers/profile_provider.dart';
 import 'package:d_una_app/features/supplier_orders/domain/utils/oc_email_template_builder.dart';
@@ -155,6 +157,12 @@ class _SupplierOrderDetailsScreenState
 
   @override
   Widget build(BuildContext context) {
+    ref.listen<NetworkStatusState>(networkStatusProvider, (previous, next) {
+      if (previous != null && !previous.isOnline && next.isOnline) {
+        ref.invalidate(supplierOrderDetailProvider(widget.orderId));
+      }
+    });
+
     final colors = Theme.of(context).colorScheme;
     final detailsAsync = ref.watch(supplierOrderDetailProvider(widget.orderId));
     final suppliers = ref.watch(suppliersProvider).valueOrNull ?? [];
@@ -741,7 +749,10 @@ class _SupplierOrderDetailsScreenState
       ),
       error: (e, s) => Scaffold(
         appBar: const StandardAppBar(title: 'Orden de compra'),
-        body: Center(child: Text('Error al cargar detalles: $e')),
+        body: FriendlyErrorWidget(
+          error: e,
+          onRetry: () => ref.invalidate(supplierOrderDetailProvider(widget.orderId)),
+        ),
       ),
     );
   }

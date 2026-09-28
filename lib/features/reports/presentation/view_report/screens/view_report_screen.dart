@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:d_una_app/core/providers/network_status_provider.dart';
 import 'package:go_router/go_router.dart';
 import 'package:pdf/pdf.dart';
 import 'package:material_symbols_icons/symbols.dart';
@@ -106,6 +107,12 @@ class _ViewReportScreenState extends ConsumerState<ViewReportScreen>
 
   @override
   Widget build(BuildContext context) {
+    ref.listen<NetworkStatusState>(networkStatusProvider, (previous, next) {
+      if (previous != null && !previous.isOnline && next.isOnline) {
+        ref.invalidate(viewReportProvider(widget.reportId));
+      }
+    });
+
     final colors = Theme.of(context).colorScheme;
     final reportAsync = ref.watch(viewReportProvider(widget.reportId));
 

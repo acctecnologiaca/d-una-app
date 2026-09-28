@@ -15,6 +15,13 @@ class FriendlyErrorWidget extends ConsumerWidget {
     final isOffline = !networkState.isOnline;
     final isConnErr = ErrorHandler.isConnectionError(error);
 
+    // Auto-recuperación: al recuperar internet (Offline -> Online), ejecutar reintento automático
+    ref.listen<NetworkStatusState>(networkStatusProvider, (previous, next) {
+      if (previous != null && !previous.isOnline && next.isOnline) {
+        onRetry?.call();
+      }
+    });
+
     // Si se detecta un error de red pero la app aún figura online, disparar comprobación inmediata
     if (isConnErr && !isOffline) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -22,10 +29,9 @@ class FriendlyErrorWidget extends ConsumerWidget {
       });
     }
 
-    // Si la app está offline o el error corresponde a problemas de conexión/realtime/socket,
-    // el bloqueo global modal (ConnectivityGate) es el único responsable de la UI.
-    // Silenciamos este widget para no renderizar mensajes degradados en cada pantalla.
-    if (isOffline || isConnErr) {
+    // Solo silenciar si la app está efectivamente offline (ConnectivityGate cubre la pantalla).
+    // Si la app está online, se debe mostrar el mensaje y el botón de reintentar.
+    if (isOffline) {
       return const SizedBox.shrink();
     }
 

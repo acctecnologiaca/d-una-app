@@ -126,17 +126,18 @@ class _PurchasesListScreenState extends ConsumerState<PurchasesListScreen> {
                 builder: (context) {
                   final state = paginatedAsync.valueOrNull;
 
-                  if (state == null || state.isInitialLoading) {
-                    return const Center(child: CircularProgressIndicator());
-                  }
-
-                  if (paginatedAsync.hasError && state.items.isEmpty) {
+                  if (paginatedAsync.hasError &&
+                      (state == null || state.items.isEmpty)) {
                     return FriendlyErrorWidget(
                       error: paginatedAsync.error!,
                       onRetry: () => ref
                           .read(paginatedPurchasesListProvider.notifier)
                           .refresh(),
                     );
+                  }
+
+                  if (state == null || state.isInitialLoading) {
+                    return const Center(child: CircularProgressIndicator());
                   }
 
                   if (state.items.isEmpty) {

@@ -69,7 +69,19 @@ class NetworkStatusNotifier extends StateNotifier<NetworkStatusState> {
       return;
     }
 
-    // Comprobación inicial
+    // 1. Hardware fast-check: Si no hay interfaz física activa, marcamos offline de inmediato (<5ms)
+    // para que ConnectivityGate bloquee antes de que se disparen peticiones a Supabase/APIs.
+    final hasHardware = await _service.hasActiveNetworkInterface();
+    if (!hasHardware && mounted) {
+      state = state.copyWith(
+        isOnline: false,
+        hasCheckedOnce: true,
+        lastCheckedAt: DateTime.now(),
+      );
+      _startOfflinePolling();
+    }
+
+    // 2. Comprobación profunda de sockets en paralelo
     _service.checkRealInternetConnection().then((hasConnection) {
       if (!mounted) return;
       state = state.copyWith(
@@ -77,9 +89,10 @@ class NetworkStatusNotifier extends StateNotifier<NetworkStatusState> {
         hasCheckedOnce: true,
         lastCheckedAt: DateTime.now(),
       );
-      // Corrección Bug A: Si inicia offline, activar polling de inmediato
       if (!hasConnection) {
         _startOfflinePolling();
+      } else {
+        _stopOfflinePolling();
       }
     });
 

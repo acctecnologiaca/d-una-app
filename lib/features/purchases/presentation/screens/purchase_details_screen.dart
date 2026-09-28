@@ -19,6 +19,8 @@ import '../widgets/add_purchase_summary_tab.dart';
 import 'package:d_una_app/shared/widgets/custom_dialog.dart';
 import 'package:d_una_app/shared/widgets/custom_action_sheet.dart';
 import 'package:d_una_app/shared/widgets/bottom_sheet_action_item.dart';
+import 'package:d_una_app/shared/widgets/friendly_error_widget.dart';
+import 'package:d_una_app/core/providers/network_status_provider.dart';
 
 class PurchaseDetailsScreen extends ConsumerStatefulWidget {
   final String purchaseId;
@@ -311,6 +313,12 @@ class _PurchaseDetailsScreenState extends ConsumerState<PurchaseDetailsScreen>
 
   @override
   Widget build(BuildContext context) {
+    ref.listen<NetworkStatusState>(networkStatusProvider, (previous, next) {
+      if (previous != null && !previous.isOnline && next.isOnline) {
+        ref.invalidate(purchaseDetailsProvider(widget.purchaseId));
+      }
+    });
+
     final colors = Theme.of(context).colorScheme;
     final asyncData = ref.watch(purchaseDetailsProvider(widget.purchaseId));
 
@@ -324,7 +332,10 @@ class _PurchaseDetailsScreenState extends ConsumerState<PurchaseDetailsScreen>
       ),
       error: (error, stack) => Scaffold(
         appBar: const StandardAppBar(title: 'Registro de compra'),
-        body: Center(child: Text('Error al cargar los detalles: $error')),
+        body: FriendlyErrorWidget(
+          error: error,
+          onRetry: () => ref.invalidate(purchaseDetailsProvider(widget.purchaseId)),
+        ),
       ),
       data: (data) {
         final purchase = data.purchase;
