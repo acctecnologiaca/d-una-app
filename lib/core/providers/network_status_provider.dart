@@ -56,6 +56,8 @@ class NetworkStatusNotifier extends StateNotifier<NetworkStatusState> {
   StreamSubscription<bool>? _subscription;
   Timer? _debounceTimer;
   Timer? _offlinePollingTimer;
+  bool _isPollingInProgress = false;
+  int _offlinePollAttempts = 0;
 
   NetworkStatusNotifier(this._service) : super(const NetworkStatusState()) {
     _init();
@@ -67,23 +69,25 @@ class NetworkStatusNotifier extends StateNotifier<NetworkStatusState> {
       return;
     }
 
-    // Comprobación inicial silenciosa
+    // Comprobación inicial
     _service.checkRealInternetConnection().then((hasConnection) {
-      if (mounted) {
-        state = state.copyWith(
-          isOnline: hasConnection,
-          hasCheckedOnce: true,
-          lastCheckedAt: DateTime.now(),
-        );
+      if (!mounted) return;
+      state = state.copyWith(
+        isOnline: hasConnection,
+        hasCheckedOnce: true,
+        lastCheckedAt: DateTime.now(),
+      );
+      // Corrección Bug A: Si inicia offline, activar polling de inmediato
+      if (!hasConnection) {
+        _startOfflinePolling();
       }
     });
 
-    // Escucha reactiva de cambios de red
+    // Escucha reactiva del stream de conectividad
     _subscription = _service.onConnectionStatusChanged.listen((hasConnection) {
       if (!mounted) return;
 
       if (!hasConnection) {
-        // Iniciar ventana de debounce para evitar falsos positivos ante micro-cortes
         _debounceTimer?.cancel();
         _debounceTimer = Timer(NetworkConfig.debounceDuration, () async {
           if (!mounted) return;
@@ -96,12 +100,10 @@ class NetworkStatusNotifier extends StateNotifier<NetworkStatusState> {
               hasCheckedOnce: true,
               lastCheckedAt: DateTime.now(),
             );
-            // Activar polling de auto-recuperación
             _startOfflinePolling();
           }
         });
       } else {
-        // Si la conexión volvió, cancelar debounce y polling, desbloquear inmediatamente
         _debounceTimer?.cancel();
         _stopOfflinePolling();
         state = state.copyWith(
@@ -114,20 +116,36 @@ class NetworkStatusNotifier extends StateNotifier<NetworkStatusState> {
     });
   }
 
-  /// Inicia un timer periódico que verifica la reconexión mientras el dispositivo está offline.
-  /// Se cancela automáticamente al detectar que la conexión volvió.
+  /// Inicia polling de auto-recuperación con backoff adaptativo y sin solapamiento.
   void _startOfflinePolling() {
-    _stopOfflinePolling(); // Evitar timers duplicados
-    debugPrint('NetworkStatus: Iniciando polling de reconexión offline...');
-    _offlinePollingTimer = Timer.periodic(
-      NetworkConfig.offlinePollingInterval,
-      (_) async {
-        if (!mounted) {
-          _stopOfflinePolling();
-          return;
-        }
+    _stopOfflinePolling();
+    _offlinePollAttempts = 0;
+    _scheduleNextPoll();
+  }
+
+  void _scheduleNextPoll() {
+    if (!mounted || state.isOnline) return;
+
+    // Backoff adaptativo: 3s -> 5s -> 8s máximo
+    final Duration delay;
+    if (_offlinePollAttempts < 2) {
+      delay = NetworkConfig.initialOfflinePollingInterval;
+    } else if (_offlinePollAttempts < 5) {
+      delay = const Duration(seconds: 5);
+    } else {
+      delay = NetworkConfig.maxOfflinePollingInterval;
+    }
+
+    _offlinePollingTimer?.cancel();
+    _offlinePollingTimer = Timer(delay, () async {
+      if (!mounted || state.isOnline || _isPollingInProgress) return;
+
+      _isPollingInProgress = true;
+      try {
         final hasConnection = await _service.checkRealInternetConnection();
-        if (hasConnection && mounted) {
+        if (!mounted) return;
+
+        if (hasConnection) {
           debugPrint('NetworkStatus: Polling detectó reconexión.');
           _stopOfflinePolling();
           state = state.copyWith(
@@ -136,56 +154,65 @@ class NetworkStatusNotifier extends StateNotifier<NetworkStatusState> {
             hasCheckedOnce: true,
             lastCheckedAt: DateTime.now(),
           );
+        } else {
+          _offlinePollAttempts++;
+          _scheduleNextPoll();
         }
-      },
-    );
+      } finally {
+        _isPollingInProgress = false;
+      }
+    });
   }
 
-  /// Detiene el timer de polling de reconexión.
   void _stopOfflinePolling() {
     _offlinePollingTimer?.cancel();
     _offlinePollingTimer = null;
+    _isPollingInProgress = false;
+    _offlinePollAttempts = 0;
   }
 
-  /// Fuerza una verificación inmediata del estado de la red.
-  /// Útil para invocar cuando la app vuelve de segundo plano (AppLifecycleState.resumed).
+  /// Fuerza comprobación inmediata (útil en AppLifecycleState.resumed).
   Future<void> checkImmediately() async {
     if (!mounted || !NetworkConfig.isConnectivityGateEnabled) return;
-    final hasConnection = await _service.checkRealInternetConnection();
-    if (mounted) {
-      final wasOffline = !state.isOnline;
-      state = state.copyWith(
-        isOnline: hasConnection,
-        hasCheckedOnce: true,
-        lastCheckedAt: DateTime.now(),
-      );
-      if (hasConnection && wasOffline) {
-        _stopOfflinePolling();
-      } else if (!hasConnection && wasOffline) {
-        _startOfflinePolling();
-      }
+    final hasConnection = await _service.checkRealInternetConnection(force: true);
+    if (!mounted) return;
+
+    final wasOffline = !state.isOnline;
+    state = state.copyWith(
+      isOnline: hasConnection,
+      hasCheckedOnce: true,
+      lastCheckedAt: DateTime.now(),
+    );
+
+    // Corrección Bug B: Activar o desactivar polling correctamente según el nuevo estado
+    if (hasConnection) {
+      if (wasOffline) _stopOfflinePolling();
+    } else {
+      if (_offlinePollingTimer == null) _startOfflinePolling();
     }
   }
 
-  /// Permite que interceptores HTTP o manejadores de error notifiquen un fallo de red,
-  /// disparando una verificación inmediata del estado real de internet.
+  /// Notificación proactiva de fallas detectadas por interceptores HTTP o repositories.
   Future<void> notifyNetworkFailure() async {
     if (!mounted || !NetworkConfig.isConnectivityGateEnabled) return;
-    debugPrint(
-      'NetworkStatus: Notificación de fallo de red recibida. Verificando...',
-    );
+    debugPrint('NetworkStatus: Notificación de fallo de red. Verificando...');
     await checkImmediately();
   }
 
-  /// Permite forzar un reintento manual inmediato (por ejemplo desde el botón en pantalla)
+  /// Reintento manual disparado por el usuario desde la UI.
   Future<bool> retryManualConnection() async {
     if (state.isChecking) return state.isOnline;
 
     state = state.copyWith(isChecking: true);
-    final isConnected = await _service.checkRealInternetConnection();
+    final isConnected = await _service.checkRealInternetConnection(force: true);
 
     if (mounted) {
-      if (isConnected) _stopOfflinePolling();
+      if (isConnected) {
+        _stopOfflinePolling();
+      } else {
+        if (_offlinePollingTimer == null) _startOfflinePolling();
+      }
+
       state = state.copyWith(
         isOnline: isConnected,
         isChecking: false,
@@ -199,7 +226,7 @@ class NetworkStatusNotifier extends StateNotifier<NetworkStatusState> {
   @override
   void dispose() {
     _debounceTimer?.cancel();
-    _offlinePollingTimer?.cancel();
+    _stopOfflinePolling();
     _subscription?.cancel();
     super.dispose();
   }
@@ -215,3 +242,4 @@ final networkStatusProvider =
   final service = ref.watch(networkConnectivityServiceProvider);
   return NetworkStatusNotifier(service);
 });
+

@@ -11,47 +11,93 @@ class NetworkConnectivityService {
   /// Cache de resultado reciente para evitar llamadas concurrentes masivas.
   bool? _lastResult;
   DateTime? _lastCheckTime;
-  static const Duration _throttleDuration = Duration(milliseconds: 500);
+
+  /// Promesa en vuelo activa para deduplicar peticiones simultáneas.
+  Future<bool>? _inFlightCheck;
 
   NetworkConnectivityService({Connectivity? connectivity})
       : _connectivity = connectivity ?? Connectivity();
 
-  /// Valida si hay salida real a internet con estrategia en 3 niveles:
-  /// 1. Socket TCP a DNS primario (1.1.1.1:53)
-  /// 2. Socket TCP a DNS secundario (8.8.8.8:53)
-  /// 3. HTTP GET a endpoint generate_204 (para firewalls/portales cautivos)
-  Future<bool> checkRealInternetConnection({Duration? timeout}) async {
-    // Throttle: reutilizar resultado reciente si la última comprobación fue hace < 500ms
-    if (_lastResult != null && _lastCheckTime != null) {
+  /// Valida si hay salida real a internet.
+  /// - Si [force] es true, ignora el throttle de caché reciente.
+  /// - Si ya hay una comprobación en curso, reusa el mismo Future.
+  Future<bool> checkRealInternetConnection({
+    Duration? timeout,
+    bool force = false,
+  }) async {
+    // 1. Throttle: reusar si no es forzado y pasaron menos de throttleDuration
+    if (!force && _lastResult != null && _lastCheckTime != null) {
       final elapsed = DateTime.now().difference(_lastCheckTime!);
-      if (elapsed < _throttleDuration) {
+      if (elapsed < NetworkConfig.throttleDuration) {
         return _lastResult!;
       }
     }
 
-    final effectiveTimeout = timeout ?? NetworkConfig.checkTimeout;
-    bool result = false;
-
-    if (kIsWeb) {
-      result = await _checkViaHttp(effectiveTimeout);
-    } else {
-      result = await _checkViaSocket(
-            NetworkConfig.primaryLookupHost,
-            effectiveTimeout,
-          ) ||
-          await _checkViaSocket(
-            NetworkConfig.secondaryLookupHost,
-            effectiveTimeout,
-          ) ||
-          await _checkViaHttp(effectiveTimeout);
+    // 2. Deduplicación de peticiones concurrentes
+    if (_inFlightCheck != null) {
+      return _inFlightCheck!;
     }
 
-    _lastResult = result;
-    _lastCheckTime = DateTime.now();
-    return result;
+    final effectiveTimeout = timeout ?? NetworkConfig.checkTimeout;
+    _inFlightCheck = _executeVerification(effectiveTimeout);
+
+    try {
+      final result = await _inFlightCheck!;
+      _lastResult = result;
+      _lastCheckTime = DateTime.now();
+      return result;
+    } finally {
+      _inFlightCheck = null;
+    }
   }
 
-  /// Nivel 1 y 2: Socket TCP directo a puerto DNS (rápido, sin overhead HTTP).
+  Future<bool> _executeVerification(Duration timeout) async {
+    if (kIsWeb) {
+      return await _checkViaHttp(timeout);
+    }
+
+    // 1. Carrera paralela de sockets DNS primario y secundario
+    final socketSuccess = await _checkSocketsInParallel(timeout);
+    if (socketSuccess) {
+      return true;
+    }
+
+    // 2. Fallback HTTP (portales cautivos / firewalls que bloquean puerto 53)
+    return await _checkViaHttp(timeout);
+  }
+
+  /// Ejecuta sockets TCP a 1.1.1.1:53 y 8.8.8.8:53 en paralelo.
+  /// Si cualquiera tiene éxito, retorna true de inmediato sin esperar al otro.
+  Future<bool> _checkSocketsInParallel(Duration timeout) async {
+    final completer = Completer<bool>();
+    int failureCount = 0;
+    const totalChecks = 2;
+
+    void onSuccess() {
+      if (!completer.isCompleted) {
+        completer.complete(true);
+      }
+    }
+
+    void onFailure() {
+      failureCount++;
+      if (failureCount >= totalChecks && !completer.isCompleted) {
+        completer.complete(false);
+      }
+    }
+
+    _checkViaSocket(NetworkConfig.primaryLookupHost, timeout)
+        .then((ok) => ok ? onSuccess() : onFailure())
+        .catchError((_) => onFailure());
+
+    _checkViaSocket(NetworkConfig.secondaryLookupHost, timeout)
+        .then((ok) => ok ? onSuccess() : onFailure())
+        .catchError((_) => onFailure());
+
+    return completer.future;
+  }
+
+  /// Socket TCP directo a puerto DNS (rápido, sin overhead HTTP).
   Future<bool> _checkViaSocket(String host, Duration timeout) async {
     try {
       final socket = await Socket.connect(
@@ -66,8 +112,7 @@ class NetworkConnectivityService {
     }
   }
 
-  /// Nivel 3: HTTP GET a endpoint generate_204 (funciona con portales cautivos
-  /// y firewalls que bloquean puerto 53). CORS-safe para plataforma Web.
+  /// HTTP GET a generate_204 con timeout controlado.
   Future<bool> _checkViaHttp(Duration timeout) async {
     try {
       final response = await http
@@ -79,7 +124,7 @@ class NetworkConnectivityService {
     }
   }
 
-  /// Stream transformado que emite `true` si hay internet real y `false` si no.
+  /// Stream reactivo que emite cambios de conectividad real.
   Stream<bool> get onConnectionStatusChanged {
     return _connectivity.onConnectivityChanged.asyncMap((results) async {
       final hasNoInterface = results.isEmpty ||
@@ -93,3 +138,4 @@ class NetworkConnectivityService {
     }).distinct();
   }
 }
+

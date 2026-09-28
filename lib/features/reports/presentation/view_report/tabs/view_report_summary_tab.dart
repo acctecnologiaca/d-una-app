@@ -296,9 +296,15 @@ class ViewReportSummaryTab extends ConsumerWidget {
               const SizedBox(height: 12),
               _buildSummaryRow(
                 context,
-                Icons.calendar_today_outlined,
-                'Fecha de ejecución',
-                DateFormat('dd/MM/yyyy').format(report.serviceDate.toLocal()),
+                report.isDateRange
+                    ? Icons.date_range_outlined
+                    : Icons.calendar_today_outlined,
+                report.isDateRange
+                    ? 'Período de ejecución'
+                    : 'Fecha de ejecución',
+                report.isDateRange
+                    ? '${report.formattedExecutionPeriod} (${report.executionDaysCount} días)'
+                    : DateFormat('dd/MM/yyyy').format(report.serviceDate.toLocal()),
                 isTextValue: true,
               ),
             ],

@@ -445,7 +445,7 @@
           document.title = `Reporte · ${esc(r.report_number)}`;
         }
 
-        // Formato de Fecha de Servicio
+        // Formato de Fecha de Servicio / Período
         function parseDate(dateStr) {
           if (!dateStr) return 'Fecha no especificada';
           const parts = String(dateStr).split('T')[0].split('-');
@@ -455,7 +455,10 @@
           return dateStr;
         }
 
-        const formattedServiceDate = parseDate(r.service_date);
+        let formattedServiceDate = parseDate(r.service_date);
+        if (r.service_end_date && r.service_end_date !== r.service_date) {
+          formattedServiceDate = `${parseDate(r.service_date)} al ${parseDate(r.service_end_date)}`;
+        }
 
         // Membrete Emisor
         const issuerHeaderTitle = issuer.company_name || issuer.user_name || 'Servicios Técnicos Especializados';
@@ -629,10 +632,11 @@
 
               <div class="info-box">
                 <h3>Detalles del Servicio</h3>
+                <p><strong>${(r.service_end_date && r.service_end_date !== r.service_date) ? 'Período de ejecución' : 'Fecha del servicio'}:</strong> ${formattedServiceDate}</p>
                 <p><strong>Tipo de servicio:</strong> ${esc(interventionLabel)}</p>
                 <p><strong>Categoría:</strong> ${esc(r.category_name || 'Servicio Técnico')}</p>
                 <p><strong>Técnicos responsables:</strong> ${esc(r.advisor_name || issuer.user_name || 'Especialista Técnico')}</p>
-                ${timeStr ? `<p><strong>Horario / Duración:</strong> ${timeStr}</p>` : ''}
+                ${timeStr ? `<p><strong>${(r.service_end_date && r.service_end_date !== r.service_date) ? 'Jornada diaria' : 'Horario / Duración'}:</strong> ${timeStr}</p>` : ''}
               </div>
             </div>
 

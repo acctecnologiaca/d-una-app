@@ -55,6 +55,7 @@ class ServiceReportPdfTemplate {
             title: 'REPORTE DE SERVICIO',
             documentNumber: report.reportNumber ?? '-',
             date: report.serviceDate,
+            customDateText: report.isDateRange ? report.formattedExecutionPeriod : null,
             senderInfo: senderInfo,
             logoImage: logoImage,
           ),
@@ -219,6 +220,10 @@ class ServiceReportPdfTemplate {
             title: 'DETALLES DEL SERVICIO',
             children: [
               PdfCommonSections.buildInfoRow(
+                report.isDateRange ? 'Período de ejecución:' : 'Fecha del servicio:',
+                report.formattedExecutionPeriod,
+              ),
+              PdfCommonSections.buildInfoRow(
                 'Tipo de servicio:',
                 typeEnum.label,
               ),
@@ -229,7 +234,10 @@ class ServiceReportPdfTemplate {
                 technicianName.isNotEmpty ? technicianName : 'Especialista Técnico',
               ),
               if (timeStr != null)
-                PdfCommonSections.buildInfoRow('Horario / Duración:', timeStr),
+                PdfCommonSections.buildInfoRow(
+                  report.isDateRange ? 'Jornada diaria:' : 'Horario / Duración:',
+                  timeStr,
+                ),
             ],
           ),
         ),

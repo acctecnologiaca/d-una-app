@@ -448,8 +448,8 @@ class ReportsListNotifier extends StateNotifier<AsyncValue<List<domain.ServiceRe
     ref.invalidate(productsProvider);
   }
 
-  Future<void> updateReportDate(String id, DateTime newDate) async {
-    await ref.read(serviceReportsRepositoryProvider).updateReportDate(id, newDate);
+  Future<void> updateReportDate(String id, DateTime newDate, {DateTime? newEndDate}) async {
+    await ref.read(serviceReportsRepositoryProvider).updateReportDate(id, newDate, newEndDate: newEndDate);
     await refresh();
   }
 
@@ -619,6 +619,7 @@ class PaginatedReportSearch extends AutoDisposeFamilyAsyncNotifier<
       reportNumber: r.reportNumber ?? 'RS-PENDIENTE',
       clientName: r.clientName ?? 'Cliente Desconocido',
       date: r.serviceDate,
+      endDate: r.serviceEndDate,
       amount: r.total,
       categoryId: r.categoryId,
       categoryName: r.categoryName,

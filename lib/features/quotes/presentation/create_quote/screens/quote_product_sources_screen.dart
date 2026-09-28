@@ -384,8 +384,8 @@ class _QuoteProductSourcesScreenState
                             item.sourceType ==
                             ProductSourceType.externalManagement;
                         final maxQty = (isExternal)
-                            ? 1.0 // Default to 1 for own/external
-                            : item.maxStock;
+                            ? 1.0 // Default to 1 for external
+                            : item.effectiveAvailableStock;
                         selectionController.toggleSelection(item.id, maxQty);
                       },
                       onDeselectAll: () {
@@ -596,7 +596,7 @@ class _QuoteProductSourcesScreenState
                 description: null,
                 availableStock: isExternal
                     ? 0.0 // Validation ignores this anyway
-                    : source.maxStock,
+                    : source.effectiveAvailableStock,
                 quantity: qty,
                 costPrice: costPrice,
                 profitMargin: profitMargin,

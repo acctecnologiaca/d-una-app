@@ -11,12 +11,21 @@ class FriendlyErrorWidget extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final isOffline = !ref.watch(networkStatusProvider).isOnline;
+    final networkState = ref.watch(networkStatusProvider);
+    final isOffline = !networkState.isOnline;
+    final isConnErr = ErrorHandler.isConnectionError(error);
+
+    // Si se detecta un error de red pero la app aún figura online, disparar comprobación inmediata
+    if (isConnErr && !isOffline) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        ref.read(networkStatusProvider.notifier).notifyNetworkFailure();
+      });
+    }
 
     // Si la app está offline o el error corresponde a problemas de conexión/realtime/socket,
     // el bloqueo global modal (ConnectivityGate) es el único responsable de la UI.
     // Silenciamos este widget para no renderizar mensajes degradados en cada pantalla.
-    if (isOffline || ErrorHandler.isConnectionError(error)) {
+    if (isOffline || isConnErr) {
       return const SizedBox.shrink();
     }
 

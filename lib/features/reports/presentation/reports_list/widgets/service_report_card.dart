@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:intl/intl.dart';
 import '../../../domain/models/service_report_model.dart';
 import '../../../../../shared/utils/currency_formatter.dart';
 import '../../../../../shared/widgets/standard_list_item.dart';
@@ -27,7 +26,6 @@ class ServiceReportCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final colors = Theme.of(context).colorScheme;
     final textTheme = Theme.of(context).textTheme;
-    final dateFormat = DateFormat('dd/MM/yyyy');
 
     return Container(
       decoration: BoxDecoration(
@@ -40,7 +38,7 @@ class ServiceReportCard extends StatelessWidget {
         onTap: onTap,
         onLongPress: onLongPress,
         overline: Text(
-          '${report.reportNumber} (${dateFormat.format(report.date)})',
+          '${report.reportNumber} (${report.formattedExecutionPeriod})',
         ),
         title: report.clientName,
         subtitle: report.reportTag != null && report.reportTag!.trim().isNotEmpty

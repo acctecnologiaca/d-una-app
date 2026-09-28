@@ -84,9 +84,10 @@ class _ReportDetailsTabState extends ConsumerState<ReportDetailsTab> {
   void initState() {
     super.initState();
     final state = ref.read(createReportProvider);
-    _dateController = TextEditingController(
-      text: _dateFormat.format(state.serviceDate),
-    );
+    final initialDateText = state.isDateRange
+        ? '${_dateFormat.format(state.serviceDate)} al ${_dateFormat.format(state.serviceEndDate!)}'
+        : _dateFormat.format(state.serviceDate);
+    _dateController = TextEditingController(text: initialDateText);
     _requestController = TextEditingController(text: state.requestDescription);
     _workController = TextEditingController(text: state.workDescription);
     _recommendationsController = TextEditingController(
@@ -188,7 +189,9 @@ class _ReportDetailsTabState extends ConsumerState<ReportDetailsTab> {
     BuildContext context,
     ServiceReportCreateState state,
   ) {
-    final dateStr = _dateFormat.format(state.serviceDate);
+    final dateStr = state.isDateRange
+        ? '${_dateFormat.format(state.serviceDate)} al ${_dateFormat.format(state.serviceEndDate!)} (${state.executionDaysCount}d)'
+        : _dateFormat.format(state.serviceDate);
     final startStr = state.startTime != null
         ? state.startTime!.format(context)
         : '--';
@@ -251,7 +254,9 @@ class _ReportDetailsTabState extends ConsumerState<ReportDetailsTab> {
       previous,
       next,
     ) {
-      final formattedDate = _dateFormat.format(next.serviceDate);
+      final formattedDate = next.isDateRange
+          ? '${_dateFormat.format(next.serviceDate)} al ${_dateFormat.format(next.serviceEndDate!)}'
+          : _dateFormat.format(next.serviceDate);
       if (_dateController.text != formattedDate) {
         _dateController.text = formattedDate;
       }
@@ -642,24 +647,108 @@ class _ReportDetailsTabState extends ConsumerState<ReportDetailsTab> {
             subtitle: _getBlock2Subtitle(context, state),
             isComplete: _isBlock2Complete(state),
             children: [
-              CustomTextField(
-                label: 'Fecha del Servicio*',
-                controller: _dateController,
-                readOnly: true,
-                onTap: () async {
-                  final date = await showDatePicker(
-                    context: context,
-                    initialDate: state.serviceDate,
-                    firstDate: DateTime(2000),
-                    lastDate: DateTime(2100),
-                  );
-                  if (date != null) {
-                    _dateController.text = _dateFormat.format(date);
-                    notifier.setServiceDate(date);
+              // Switch "Servicio de múltiples días (Rango de fechas)"
+              SwitchListTile(
+                contentPadding: EdgeInsets.zero,
+                title: Text(
+                  'Servicio de múltiples días',
+                  style: textTheme.titleSmall?.copyWith(
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                subtitle: Text(
+                  'Permite registrar un período con fecha de inicio y finalización',
+                  style: textTheme.bodySmall?.copyWith(
+                    color: colors.onSurfaceVariant,
+                  ),
+                ),
+                activeThumbColor: colors.primary,
+                value: state.isDateRange,
+                onChanged: (val) async {
+                  if (val) {
+                    final picked = await showDateRangePicker(
+                      context: context,
+                      firstDate: DateTime(2000),
+                      lastDate: DateTime(2100),
+                      initialDateRange: state.serviceEndDate != null
+                          ? DateTimeRange(
+                              start: state.serviceDate,
+                              end: state.serviceEndDate!,
+                            )
+                          : DateTimeRange(
+                              start: state.serviceDate,
+                              end: state.serviceDate.add(const Duration(days: 1)),
+                            ),
+                    );
+                    if (picked != null) {
+                      notifier.setServiceDateRange(picked.start, picked.end);
+                    }
+                  } else {
+                    notifier.clearServiceEndDate();
                   }
                 },
-                suffixIcon: const Icon(Icons.calendar_today),
               ),
+              const SizedBox(height: 8),
+              if (!state.isDateRange)
+                CustomTextField(
+                  label: 'Fecha del Servicio*',
+                  controller: _dateController,
+                  readOnly: true,
+                  onTap: () async {
+                    final date = await showDatePicker(
+                      context: context,
+                      initialDate: state.serviceDate,
+                      firstDate: DateTime(2000),
+                      lastDate: DateTime(2100),
+                    );
+                    if (date != null) {
+                      _dateController.text = _dateFormat.format(date);
+                      notifier.setServiceDate(date);
+                    }
+                  },
+                  suffixIcon: const Icon(Icons.calendar_today),
+                )
+              else ...[
+                CustomTextField(
+                  label: 'Período de Ejecución*',
+                  controller: _dateController,
+                  readOnly: true,
+                  onTap: () async {
+                    final picked = await showDateRangePicker(
+                      context: context,
+                      firstDate: DateTime(2000),
+                      lastDate: DateTime(2100),
+                      initialDateRange: DateTimeRange(
+                        start: state.serviceDate,
+                        end: state.serviceEndDate ?? state.serviceDate,
+                      ),
+                    );
+                    if (picked != null) {
+                      notifier.setServiceDateRange(picked.start, picked.end);
+                    }
+                  },
+                  suffixIcon: const Icon(Icons.date_range_outlined),
+                ),
+                const SizedBox(height: 6),
+                Align(
+                  alignment: Alignment.centerLeft,
+                  child: Container(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: colors.primaryContainer.withValues(alpha: 0.5),
+                      borderRadius: BorderRadius.circular(6),
+                    ),
+                    child: Text(
+                      '${state.executionDaysCount} día(s) de ejecución técnica',
+                      style: textTheme.labelSmall?.copyWith(
+                        color: colors.primary,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
               const SizedBox(height: 12),
               Row(
                 children: [

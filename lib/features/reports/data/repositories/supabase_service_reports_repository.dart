@@ -191,9 +191,11 @@ class SupabaseServiceReportsRepository implements ServiceReportsRepository {
     }
 
     if (dateRange != null) {
+      final startStr = dateRange.start.toIso8601String().split('T').first;
+      final endStr = dateRange.end.toIso8601String().split('T').first;
       query = query
-          .gte('service_date', dateRange.start.toIso8601String().split('T').first)
-          .lte('service_date', dateRange.end.toIso8601String().split('T').first);
+          .lte('service_date', endStr)
+          .or('service_end_date.gte.$startStr,and(service_end_date.is.null,service_date.gte.$startStr)');
     }
 
     if (!includeArchived) {
@@ -278,6 +280,7 @@ class SupabaseServiceReportsRepository implements ServiceReportsRepository {
           'work_description': report.workDescription,
           'recommendations': report.recommendations,
           'service_date': report.serviceDate.toIso8601String().split('T').first,
+          'service_end_date': report.serviceEndDate?.toIso8601String().split('T').first,
           'start_time': report.startTime,
           'end_time': report.endTime,
           'duration_minutes': report.durationMinutes,
@@ -439,6 +442,7 @@ class SupabaseServiceReportsRepository implements ServiceReportsRepository {
       'work_description': report.workDescription,
       'recommendations': report.recommendations,
       'service_date': report.serviceDate.toIso8601String().split('T').first,
+      'service_end_date': report.serviceEndDate?.toIso8601String().split('T').first,
       'start_time': report.startTime,
       'end_time': report.endTime,
       'duration_minutes': report.durationMinutes,
@@ -666,9 +670,10 @@ class SupabaseServiceReportsRepository implements ServiceReportsRepository {
   }
 
   @override
-  Future<void> updateReportDate(String id, DateTime newDate) async {
+  Future<void> updateReportDate(String id, DateTime newDate, {DateTime? newEndDate}) async {
     await _client.from('service_reports').update({
       'service_date': newDate.toIso8601String().split('T').first,
+      'service_end_date': newEndDate?.toIso8601String().split('T').first,
       'updated_at': DateTime.now().toIso8601String(),
     }).eq('id', id);
   }

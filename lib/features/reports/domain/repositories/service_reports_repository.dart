@@ -62,7 +62,7 @@ abstract class ServiceReportsRepository {
   });
 
   Future<void> updateReportStatus(String id, String status);
-  Future<void> updateReportDate(String id, DateTime newDate);
+  Future<void> updateReportDate(String id, DateTime newDate, {DateTime? newEndDate});
   Future<void> archiveReport(String id, bool isArchived);
   Future<void> deleteReport(String id);
 

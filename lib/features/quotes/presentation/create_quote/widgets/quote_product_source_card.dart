@@ -86,7 +86,7 @@ class _QuoteProductSourceCardState
     final isOwn = widget.source.sourceType == ProductSourceType.own;
     final isExternal =
         widget.source.sourceType == ProductSourceType.externalManagement;
-    final maxQty = (isExternal) ? 999999.0 : widget.source.maxStock;
+    final maxQty = widget.source.effectiveAvailableStock;
 
     // Access Level Parsing
     final isRestricted = !widget.source.isAccessible;
@@ -96,17 +96,16 @@ class _QuoteProductSourceCardState
     bool? checkboxState;
     if (widget.selectedQty == 0) {
       checkboxState = false;
-    } else if (isExternal || widget.selectedQty == widget.source.maxStock) {
+    } else if (isExternal || (maxQty > 0 && widget.selectedQty == maxQty)) {
       checkboxState = true;
     } else {
       checkboxState = null; // Indeterminate
     }
 
-    // ERROR STATE: Selected Qty exceeds max stock (excluding own inventory and external)
+    // ERROR STATE: Selected Qty exceeds max available stock
     final hasError =
-        !isOwn &&
         !isExternal &&
-        widget.selectedQty > widget.source.maxStock &&
+        widget.selectedQty > maxQty &&
         widget.selectedQty > 0;
 
     // PRICE ALERT: Current price exceeds the established cost when the quote was created
@@ -129,15 +128,17 @@ class _QuoteProductSourceCardState
         : (isWholesale ? 'MAYORISTA' : 'MINORISTA');
 
     // Stock Styling
-    final hasStock = isOwn ? true : widget.source.maxStock > 0;
+    final isFullyReserved = widget.source.isFullyReserved;
+    final hasPartialReservation = widget.source.hasPartialReservation;
+    final hasStock = isExternal || widget.source.effectiveAvailableStock > 0;
 
     // User requested specific error colors
-    final stockColor = hasError
+    final stockColor = (hasError || isFullyReserved)
         ? colors.error
         : (hasStock ? colors.onSecondaryContainer : colors.onErrorContainer);
 
-    final stockBgColor = hasError
-        ? Colors.white
+    final stockBgColor = (hasError || isFullyReserved)
+        ? colors.errorContainer.withValues(alpha: 0.5)
         : (hasStock ? colors.secondaryContainer : colors.errorContainer);
 
     final formattedMaxStock = widget.source.maxStock.isFinite
@@ -146,6 +147,13 @@ class _QuoteProductSourceCardState
               : widget.source.maxStock.toString())
         : '∞';
 
+    final formattedAvailableStock = widget.source.effectiveAvailableStock.isFinite
+        ? (widget.source.effectiveAvailableStock.truncateToDouble() ==
+                  widget.source.effectiveAvailableStock
+              ? widget.source.effectiveAvailableStock.toInt().toString()
+              : widget.source.effectiveAvailableStock.toString())
+        : '0';
+
     final formattedSelectedQty = widget.selectedQty.isFinite
         ? (widget.selectedQty.truncateToDouble() == widget.selectedQty
               ? widget.selectedQty.toInt().toString()
@@ -153,9 +161,17 @@ class _QuoteProductSourceCardState
         : '∞';
 
     final stockText = isOwn
-        ? (widget.selectedQty > 0
-              ? '$formattedSelectedQty/$formattedMaxStock ${widget.uom}'
-              : '$formattedMaxStock ${widget.uom}')
+        ? (widget.source.maxStock <= 0
+              ? 'Sin stock'
+              : (isFullyReserved
+                    ? '0/$formattedMaxStock ${widget.uom}'
+                    : (hasPartialReservation
+                          ? (widget.selectedQty > 0
+                                ? '$formattedSelectedQty/$formattedAvailableStock ${widget.uom}'
+                                : '$formattedAvailableStock/$formattedMaxStock ${widget.uom}')
+                          : (widget.selectedQty > 0
+                                ? '$formattedSelectedQty/$formattedMaxStock ${widget.uom}'
+                                : '$formattedMaxStock ${widget.uom}'))))
         : (hasStock
               ? (widget.selectedQty > 0
                     ? '$formattedSelectedQty/$formattedMaxStock ${widget.uom}'
@@ -819,17 +835,30 @@ class _QuoteProductSourceCardState
                       ),
                     ],
                   ),
-                  if (isOwn && widget.source.reservedStock > 0) ...[
-                    const SizedBox(height: 6),
-                    Text(
-                      'Hay ${widget.source.reservedStock.toStringAsFixed(widget.source.reservedStock.truncateToDouble() == widget.source.reservedStock ? 0 : 2)} ${widget.uom} de inventario propio reservadas en cotizaciones o notas de entrega.',
-                      style: TextStyle(
-                        color: colors.error,
-                        fontSize: 12,
-                        fontWeight: FontWeight.bold,
+                  if (isOwn) ...[
+                    if (isFullyReserved) ...[
+                      const SizedBox(height: 6),
+                      Text(
+                        'Todo el inventario propio está reservado en cotizaciones aprobadas, notas de entrega o reportes de servicio activos.',
+                        style: TextStyle(
+                          color: colors.error,
+                          fontSize: 12,
+                          fontWeight: FontWeight.bold,
+                        ),
+                        textAlign: TextAlign.left,
                       ),
-                      textAlign: TextAlign.left,
-                    ),
+                    ] else if (hasPartialReservation) ...[
+                      const SizedBox(height: 6),
+                      Text(
+                        'Hay ${widget.source.reservedStock.toStringAsFixed(widget.source.reservedStock.truncateToDouble() == widget.source.reservedStock ? 0 : 2)} ${widget.uom} de inventario propio reservadas en cotizaciones, notas de entrega o reportes de servicio.',
+                        style: TextStyle(
+                          color: colors.error,
+                          fontSize: 12,
+                          fontWeight: FontWeight.bold,
+                        ),
+                        textAlign: TextAlign.left,
+                      ),
+                    ],
                   ],
                 ],
               ),

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 import 'package:material_symbols_icons/symbols.dart';
 
 enum ServiceReportStatus {
@@ -181,6 +182,7 @@ class ServiceReportSummary {
   final String reportNumber;
   final String clientName;
   final DateTime date;
+  final DateTime? endDate;
   final double amount;
   final String? categoryId;
   final String? categoryName;
@@ -193,11 +195,21 @@ class ServiceReportSummary {
   final DateTime createdAt;
   final String? durationText;
 
+  bool get isDateRange =>
+      endDate != null && !DateUtils.isSameDay(date, endDate!);
+
+  String get formattedExecutionPeriod {
+    final f = DateFormat('dd/MM/yyyy');
+    if (!isDateRange) return f.format(date.toLocal());
+    return '${f.format(date.toLocal())} - ${f.format(endDate!.toLocal())}';
+  }
+
   ServiceReportSummary({
     required this.id,
     required this.reportNumber,
     required this.clientName,
     required this.date,
+    this.endDate,
     required this.amount,
     this.categoryId,
     this.categoryName,
@@ -216,6 +228,8 @@ class ServiceReportSummary {
     String? reportNumber,
     String? clientName,
     DateTime? date,
+    DateTime? endDate,
+    bool clearEndDate = false,
     double? amount,
     String? categoryId,
     String? categoryName,
@@ -233,6 +247,7 @@ class ServiceReportSummary {
       reportNumber: reportNumber ?? this.reportNumber,
       clientName: clientName ?? this.clientName,
       date: date ?? this.date,
+      endDate: clearEndDate ? null : (endDate ?? this.endDate),
       amount: amount ?? this.amount,
       categoryId: categoryId ?? this.categoryId,
       categoryName: categoryName ?? this.categoryName,

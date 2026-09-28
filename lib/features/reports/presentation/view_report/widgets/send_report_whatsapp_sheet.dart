@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:intl/intl.dart';
 import '../../../../../shared/widgets/custom_text_field.dart';
 import '../../../../../shared/widgets/custom_button.dart';
 import '../../../../../shared/widgets/custom_dialog.dart';
@@ -123,9 +122,7 @@ class _SendReportWhatsAppSheetState
           ? defaultAvailability
           : '$userNote (Enlace disponible por 30 días)';
 
-      final formattedDate = DateFormat(
-        'dd/MM/yyyy',
-      ).format(widget.report.serviceDate);
+      final formattedPeriod = widget.report.formattedExecutionPeriod;
 
       final cleanPhone = phone.replaceAll(RegExp(r'[^\d]'), '');
 
@@ -147,7 +144,7 @@ class _SendReportWhatsAppSheetState
               {'name': 'usuario', 'text': _sanitizeParam(senderDisplayName)},
               {
                 'name': 'fecha_ejecucion',
-                'text': _sanitizeParam(formattedDate),
+                'text': _sanitizeParam(formattedPeriod),
               },
               {
                 'name': 'telefono',

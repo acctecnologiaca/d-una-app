@@ -17,41 +17,48 @@ class ConnectivityGate extends ConsumerStatefulWidget {
 class _ConnectivityGateState extends ConsumerState<ConnectivityGate> {
   @override
   Widget build(BuildContext context) {
-    // 1. Si el feature flag está deshabilitado por el programador, renderiza directo
+    // Si el flag está deshabilitado, renderiza directo sin overlay
     if (!NetworkConfig.isConnectivityGateEnabled) {
       return widget.child;
     }
 
     final networkState = ref.watch(networkStatusProvider);
 
-    // 2. Escucha transiciones de Offline -> Online para refrescar datos proactivamente
+    // Escucha transiciones de Offline -> Online para refrescar datos proactivamente
     ref.listen<NetworkStatusState>(networkStatusProvider, (previous, next) {
       if (previous != null && !previous.isOnline && next.isOnline) {
         ReconnectionSyncService.syncAfterReconnection(ref);
       }
     });
 
-    // 3. Renderizado con transición suave
     return Stack(
       fit: StackFit.expand,
       children: [
+        // 1. Árbol principal de la aplicación
         widget.child,
-        AnimatedSwitcher(
-          duration: const Duration(milliseconds: 350),
-          transitionBuilder: (child, animation) {
-            return FadeTransition(
-              opacity: animation,
-              child: child,
-            );
-          },
-          child: !networkState.isOnline
-              ? const Positioned.fill(
-                  key: ValueKey('no-internet-overlay'),
-                  child: NoInternetBlockingOverlay(),
-                )
-              : const SizedBox.shrink(key: ValueKey('online')),
+
+        // 2. Capa de bloqueo modal estructurada correctamente
+        Positioned.fill(
+          child: IgnorePointer(
+            ignoring: networkState.isOnline,
+            child: AnimatedSwitcher(
+              duration: NetworkConfig.fadeDuration,
+              transitionBuilder: (child, animation) {
+                return FadeTransition(
+                  opacity: animation,
+                  child: child,
+                );
+              },
+              child: !networkState.isOnline
+                  ? const NoInternetBlockingOverlay(
+                      key: ValueKey('no-internet-overlay'),
+                    )
+                  : const SizedBox.shrink(key: ValueKey('online')),
+            ),
+          ),
         ),
       ],
     );
   }
 }
+

@@ -15,8 +15,9 @@ class PdfCommonSections {
     PdfColor? badgeColor,
     PdfColor? badgeBgColor,
     PdfColor? badgeBorderColor,
+    String? customDateText,
   }) {
-    final formattedDate = PdfHelpers.formatDate(date);
+    final formattedDate = customDateText ?? PdfHelpers.formatDate(date);
 
     return pw.Column(
       children: [

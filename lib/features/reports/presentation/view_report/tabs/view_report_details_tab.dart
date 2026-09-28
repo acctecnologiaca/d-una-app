@@ -180,16 +180,22 @@ class ViewReportDetailsTab extends ConsumerWidget {
               const SizedBox(height: 24),
 
               InfoBlock.text(
-                icon: Icons.calendar_today_outlined,
-                label: 'Fecha de servicio',
-                value: dateFormat.format(report.serviceDate.toLocal()),
+                icon: report.isDateRange
+                    ? Icons.date_range_outlined
+                    : Icons.calendar_today_outlined,
+                label: report.isDateRange
+                    ? 'Período de ejecución'
+                    : 'Fecha de servicio',
+                value: report.isDateRange
+                    ? '${report.formattedExecutionPeriod} (${report.executionDaysCount} días)'
+                    : dateFormat.format(report.serviceDate.toLocal()),
               ),
               const SizedBox(height: 24),
 
               if (report.startTime != null || report.endTime != null) ...[
                 InfoBlock.text(
                   icon: Icons.access_time_outlined,
-                  label: 'Horario',
+                  label: report.isDateRange ? 'Jornada diaria' : 'Horario',
                   value:
                       '${report.startTime ?? "--"} - ${report.endTime ?? "--"}',
                 ),

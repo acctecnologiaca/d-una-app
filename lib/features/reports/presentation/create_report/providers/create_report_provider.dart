@@ -35,6 +35,7 @@ class ServiceReportCreateState {
   final String workDescription;
   final String recommendations;
   final DateTime serviceDate;
+  final DateTime? serviceEndDate;
   final TimeOfDay? startTime;
   final TimeOfDay? endTime;
   final int? durationMinutes;
@@ -50,6 +51,22 @@ class ServiceReportCreateState {
   final double globalTaxRate;
   final String pricingMethod;
   final bool isReadOnly;
+
+  bool get isDateRange =>
+      serviceEndDate != null &&
+      !DateUtils.isSameDay(serviceDate, serviceEndDate!);
+
+  int get executionDaysCount {
+    if (!isDateRange) return 1;
+    final start =
+        DateTime(serviceDate.year, serviceDate.month, serviceDate.day);
+    final end = DateTime(
+      serviceEndDate!.year,
+      serviceEndDate!.month,
+      serviceEndDate!.day,
+    );
+    return end.difference(start).inDays + 1;
+  }
 
   ServiceReportCreateState({
     this.report,
@@ -70,6 +87,7 @@ class ServiceReportCreateState {
     this.workDescription = '',
     this.recommendations = '',
     DateTime? serviceDate,
+    this.serviceEndDate,
     this.startTime,
     this.endTime,
     this.durationMinutes,
@@ -104,6 +122,8 @@ class ServiceReportCreateState {
     String? workDescription,
     String? recommendations,
     DateTime? serviceDate,
+    DateTime? serviceEndDate,
+    bool clearServiceEndDate = false,
     TimeOfDay? startTime,
     TimeOfDay? endTime,
     int? durationMinutes,
@@ -137,6 +157,7 @@ class ServiceReportCreateState {
       workDescription: workDescription ?? this.workDescription,
       recommendations: recommendations ?? this.recommendations,
       serviceDate: serviceDate ?? this.serviceDate,
+      serviceEndDate: clearServiceEndDate ? null : (serviceEndDate ?? this.serviceEndDate),
       startTime: startTime ?? this.startTime,
       endTime: endTime ?? this.endTime,
       durationMinutes: durationMinutes ?? this.durationMinutes,
@@ -173,6 +194,8 @@ class ServiceReportCreateState {
       'work_description': workDescription,
       'recommendations': recommendations,
       'service_date': serviceDate.toIso8601String(),
+      if (serviceEndDate != null)
+        'service_end_date': serviceEndDate!.toIso8601String(),
       'start_time': startTime != null
           ? {'hour': startTime!.hour, 'minute': startTime!.minute}
           : null,
@@ -242,6 +265,9 @@ class ServiceReportCreateState {
       serviceDate:
           DateTime.tryParse(json['service_date'] as String? ?? '') ??
           DateTime.now(),
+      serviceEndDate: json['service_end_date'] != null
+          ? DateTime.tryParse(json['service_end_date'] as String)
+          : null,
       startTime: parseTime(json['start_time']),
       endTime: parseTime(json['end_time']),
       durationMinutes: (json['duration_minutes'] as num?)?.toInt(),
@@ -350,6 +376,11 @@ class ServiceReportCreateState {
     if (contactId != report!.contactId) return true;
     if (advisorId != report!.advisorId) return true;
     if (categoryId != report!.categoryId) return true;
+    if (!DateUtils.isSameDay(serviceDate, report!.serviceDate)) return true;
+    final origEnd = report!.serviceEndDate;
+    final curEnd = serviceEndDate;
+    if ((origEnd == null) != (curEnd == null)) return true;
+    if (origEnd != null && curEnd != null && !DateUtils.isSameDay(origEnd, curEnd)) return true;
     if (interventionType.dbValue != report!.interventionType) return true;
     if (requestDescription.trim() != (report!.requestDescription ?? '').trim()) return true;
     if (workDescription.trim() != (report!.workDescription ?? '').trim()) return true;
@@ -716,6 +747,7 @@ class CreateServiceReportNotifier
         workDescription: report.workDescription ?? '',
         recommendations: report.recommendations ?? '',
         serviceDate: report.serviceDate,
+        serviceEndDate: report.serviceEndDate,
         startTime: start,
         endTime: end,
         durationMinutes: report.durationMinutes,
@@ -820,6 +852,7 @@ class CreateServiceReportNotifier
         workDescription: source.workDescription ?? '',
         recommendations: source.recommendations ?? '',
         serviceDate: DateTime.now(),
+        serviceEndDate: null,
         startTime: start,
         endTime: end,
         durationMinutes: source.durationMinutes,
@@ -871,7 +904,25 @@ class CreateServiceReportNotifier
   }
 
   void setServiceDate(DateTime date) {
-    state = state.copyWith(serviceDate: date);
+    DateTime? adjustedEnd = state.serviceEndDate;
+    if (adjustedEnd != null && adjustedEnd.isBefore(date)) {
+      adjustedEnd = date;
+    }
+    state = state.copyWith(serviceDate: date, serviceEndDate: adjustedEnd);
+    autoSaveDraft();
+  }
+
+  void setServiceDateRange(DateTime start, DateTime? end) {
+    state = state.copyWith(
+      serviceDate: start,
+      serviceEndDate: end,
+      clearServiceEndDate: end == null,
+    );
+    autoSaveDraft();
+  }
+
+  void clearServiceEndDate() {
+    state = state.copyWith(clearServiceEndDate: true);
     autoSaveDraft();
   }
 
@@ -944,6 +995,7 @@ class CreateServiceReportNotifier
       workDescription: state.workDescription,
       recommendations: state.recommendations,
       serviceDate: state.serviceDate,
+      serviceEndDate: state.serviceEndDate,
       startTime: state.startTime,
       endTime: state.endTime,
       durationMinutes: state.durationMinutes,
@@ -986,6 +1038,7 @@ class CreateServiceReportNotifier
       workDescription: state.workDescription,
       recommendations: state.recommendations,
       serviceDate: state.serviceDate,
+      serviceEndDate: state.serviceEndDate,
       startTime: state.startTime,
       endTime: state.endTime,
       durationMinutes: state.durationMinutes,
@@ -1185,6 +1238,7 @@ class CreateServiceReportNotifier
         workDescription: state.workDescription,
         recommendations: state.recommendations,
         serviceDate: state.serviceDate,
+        serviceEndDate: state.serviceEndDate,
         startTime: startStr,
         endTime: endStr,
         durationMinutes: state.durationMinutes,

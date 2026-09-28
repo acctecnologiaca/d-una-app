@@ -526,23 +526,25 @@ class ReportSelectionActions {
     }
 
     final now = DateTime.now();
-    final serviceDate = report.date;
-    final isSameDate =
-        serviceDate.year == now.year &&
-        serviceDate.month == now.month &&
-        serviceDate.day == now.day;
+    final today = DateTime(now.year, now.month, now.day);
+    final serviceStart = DateTime(report.date.year, report.date.month, report.date.day);
+    final serviceEnd = report.endDate != null
+        ? DateTime(report.endDate!.year, report.endDate!.month, report.endDate!.day)
+        : serviceStart;
+
+    final isWithinRange = !today.isBefore(serviceStart) && !today.isAfter(serviceEnd);
 
     void onProceedSend(ServiceReportSummary targetReport) {
       ref.read(reportSelectionProvider.notifier).clear();
       context.push('/reports/${targetReport.id}', extra: {'triggerSend': true});
     }
 
-    if (isSameDate) {
+    if (isWithinRange) {
       onProceedSend(report);
       return;
     }
 
-    final formattedReportDate = DateFormat('dd/MM/yyyy').format(serviceDate);
+    final formattedPeriod = report.formattedExecutionPeriod;
     final formattedToday = DateFormat('dd/MM/yyyy').format(now);
 
     final action = await CustomDialog.show<String>(
@@ -551,7 +553,7 @@ class ReportSelectionActions {
         icon: Icons.date_range_outlined,
         title: 'Fecha de servicio diferente',
         contentText:
-            'La fecha de este reporte ($formattedReportDate) es distinta a la fecha de hoy ($formattedToday). ¿Cómo deseas proceder?',
+            'El período de este reporte ($formattedPeriod) no coincide con la fecha de hoy ($formattedToday). ¿Cómo deseas proceder?',
         actions: [
           Builder(
             builder: (c) => TextButton(
@@ -579,9 +581,14 @@ class ReportSelectionActions {
       onProceedSend(report);
     } else if (action == 'update_date') {
       try {
+        DateTime? newEndDate;
+        if (report.endDate != null) {
+          final duration = report.endDate!.difference(report.date);
+          newEndDate = today.add(duration);
+        }
         await ref
             .read(reportsListProvider.notifier)
-            .updateReportDate(report.id, DateTime.now());
+            .updateReportDate(report.id, today, newEndDate: newEndDate);
         ref.invalidate(reportsListProvider);
         refreshAllReportProviders(ref);
         onProceedSend(report);

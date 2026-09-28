@@ -102,4 +102,29 @@ class QuoteProductSource {
       minimumPurchaseAmount: minimumPurchaseAmount ?? this.minimumPurchaseAmount,
     );
   }
+
+  /// Retorna el stock libre disponible real para ser tomado por la cotización.
+  /// Para inventario propio deduce estrictamente las reservas activas (NEs desde cero, otras cotizaciones y reportes).
+  double get effectiveAvailableStock {
+    if (sourceType == ProductSourceType.externalManagement) {
+      return 999999.0;
+    }
+    if (sourceType == ProductSourceType.own) {
+      return (maxStock - reservedStock).clamp(0.0, double.infinity);
+    }
+    return maxStock;
+  }
+
+  /// Indica si el producto propio tiene existencias físicas pero todo está reservado.
+  bool get isFullyReserved =>
+      sourceType == ProductSourceType.own &&
+      maxStock > 0 &&
+      effectiveAvailableStock <= 0;
+
+  /// Indica si el producto propio tiene stock libre disponible pero tiene reservas parciales activas.
+  bool get hasPartialReservation =>
+      sourceType == ProductSourceType.own &&
+      reservedStock > 0 &&
+      effectiveAvailableStock > 0;
 }
+

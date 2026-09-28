@@ -7,50 +7,65 @@ import '../../features/purchases/presentation/providers/purchases_providers.dart
 import '../../features/reports/presentation/reports_list/providers/reports_provider.dart';
 import '../../features/quotes/presentation/quotes_list/providers/quotes_provider.dart';
 import '../../features/clients/presentation/providers/clients_provider.dart';
+import '../../features/delivery_notes/presentation/delivery_notes_list/providers/delivery_notes_providers.dart';
+import '../../features/portfolio/presentation/providers/products_provider.dart';
 
 /// Servicio centralizado para sincronizar datos tras una reconexión a internet
-/// o reanudación desde segundo plano. Elimina la duplicación entre
-/// ConnectivityGate y _DUnaAppState.didChangeAppLifecycleState.
+/// o reanudación desde segundo plano.
 class ReconnectionSyncService {
   const ReconnectionSyncService._();
 
-  /// Refresca la sesión de Supabase y fuerza la re-carga de los providers
-  /// de datos clave (profile, shipping methods, supplier orders, purchases, reports, quotes, clients).
+  static bool _isSyncing = false;
+  static DateTime? _lastSyncTime;
+  static const Duration _syncCooldown = Duration(seconds: 2);
+
+  /// Refresca la sesión de Supabase y fuerza la re-carga de todos los providers clave.
   static Future<void> syncAfterReconnection(WidgetRef ref) async {
+    await _executeSync((provider) => ref.invalidate(provider));
+  }
+
+  /// Versión que acepta un Ref genérico (para lifecycle o providers).
+  static Future<void> syncAfterReconnectionWithRef(Ref ref) async {
+    await _executeSync((provider) => ref.invalidate(provider));
+  }
+
+  static Future<void> _executeSync(void Function(ProviderOrFamily) invalidate) async {
+    // Evitar sincronizaciones simultáneas o duplicadas dentro del cooldown
+    if (_isSyncing) return;
+    if (_lastSyncTime != null &&
+        DateTime.now().difference(_lastSyncTime!) < _syncCooldown) {
+      debugPrint('ReconnectionSync: Omitiendo sincronización duplicada (cooldown activo).');
+      return;
+    }
+
+    _isSyncing = true;
+    _lastSyncTime = DateTime.now();
     debugPrint('ReconnectionSync: Refrescando sesión y providers...');
+
     try {
       await Supabase.instance.client.auth.refreshSession();
       debugPrint('ReconnectionSync: Sesión refrescada exitosamente.');
     } catch (e) {
-      debugPrint('ReconnectionSync: Error al refrescar sesión: $e');
+      debugPrint('ReconnectionSync: Aviso al refrescar sesión: $e');
+    } finally {
+      _isSyncing = false;
     }
 
-    ref.invalidate(userProfileProvider);
-    ref.invalidate(shippingMethodsProvider);
-    ref.invalidate(verificationDocumentsProvider);
-    ref.invalidate(paginatedSupplierOrdersProvider);
-    ref.invalidate(paginatedPurchasesListProvider);
-    ref.invalidate(paginatedReportsListProvider);
-    ref.invalidate(paginatedQuotesListProvider);
-    ref.invalidate(paginatedClientsProvider);
-  }
+    // Invalidar perfil y parámetros del sistema
+    invalidate(userProfileProvider);
+    invalidate(shippingMethodsProvider);
+    invalidate(verificationDocumentsProvider);
 
-  /// Versión que acepta un Ref genérico (para usar desde providers o lifecycle).
-  static Future<void> syncAfterReconnectionWithRef(Ref ref) async {
-    debugPrint('ReconnectionSync: Refrescando sesión y providers (desde Ref)...');
-    try {
-      await Supabase.instance.client.auth.refreshSession();
-    } catch (e) {
-      debugPrint('ReconnectionSync: Error al refrescar sesión: $e');
-    }
+    // Invalidar listados principales
+    invalidate(paginatedQuotesListProvider);
+    invalidate(paginatedReportsListProvider);
+    invalidate(paginatedPurchasesListProvider);
+    invalidate(paginatedSupplierOrdersProvider);
+    invalidate(paginatedDeliveryNotesProvider);
+    invalidate(paginatedProductsProvider);
+    invalidate(paginatedClientsProvider);
 
-    ref.invalidate(userProfileProvider);
-    ref.invalidate(shippingMethodsProvider);
-    ref.invalidate(verificationDocumentsProvider);
-    ref.invalidate(paginatedSupplierOrdersProvider);
-    ref.invalidate(paginatedPurchasesListProvider);
-    ref.invalidate(paginatedReportsListProvider);
-    ref.invalidate(paginatedQuotesListProvider);
-    ref.invalidate(paginatedClientsProvider);
+    debugPrint('ReconnectionSync: Todos los providers fueron invalidados.');
   }
 }
+

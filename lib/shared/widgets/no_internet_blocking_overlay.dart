@@ -22,6 +22,9 @@ class _NoInternetBlockingOverlayState
   @override
   void initState() {
     super.initState();
+    // Ocultar teclado virtual automáticamente si estaba activo
+    FocusManager.instance.primaryFocus?.unfocus();
+
     _pulseController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 1500),
@@ -43,14 +46,14 @@ class _NoInternetBlockingOverlayState
     final isChecking = networkState.isChecking;
     final theme = Theme.of(context);
 
-    // Si vuelve la conexión, aseguramos resetear cualquier mensaje de error local
+    // Si vuelve la conexión, resetear el error local
     if (networkState.isOnline && _showRetryError) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (mounted) setState(() => _showRetryError = false);
       });
     }
 
-    // PopScope bloquea el botón físico/gesto de retroceso de Android mientras esté desconectado
+    // PopScope bloquea el botón físico/gesto de retroceso de Android
     return PopScope(
       canPop: false,
       child: Stack(
@@ -145,8 +148,13 @@ class _NoInternetBlockingOverlayState
                                       .read(networkStatusProvider.notifier)
                                       .retryManualConnection();
 
-                                  if (!isSuccess && mounted) {
-                                    setState(() => _showRetryError = true);
+                                  if (mounted) {
+                                    if (isSuccess) {
+                                      HapticFeedback.mediumImpact();
+                                    } else {
+                                      HapticFeedback.selectionClick();
+                                      setState(() => _showRetryError = true);
+                                    }
                                   }
                                 },
                           child: isChecking
@@ -174,7 +182,7 @@ class _NoInternetBlockingOverlayState
                         ),
                       ),
 
-                      // Alerta Inline de error al reintentar (Reemplaza al SnackBar)
+                      // Alerta Inline de error al reintentar
                       if (_showRetryError) ...[
                         const SizedBox(height: 14),
                         Container(
@@ -216,7 +224,7 @@ class _NoInternetBlockingOverlayState
 
                       const SizedBox(height: 12),
 
-                      // Nota al pie
+                      // Nota al pie informativa
                       Text(
                         'La app se reactivará automáticamente al recuperar señal.',
                         style: theme.textTheme.labelSmall?.copyWith(
@@ -235,3 +243,4 @@ class _NoInternetBlockingOverlayState
     );
   }
 }
+

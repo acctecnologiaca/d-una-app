@@ -478,27 +478,44 @@ class _ViewReportScreenState extends ConsumerState<ViewReportScreen>
     required Function(ServiceReport report) onSend,
   }) async {
     final now = DateTime.now();
-    final serviceDate = report.serviceDate;
-    final isSameDate =
-        serviceDate.year == now.year &&
-        serviceDate.month == now.month &&
-        serviceDate.day == now.day;
+    final today = DateTime(now.year, now.month, now.day);
+    final startDate = DateTime(
+      report.serviceDate.year,
+      report.serviceDate.month,
+      report.serviceDate.day,
+    );
+    final endDate = report.serviceEndDate != null
+        ? DateTime(
+            report.serviceEndDate!.year,
+            report.serviceEndDate!.month,
+            report.serviceEndDate!.day,
+          )
+        : startDate;
 
-    if (isSameDate) {
+    final isWithinExecution =
+        (today.isAtSameMomentAs(startDate) || today.isAfter(startDate)) &&
+        (today.isAtSameMomentAs(endDate) || today.isBefore(endDate));
+
+    if (isWithinExecution) {
       onSend(report);
       return;
     }
 
-    final formattedReportDate = DateFormat('dd/MM/yyyy').format(serviceDate);
+    final formattedReportDate = report.isDateRange
+        ? report.formattedExecutionPeriod
+        : DateFormat('dd/MM/yyyy').format(report.serviceDate);
     final formattedToday = DateFormat('dd/MM/yyyy').format(now);
 
     final action = await CustomDialog.show<String>(
       context: context,
       dialog: CustomDialog.confirmation(
         icon: Icons.date_range_outlined,
-        title: 'Fecha de servicio diferente',
-        contentText:
-            'La fecha de este reporte ($formattedReportDate) es distinta a la fecha de hoy ($formattedToday). ¿Cómo deseas proceder?',
+        title: report.isDateRange
+            ? 'Período de servicio diferente'
+            : 'Fecha de servicio diferente',
+        contentText: report.isDateRange
+            ? 'El período de ejecución de este reporte ($formattedReportDate) no incluye la fecha de hoy ($formattedToday). ¿Cómo deseas proceder?'
+            : 'La fecha de este reporte ($formattedReportDate) es distinta a la fecha de hoy ($formattedToday). ¿Cómo deseas proceder?',
         actions: [
           TextButton(
             onPressed: () =>
@@ -523,11 +540,22 @@ class _ViewReportScreenState extends ConsumerState<ViewReportScreen>
       onSend(report);
     } else if (action == 'update_date') {
       try {
+        DateTime newStart = DateTime.now();
+        DateTime? newEnd;
+        if (report.isDateRange) {
+          final durationDays = endDate.difference(startDate).inDays;
+          newStart = today.subtract(Duration(days: durationDays));
+          newEnd = today;
+        }
+
         await ref
             .read(reportsListProvider.notifier)
-            .updateReportDate(report.id, DateTime.now());
+            .updateReportDate(report.id, newStart, newEndDate: newEnd);
         ref.invalidate(viewReportProvider(report.id));
-        final updatedReport = report.copyWith(serviceDate: DateTime.now());
+        final updatedReport = report.copyWith(
+          serviceDate: newStart,
+          serviceEndDate: newEnd,
+        );
         onSend(updatedReport);
       } catch (e) {
         if (context.mounted) {

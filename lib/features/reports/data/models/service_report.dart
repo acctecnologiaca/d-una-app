@@ -1,3 +1,5 @@
+import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 import 'service_report_item_product.dart';
 import 'service_report_item_service.dart';
 import 'service_report_condition.dart';
@@ -18,6 +20,7 @@ class ServiceReport {
   final String? workDescription;
   final String? recommendations;
   final DateTime serviceDate;
+  final DateTime? serviceEndDate;
   final String? startTime;
   final String? endTime;
   final int? durationMinutes;
@@ -57,6 +60,30 @@ class ServiceReport {
   final String? clientState;
   final String? clientCountry;
 
+  bool get isDateRange =>
+      serviceEndDate != null &&
+      !DateUtils.isSameDay(serviceDate, serviceEndDate!);
+
+  int get executionDaysCount {
+    if (!isDateRange) return 1;
+    final start =
+        DateTime(serviceDate.year, serviceDate.month, serviceDate.day);
+    final end = DateTime(
+      serviceEndDate!.year,
+      serviceEndDate!.month,
+      serviceEndDate!.day,
+    );
+    return end.difference(start).inDays + 1;
+  }
+
+  String get formattedExecutionPeriod {
+    final f = DateFormat('dd/MM/yyyy');
+    if (!isDateRange) {
+      return f.format(serviceDate.toLocal());
+    }
+    return '${f.format(serviceDate.toLocal())} al ${f.format(serviceEndDate!.toLocal())}';
+  }
+
   ServiceReport({
     required this.id,
     required this.userId,
@@ -71,6 +98,7 @@ class ServiceReport {
     this.workDescription,
     this.recommendations,
     required this.serviceDate,
+    this.serviceEndDate,
     this.startTime,
     this.endTime,
     this.durationMinutes,
@@ -121,6 +149,8 @@ class ServiceReport {
     String? workDescription,
     String? recommendations,
     DateTime? serviceDate,
+    DateTime? serviceEndDate,
+    bool clearServiceEndDate = false,
     String? startTime,
     String? endTime,
     int? durationMinutes,
@@ -170,6 +200,7 @@ class ServiceReport {
       workDescription: workDescription ?? this.workDescription,
       recommendations: recommendations ?? this.recommendations,
       serviceDate: serviceDate ?? this.serviceDate,
+      serviceEndDate: clearServiceEndDate ? null : (serviceEndDate ?? this.serviceEndDate),
       startTime: startTime ?? this.startTime,
       endTime: endTime ?? this.endTime,
       durationMinutes: durationMinutes ?? this.durationMinutes,
@@ -314,6 +345,9 @@ class ServiceReport {
       serviceDate: json['service_date'] != null
           ? DateTime.parse(json['service_date'] as String)
           : DateTime.now(),
+      serviceEndDate: json['service_end_date'] != null
+          ? DateTime.tryParse(json['service_end_date'] as String)
+          : null,
       startTime: json['start_time'] as String?,
       endTime: json['end_time'] as String?,
       durationMinutes: json['duration_minutes'] as int?,
@@ -390,6 +424,8 @@ class ServiceReport {
       if (workDescription != null) 'work_description': workDescription,
       if (recommendations != null) 'recommendations': recommendations,
       'service_date': serviceDate.toIso8601String().split('T').first,
+      if (serviceEndDate != null)
+        'service_end_date': serviceEndDate!.toIso8601String().split('T').first,
       if (startTime != null) 'start_time': startTime,
       if (endTime != null) 'end_time': endTime,
       if (durationMinutes != null) 'duration_minutes': durationMinutes,

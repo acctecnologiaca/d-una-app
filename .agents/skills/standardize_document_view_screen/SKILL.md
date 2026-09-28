@@ -628,10 +628,10 @@ Para documentos que consumen productos de inventario propio (`sourceType == 'own
 3. **Inmutabilidad:** El trigger en base de datos (`check_*_status_immutability`) bloquea cualquier modificación o eliminación de ítems en documentos finalizados o cancelados.
 
 ### B. Validación Preventiva de Stock mediante RPC
-1. **Verificación Previa a la Persistencia:** Antes de guardar el estatus `finalized` (tanto en cambios individuales como en lote), el repositorio debe invocar la función RPC preventiva:
-   - Para Notas de Entrega: `check_delivery_note_insufficient_stock(p_delivery_note_id)`
-   - Para Reportes de Servicio: `check_service_report_insufficient_stock(p_report_id)`
-2. **Excepción de Dominio:** Si la RPC detecta que la cantidad requerida supera el stock físico neto disponible $(\text{inventory\_quantity} - \text{reserved\_quantity})$, el repositorio lanza `InsufficientStockException(productNames)`.
+1. **Verificación Previa a la Persistencia:** Antes de guardar el estatus `finalized` (tanto en cambios individuales como en lote o al confirmar recepción), el repositorio debe invocar la función RPC preventiva:
+   - Para Notas de Entrega: `check_delivery_note_insufficient_stock(p_note_id)` (valida stock físico real y reserva de cotización asociada vs stock comprometido por terceros).
+   - Para Reportes de Servicio: `check_service_report_insufficient_stock(p_report_id)` (con algoritmo anti-autobloqueo que excluye la reserva del propio reporte).
+2. **Excepción de Dominio:** Si la RPC devuelve registros con déficit, el repositorio busca los nombres formateados (`Nombre (Modelo)`) y arroja `InsufficientStockException(productNames)`.
 
 ### C. Manejo en la Interfaz de Usuario (UI) y Feedback
 1. **Diálogo de Advertencia Estándar:** Al capturar `InsufficientStockException`, la pantalla (`ViewDocumentScreen` o `SelectionActions`) presenta un [`CustomDialog.confirmation`](file:///c:/Users/aleja/flutter_apps/MVP/d_una_app/lib/shared/widgets/custom_dialog.dart):
